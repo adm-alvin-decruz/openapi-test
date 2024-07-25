@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const membershipRoutes = require('./src/membershipRoutes');
-const userRoutes = require('./src/membershipRoutes');
+const membershipRoutes = require('./src/routers/membershipRoutes');
 const app = express();
 const serverless = require('serverless-http');
 
