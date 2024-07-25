@@ -1,0 +1,24 @@
+{
+  "name": "lambda-ciam-cognito-api",
+  "version": "1.0.0",
+  "main": "app.js",
+  "watch": {
+    "test": "{src,test}/*.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.609.0",
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "serverless-http": "^3.2.0"
+  }
+}
