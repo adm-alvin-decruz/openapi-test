@@ -61,20 +61,10 @@ async function adminGetUser(reqBody){
       console.log(error);
     }
     if(error.name === 'UserNotFoundException'){
+      // prepare response membership not found
       result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
       // check to AEM checkemail for group = wildpass
-      if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
-        var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
-        var noMembership = aemResponse.data.valid;
-        if(noMembership === 'true'){
-          // means email has no membership in aem
-          result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
-        }else {
-          // has membership in aem and success
-          result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
-        }
-        console.log(aemResponse);
-      }
+      result = checkEmailInAem(reqBody);
     }else{
       result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
     }
@@ -115,147 +105,25 @@ function validationParams(reqBody){
   }
 }
 
-/**
- * User flow step 1 signup
- * User created and with  password
- */
-async function adminCreateUser (){
-  var setPasswordParams = new AdminCreateUserCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com",
-    TemporaryPassword: "Password123",
-    DesiredDeliveryMediums: ["EMAIL"],
-    UserAttributes: [
-      {
-        Name: "email_verified",
-        Value: "true"
-      },
-      {
-        Name: "given_name",
-        Value: "kwanoun"
-      },
-      {
-        Name: "family_name",
-        Value: "Liong"
-      },
-      {
-        Name: "email",
-        Value: "kwanoun.liong@mandai.com"
-      },
-      {
-        Name: "phone_number",
-        Value: "+6599889998"
-      }
-   ],
-  });
-
-  try {
-    var response = await client.send(setPasswordParams);
-    return response;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
-}
-
-/**
- * User flow step 2 after signup
- * User created and in "force change password" status
- * Send Admin set user password
- */
-async function adminSetUserPassword (){
-  var setPasswordParams = new AdminSetUserPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com",
-    Password: "Password123",
-    Permanent: true
-  });
-
-  try {
-    var response = await client.send(setPasswordParams);
-    console.log(response);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function userLogin (){
-  var userSigninParams = new AdminInitiateAuthCommand({
-    AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
-    UserPoolId: process.env.USER_POOL_ID,
-    ClientId: process.env.CLIENT_ID,
-    AuthParameters: {
-      USERNAME: "kwanoun.liong@mandai.com",
-      PASSWORD: "Password123"
+async function checkEmailInAem(reqBody){
+  // check route if true
+  if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
+    var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
+    var noMembership = aemResponse.data.valid;
+    if(noMembership === 'true'){
+      // means email has no membership in aem
+      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
+    }else {
+      // has membership in aem and success
+      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
     }
-  });
-
-  try {
-    var response = await client.send(userSigninParams);
-  } catch (error) {
-    response = error;
+    console.log(aemResponse);
   }
-  return response;
+  return result
 }
-
-async function userResetPassword (){
-  var resetPasswordParams = new AdminResetUserPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
-
-  try {
-    var response = await client.send(resetPasswordParams);
-    console.log(response);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function userForgotPassword (){
-  var forgotPasswordParams = new ForgotPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
-
-  try {
-    var response = await client.send(forgotPasswordParams);
-    console.log(response);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function adminUpdateUser (){
-  var setPasswordParams = new AdminUpdateUserAttributesCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com",
-    UserAttributes: [
-      {
-        Name: "given_name",
-        Value: "KwanOun"
-      }
-   ],
-  });
-
-  try {
-    var response = await client.send(setPasswordParams);
-    return response;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
-}
-
 
 module.exports = {
   listAll,
-  adminGetUser,
-  adminCreateUser,
-  adminUpdateUser,
-  adminSetUserPassword,
-  userLogin,
-  userResetPassword,
-  userForgotPassword
+  adminGetUser
 };
 

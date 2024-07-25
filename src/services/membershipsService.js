@@ -42,9 +42,13 @@ function processResponse(attr='', reqBody, mwgCode){
     if(resConfig.status === 'success' && isJsonAttr){
         var group = processGroup(attr, reqBody);
     }
-    // handle aem checkemail api response too
+    // handle aem checkemail api response
     else if (!isJsonAttr && attr === 'aem'){
-        var group = processAemGroup(reqBody);
+        var exist = true;
+        if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
+            exist = false;
+        }
+        var group = processAemGroup(reqBody, exist);
     }
 
     // step3: craft response JSON
@@ -108,9 +112,9 @@ function loopAttr(attr, name, value=''){
     return attrObj;
 }
 
-function processAemGroup(reqBody){
+function processAemGroup(reqBody, exist){
     // AEM only has wildpass
-    return {["wildpass"]: true}
+    return {["wildpass"]: exist}
 }
 
 function isJSONObject(obj) {
