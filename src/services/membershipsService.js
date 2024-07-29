@@ -14,11 +14,11 @@ require('dotenv').config();
  * @returns
  */
 function processMembership(data, reqBody){
-    var attr = data.UserAttributes;
-    member = loopAttr(attr, 'email', reqBody.email);
-    if(member !== false){
-        return processResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
-    }
+  var attr = data.UserAttributes;
+  member = loopAttr(attr, 'email', reqBody.email);
+  if(member !== false){
+    return processResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+  }
 }
 
 /**
@@ -31,39 +31,38 @@ function processMembership(data, reqBody){
  * @returns
  */
 function processResponse(attr='', reqBody, mwgCode){
-    // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-    var resConfigVar = JSON.parse(process.env.MEMBERSHIPS_API_RESPONSE_CONFIG);
-    var resConfig = resConfigVar[mwgCode];
+  // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
+  var resConfigVar = JSON.parse(process.env.MEMBERSHIPS_API_RESPONSE_CONFIG);
+  var resConfig = resConfigVar[mwgCode];
 
-    // step2: process membership group
-    // check if attr is JSON with consideration of aem checkemail response
-    const isJsonAttr = isJSONObject(attr);
+  // step2: process membership group
+  // check if attr is JSON with consideration of aem checkemail response
+  const isJsonAttr = isJSONObject(attr);
 
-    if(resConfig.status === 'success' && isJsonAttr){
-        var group = processGroup(attr, reqBody);
+  if(resConfig.status === 'success' && isJsonAttr){
+    var group = processGroup(attr, reqBody);
+  }
+  // handle aem checkemail api response
+  else if (!isJsonAttr && attr === 'aem'){
+    var exist = true;
+    if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
+        exist = false;
     }
-    // handle aem checkemail api response
-    else if (!isJsonAttr && attr === 'aem'){
-        var exist = true;
-        if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
-            exist = false;
-        }
-        var group = processAemGroup(reqBody, exist);
+    var group = processAemGroup(reqBody, exist);
+  }
+
+  // step3: craft response JSON
+  return {
+    "membership": {
+      "group": group,
+      "code": resConfig.code,
+      "mwgCode": resConfig.mwgCode,
+      "message": resConfig.message,
+      "email": reqBody.email
+    },
+    "status": resConfig.status,
+    "statusCode": resConfig.code
     }
-
-    // step3: craft response JSON
-    return {
-        "membership": {
-          "group": group,
-          "code": resConfig.code,
-          "mwgCode": resConfig.mwgCode,
-          "message": resConfig.message,
-          "email": reqBody.email
-        },
-        "status": resConfig.status,
-        "statusCode": resConfig.code
-      }
-
 }
 
 /**
@@ -74,19 +73,19 @@ function processResponse(attr='', reqBody, mwgCode){
  * @returns json group object
  */
 function processGroup(attr, reqBody){
-    var reqGroupName = reqBody.group;
-    grpAttr = loopAttr(attr, 'custom:group', '');
+  var reqGroupName = reqBody.group;
+  grpAttr = loopAttr(attr, 'custom:group', '');
 
-    // parse JSON
-    if(grpAttr != false){
-        grpJson = JSON.parse(grpAttr.Value);
-        var grpObj = loopAttr(grpJson, reqGroupName, 'expiry');
-        if(grpObj != false){
-            return {[grpObj.name]: true};
-        }
+  // parse JSON
+  if(grpAttr != false){
+    grpJson = JSON.parse(grpAttr.Value);
+    var grpObj = loopAttr(grpJson, reqGroupName, 'expiry');
+    if(grpObj != false){
+      return {[grpObj.name]: true};
     }
+  }
 
-    return {[reqGroupName]: false}
+  return {[reqGroupName]: false}
 }
 
 /**
@@ -98,30 +97,30 @@ function processGroup(attr, reqBody){
  * @returns json object
  */
 function loopAttr(attr, name, value=''){
-    var attrObj = false;
-    attr.forEach(function(attribute) {
-        if(attribute.Name === name || attribute.name === name){
-            if(value != '' || attribute.Value === value){
-            // attr found, return
-            attrObj = attribute;
-            } else {
-                attrObj = attribute;
-            }
-        }
-    });
-    return attrObj;
+  var attrObj = false;
+  attr.forEach(function(attribute) {
+    if(attribute.Name === name || attribute.name === name){
+      if(value != '' || attribute.Value === value){
+      // attr found, return
+      attrObj = attribute;
+      } else {
+        attrObj = attribute;
+      }
+    }
+  });
+  return attrObj;
 }
 
 function processAemGroup(reqBody, exist){
-    // AEM only has wildpass
-    return {["wildpass"]: exist}
+  // AEM only has wildpass
+  return {["wildpass"]: exist}
 }
 
 function isJSONObject(obj) {
-    return Array.isArray(obj);
+  return Array.isArray(obj);
 }
 
 /** export the module */
 module.exports = {
-    processMembership,processResponse
+  processMembership,processResponse
 };
