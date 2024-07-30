@@ -135,3 +135,6 @@ dist
 
 # zip
 .zip
+
+#sample
+.js-sample
