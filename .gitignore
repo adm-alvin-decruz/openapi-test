@@ -134,7 +134,7 @@ dist
 **/.DS_Store
 
 # zip
-.zip
+*.zip
 
 #sample
-.js-sample
+*.js-sample
