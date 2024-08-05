@@ -7,8 +7,8 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const membershipsService = require('./services/membershipsService');
-const AEMService = require('./services/AEMService');
+const membershipsService = require('../services/membershipsService');
+const AEMService = require('../services/AEMService');
 
 /**
  * Function listAll users
@@ -61,20 +61,10 @@ async function adminGetUser(reqBody){
       console.log(error);
     }
     if(error.name === 'UserNotFoundException'){
+      // prepare response membership not found
       result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
       // check to AEM checkemail for group = wildpass
-      if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
-        var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
-        var noMembership = aemResponse.data.valid;
-        if(noMembership === 'true'){
-          // means email has no membership in aem
-          result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
-        }else {
-          // has membership in aem and success
-          result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
-        }
-        console.log(aemResponse);
-      }
+      result = checkEmailInAem(reqBody);
     }else{
       result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
     }
@@ -115,7 +105,26 @@ function validationParams(reqBody){
   }
 }
 
+async function checkEmailInAem(reqBody){
+  // check route if true
+  if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
+    var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
+    var noMembership = aemResponse.data.valid;
+    if(noMembership === 'true'){
+      // means email has no membership in aem
+      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
+    }else {
+      // has membership in aem and success
+      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+    }
+    console.log(aemResponse);
+  }
+  return result
+}
+
 /**
+ * Create user using admin function
+ *
  * User flow step 1 signup
  * User created and with  password
  */
@@ -226,33 +235,10 @@ async function userForgotPassword (){
   }
 }
 
-async function adminUpdateUser (){
-  var setPasswordParams = new AdminUpdateUserAttributesCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com",
-    UserAttributes: [
-      {
-        Name: "given_name",
-        Value: "KwanOun"
-      }
-   ],
-  });
-
-  try {
-    var response = await client.send(setPasswordParams);
-    return response;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
-}
-
-
 module.exports = {
   listAll,
   adminGetUser,
   adminCreateUser,
-  adminUpdateUser,
   adminSetUserPassword,
   userLogin,
   userResetPassword,

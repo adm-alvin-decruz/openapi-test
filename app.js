@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const membershipRoutes = require('./src/membershipRoutes');
-const userRoutes = require('./src/membershipRoutes');
+const membershipRoutes = require('./src/routers/membershipRoutes');
+const userRoutes = require('./src/routers/userRoutes');
 const app = express();
 const serverless = require('serverless-http');
 
@@ -10,6 +10,7 @@ app.use(express.json());
 
 // use routes
 app.use('/', membershipRoutes)
+app.use('/', userRoutes)
 
 const handler = serverless(app);
 

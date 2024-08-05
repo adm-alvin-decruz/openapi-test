@@ -13,7 +13,7 @@ async function aemCheckWildPassByEmail (reqBody){
   const appEnv = process.env.APP_ENV
   console.log(appEnv);
   // get aem 'check email' url
-  const aemURL = buildAemURL (appEnv, "CHECK_WILDPASS");
+  const aemURL = buildAemURL (appEnv, "WILDPASS_CHECK_EMAIL");
   console.log(aemURL);
 
   // send post checkemail to aem
@@ -34,42 +34,14 @@ async function aemCheckWildPassByEmail (reqBody){
 
 function buildAemURL (appEnv, service){
   var aemEnvUrl = switchAppEnvURL (appEnv);
-  switch(service) {
-    case "RESEND_WILDPASS": {
-      aemServicePath = process.env.AEM_RESEND_WILDPASS_PATH;
-      break;
-    }
-    case "CHECK_WILDPASS": {
-      aemServicePath = process.env.AEM_WILDPASS_EMAILCHECK_PATH;
-      break;
-    }
-    default: {
-      aemServicePath = process.env.AEM_RESEND_WILDPASS_PATH;
-      break;
-    }
-  }
+  let aemServicePath = 'AEM_PATH_'+service.toUpperCase();
 
-  return aemEnvUrl + aemServicePath;
+  return aemEnvUrl + process.env[aemServicePath];
 }
 
 function switchAppEnvURL (appEnv){
-  var aemURL = '';
-  switch(appEnv) {
-    case "uat": {
-      aemURL = process.env.AEM_UAT_URL;
-      break;
-    }
-    case "prod": {
-      aemURL = process.env.AEM_PROD_URL;
-      break;
-    }
-    default: {
-      aemURL = process.env.AEM_UAT_URL;
-      break;
-    }
-  }
-
-  return aemURL;
+  let envAemUrl = 'AEM_URL_'+appEnv.toUpperCase();
+  return process.env[envAemUrl];
 }
 
 module.exports = {
