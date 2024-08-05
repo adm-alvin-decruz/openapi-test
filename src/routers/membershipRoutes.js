@@ -36,7 +36,7 @@ router.get('/users/memberships', upload.none(), async (req, res) => {
   else{
     let checkMemberResult = await memberships.adminGetUser(reqBody);
     // response
-    res.json(checkMemberResult);
+    res.status(200).json(checkMemberResult);
   }
 });
 

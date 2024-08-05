@@ -33,15 +33,10 @@ async function aemCheckWildPassByEmail (reqBody){
 }
 
 function buildAemURL (appEnv, service){
-  var aemEnvUrl = switchAppEnvURL (appEnv);
+  var aemEnvUrl = process.env.AEM_URL;
   let aemServicePath = 'AEM_PATH_'+service.toUpperCase();
 
   return aemEnvUrl + process.env[aemServicePath];
-}
-
-function switchAppEnvURL (appEnv){
-  let envAemUrl = 'AEM_URL_'+appEnv.toUpperCase();
-  return process.env[envAemUrl];
 }
 
 module.exports = {
