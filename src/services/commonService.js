@@ -30,11 +30,9 @@ function trimWhiteSpace (str){
  */
 function validateAppID(env, reqHeader){
 	var mwgAppID = reqHeader['mwg-app-id'];
-	var appEnv = env.APP_ENV.toUpperCase();
-	var aemAppID = JSON.parse(env.AEM_APP_ID);
 
 	if(mwgAppID !== ''){
-		if(mwgAppID === aemAppID[appEnv]){
+		if(mwgAppID === env.AEM_APP_ID){
 			return true;
 		}
 	}
