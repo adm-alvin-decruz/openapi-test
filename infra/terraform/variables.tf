@@ -87,3 +87,13 @@ variable "MEMBERSHIPS_API_RESPONSE_CONFIG" {
   description = "MEMBERSHIPS_API_RESPONSE_CONFIG"
   default = ""
 }
+
+variable "APP_LOG_SWITCH" {
+  description = "APP_LOG_SWITCH"
+  default = ""
+}
+
+variable "USER_POOL_ID" {
+  description = "USER_POOL_ID"
+  default = ""
+}
