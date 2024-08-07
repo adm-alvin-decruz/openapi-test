@@ -7,7 +7,7 @@
 #  key    = var.s3_key
 #}
 
-module "lambda_function_face_rekognition" {
+module "lambda_function_ciam_membership" {
   source = "terraform-aws-modules/lambda/aws"
 
   function_name = "${var.project}-${var.env}-lambda"
