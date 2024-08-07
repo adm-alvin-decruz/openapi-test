@@ -5,13 +5,11 @@
  * @param {*} reqHeader
  * @returns
  */
-function validateAppID(env, reqHeader){
+function validateAppID(reqHeader){
 	var mwgAppID = reqHeader['mwg-app-id'];
-	var appEnv = env.APP_ENV.toUpperCase();
-	var aemAppID = JSON.parse(env.AEM_APP_ID);
 
 	if(mwgAppID !== ''){
-		if(mwgAppID === aemAppID[appEnv]){
+		if(mwgAppID === process.env.AEM_APP_ID){
 			return true;
 		}
 	}

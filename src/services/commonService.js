@@ -31,6 +31,11 @@ function prepareMembershipGroup(reqBody){
   return {"name":reqBody.group,"expiry":""};
 }
 
+/**
+ * TODO - find a format
+ * @param {} reqBody
+ * @returns
+ */
 function generateMandaiId(reqBody){
   return "123456";
 }
@@ -42,7 +47,7 @@ function setSource(reqHeaders){
 }
 
 /**
- * Detail check is JSON is not empty
+ * Detail check JSON empty or not
  *
  * @param {JSON} json
  * @returns
@@ -63,7 +68,7 @@ function isJsonNotEmpty(json) {
     return json.length > 0;
   }
 
-  // Iif it's an object, check if it has any own properties
+  // if it's an object, check if it has any own properties
   return Object.keys(json).length > 0;
 }
 
@@ -87,11 +92,53 @@ function mapJsonObjects(mappingJSON, inputJson) {
   return result;
 }
 
+/**
+ * Create a new cognito format JSON by mapping 'mappingJSON' & an input JSON from request
+ *
+ * @param {JSON} mappingJSON
+ * @param {JSON} inputJson
+ * @returns
+ */
+function mapCognitoJsonObj(mappingJSON, inputJSON){
+  const jsonC = [];
+
+  for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
+    if (valueA in inputJSON) {
+      let value = inputJSON[valueA];
+      if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        value = JSON.stringify(value);
+      }
+      jsonC.push({
+        Name: keyA,
+        Value: value
+      });
+    }
+  }
+
+  return jsonC;
+}
+
+function compareAndFilterJSON(inputJson, sourceCompare) {
+  // Convert jsonB to a map for easier lookup
+  const jsonBMap = new Map(sourceCompare.map(item => [item.Name, item.Value]));
+
+  // Filter inputJson
+  const result = inputJson.filter(itemA => {
+      const valueB = jsonBMap.get(itemA.Name);
+      // Keep the item if it's not in sourceCompare or if the values are different
+      return valueB === undefined || itemA.Value !== valueB;
+  });
+
+  return result;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
   generateMandaiId,
   setSource,
   isJsonNotEmpty,
-  mapJsonObjects
+  mapJsonObjects,
+  mapCognitoJsonObj,
+  compareAndFilterJSON
 }

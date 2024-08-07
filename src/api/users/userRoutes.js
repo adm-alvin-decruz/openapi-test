@@ -4,10 +4,10 @@ const router = express.Router();
 const multer  = require('multer');
 const upload = multer();
 
-const userController = require('../controllers/users');
-const commonService = require('../services/commonService');
-const validationService = require('../services/validationService');
-const { isEmptyRequest } = require('../middlewares/validationMiddleware');
+const userController = require("./usersContollers" );
+const commonService = require('../../services/commonService');
+const validationService = require('../../services/validationService');
+const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 
 const pong = {'pong': 'pang'};
 
@@ -20,9 +20,9 @@ router.get('/ping', async (req, res) => {
 /**
  * User signup, create new CIAM user
  */
-router.post('/users', isEmptyRequest, async (req, res) => {
+router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
-  var valAppID = validationService.validateAppID(process.env, req.headers);
+  var valAppID = validationService.validateAppID(req.headers);
 
   if(valAppID === true){
     let newUser = await userController.adminCreateUser(req);
@@ -37,19 +37,18 @@ router.post('/users', isEmptyRequest, async (req, res) => {
  * Update CIAM user info
  * Handling most HTTP validation here
  */
-router.put('/users', isEmptyRequest, async (req, res) => {
+router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
-  var valAppID = validationService.validateAppID(process.env, req.headers);
+  var valAppID = validationService.validateAppID(req.headers);
 
   // validate request params is listed, NOTE: listedParams doesn't have email
-  var listedParams = commonService.mapJsonObjects(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
-  return res.status(200).json(listedParams);
-  if(commonService.isJsonNotEmpty(listedParams) !== true){
+  var listedParams = commonService.mapCognitoJsonObj(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
+  // return res.status(200).json(listedParams);
+  if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
   }
 
-
-  if(valAppID === false){
+  if(valAppID === true){
     let updateUser = await userController.adminUpdateUser(req, listedParams);
     return res.status(200).json(updateUser);
   }

@@ -7,8 +7,11 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const usersService = require('../services/usersService');
-const validationService = require('../services/validationService');
+const usersService = require('./usersServices');
+const validationService = require('../../services/validationService');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
+const responseHelper = require('../../helpers/responseHelpers');
 
 /**
  * Function listAll users
@@ -49,9 +52,14 @@ async function adminCreateUser (req){
 
       if(memberExist.status === 'success'){
         // response "member exist" error.... TODO: move below process two lines and below below same two lines into a func
-        let errorConfig = usersService.processError('email', req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
-        let response = usersService.processResponse('email', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR');
-        return response;
+        let errorConfig = usersService.processError('user', req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
+        // let response = responseHelper.craftUsersApiResponse('email', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP');
+
+        // prepare logs
+        let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', {}, memberExist);
+        // prepare error params response
+        return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+
       }else{
         var response = await usersService.createUserService(req);
       }
@@ -62,10 +70,13 @@ async function adminCreateUser (req){
       return error;
     }
   }
-  // prepare error params response
-  errorConfig = usersService.processErrors(errorParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
-  response = usersService.processResponse(errorParams, errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR');
-  return response;
+
+    // prepare error params response
+    errorConfig = usersService.processErrors(errorParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+    // prepare error params response
+    return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
 }
 
 /**
@@ -75,29 +86,42 @@ async function adminCreateUser (req){
  */
 async function adminUpdateUser (req, listedParams){
 
-  // validate if email param exist.
-  // if(listedParams.email === undefined){
-  //   return res.status(400).send({ error: 'Bad Request' });
-  // }
-
   try {
     // check if user exist
-    var memberExist = await usersService.getUserMembership(req);
+    var memberInfo = await usersService.getUserMembership(req);
 
-    if(memberExist.status === 'success'){
-      // user exist, can update info
-      var response = await usersService.adminUpdateUser(req, listedParams);
-      return response;
-    }else{
-      // TODO: reponse error user not exist
+    // compare input data vs membership info
+    let listedComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.UserAttributes);
+
+    if(commonService.isJsonNotEmpty(listedComparedParams) === true){
+      if(memberInfo.status === 'success'){
+        // user exist, can update info
+        var response = await usersService.adminUpdateUser(req, listedParams, memberInfo.data.UserAttributes);
+        return response;
+      }
     }
 
-    return response;
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {}, memberInfo);
+
+    // prepare error params response
+    return responseHelper.craftUsersApiResponse('usersControllers.adminUpdateUser', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
+    // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
+
   } catch (error) {
     console.log(error);
     return error;
   }
 }
+
+/**
+ * simplified log and response
+ * TODO: look into this again
+ */
+// function handleUserSignupError(moduleName, action, req, mwgCode, envFunc, endpoindReq, endpointRes) {
+//   const logObj = loggerService.build(moduleName, action, req, mwgCode, endpoindReq, endpointRes);
+//   return responseHelper.craftUsersApiResponse(action, endpointRes, mwgCode, envFunc, logObj);
+// }
 
 /**
  * User flow step 2 after signup

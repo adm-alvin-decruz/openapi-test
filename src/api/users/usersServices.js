@@ -13,8 +13,10 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 require('dotenv').config();
 
 const crypto = require("crypto");
-const commonService = require('../services/commonService');
-const loggerService = require('../logs/logger');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
+const responseHelper = require('../../helpers/responseHelpers');
+const usersUpdateHelpers = require('./usersUpdateHelpers');
 
 async function createUserService(req){
   // clean the request data for possible white space
@@ -29,7 +31,8 @@ async function createUserService(req){
   // set the source base on app ID
   let source = commonService.setSource(req.headers);
 
-  var newUserParams = new AdminCreateUserCommand({
+  // prepare array  to create user
+  const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: reqBody.email,
     TemporaryPassword: "Password123#",
@@ -53,29 +56,29 @@ async function createUserService(req){
       {"Name": "custom:last_login", "Value": "null"},
       {"Name": "custom:source", "Value": source}
     ],
-  });
+  };
+
+  var newUserParams = new AdminCreateUserCommand(newUserArray);
 
   try {
     var response = await client.send(newUserParams);
+
     // prepare logs
-    const callerAPI = {
-      "membership": reqBody.group,
-      "api_header": req.headers,
-      "api_body": reqBody,
-      "mwgCode": "MWG_CIAM_USER_SIGNUP_SUCCESS"
-    }
-    loggerService.log('user', callerAPI, newUserParams, response);
-    return processResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_SUCCESS');
+    let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
+
+    // prepare response to client
+    let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
+
+    return responseToClient;
+
   } catch (error) {
     // prepare logs
-    const callerAPI = {
-      "membership": reqBody.group,
-      "api_header": req.headers,
-      "api_body": reqBody,
-      "mwgCode": "MWG_CIAM_USER_SIGNUP_ERR"
-    }
-    loggerService.log('user', callerAPI, newUserParams, error);
-    return processResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR');
+    let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
+
+    // prepare response to client
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+
+    return responseErrorToClient;
   }
 }
 
@@ -85,15 +88,24 @@ async function createUserService(req){
  * @returns
  */
 async function getUserMembership(req){
-  const getUserCommand = new AdminGetUserCommand({
+  let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
-  });
+  };
 
-  var result = {};
+  const getUserCommand = new AdminGetUserCommand(getMemberJson);
+
   try {
     var response = await client.send(getUserCommand);
-    var result = {"status": "success", "data": response};
+    // var result = {"status": "success", "data": response};
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
+    // prepare response to client
+    let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
+    console.log(responseToInternal);
+    return responseToInternal;
+
   } catch (error) {
     if(error.name === 'UserNotFoundException'){
       var result = {"status": "not found", "data": error};
@@ -103,13 +115,14 @@ async function getUserMembership(req){
   }
 
   // prepare logs
-  const callerAPI = {
+  const clientAPIData = {
     "membership": req.body.group,
+    "action": "getUserMembership Service",
     "api_header": req.headers,
     "api_body": req.body,
-    "mwgCode": "MWG_CIAM_USER_SIGNUP_ERR"
+    "mwgCode": ""
   }
-  loggerService.log('user', callerAPI, getUserCommand, result);
+  loggerService.log('user', clientAPIData, getUserCommand, response, result);
 
   return result;
 }
@@ -117,28 +130,43 @@ async function getUserMembership(req){
 /**
  * Update user CIAM info
  */
-async function adminUpdateUser (req, listedParams){
+async function adminUpdateUser (req, listedParams, userAttributes){
   // clean the request data for possible white space
   var reqBody = commonService.cleanData(req.body);
 
-  // add name to listedParams
-  // {"Name": "name"   , "Value": reqBody.firstName +" "+reqBody.lastName},
-  listedParams['Name'] = "name";
+  // add name params to cognito request, make sure update value if there's changes otherwise no change.
+  // let firstName = (reqBody.firstName === undefined) ? ''
+  let name = usersUpdateHelpers.createNameParameter(listedParams, userAttributes);
+  listedParams.push(name);
 
-  var setUpdateParams = new AdminUpdateUserAttributesCommand({
+  // prepare update user array
+  const updateUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: reqBody.email,
-    UserAttributes: [
-      listedParams,
-   ],
-  });
+    UserAttributes: listedParams
+  }
+
+  var setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
 
   try {
-    var response = await client.send(setUpdateParams);
-    return response;
+    var responseFromCognito = await client.send(setUpdateParams);
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, responseFromCognito);
+
+    // prepare response to client
+    let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
+
+    return responseToClient;
+
   } catch (error) {
-    console.log(error);
-    return error;
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', updateUserArray, error);
+
+    // prepare response to client
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_UPDATE', logObj);
+
+    return responseErrorToClient;
   }
 }
 
@@ -155,47 +183,6 @@ function genSecretHash(username, clientId, clientSecret) {
     .createHmac("sha256", clientSecret)
     .update(`${username}${clientId}`)
     .digest("base64");
-}
-
-/**
- * Function process CIAM response
- *
- * @param {JSON} attr attribute section of the cognito response
- * @param {JSON} reqBody request body
- * @param {string} status status text success | failed
- * @param {int} statusCode status code 200 | 400 | 501
- * @returns
- */
-function processResponse(attr='', reqBody, mwgCode){
-  // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  var resConfigVar = JSON.parse(process.env.USERS_SIGNUP_API_RESPONSE_CONFIG);
-  var resConfig = resConfigVar[mwgCode];
-
-  // step3: craft response JSON
-  let responsePayload = {
-        "membership": {
-          "code": resConfig.code,
-          "mwgCode": mwgCode,
-          "message": resConfig.message
-        },
-        "status": resConfig.status,
-        "statusCode": resConfig.code
-  };
-
-  if(mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
-    // add error params
-    responsePayload['error'] = reqBody;
-  }
-
-  // prepare logs
-  const callerAPI = {
-    "membership": reqBody.group,
-    "api_body": reqBody,
-    "mwgCode": "MWG_CIAM_USER_SIGNUP_ERR"
-  }
-  loggerService.log('user', callerAPI, {}, responsePayload);
-
-  return responsePayload;
 }
 
 /**
@@ -262,7 +249,7 @@ function processMembership(data, reqBody){
   var attr = data.UserAttributes;
   member = loopAttr(attr, 'email', reqBody.email);
   if(member !== false){
-    return processResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+    return responseHelper.craftUsersApiResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', 'USERS_SIGNUP');
   }
 }
 
@@ -326,7 +313,6 @@ module.exports = {
   createUserService,
   adminUpdateUser,
   getUserMembership,
-  processResponse,
   processError,
   genSecretHash,
   processErrors
