@@ -1,0 +1,14 @@
+project = "ciam-membership"
+env = "dev"
+layers = ["arn:aws:lambda:ap-southeast-1:451483290750:layer:NewRelicNodeJS20X:25"]
+NEW_RELIC_ACCOUNT_ID = "4510480"
+NEW_RELIC_USE_ESM = "true"
+newrelic_handler = "newrelic-lambda-wrapper.handler"
+AEM_PATH_RESEND_WILDPASS = "/bin/wrs/wildpass/wildpassresendecard"
+AEM_PATH_WILDPASS_CHECK_EMAIL = "/bin/wrs/wildpass/checkemail"
+AEM_URL = "https://uat-www.mandai.com"
+AEM_WILDPASS_EMAILCHECK_ROUTE = "true"
+AEM_APP_ID = "aemDev.com.mandaiapi.ciam"
+APP_LOG_SWITCH = "true"
+MEMBERSHIPS_API_RESPONSE_CONFIG = {"MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS":{"mwgCode":"MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS","code":200,"message":"Get memberships success.","status":"success"},"MWG_CIAM_USERS_MEMBERSHIPS_NULL":{"mwgCode":"MWG_CIAM_USERS_MEMBERSHIPS_NULL","code":200,"message":"No record found.","status":"failed"},"MWG_CIAM_PARAMS_ERR":{"mwgCode":"MWG_CIAM_PARAMS_ERR","code":400,"message":"Wrong parameters.","status":"failed"},"MWG_CIAM_501_ERR":{"mwgCode":"MWG_CIAM_501_ERR","code":501,"message":"Not implemented.","status":"failed"},"MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR":{"mwgCode":"MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR","code":200,"message":"Requested email is invalid or empty.","status":"failed"}}
+USER_POOL_ID = "ap-southeast-1_7KXtK9lOe"
