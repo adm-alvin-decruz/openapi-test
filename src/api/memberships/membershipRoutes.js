@@ -4,15 +4,16 @@ const router = express.Router();
 const multer  = require('multer');
 const upload = multer();
 
-const memberships = require('../controllers/memberships');
-const common = require('../services/commonService')
+const membershipsController = require('./membershipsControllers');
+const commonService = require('../../services/commonService')
+const validationService = require('../../services/validationService')
 
 const pong = {'pong': 'pang'};
 
 router.use(express.json());
 
 router.get('/ping', async (req, res) => {
-  res.json(pong);
+    res.json(pong);
 });
 
 /**
@@ -20,28 +21,30 @@ router.get('/ping', async (req, res) => {
  * Response
  */
 router.get('/users/memberships', upload.none(), async (req, res) => {
-  // sign email to memberships check
+  // if log turned on, log request
   if(process.env.APP_LOG_SWITCH){
     console.log(req.body);
+    console.log(req.headers);
   }
 
   // clean the request data for possible white space
-  var reqBody = common.cleanData(req.body);
+  var reqBody = commonService.cleanData(req.body);
 
   // validate req app-id
-  var valAppID = common.validateAppID(process.env, req.headers);
+  var valAppID = validationService.validateAppID(req.headers);
   if(valAppID === false){
     res.status(401).send('Unauthorized');
   }
   else{
-    let checkMemberResult = await memberships.adminGetUser(reqBody);
+    let checkMemberResult = await membershipsController.adminGetUser(reqBody);
     // response
     res.status(200).json(checkMemberResult);
   }
 });
 
-router.post('/users/memberships', async (req, res) => {
-  res.status(405).send('Method Not Allowed');
-})
+// router.post('/users', async (req, res) => {
+//   let resUser = await membershipsController.adminCreateUser();
+//     res.json({resUser});
+// })
 
 module.exports = router;

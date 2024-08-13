@@ -1,3 +1,8 @@
+const crypto = require('crypto');
+
+// use dotenv
+require('dotenv').config();
+
 /**
  * Function cleanData
  *
@@ -6,7 +11,9 @@
  */
 function cleanData(reqData){
 	Object.keys(reqData).forEach(function(key) {
+    if(typeof reqData[key] === "string"){
 			reqData[key] = trimWhiteSpace (reqData[key]);
+    }
 	})
 	return reqData;
 }
@@ -21,25 +28,137 @@ function trimWhiteSpace (str){
 	return str.trim()
 }
 
+function prepareMembershipGroup(reqBody){
+  // TODO: update expiry for future FOW, FOW+
+  return {"name":reqBody.group,"visualID": reqBody.visualID,"expiry":""};
+}
+
+function setSource(reqHeaders){
+  const mwgAppID = reqHeaders['mwg-app-id'];
+  let sourceMap = JSON.parse(process.env.SOURCE_MAPPING);
+  return sourceMap[mwgAppID];
+}
+
 /**
- * Validate App ID
+ * Detail check JSON empty or not
  *
- * @param {*} env
- * @param {*} reqHeader
+ * @param {JSON} json
  * @returns
  */
-function validateAppID(env, reqHeader){
-	var mwgAppID = reqHeader['mwg-app-id'];
+function isJsonNotEmpty(json) {
+  // check if the input is null or undefined
+  if (json == null) {
+    return false;
+  }
 
-	if(mwgAppID !== ''){
-		if(mwgAppID === env.AEM_APP_ID){
-			return true;
-		}
-	}
-	return false;
+  // check if it's an object
+  if (typeof json !== 'object') {
+    return false;
+  }
+
+  // check if it's an array
+  if (Array.isArray(json)) {
+    return json.length > 0;
+  }
+
+  // if it's an object, check if it has any own properties
+  return Object.keys(json).length > 0;
+}
+
+/**
+ * Create a new JSON by mapping 'mappingJSON' & an input JSON from request
+ *
+ * @param {JSON} mappingJSON
+ * @param {JSON} inputJson
+ * @returns
+ */
+function mapJsonObjects(mappingJSON, inputJson) {
+  const result = {};
+  let mappingJSONObj = JSON.parse(mappingJSON);
+
+  for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
+    if (valueA in inputJson) {
+      result[keyA] = inputJson[valueA];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Create a new cognito format JSON by mapping 'mappingJSON' & an input JSON from request
+ *
+ * @param {JSON} mappingJSON
+ * @param {JSON} inputJson
+ * @returns
+ */
+function mapCognitoJsonObj(mappingJSON, inputJSON){
+  const jsonC = [];
+
+  for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
+    if (valueA in inputJSON) {
+      let value = inputJSON[valueA];
+      if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        value = JSON.stringify(value);
+      }
+      jsonC.push({
+        Name: keyA,
+        Value: value
+      });
+    }
+  }
+
+  return jsonC;
+}
+
+/**
+ *
+ * @param {json} inputJson
+ * @param {json} sourceCompare
+ * @returns
+ */
+function compareAndFilterJSON(inputJson, sourceCompare) {
+  // Convert jsonB to a map for easier lookup
+  const jsonBMap = new Map(sourceCompare.map(item => [item.Name, item.Value]));
+
+  // Filter inputJson
+  const result = inputJson.filter(itemA => {
+      const valueB = jsonBMap.get(itemA.Name);
+      // Keep the item if it's not in sourceCompare or if the values are different
+      return valueB === undefined || itemA.Value !== valueB;
+  });
+
+  return result;
+}
+
+function findUserAttributeValue(userAttributes, attribute) {
+  // Find the attribute object where the Name matches the attribute input
+  const attributeObject = userAttributes.find(attr => attr.Name === attribute);
+
+  // Return the Value if the attribute object is found, otherwise return null
+  return attributeObject ? attributeObject.Value : null;
+}
+
+function decodeBase64(base64String) {
+  let buff = Buffer.from(base64String, 'base64');
+  let decodedString = buff.toString('utf8');
+  return decodedString;
+}
+
+function convertDateHyphenFormat(inputDate) {
+  const [day, month, year] = inputDate.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 module.exports = {
   cleanData,
-  validateAppID
+  prepareMembershipGroup,
+  setSource,
+  isJsonNotEmpty,
+  mapJsonObjects,
+  mapCognitoJsonObj,
+  compareAndFilterJSON,
+  findUserAttributeValue,
+  decodeBase64,
+  convertDateHyphenFormat
 }
