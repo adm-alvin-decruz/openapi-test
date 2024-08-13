@@ -7,8 +7,8 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const membershipsService = require('../services/membershipsService');
-const AEMService = require('../services/AEMService');
+const membershipsService = require('././membershipsServices');
+const AEMService = require('../../services/AEMService');
 
 /**
  * Function listAll users
@@ -122,8 +122,126 @@ async function checkEmailInAem(reqBody){
   return result
 }
 
+/**
+ * Create user using admin function
+ *
+ * User flow step 1 signup
+ * User created and with  password
+ */
+async function adminCreateUser (){
+  var setPasswordParams = new AdminCreateUserCommand({
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: "kwanoun.liong@mandai.com",
+    TemporaryPassword: "Password123",
+    DesiredDeliveryMediums: ["EMAIL"],
+    UserAttributes: [
+      {
+        Name: "email_verified",
+        Value: "true"
+      },
+      {
+        Name: "given_name",
+        Value: "kwanoun"
+      },
+      {
+        Name: "family_name",
+        Value: "Liong"
+      },
+      {
+        Name: "email",
+        Value: "kwanoun.liong@mandai.com"
+      },
+      {
+        Name: "phone_number",
+        Value: "+6599889998"
+      }
+   ],
+  });
+
+  try {
+    var response = await client.send(setPasswordParams);
+    return response;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
+}
+
+/**
+ * User flow step 2 after signup
+ * User created and in "force change password" status
+ * Send Admin set user password
+ */
+async function adminSetUserPassword (){
+  var setPasswordParams = new AdminSetUserPasswordCommand({
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: "kwanoun.liong@mandai.com",
+    Password: "Password123",
+    Permanent: true
+  });
+
+  try {
+    var response = await client.send(setPasswordParams);
+    console.log(response);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function userLogin (){
+  var userSigninParams = new AdminInitiateAuthCommand({
+    AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
+    UserPoolId: process.env.USER_POOL_ID,
+    ClientId: process.env.CLIENT_ID,
+    AuthParameters: {
+      USERNAME: "kwanoun.liong@mandai.com",
+      PASSWORD: "Password123"
+    }
+  });
+
+  try {
+    var response = await client.send(userSigninParams);
+  } catch (error) {
+    response = error;
+  }
+  return response;
+}
+
+async function userResetPassword (){
+  var resetPasswordParams = new AdminResetUserPasswordCommand({
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: "kwanoun.liong@mandai.com"
+  });
+
+  try {
+    var response = await client.send(resetPasswordParams);
+    console.log(response);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function userForgotPassword (){
+  var forgotPasswordParams = new ForgotPasswordCommand({
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: "kwanoun.liong@mandai.com"
+  });
+
+  try {
+    var response = await client.send(forgotPasswordParams);
+    console.log(response);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
 module.exports = {
   listAll,
-  adminGetUser
+  adminGetUser,
+  adminCreateUser,
+  adminSetUserPassword,
+  userLogin,
+  userResetPassword,
+  userForgotPassword
 };
 
