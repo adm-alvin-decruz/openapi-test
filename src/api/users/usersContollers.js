@@ -40,11 +40,14 @@ async function listAll(){
  * User created and with  password
  */
 async function adminCreateUser (req){
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
+
   // API validation
-  let errorParams = validationService.validateParams(req.body);
+  let validatedParams = validationService.validateParams(req.body, 'SIGNUP_VALIDATE_PARAMS');
 
   // return errorParams;
-  if(errorParams.status === 'success'){
+  if(validatedParams.status === 'success'){
     // continue
     try {
       // check if user exist
@@ -61,7 +64,7 @@ async function adminCreateUser (req){
         return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
       }else{
-        var response = await usersService.createUserService(req);
+        var response = await usersService.userSignupService(req);
       }
 
       return response;
@@ -72,7 +75,7 @@ async function adminCreateUser (req){
   }
 
     // prepare error params response
-    errorConfig = usersService.processErrors(errorParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
+    errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
     // prepare logs
     let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
     // prepare error params response
@@ -112,6 +115,59 @@ async function adminUpdateUser (req, listedParams){
     console.log(error);
     return error;
   }
+}
+
+/**
+ * Resend membership
+ *
+ * @param {json} req
+ * @returns
+ */
+async function membershipResend(req){
+  // API validation
+  let validatedParams = validationService.validateParams(req.body, 'RESEND_VALIDATE_PARAMS');
+
+  // if params no error, status success
+  if(validatedParams.status === 'success'){
+    // check if user exist
+    var memberInfo = await usersService.getUserMembership(req);
+
+    if(memberInfo.status === 'success'){
+      // user exist, resend membership
+      var response = await usersService.resendUserMembership(req, memberInfo.data.UserAttributes);
+      return response;
+    }
+    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, validatedParams);
+    // prepare error params response
+    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', validatedParams, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
+  }
+
+  // prepare error params response
+  errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_PARAMS_ERR');
+  // prepare logs
+  let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+  // prepare error params response
+  return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'RESEND_MEMBERSHIP', logObj);
+}
+
+/**
+ * Delete cognito membership
+ *
+ * @param {json} req
+ * @returns
+ */
+async function membershipDelete(req){
+  // check if user exist
+  var memberInfo = await usersService.getUserMembership(req);
+
+  if(memberInfo.status === 'success'){
+    // user exist, can update info
+    var response = await usersService.deleteMembership(req);
+    return response;
+  }
+  let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, {});
+  // prepare error params response
+  return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', {}, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
 }
 
 /**
@@ -214,6 +270,8 @@ module.exports = {
   listAll,
   adminCreateUser,
   adminUpdateUser,
+  membershipResend,
+  membershipDelete,
   adminSetUserPassword,
   userLogin,
   userResetPassword,

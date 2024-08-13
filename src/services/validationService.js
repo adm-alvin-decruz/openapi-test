@@ -35,9 +35,8 @@ function validateAppID(reqHeader){
  * @param {*} env
  * @param {*} reqBody
  */
-function validateParams(reqBody){
-  const valVarName = 'SIGNUP_VALIDATE_PARAMS';
-  const validationVar = JSON.parse(process.env[valVarName]);
+function validateParams(reqBody, envVarName){
+  const validationVar = JSON.parse(process.env[envVarName]);
 
   let errorObj = {'status': "success"};
   // check for invalid and dob
@@ -61,7 +60,7 @@ function validateParams(reqBody){
     }
 	})
 
-  if(errorObj.invalid || errorObj.dob){
+  if(errorObj.invalid || errorObj.dob || errorObj.newsletter){
     errorObj['status'] = 'failed';
   }
 

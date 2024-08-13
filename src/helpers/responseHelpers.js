@@ -27,7 +27,7 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
 
   if(mwgCode === 'MWG_CIAM_PARAMS_ERR'){
     // add error params
-    responseToClient['error'] = reqBody;
+    responseToClient['membership']['error'] = reqBody;
   }
 
   // prepare logs

@@ -9,7 +9,7 @@
 function createNameParameter(reqBody, userAttribute) {
   let name;
 
-  // Check if firstName and lastName are provided in reqBody
+  // check if firstName and lastName are provided in reqBody
   if (reqBody.firstName && reqBody.lastName && reqBody.firstName.trim() !== '' && reqBody.lastName.trim() !== '') {
       name = {
           "Name": "name",

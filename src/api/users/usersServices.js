@@ -4,8 +4,8 @@
  */
 
 const {
-  CognitoIdentityProviderClient, AdminGetUserCommand, AdminInitiateAuthCommand, AdminResetUserPasswordCommand,
-  ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand
+  CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
+  AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
@@ -17,66 +17,93 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const usersUpdateHelpers = require('./usersUpdateHelpers');
+const lambdaService = require('../../services/lambdaService');
+const passkitService = require('../../services/passkitService');
+const usersSignupHelper = require('./usersSignupHelper');
 
-async function createUserService(req){
-  // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
-
-  // prepare membership group
-  let membershipGroup = commonService.prepareMembershipGroup(reqBody);
+/**
+ * Function User signup service
+ * @param {json} req
+ * @returns
+ */
+async function userSignupService(req){
+  // set the source base on app ID
+  req['body']['source'] = commonService.setSource(req.headers);
 
   // generate Mandai ID
-  let mandaiId = commonService.generateMandaiId(reqBody);
+  req.body['mandaiID'] = usersSignupHelper.generateMandaiID(req.body);
 
-  // set the source base on app ID
-  let source = commonService.setSource(req.headers);
+  req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
 
+  // prepare membership group
+  req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
+
+  // TODO: create user's wildpass card face first.
+  let genWPCardFace = prepareWPCardfaceInvoke(req);
+  if(genWPCardFace.status === 'failed'){
+    return genWPCardFace
+  }
+  // TODO: save users into DB
+
+  // call cognitoCreateUser function
+  return cognitoCreateUser(req);
+}
+
+/**
+ * Cognito create user
+ *
+ * @param {json} req
+ * @returns
+ */
+async function cognitoCreateUser(req){
   // prepare array  to create user
   const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
-    Username: reqBody.email,
+    Username: req.body.email,
     TemporaryPassword: "Password123#",
     DesiredDeliveryMediums: ["EMAIL"],
+    MessageAction: "SUPPRESS", // disable send verification email temp password
     UserAttributes: [
       {"Name": "email_verified", "Value": "true"},
-      {"Name": "given_name"    , "Value": reqBody.firstName},
-      {"Name": "family_name"   , "Value": reqBody.lastName},
-      {"Name": "preferred_username", "Value": reqBody.email},
-      {"Name": "name"   , "Value": reqBody.firstName +" "+reqBody.lastName},
-      {"Name": "email"         , "Value": reqBody.email},
-      {"Name": "birthdate"     , "Value": reqBody.dob}, //TODO, convert birthdate to timestamp
+      {"Name": "given_name"    , "Value": req.body.firstName},
+      {"Name": "family_name"   , "Value": req.body.lastName},
+      {"Name": "preferred_username", "Value": req.body.email},
+      {"Name": "name"   , "Value": req.body.firstName +" "+req.body.lastName},
+      {"Name": "email"         , "Value": req.body.email},
+      {"Name": "birthdate"     , "Value": req.body.dob}, //TODO, convert birthdate to timestamp
       // custom fields
-      {"Name": "custom:membership", "Value": JSON.stringify(membershipGroup)},
-      {"Name": "custom:mandai_id", "Value": mandaiId},
-      {"Name": "custom:newsletter", "Value": JSON.stringify(reqBody.newsletter)},
+      {"Name": "custom:membership", "Value": JSON.stringify(req.body.membershipGroup)},
+      {"Name": "custom:mandai_id", "Value": req.body.mandaiID},
+      {"Name": "custom:newsletter", "Value": JSON.stringify(req.body.newsletter)},
       {"Name": "custom:terms_conditions", "Value": "null"},
       {"Name": "custom:visual_id", "Value": "null"},
       {"Name": "custom:vehicle_iu", "Value": "null"},
       {"Name": "custom:vehicle_plate", "Value": "null"},
       {"Name": "custom:last_login", "Value": "null"},
-      {"Name": "custom:source", "Value": source}
+      {"Name": "custom:source", "Value": req.body.source}
     ],
   };
 
   var newUserParams = new AdminCreateUserCommand(newUserArray);
 
   try {
+    // create user in Lambda
     var response = await client.send(newUserParams);
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
-
     // prepare response to client
-    let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
+    let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
+
+    //TODO: import pass to GALAXY
 
     return responseToClient;
 
   } catch (error) {
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
-
     // prepare response to client
-    let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
     return responseErrorToClient;
   }
@@ -136,7 +163,7 @@ async function adminUpdateUser (req, listedParams, userAttributes){
 
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
   // let firstName = (reqBody.firstName === undefined) ? ''
-  let name = usersUpdateHelpers.createNameParameter(listedParams, userAttributes);
+  let name = usersUpdateHelpers.createNameParameter(req.body, userAttributes);
   listedParams.push(name);
 
   // prepare update user array
@@ -153,7 +180,6 @@ async function adminUpdateUser (req, listedParams, userAttributes){
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, responseFromCognito);
-
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
@@ -162,7 +188,6 @@ async function adminUpdateUser (req, listedParams, userAttributes){
   } catch (error) {
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', updateUserArray, error);
-
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_UPDATE', logObj);
 
@@ -231,6 +256,124 @@ function processErrors(attr, reqBody, mwgCode){
   }
   return errors;
 }
+
+/**
+ * Resend user membership preparation
+ *
+ * @param {json} req
+ * @param {json} memberAttributes
+ * @returns
+ */
+async function resendUserMembership(req, memberAttributes){
+
+  // clean the request data for possible white space
+  var reqBody = commonService.cleanData(req.body);
+
+  // invokesend email lambda
+  let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
+
+  // find user attribute value for mandaiID
+  mandaiID = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
+  firstName = commonService.findUserAttributeValue(memberAttributes, 'given_name')
+
+  // event data
+  const event = {
+    email: reqBody.email,
+    firstName: firstName,
+    group: reqBody.group,
+    ID: mandaiID
+  };
+
+  try {
+    // lambda invoke
+    const response = await lambdaService.lambdaInvokeFunction(event, functionName, req);
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', event, response);
+    // prepare response to client
+    return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
+
+  } catch (error) {
+   // prepare logs
+   let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIPS_ERR', event, error);
+   // prepare response to client
+   return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_RESEND_MEMBERSHIPS_ERR', 'RESEND_MEMBERSHIP', logObj);
+  }
+}
+
+/**
+ * Generate WP cardface
+ *
+ * @param {json} req
+ * @returns
+ */
+async function prepareWPCardfaceInvoke(req){
+   // integrate with cardface lambda
+   let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
+
+   let dob = commonService.convertDateHyphenFormat(req.body.dob);
+   // event data
+   const event = {
+      name: req.body.lastName +' '+ req.body.firstName,
+      dateOfBirth: dob,
+      mandaiId: req.body.mandaiID
+   };
+
+   try {
+    // lambda invoke
+    const response = await lambdaService.lambdaInvokeFunction(event, functionName, req);
+    if(response.statusCode === 200){
+      return response;
+    }
+    if([400, 500].includes(response.statusCode) ){
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
+      // prepare response to client
+      return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+    }
+  } catch (error) {
+
+
+    return error
+  }
+}
+
+/**
+ * Delete membership
+ *
+ * @param {json} req
+ * @returns
+ */
+async function deleteMembership(req){
+  // prepare update user array
+  const deleteUserArray = {
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: req.body.email,
+  }
+
+  var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
+
+  try {
+    var responseFromCognito = await client.send(setDeleteParams);
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, responseFromCognito);
+    // prepare response to client
+    let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_SUCCESS', 'DELETE_MEMBERSHIP', logObj);
+
+    return responseToClient;
+
+  } catch (error) {
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_ERR', deleteUserArray, error);
+    // prepare response to client
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_ERR', 'DELETE_MEMBERSHIP', logObj);
+
+    return responseErrorToClient;
+  }
+}
+
+
 
 // ***************************************************************
 // ********
@@ -310,9 +453,11 @@ function isJSONObject(obj) {
 
 /** export the module */
 module.exports = {
-  createUserService,
+  userSignupService,
   adminUpdateUser,
   getUserMembership,
+  resendUserMembership,
+  deleteMembership,
   processError,
   genSecretHash,
   processErrors

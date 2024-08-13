@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 // use dotenv
 require('dotenv').config();
 
@@ -28,16 +30,7 @@ function trimWhiteSpace (str){
 
 function prepareMembershipGroup(reqBody){
   // TODO: update expiry for future FOW, FOW+
-  return {"name":reqBody.group,"expiry":""};
-}
-
-/**
- * TODO - find a format
- * @param {} reqBody
- * @returns
- */
-function generateMandaiId(reqBody){
-  return "123456";
+  return {"name":reqBody.group,"visualID": reqBody.visualID,"expiry":""};
 }
 
 function setSource(reqHeaders){
@@ -118,6 +111,12 @@ function mapCognitoJsonObj(mappingJSON, inputJSON){
   return jsonC;
 }
 
+/**
+ *
+ * @param {json} inputJson
+ * @param {json} sourceCompare
+ * @returns
+ */
 function compareAndFilterJSON(inputJson, sourceCompare) {
   // Convert jsonB to a map for easier lookup
   const jsonBMap = new Map(sourceCompare.map(item => [item.Name, item.Value]));
@@ -132,13 +131,34 @@ function compareAndFilterJSON(inputJson, sourceCompare) {
   return result;
 }
 
+function findUserAttributeValue(userAttributes, attribute) {
+  // Find the attribute object where the Name matches the attribute input
+  const attributeObject = userAttributes.find(attr => attr.Name === attribute);
+
+  // Return the Value if the attribute object is found, otherwise return null
+  return attributeObject ? attributeObject.Value : null;
+}
+
+function decodeBase64(base64String) {
+  let buff = Buffer.from(base64String, 'base64');
+  let decodedString = buff.toString('utf8');
+  return decodedString;
+}
+
+function convertDateHyphenFormat(inputDate) {
+  const [day, month, year] = inputDate.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
-  generateMandaiId,
   setSource,
   isJsonNotEmpty,
   mapJsonObjects,
   mapCognitoJsonObj,
-  compareAndFilterJSON
+  compareAndFilterJSON,
+  findUserAttributeValue,
+  decodeBase64,
+  convertDateHyphenFormat
 }

@@ -1,8 +1,6 @@
 require('dotenv').config()
 const express = require('express');
 const router = express.Router();
-const multer  = require('multer');
-const upload = multer();
 
 const userController = require("./usersContollers" );
 const commonService = require('../../services/commonService');
@@ -24,8 +22,19 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
 
+  // validate request params is listed, NOTE: listedParams doesn't have email
+  var listedParams = commonService.mapCognitoJsonObj(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
+
+  if(commonService.isJsonNotEmpty(listedParams) === false){
+    return res.status(400).json({ error: 'Bad Requests' });
+  }
+
   if(valAppID === true){
     let newUser = await userController.adminCreateUser(req);
+
+    if('membership' in newUser && 'code' in newUser.membership){
+      return res.status(newUser.membership.code).json(newUser);
+    }
     return res.status(200).json(newUser);
   }
   else{
@@ -34,7 +43,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
 })
 
 /**
- * Update CIAM user info
+ * CIAM Update user info
  * Handling most HTTP validation here
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
@@ -43,41 +52,75 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
 
   // validate request params is listed, NOTE: listedParams doesn't have email
   var listedParams = commonService.mapCognitoJsonObj(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
-  // return res.status(200).json(listedParams);
+
   if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
   }
 
   if(valAppID === true){
     let updateUser = await userController.adminUpdateUser(req, listedParams);
+
+    if('membership' in updateUser && 'code' in updateUser.membership){
+      return res.status(updateUser.membership.code).json(updateUser);
+    }
     return res.status(200).json(updateUser);
-  }
-  else if(req.body === ''){
-    return res.status(400).send({ error: 'Bad Request' });
   }
   else{
     return res.status(401).send({ error: 'Unauthorized' });
   }
 })
 
+/**
+ * Resend wildpass
+ */
+router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
+
+  if(valAppID === true){
+    let resendUser = await userController.membershipResend(req);
+
+    let code = 200;
+    if('membership' in resendUser && 'code' in resendUser.membership){
+      code = resendUser.membership.code;
+    }
+    return res.status(200).json(resendUser);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+})
+
+/**
+ * Delete user in cognito
+ * only in dev/UAT
+ */
+router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
+  if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+    let deleteMember = await userController.membershipDelete(req);
+    return res.status(200).json({deleteMember});
+  }
+
+  return res.status(500).json({error: 'Not Implemented'});
+})
 
 router.post('/users/set-password', async (req, res) => {
-    let membersetPassword = await userController.adminSetUserPassword();
+    // let membersetPassword = await userController.adminSetUserPassword();
     return res.json({membersetPassword});
 })
 
 router.post('/users/login', async (req, res) => {
-    let memberLogin = await userController.userLogin();
+    // let memberLogin = await userController.userLogin();
     return resjson({memberLogin});
 })
 
 router.post('/users/reset-password', async (req, res) => {
-    let memberResetPassword = await memberships.userResetPassword();
+    // let memberResetPassword = await memberships.userResetPassword();
     return resjson({memberResetPassword});
 })
 
 router.post('/users/forgot-password', async (req, res) => {
-    let memberResetPassword = await memberships.userResetPassword();
+    // let memberResetPassword = await memberships.userResetPassword();
     return resjson({memberResetPassword});
 })
 
