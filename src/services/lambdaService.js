@@ -6,7 +6,7 @@ const loggerService = require('../logs/logger');
 const responseHelper = require('../helpers/responseHelpers');
 const commonService = require('../services/commonService');
 
-async function lambdaInvokeFunction(event, functionName, req){
+async function lambdaInvokeFunction(event, functionName){
   // build input
   const input = { // InvocationRequest
     FunctionName: functionName, // required

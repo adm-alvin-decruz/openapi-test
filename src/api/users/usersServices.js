@@ -90,6 +90,18 @@ async function cognitoCreateUser(req){
     // create user in Lambda
     var response = await client.send(newUserParams);
 
+    // send welcome email
+    let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
+    const emailTriggerData = {
+      email: req.body.email,
+      firstName: req.body.firstName,
+      group: req.body.group,
+      ID: req.body.mandaiID
+    };
+
+    // lambda invoke
+    response['email_trigger'] = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
     // prepare response to client
@@ -286,7 +298,7 @@ async function resendUserMembership(req, memberAttributes){
 
   try {
     // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName, req);
+    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
 
     // prepare logs
     let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', event, response);
@@ -321,7 +333,7 @@ async function prepareWPCardfaceInvoke(req){
 
    try {
     // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName, req);
+    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
     if(response.statusCode === 200){
       return response;
     }
