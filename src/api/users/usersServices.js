@@ -5,7 +5,7 @@
 
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
-  AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
+  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
@@ -91,7 +91,7 @@ async function cognitoCreateUser(req){
     var response = await client.send(newUserParams);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.createUserServiceA', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
+    let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
 
@@ -101,7 +101,7 @@ async function cognitoCreateUser(req){
 
   } catch (error) {
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.createUserServiceE', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
+    let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 

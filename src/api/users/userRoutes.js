@@ -96,12 +96,20 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
  * only in dev/UAT
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
-  if(['dev', 'uat'].includes(process.env.APP_ENV) ){
-    let deleteMember = await userController.membershipDelete(req);
-    return res.status(200).json({deleteMember});
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
+  if(valAppID === true){
+    if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+      let deleteMember = await userController.membershipDelete(req);
+      return res.status(200).json({deleteMember});
+    }
+    else{
+      return res.status(501).json({error: 'Not Implemented'});
+    }
   }
-
-  return res.status(500).json({error: 'Not Implemented'});
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
 })
 
 router.post('/users/set-password', async (req, res) => {

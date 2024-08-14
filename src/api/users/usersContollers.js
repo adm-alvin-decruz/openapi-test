@@ -140,19 +140,27 @@ async function membershipResend(req){
     }
     else if(memberInfo.status === 'not found'){
       // need to check to AEM and resend from there
-      let response = aemService.aemResendWildpass(req.body);
+      let response = await aemService.aemResendWildpass(req.body);
+
+      if(response.code === 200){
+        // prepare response resend success
+        let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, response);
+        // prepare error params response
+        return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', response, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
+      }
     }
-    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, response);
+    // Prepare response membership not found
+    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, memberInfo);
     // prepare error params response
-    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', response, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
+    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', memberInfo, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
   }
 
   // prepare error params response
   errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_PARAMS_ERR');
   // prepare logs
-  let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+  let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
   // prepare error params response
-  return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'RESEND_MEMBERSHIP', logObj);
+  return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'RESEND_MEMBERSHIP', logObj);
 }
 
 /**
