@@ -7,7 +7,7 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const membershipsService = require('././membershipsServices');
+const membershipsService = require('./membershipsServices');
 const AEMService = require('../../services/AEMService');
 
 /**
