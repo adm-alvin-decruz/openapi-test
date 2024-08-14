@@ -32,6 +32,35 @@ async function aemCheckWildPassByEmail (reqBody){
   return res;
 }
 
+/**
+ * TODO: WIP
+ * @param {json} reqBody
+ * @returns
+ */
+async function aemResendWildpass(reqBody){
+  // get env dev/uat/prod
+  const appEnv = process.env.APP_ENV
+  console.log(appEnv);
+  // get aem 'check email' url
+  const aemURL = buildAemURL (appEnv, "RESEND_WILDPASS");
+  console.log(aemURL);
+
+  // send post checkemail to aem
+  const formData = new FormData();
+  formData.append('email', reqBody.email);
+
+  var res = await axios.post(aemURL, formData)
+    .then(response => {
+      // return response.data
+      console.log('response: ', response.data);
+    })
+    .catch(error => {
+      console.log(error);
+    });
+
+  return res;
+}
+
 function buildAemURL (appEnv, service){
   var aemEnvUrl = process.env.AEM_URL;
   let aemServicePath = 'AEM_PATH_'+service.toUpperCase();
@@ -40,5 +69,6 @@ function buildAemURL (appEnv, service){
 }
 
 module.exports = {
-  aemCheckWildPassByEmail
+  aemCheckWildPassByEmail,
+  aemResendWildpass
 };

@@ -12,6 +12,7 @@ const validationService = require('../../services/validationService');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
+const aemService = require('../../services/AEMService');
 
 /**
  * Function listAll users
@@ -137,9 +138,13 @@ async function membershipResend(req){
       var response = await usersService.resendUserMembership(req, memberInfo.data.UserAttributes);
       return response;
     }
-    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, validatedParams);
+    else if(memberInfo.status === 'not found'){
+      // need to check to AEM and resend from there
+      let response = aemService.aemResendWildpass(req.body);
+    }
+    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, response);
     // prepare error params response
-    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', validatedParams, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
+    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', response, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
   }
 
   // prepare error params response
