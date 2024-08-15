@@ -67,7 +67,7 @@ jobs:
     - name: Terraform Plan
       working-directory: ./infra/terraform
       run: |
-        terraform plan -var-file ${{ github.event.inputs.app-environment }}.tfvars -var role_arn=${{ secrets.role_arn}} -var external_id=${{ secrets.external_id }} -var USER_POOL_CLIENT_SECRET={{ secrets.USER_POOL_CLIENT_SECRET }} -out out.terraform
+        terraform plan -var-file ${{ github.event.inputs.app-environment }}.tfvars -var role_arn=${{ secrets.role_arn}} -var external_id=${{ secrets.external_id }} -var USER_POOL_CLIENT_SECRET=${{ secrets.USER_POOL_CLIENT_SECRET }} -out out.terraform
 
     - name: Terraform Apply
       if: github.event.inputs.action_type == 'apply'
