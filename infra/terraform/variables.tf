@@ -97,3 +97,35 @@ variable "USER_POOL_ID" {
   description = "USER_POOL_ID"
   default = ""
 }
+
+variable "LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION" {
+  description = "LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION"
+  default = ""
+}
+
+variable "LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION" {}
+
+variable "USER_POOL_CLIENT_ID" {}
+
+variable "USER_POOL_CLIENT_SECRET" {}
+
+variable "SOURCE_MAPPING" {}
+
+variable "WILDPASS_SOURCE_COGNITO_MAPPING" {}
+
+variable "SIGNUP_VALIDATE_PARAMS" {}
+
+variable "RESEND_VALIDATE_PARAMS" {}
+
+variable "USERS_SIGNUP_API_RESPONSE_CONFIG" {}
+
+variable "USERS_UPDATE_API_RESPONSE_CONFIG" {}
+
+variable "RESEND_MEMBERSHIP_API_RESPONSE_CONFIG" {}
+
+variable "DELETE_MEMBERSHIP_API_RESPONSE_CONFIG" {}
+
+variable "GALAXY_URL_IMPORT_PASS" {}
+
+variable "GALAXY_URL_UPDATE_PASS" {}
+"
