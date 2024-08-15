@@ -9,7 +9,6 @@ jobs:
     if: ${{contains(github.repository, 'MandaiWildlifeReserves')}}
     name: SonarQube scan
     runs-on: shared-runner
-    environment: prod
     steps:
     - name: Checking out
       uses: actions/checkout@v3
@@ -65,7 +64,6 @@ jobs:
     if: ${{contains(github.repository, 'MandaiWildlifeReserves')}}
     name: trivy-scan-repo
     runs-on: ubuntu-latest
-    environment: prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -109,7 +107,6 @@ jobs:
     if: ${{contains(github.repository, 'MandaiWildlifeReserves')}}
     name: trivy-scan-config
     runs-on: ubuntu-latest
-    environment: prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
