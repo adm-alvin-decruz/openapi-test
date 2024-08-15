@@ -41,7 +41,7 @@ jobs:
 
       - name: Scan current project
         id: grype-scan-repo
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v4
         with:
           path: "."
           fail-build: true
@@ -56,7 +56,7 @@ jobs:
 
       - name: upload Anchore Grype scan repo SARIF report
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.grype-scan-repo.outputs.sarif }}
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: upload trivy scan repo SARIF report
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-repo-scan-results.sarif'
 
@@ -142,7 +142,7 @@ jobs:
 
       - name: upload trivy scan config SARIF report
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-config-scan-results.sarif'
 
