@@ -5,6 +5,7 @@
 
 // use dotenv
 require('dotenv').config();
+const resConfig = require('../../config/responseConfig');
 
 /**
  * Function to process membership data
@@ -32,7 +33,8 @@ function processMembership(data, reqBody){
  */
 function processResponse(attr='', reqBody, mwgCode){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  var resConfigVar = JSON.parse(process.env.MEMBERSHIPS_API_RESPONSE_CONFIG);
+  console.log("config: ", resConfig)
+  var resConfigVar = resConfig.MEMBERSHIPS_API_RESPONSE_CONFIG;
   var resConfig = resConfigVar[mwgCode];
 
   // step2: process membership group
