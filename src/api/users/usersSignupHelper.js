@@ -1,4 +1,10 @@
 const crypto = require('crypto');
+// db
+const userModel = require('../../db/models/userModel');
+const userMembershipModel = require('../../db/models/userMembershipModel');
+const userNewsletterModel = require('../../db/models/userNewletterModel');
+const userCredentialModel = require('../../db/models/userCredentialModel');
+const log = [];
 
 /**
  * Generate mandaiID
@@ -107,4 +113,66 @@ function generateVisualID(reqBody) {
   return `${year}${sources[source]}${groups[group]}${month}${numbers}`;
 }
 
-module.exports = {generateMandaiID, generateVisualID};
+async function createUserSignupDB(req){
+  let response = [];
+  // insert to user table
+  let useID = await insertUser(req);
+  // insert to membership table
+  response['new_user_membership'] = await insertUserMembership(req, userID);
+
+  // insert to newsletter table
+
+  // insert to credential table
+
+  return response
+}
+
+async function insertUser(req){
+  // process source
+  let envSource = JSON.parse(process.env.SOURCE_DB_MAPPING);
+
+  try {
+    // Create a new user
+    const userId = await userModel.create({
+      email: req.body.email,
+      given_name: req.body.firstName,
+      family_name: req.body.lastName,
+      birthdate: req.body.dob,
+      mandai_id: req.body.mandaiID,
+      source: envSource[req.body.source],
+      active: true
+    });
+
+    return userId;
+
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function insertUserMembership(){
+  // process membership data
+  try {
+    // Create a new user
+    const userId = await userModel.create({
+      email: req.body.email,
+      given_name: req.body.firstName,
+      family_name: req.body.lastName,
+      birthdate: req.body.dob,
+      mandai_id: req.body.mandaiID,
+      source: envSource[req.body.source],
+      active: true
+    });
+
+    return userId;
+
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+module.exports = {
+  generateMandaiID,
+  generateVisualID,
+  createUserSignupDB
+};

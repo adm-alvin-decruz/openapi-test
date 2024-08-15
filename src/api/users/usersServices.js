@@ -20,6 +20,7 @@ const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
 const passkitService = require('../../services/passkitService');
 const usersSignupHelper = require('./usersSignupHelper');
+const emailService = require('./usersEmailService');
 
 /**
  * Function User signup service
@@ -43,7 +44,6 @@ async function userSignupService(req){
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
   }
-  // TODO: save users into DB
 
   // call cognitoCreateUser function
   return cognitoCreateUser(req);
@@ -88,19 +88,13 @@ async function cognitoCreateUser(req){
 
   try {
     // create user in Lambda
-    var response = await client.send(newUserParams);
+    var response = [];//await client.send(newUserParams);
 
     // send welcome email
-    let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
-    const emailTriggerData = {
-      email: req.body.email,
-      firstName: req.body.firstName,
-      group: req.body.group,
-      ID: req.body.mandaiID
-    };
+    // response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
 
-    // lambda invoke
-    response['email_trigger'] = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+    // save to DB
+    response['db'] = await usersSignupHelper.createUserSignupDB(req);
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
@@ -285,23 +279,15 @@ async function resendUserMembership(req, memberAttributes){
   let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
 
   // find user attribute value for mandaiID
-  mandaiID = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
-  firstName = commonService.findUserAttributeValue(memberAttributes, 'given_name')
-
-  // event data
-  const event = {
-    email: reqBody.email,
-    firstName: firstName,
-    group: reqBody.group,
-    ID: mandaiID
-  };
+  reqBody['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
+  reqBody['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
 
   try {
-    // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+    // resend wildpass email
+    const response  = await emailService.lambdaSendEmail(reqBody);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', event, response);
+    let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', memberAttributes, response);
     // prepare response to client
     return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
 

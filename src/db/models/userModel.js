@@ -1,0 +1,62 @@
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+
+class User {
+  static async create(userData) {
+    const now = getCurrentUTCTimestamp();
+    const sql = `
+      INSERT INTO users
+      (email, given_name, family_name, birthdate, mandai_id, source, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      userData.email,
+      userData.given_name,
+      userData.family_name,
+      convertDateToMySQLFormat(userData.birthdate),
+      userData.mandai_id,
+      userData.source,
+      userData.active,
+      now,
+      now
+    ];
+    const result = await pool.execute(sql, params);
+    return result.insertId;
+  }
+
+  static async findById(id) {
+    const sql = 'SELECT * FROM users WHERE id = ?';
+    const [rows] = await pool.query(sql, [id]);
+    return rows[0];
+  }
+
+  static async update(id, userData) {
+    const now = getCurrentUTCTimestamp();
+    const sql = `
+      UPDATE users
+      SET email = ?, given_name = ?, family_name = ?, birthdate = ?,
+          mandai_id = ?, source = ?, active = ?, updated_at = ?
+      WHERE id = ?
+    `;
+    const params = [
+      userData.email,
+      userData.given_name,
+      userData.family_name,
+      userData.birthdate,
+      userData.mandai_id,
+      userData.source,
+      userData.active,
+      now,
+      id
+    ];
+    await pool.execute(sql, params);
+  }
+
+  static async delete(id) {
+    const now = getCurrentUTCTimestamp();
+    const sql = 'UPDATE users SET active = false, updated_at = ? WHERE id = ?';
+    await pool.execute(sql, [now, id]);
+  }
+}
+
+module.exports = User;
