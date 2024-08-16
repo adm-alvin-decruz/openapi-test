@@ -20,6 +20,7 @@ const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
 const passkitService = require('../../services/passkitService');
 const usersSignupHelper = require('./usersSignupHelper');
+const userConfig = require('../../config/usersConfig');
 
 /**
  * Function User signup service
@@ -231,8 +232,7 @@ function genSecretHash(username, clientId, clientSecret) {
  * @returns
  */
 function processError(attr='', reqBody, mwgCode){
-  const valVarName = 'SIGNUP_VALIDATE_PARAMS';
-  const validationVar = JSON.parse(process.env[valVarName]);
+  const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   if(attr === 'email' && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
     // replace string
@@ -243,8 +243,7 @@ function processError(attr='', reqBody, mwgCode){
 }
 
 function processErrors(attr, reqBody, mwgCode){
-  const valVarName = 'SIGNUP_VALIDATE_PARAMS';
-  const validationVar = JSON.parse(process.env[valVarName]);
+  const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   let errors = {};
   if(commonService.isJsonNotEmpty(attr) && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
