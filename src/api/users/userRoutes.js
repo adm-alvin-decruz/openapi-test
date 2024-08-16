@@ -6,6 +6,7 @@ const userController = require("./usersContollers" );
 const commonService = require('../../services/commonService');
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
+const userConfig = require('../../config/usersConfig');
 
 const pong = {'pong': 'pang'};
 
@@ -23,7 +24,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   var valAppID = validationService.validateAppID(req.headers);
 
   // validate request params is listed, NOTE: listedParams doesn't have email
-  var listedParams = commonService.mapCognitoJsonObj(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
+  var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
   if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
@@ -51,7 +52,7 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   var valAppID = validationService.validateAppID(req.headers);
 
   // validate request params is listed, NOTE: listedParams doesn't have email
-  var listedParams = commonService.mapCognitoJsonObj(process.env.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
+  var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
   if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
