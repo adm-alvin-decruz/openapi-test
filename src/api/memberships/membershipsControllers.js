@@ -55,25 +55,24 @@ async function adminGetUser(reqBody){
 
   try {
     var response = await client.send(command);
-    result = membershipsService.processMembership(response, reqBody);
+    response = await membershipsService.processResponse(response, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
   } catch (error) {
     if(process.env.APP_LOG_SWITCH === 'true'){
-      console.log(error);
+      console.error(error);
     }
     if(error.name === 'UserNotFoundException'){
-      // prepare response membership not found
-      result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
       // check to AEM checkemail for group = wildpass
-      result = checkEmailInAem(reqBody);
+      response = await checkEmailInAem(reqBody);
     }else{
-      result = membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
+      response = await membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
     }
   }
 
   if(process.env.APP_LOG_SWITCH === 'true'){
-      console.log(result);
-    }
-  return result;
+    response['source'] = 'ciam';
+    console.log(response);
+  }
+  return response;
 }
 
 /**
@@ -110,16 +109,21 @@ async function checkEmailInAem(reqBody){
   if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
     var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
     var noMembership = aemResponse.data.valid;
+
     if(noMembership === 'true'){
       // means email has no membership in aem
-      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
+      response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
     }else {
       // has membership in aem and success
-      result = membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+      response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
     }
-    console.log(aemResponse);
+    if(process.env.APP_LOG_SWITCH === 'true'){
+      response['source'] = 'aem';
+      console.log(aemResponse);
+      // NOTE: don't log response here because caller function (adminGetUser) is logged
+    }
   }
-  return result
+  return response
 }
 
 /**

@@ -1,7 +1,8 @@
 const crypto = require('crypto');
-
 // use dotenv
 require('dotenv').config();
+
+const userConfig = require('../config/usersConfig');
 
 /**
  * Function cleanData
@@ -35,7 +36,7 @@ function prepareMembershipGroup(reqBody){
 
 function setSource(reqHeaders){
   const mwgAppID = reqHeaders['mwg-app-id'];
-  let sourceMap = JSON.parse(process.env.SOURCE_MAPPING);
+  let sourceMap = JSON.parse(userConfig.SOURCE_MAPPING);
   return sourceMap[mwgAppID];
 }
 
@@ -131,6 +132,13 @@ function compareAndFilterJSON(inputJson, sourceCompare) {
   return result;
 }
 
+/**
+ * Find user attributes from cognito
+ *
+ * @param {json} userAttributes
+ * @param {string} attribute
+ * @returns
+ */
 function findUserAttributeValue(userAttributes, attribute) {
   // Find the attribute object where the Name matches the attribute input
   const attributeObject = userAttributes.find(attr => attr.Name === attribute);
@@ -149,6 +157,19 @@ function convertDateHyphenFormat(inputDate) {
   const [day, month, year] = inputDate.split('/');
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
+/**
+ * {"name":"wildpass","visualID":"24110876643220562330","expiry":""}
+ *
+ * @param {json} jsonObj
+ * @param {string} objKey
+ */
+function findJsonObjValue(jsonObj, objKey){
+  for (const key in jsonObj) {
+    if(jsonObj[key] === objKey){
+      return jsonObj[key];
+    }
+  }
+}
 
 module.exports = {
   cleanData,
@@ -159,6 +180,7 @@ module.exports = {
   mapCognitoJsonObj,
   compareAndFilterJSON,
   findUserAttributeValue,
+  findJsonObjValue,
   decodeBase64,
   convertDateHyphenFormat
 }

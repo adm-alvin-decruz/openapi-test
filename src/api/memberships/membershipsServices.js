@@ -5,7 +5,7 @@
 
 // use dotenv
 require('dotenv').config();
-const resConfig = require('../../config/responseConfig');
+const responseConfig = require('../../config/membershipConfig');
 
 /**
  * Function to process membership data
@@ -31,18 +31,17 @@ function processMembership(data, reqBody){
  * @param {int} statusCode status code 200 | 400 | 501
  * @returns
  */
-function processResponse(attr='', reqBody, mwgCode){
+async function processResponse(attr='', reqBody, mwgCode){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  console.log("config: ", resConfig)
-  var resConfigVar = resConfig.MEMBERSHIPS_API_RESPONSE_CONFIG;
+  var resConfigVar = JSON.parse(responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG);
   var resConfig = resConfigVar[mwgCode];
 
   // step2: process membership group
   // check if attr is JSON with consideration of aem checkemail response
-  const isJsonAttr = isJSONObject(attr);
+  const isJsonAttr = isJSONObject(attr.UserAttributes);
 
   if(resConfig.status === 'success' && isJsonAttr){
-    var group = processGroup(attr, reqBody);
+    var group = processMembership(attr, reqBody);
   }
   // handle aem checkemail api response
   else if (!isJsonAttr && attr === 'aem'){
@@ -54,17 +53,19 @@ function processResponse(attr='', reqBody, mwgCode){
   }
 
   // step3: craft response JSON
-  return {
+  let resJson = {
     "membership": {
       "group": group,
       "code": resConfig.code,
       "mwgCode": resConfig.mwgCode,
       "message": resConfig.message,
-      "email": reqBody.email
+      "email": reqBody.email,
     },
     "status": resConfig.status,
     "statusCode": resConfig.code
     }
+
+  return resJson;
 }
 
 /**
@@ -74,16 +75,15 @@ function processResponse(attr='', reqBody, mwgCode){
  * @param {json} reqBody request body
  * @returns json group object
  */
-function processGroup(attr, reqBody){
+function processMembership(attr, reqBody){
   var reqGroupName = reqBody.group;
-  grpAttr = loopAttr(attr, 'custom:group', '');
+  let grpAttr = loopAttr(attr, 'custom:membership', '');
 
   // parse JSON
   if(grpAttr != false){
-    grpJson = JSON.parse(grpAttr.Value);
-    var grpObj = loopAttr(grpJson, reqGroupName, 'expiry');
-    if(grpObj != false){
-      return {[grpObj.name]: true};
+    let grpJson = JSON.parse(grpAttr.Value);
+    if(grpJson != false){
+      return {[grpJson.name]: true};
     }
   }
 
@@ -99,18 +99,20 @@ function processGroup(attr, reqBody){
  * @returns json object
  */
 function loopAttr(attr, name, value=''){
-  var attrObj = false;
-  attr.forEach(function(attribute) {
-    if(attribute.Name === name || attribute.name === name){
-      if(value != '' || attribute.Value === value){
+  var foundAttr = false;
+  let userAttr = attr.UserAttributes;
+
+  Object.keys(userAttr).forEach(key => {
+    if(userAttr[key].Name === name || key === name){
+      if(value != '' || userAttr[key].Value === value){
       // attr found, return
-      attrObj = attribute;
+      foundAttr = key;
       } else {
-        attrObj = attribute;
+        foundAttr = userAttr[key];
       }
     }
   });
-  return attrObj;
+  return foundAttr;
 }
 
 function processAemGroup(reqBody, exist){
