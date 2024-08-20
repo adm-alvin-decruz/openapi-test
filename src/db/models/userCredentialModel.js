@@ -19,7 +19,6 @@ class UserCredential {
       now,
       now
     ];
-    console.log(params);
     const result = await pool.execute(sql, params);
     return {
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
