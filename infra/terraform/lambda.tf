@@ -1,11 +1,51 @@
-#data "aws_s3_bucket" "billing" {
-#  bucket = var.s3_bucket
-#}
+data "aws_kms_alias" "s3" {
+  name = "alias/aws/s3"
+}
 
-#data "aws_s3_object" "billing" {
-#  bucket = data.aws_s3_bucket.billing.id
-#  key    = var.s3_key
-#}
+resource "aws_s3_bucket" "ciam" {
+  bucket = "${var.project}-${var.env}"
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+}
+
+resource "aws_s3_bucket_ownership_controls" "ciam" {
+  bucket = aws_s3_bucket.ciam.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "ciam" {
+  depends_on = [aws_s3_bucket_ownership_controls.ciam]
+
+  bucket = aws_s3_bucket.ciam.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "ciam" {
+        bucket = aws_s3_bucket.ciam.id
+        ignore_public_acls = true   
+        restrict_public_buckets = true
+        block_public_policy = true 
+        block_public_acls = true
+ }
+
+resource "aws_s3_object" "ciam" {
+  bucket = aws_s3_bucket.ciam.id
+  key    = "packages/app-${var.github_hash}.zip"
+  source = "files/app-${var.github_hash}.zip"
+  server_side_encryption = "aws:kms"
+
+  # The filemd5() function is available in Terraform 0.11.12 and later
+  # For Terraform 0.11.11 and earlier, use the md5() function and the file() function:
+  # etag = "${md5(file("path/to/file"))}"
+  etag = filemd5("files/app-${var.github_hash}.zip")
+}
 
 module "lambda_function_ciam_membership" {
   source = "terraform-aws-modules/lambda/aws"
@@ -16,13 +56,12 @@ module "lambda_function_ciam_membership" {
   runtime       = "nodejs20.x"
   timeout       = 30
   create_package      = false
-  local_existing_package = "files/app.zip"
   ignore_source_code_hash = false
   cloudwatch_logs_retention_in_days = var.cloudwatch_logs_retention_in_days
-#  s3_existing_package = {
-#    bucket         = data.aws_s3_object.billing.bucket
-#    key            = data.aws_s3_object.billing.key
-#  }
+  s3_existing_package = {
+    bucket         = aws_s3_object.ciam.bucket
+    key            = aws_s3_object.ciam.key
+  }
   environment_variables = {
     LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION = data.terraform_remote_state.email_trigger_function.outputs.lambda_name
     LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION = data.terraform_remote_state.card_face_generator_function.outputs.lambda_name

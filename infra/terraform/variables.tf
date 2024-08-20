@@ -127,3 +127,6 @@ variable "GALAXY_URL_IMPORT_PASS" {}
 
 variable "GALAXY_URL_UPDATE_PASS" {}
 
+variable "github_hash" {
+  description = "goithub commit hash"
+}
