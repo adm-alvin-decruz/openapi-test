@@ -8,6 +8,7 @@ const {
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
+const passwordService = require('../users/userPasswordService');
 
 // use dotenv
 require('dotenv').config();
@@ -20,7 +21,11 @@ const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
 const passkitService = require('../../services/passkitService');
 const usersSignupHelper = require('./usersSignupHelper');
+const userConfig = require('../../config/usersConfig');
 const emailService = require('./usersEmailService');
+const userDBService = require('./usersDBService');
+const userUpdateHelper = require('./usersUpdateHelpers');
+const userDeleteHelper = require('./usersDeleteHelpers');
 
 /**
  * Function User signup service
@@ -60,7 +65,7 @@ async function cognitoCreateUser(req){
   const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email,
-    TemporaryPassword: "Password123#",
+    TemporaryPassword: passwordService.generatePassword(8),
     DesiredDeliveryMediums: ["EMAIL"],
     MessageAction: "SUPPRESS", // disable send verification email temp password
     UserAttributes: [
@@ -88,12 +93,13 @@ async function cognitoCreateUser(req){
 
   try {
     // create user in Lambda
-    var response = [];//await client.send(newUserParams);
+    var response = await client.send(newUserParams);
 
     // send welcome email
-    // response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
+    response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
 
     // save to DB
+    req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
     response['db'] = await usersSignupHelper.createUserSignupDB(req);
 
     // prepare logs
@@ -127,16 +133,17 @@ async function getUserMembership(req){
   };
 
   const getUserCommand = new AdminGetUserCommand(getMemberJson);
-
+  var response = {};
   try {
-    var response = await client.send(getUserCommand);
-    // var result = {"status": "success", "data": response};
+    // get from cognito
+    response['cognitoUser'] = await client.send(getUserCommand);
+    // read from database
+    response['db_user'] = await userDBService.getDBUserByEmail(req.body);
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
     // prepare response to client
     let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
-    console.log(responseToInternal);
     return responseToInternal;
 
   } catch (error) {
@@ -163,39 +170,40 @@ async function getUserMembership(req){
 /**
  * Update user CIAM info
  */
-async function adminUpdateUser (req, listedParams, userAttributes){
-  // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
-
+async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
-  // let firstName = (reqBody.firstName === undefined) ? ''
-  let name = usersUpdateHelpers.createNameParameter(req.body, userAttributes);
-  listedParams.push(name);
+  let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
+  ciamComparedParams.push(name);
 
   // prepare update user array
   const updateUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
-    Username: reqBody.email,
-    UserAttributes: listedParams
+    Username: req.body.email,
+    UserAttributes: ciamComparedParams
   }
 
   var setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
 
+  const response = [];
+
   try {
-    var responseFromCognito = await client.send(setUpdateParams);
+    response['update_user_cognito'] = await client.send(setUpdateParams);
+
+    // save to DB
+    response['update_user_db'] = await userUpdateHelper.updateDBUserInfo(req.body, prepareDBUpdateData, membershipData.db_user);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, responseFromCognito);
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, response);
     // prepare response to client
-    let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
+    let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
     return responseToClient;
 
   } catch (error) {
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', updateUserArray, error);
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', updateUserArray, error);
     // prepare response to client
-    let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_UPDATE', logObj);
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
 
     return responseErrorToClient;
   }
@@ -225,8 +233,7 @@ function genSecretHash(username, clientId, clientSecret) {
  * @returns
  */
 function processError(attr='', reqBody, mwgCode){
-  const valVarName = 'SIGNUP_VALIDATE_PARAMS';
-  const validationVar = JSON.parse(process.env[valVarName]);
+  const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   if(attr === 'email' && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
     // replace string
@@ -237,8 +244,7 @@ function processError(attr='', reqBody, mwgCode){
 }
 
 function processErrors(attr, reqBody, mwgCode){
-  const valVarName = 'SIGNUP_VALIDATE_PARAMS';
-  const validationVar = JSON.parse(process.env[valVarName]);
+  const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   let errors = {};
   if(commonService.isJsonNotEmpty(attr) && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
@@ -342,7 +348,7 @@ async function prepareWPCardfaceInvoke(req){
  * @param {json} req
  * @returns
  */
-async function deleteMembership(req){
+async function deleteMembership(req, membershipData){
   // prepare update user array
   const deleteUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
@@ -351,11 +357,16 @@ async function deleteMembership(req){
 
   var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
 
+  const response = [];
   try {
-    var responseFromCognito = await client.send(setDeleteParams);
+    // delete from cognito
+    response['delete_user_cognito'] = await client.send(setDeleteParams);
+
+    // delete from DB
+    response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(req.body, membershipData.db_user);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, responseFromCognito);
+    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_SUCCESS', 'DELETE_MEMBERSHIP', logObj);
 

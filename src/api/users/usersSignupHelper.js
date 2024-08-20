@@ -4,6 +4,8 @@ const userModel = require('../../db/models/userModel');
 const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
+const userDetailModel = require('../../db/models/userDetailsModel');
+const dbConfig = require('../../config/dbConfig');
 const log = [];
 
 /**
@@ -114,26 +116,48 @@ function generateVisualID(reqBody) {
 }
 
 async function createUserSignupDB(req){
-  let response = [];
   // insert to user table
-  let useID = await insertUser(req);
-  // insert to membership table
-  response['new_user_membership'] = await insertUserMembership(req, userID);
+  let newUserResult= await insertUser(req);
+  if(!newUserResult.error){
+    // insert to membership table
+    let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
+    // insert to newsletter table
+    let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id);
+    // insert to credential table
+    let newUserCredentialResult = await insertUserCredential(req, newUserResult.user_id);
+    // if group non wildpass, insert user credential
+    let response = {
+      newUserResult: JSON.stringify(newUserResult),
+      newMembershipResult: JSON.stringify(newMembershipResult),
+      newUserNewsLetterResult: JSON.stringify(newUserNewsLetterResult),
+      newUserCredentialResult: JSON.stringify(newUserCredentialResult)
+    }
+    if(req.body.group !== 'wildpass'){
+      // TODO: insert user details
+      response['newUserDetailResult'] = await insertUserDetail(req, newUserResult.user_id);
+    }
 
-  // insert to newsletter table
+    return response;
+  }
+  else{
+    throw newUserResult;
+  }
 
-  // insert to credential table
-
-  return response
 }
 
+/**
+ * Function Insert User to DB
+ *
+ * @param {json} req
+ * @returns
+ */
 async function insertUser(req){
   // process source
-  let envSource = JSON.parse(process.env.SOURCE_DB_MAPPING);
+  let envSource = JSON.parse(dbConfig.SOURCE_DB_MAPPING);
 
   try {
     // Create a new user
-    const userId = await userModel.create({
+    const result = await userModel.create({
       email: req.body.email,
       given_name: req.body.firstName,
       family_name: req.body.lastName,
@@ -143,31 +167,125 @@ async function insertUser(req){
       active: true
     });
 
-    return userId;
+    return result;
 
   } catch (error) {
-    console.error('Error:', error);
+    return {error: error};
   }
 }
 
-async function insertUserMembership(){
+/**
+ * Function insert User Membership to DB
+ *
+ * @param {json} req
+ * @param {string} dbUserID
+ * @returns
+ */
+async function insertUserMembership(req, dbUserID){
   // process membership data
+  let expireDate = null; //TODO: update expiry for fow fow+
+  if(req.body.group === 'wildpass'){
+    let expireDate = null;
+  }
+
   try {
     // Create a new user
-    const userId = await userModel.create({
-      email: req.body.email,
-      given_name: req.body.firstName,
-      family_name: req.body.lastName,
-      birthdate: req.body.dob,
-      mandai_id: req.body.mandaiID,
-      source: envSource[req.body.source],
-      active: true
+    const result = await userMembershipModel.create({
+      user_id: dbUserID,
+      name: req.body.group,
+      visual_id: req.body.visualID,
+      expires_at: expireDate
     });
 
-    return userId;
+    return result;
 
   } catch (error) {
-    console.error('Error:', error);
+    throw error
+  }
+}
+
+/**
+ * Insert user'r newsletter to DB
+ *
+ * @param {json} req
+ * @param {string} dbUserID
+ * @returns
+ */
+async function insertUserNewletter(req, dbUserID){
+  // process newsletter
+  if(typeof req.body.newsletter != 'undefined'){
+    var newsletterName = req.body.newsletter.name;
+    var newslettertype = req.body.newsletter.type;
+    var newsletterSubs = req.body.newsletter.subscribe;
+  }
+  try {
+    // Create a new user
+    const result = await userNewsletterModel.create({
+      user_id: dbUserID,
+      name: newsletterName,
+      type: newslettertype,
+      subscribe: newsletterSubs
+    });
+
+    return result;
+
+  } catch (error) {
+    throw error;
+  }
+}
+/**
+ * Insert user's credential to DB
+ *
+ * @param {json} req
+ * @param {str} dbUserID
+ * @returns
+ */
+async function insertUserCredential(req, dbUserID){
+  // process credential data
+
+  try {
+    // Create a new user
+    const result = await userCredentialModel.create({
+      user_id: dbUserID,
+      username: req.body.email, // cognito username is email
+      password_hash: req.body.password,
+      tokens: null,
+      last_login: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    });
+
+    return result;
+
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Insert user's detail to DB
+ *
+ * @param {json} req
+ * @param {string} dbUserID
+ * @returns
+ */
+async function insertUserDetail(req, dbUserID){
+  // process user detail
+  try {
+    // Create a new user
+    const result = await userDetailModel.create({
+      user_id: dbUserID,
+      phone_number: '+1234567890',
+      zoneinfo: 'SG',
+      address: '123 Main St, City, Country',
+      picture: null,
+      vehicle_iu: 'IU123456',
+      vehicle_plate: 'ABC123',
+      extra: { favorite_color: 'blue' }
+    });
+
+    return result;
+
+  } catch (error) {
+    throw error;
   }
 }
 

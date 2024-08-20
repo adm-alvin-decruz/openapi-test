@@ -33,8 +33,11 @@ function build(moduleName, action, req, mwgCode, endpointReqObj, responseFromEnd
         "api_body": req.body,
         "mwgCode": mwgCode
   },
-    endoint_request_array: JSON.stringify(endpointReqObj),
-    endpoint_response: JSON.stringify(responseFromEndpoint),
+    endoint_request_array: JSON.stringify(endpointReqObj)
+  }
+  logObj['endpoint_response'] = responseFromEndpoint;
+  if (typeof responseFromEndpoint === 'object') {
+    logObj['endpoint_response'] = JSON.stringify(responseFromEndpoint);
   }
 
   return logObj;

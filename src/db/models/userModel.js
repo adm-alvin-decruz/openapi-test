@@ -1,5 +1,6 @@
 const pool = require('../connections/mysqlConn');
 const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
 
 class User {
   static async create(userData) {
@@ -21,7 +22,11 @@ class User {
       now
     ];
     const result = await pool.execute(sql, params);
-    return result.insertId;
+
+    return {
+      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+      user_id: result.insertId
+    };
   }
 
   static async findById(id) {
@@ -30,32 +35,92 @@ class User {
     return rows[0];
   }
 
+  static async findByEmail(email) {
+    try{
+      const sql = 'SELECT * FROM users WHERE email = ?';
+      const rows = await pool.query(sql, [email]);
+      return rows[0];
+    }
+    catch (error){
+      return error;
+    }
+
+  }
+
+  // static async update(id, userData) {
+  //   const now = getCurrentUTCTimestamp();
+  //   const sql = `
+  //     UPDATE users
+  //     SET email = ?, given_name = ?, family_name = ?, birthdate = ?,
+  //         mandai_id = ?, source = ?, active = ?, updated_at = ?
+  //     WHERE id = ?
+  //   `;
+  //   const params = [
+  //     userData.email,
+  //     userData.given_name,
+  //     userData.family_name,
+  //     userData.birthdate,
+  //     userData.mandai_id,
+  //     userData.source,
+  //     userData.active,
+  //     now,
+  //     id
+  //   ];
+  //   await pool.execute(sql, params);
+  // }
+
   static async update(id, userData) {
     const now = getCurrentUTCTimestamp();
+
+    // Filter out undefined values and create SET clauses
+    const updateFields = Object.entries(userData)
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
+
+    // Add updated_at to the SET clauses
+    updateFields.push('updated_at = ?');
+
+    // Construct the SQL query
     const sql = `
       UPDATE users
-      SET email = ?, given_name = ?, family_name = ?, birthdate = ?,
-          mandai_id = ?, source = ?, active = ?, updated_at = ?
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `;
+
+    // Prepare the params array
     const params = [
-      userData.email,
-      userData.given_name,
-      userData.family_name,
-      userData.birthdate,
-      userData.mandai_id,
-      userData.source,
-      userData.active,
+      ...Object.values(userData).filter(value => value !== undefined),
       now,
       id
     ];
-    await pool.execute(sql, params);
+
+    // Execute the query
+    const result = await pool.execute(sql, params);
+
+    return {
+      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+      user_id: result.insertId
+    };
   }
 
   static async delete(id) {
     const now = getCurrentUTCTimestamp();
     const sql = 'UPDATE users SET active = false, updated_at = ? WHERE id = ?';
     await pool.execute(sql, [now, id]);
+  }
+
+  static async deletebyUserID(user_id){
+    try{
+      const sql = 'DELETE FROM users WHERE id = ?';
+      var result = await pool.execute(sql, [user_id]);
+
+      return JSON.stringify({
+        sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
+      });
+    }
+    catch (error){
+      throw error;
+    }
   }
 }
 

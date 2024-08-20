@@ -1,4 +1,5 @@
  const loggerService = require('../logs/logger');
+ const userConfig = require('../config/usersConfig');
 
 /**
  * Function process CIAM response
@@ -11,7 +12,7 @@
  */
 function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  let resConfigVar = JSON.parse(process.env[module+'_API_RESPONSE_CONFIG']);
+  let resConfigVar = JSON.parse(userConfig[module+'_API_RESPONSE_CONFIG']);
   let resConfig = resConfigVar[mwgCode];
 
   // step3: craft response JSON
@@ -52,7 +53,7 @@ function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logOb
   let responseToInternal = {"status": status, "data": response};
 
   // prepare logs
-  logObj['response_to_internal']= responseToInternal;
+  logObj['response_to_internal']= JSON.stringify(responseToInternal);
   loggerService.log(logObj);
 
   return responseToInternal;

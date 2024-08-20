@@ -1,5 +1,6 @@
 const pool = require('../connections/mysqlConn');
 const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
 
 class UserDetail {
   static async create(detailData) {
@@ -22,7 +23,10 @@ class UserDetail {
       now
     ];
     const result = await pool.execute(sql, params);
-    return result.insertId;
+    return {
+      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+      newsletter_id: result.insertId
+    };
   }
 
   static async findByUserId(userId) {
@@ -56,6 +60,20 @@ class UserDetail {
   static async delete(id) {
     const sql = 'DELETE FROM user_details WHERE id = ?';
     await pool.execute(sql, [id]);
+  }
+
+  static async deletebyUserID(user_id) {
+    try{
+      const sql = 'DELETE FROM user_details WHERE user_id = ?';
+      var result = await pool.execute(sql, [user_id]);
+
+      return JSON.stringify({
+        sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
+      });
+    }
+    catch(error){
+      throw error;
+    }
   }
 }
 

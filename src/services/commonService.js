@@ -1,7 +1,8 @@
 const crypto = require('crypto');
-
 // use dotenv
 require('dotenv').config();
+
+const userConfig = require('../config/usersConfig');
 
 /**
  * Function cleanData
@@ -35,7 +36,7 @@ function prepareMembershipGroup(reqBody){
 
 function setSource(reqHeaders){
   const mwgAppID = reqHeaders['mwg-app-id'];
-  let sourceMap = JSON.parse(process.env.SOURCE_MAPPING);
+  let sourceMap = JSON.parse(userConfig.SOURCE_MAPPING);
   return sourceMap[mwgAppID];
 }
 
@@ -87,6 +88,10 @@ function mapJsonObjects(mappingJSON, inputJson) {
 
 /**
  * Create a new cognito format JSON by mapping 'mappingJSON' & an input JSON from request
+ * {
+        "Name": "given_name",
+        "Value": "Kay"
+    }
  *
  * @param {JSON} mappingJSON
  * @param {JSON} inputJson
@@ -112,6 +117,8 @@ function mapCognitoJsonObj(mappingJSON, inputJSON){
 }
 
 /**
+ * Map input JSON to source format. If no change, return empty
+ * If any params change, will return the changed name and value
  *
  * @param {json} inputJson
  * @param {json} sourceCompare
@@ -131,6 +138,13 @@ function compareAndFilterJSON(inputJson, sourceCompare) {
   return result;
 }
 
+/**
+ * Find user attributes from cognito
+ *
+ * @param {json} userAttributes
+ * @param {string} attribute
+ * @returns
+ */
 function findUserAttributeValue(userAttributes, attribute) {
   // Find the attribute object where the Name matches the attribute input
   const attributeObject = userAttributes.find(attr => attr.Name === attribute);
@@ -149,6 +163,33 @@ function convertDateHyphenFormat(inputDate) {
   const [day, month, year] = inputDate.split('/');
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
+/**
+ * {"name":"wildpass","visualID":"24110876643220562330","expiry":""}
+ *
+ * @param {json} jsonObj
+ * @param {string} objKey
+ */
+function findJsonObjValue(jsonObj, objKey){
+  for (const key in jsonObj) {
+    if(jsonObj[key] === objKey){
+      return jsonObj[key];
+    }
+  }
+}
+
+function replaceSqlPlaceholders(sql, params) {
+  let index = 0;
+  return sql.replace(/\?/g, () => {
+    const value = params[index++];
+    if (typeof value === 'string') {
+      return `'${value.replace(/'/g, "''")}'`;
+    } else if (value === null) {
+      return 'NULL';
+    } else {
+      return value;
+    }
+  });
+}
 
 module.exports = {
   cleanData,
@@ -159,6 +200,8 @@ module.exports = {
   mapCognitoJsonObj,
   compareAndFilterJSON,
   findUserAttributeValue,
+  findJsonObjValue,
   decodeBase64,
-  convertDateHyphenFormat
+  convertDateHyphenFormat,
+  replaceSqlPlaceholders
 }

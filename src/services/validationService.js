@@ -1,3 +1,5 @@
+const userConfig = require('../config/usersConfig');
+
 /**
  * Validate App ID
  *
@@ -16,18 +18,6 @@ function validateAppID(reqHeader){
 	return false;
 }
 
-// function validateUserSignUp(reqBody){
-//   let valParams = validateParams(reqBody);
-//   if(valParams !== undefined || valParams.length > 0){
-//     // prepare error response
-//     Object.keys(valParams).forEach(function(key) {
-//       if(reqBody[key] === "undefined"){
-//         errorObj.push(key);
-//       }
-//     })
-//   }
-// }
-
 /**
  * Validate request parameters
  * Invalid Output similar: {"invalid":["firstName","lastName"],"dob":["dob"]}
@@ -36,7 +26,7 @@ function validateAppID(reqHeader){
  * @param {*} reqBody
  */
 function validateParams(reqBody, envVarName){
-  const validationVar = JSON.parse(process.env[envVarName]);
+  const validationVar = JSON.parse(userConfig[envVarName]);
 
   let errorObj = {'status': "success"};
   // check for invalid and dob

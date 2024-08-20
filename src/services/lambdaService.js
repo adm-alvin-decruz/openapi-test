@@ -26,7 +26,9 @@ async function lambdaInvokeFunction(event, functionName){
     // decode response base64
     // let decodedString = commonService.decodeBase64(response.LogResult);
     let decodedString = JSON.parse(Buffer.from(response.Payload));
-    decodedString["body"] = JSON.parse(decodedString.body);
+    if(decodedString.body){
+      decodedString["body"] = JSON.parse(decodedString.body);
+    }
 
     return decodedString;
 

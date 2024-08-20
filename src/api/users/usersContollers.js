@@ -13,6 +13,7 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const aemService = require('../../services/AEMService');
+const dbService = require('./usersDBService');
 
 /**
  * Function listAll users
@@ -95,12 +96,13 @@ async function adminUpdateUser (req, listedParams){
     var memberInfo = await usersService.getUserMembership(req);
 
     // compare input data vs membership info
-    let listedComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.UserAttributes);
+    let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
+    let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-    if(commonService.isJsonNotEmpty(listedComparedParams) === true){
+    if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
       if(memberInfo.status === 'success'){
         // user exist, can update info
-        var response = await usersService.adminUpdateUser(req, listedParams, memberInfo.data.UserAttributes);
+        var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
         return response;
       }
     }
@@ -175,7 +177,7 @@ async function membershipDelete(req){
 
   if(memberInfo.status === 'success'){
     // user exist, can update info
-    var response = await usersService.deleteMembership(req);
+    var response = await usersService.deleteMembership(req, memberInfo.data);
     return response;
   }
   let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, {});
