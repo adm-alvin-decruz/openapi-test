@@ -33,7 +33,7 @@ data "aws_iam_policy_document" "lambda" {
     sid = "1"
 
     actions = [
-      "cognito-idp:AdminGetUser",
+      "cognito-idp:Admin*",
     ]
 
     resources = [
