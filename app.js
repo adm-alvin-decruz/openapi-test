@@ -9,8 +9,8 @@ app.use(cors())
 app.use(express.json());
 
 // use routes
-app.use('/', membershipRoutes)
-app.use('/', userRoutes)
+app.use('/v1/ciam/', membershipRoutes)
+app.use('/v1/ciam/', userRoutes)
 
 const handler = serverless(app);
 
