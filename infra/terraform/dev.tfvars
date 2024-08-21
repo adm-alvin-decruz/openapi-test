@@ -1,5 +1,6 @@
 project = "ciam-membership"
 env = "dev"
+memory_size = 512
 layers = ["arn:aws:lambda:ap-southeast-1:451483290750:layer:NewRelicNodeJS20X:25"]
 NEW_RELIC_ACCOUNT_ID = "4510480"
 NEW_RELIC_USE_ESM = "true"
