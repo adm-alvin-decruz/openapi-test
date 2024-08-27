@@ -8,7 +8,12 @@ const convertDateToMySQLFormat = (dateString) => {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+function formatDateToMySQLDateTime(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 module.exports = {
   getCurrentUTCTimestamp,
-  convertDateToMySQLFormat
+  convertDateToMySQLFormat,
+  formatDateToMySQLDateTime
 };

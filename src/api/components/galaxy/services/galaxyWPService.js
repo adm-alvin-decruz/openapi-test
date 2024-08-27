@@ -1,21 +1,44 @@
-const axios = require('axios');
-const tokenService = require('./tokenService');
-const utils = require('../utils/utils');
+const ApiUtils = require('../../../../utils/apiUtils');
+const galaxyTokenService = require('./galaxyTokenService');
+const galaxyConf = require('../config/galaxyConfig');
+const galaxyCmnService = require('./galaxyCommonService');
 
-class MembershipPassWPService {
-  async callMembershipPassWP(inputData) {
-    const token = await tokenService.getToken();
-    const body = utils.mapInputToBody(inputData);
+class MembershipPassService {
+  constructor() {
+    this.apiEndpoint = 'https://uat-connect.mandaiapi.com/api/MembershipPass';
+  }
 
-    const response = await axios.post('/MembershipPass-WP', body, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  async callMembershipPassApi(inputData) {
+    try {
+      const dbToken = await galaxyTokenService.getToken('galaxy');
+      const token  = dbToken.token;
 
-    return response.data;
+      const headers = {
+        'Authorization': `${token.token_type} ${token.access_token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const body = await this.createRequestBody(inputData);
+
+      const response = await ApiUtils.makeRequest(this.apiEndpoint, 'post', headers, body);
+      return ApiUtils.handleResponse(response);
+    } catch (error) {
+      return error
+    }
+  }
+
+  async createRequestBody(inputData) {
+    let wpImportParams = galaxyConf.importWPParams;
+    return await galaxyCmnService.mapImputToImportParams(inputData, wpImportParams);
+  }
+
+  /**
+   * testing only
+   * TODO: remove when test done
+   */
+  async importWPToGlx(inputData){
+    return this.createRequestBody(inputData);
   }
 }
 
-module.exports = new MembershipPassWPService();
+module.exports = new MembershipPassService();

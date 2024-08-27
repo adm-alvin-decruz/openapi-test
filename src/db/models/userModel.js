@@ -44,7 +44,6 @@ class User {
     catch (error){
       return error;
     }
-
   }
 
   // static async update(id, userData) {

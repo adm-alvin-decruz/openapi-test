@@ -68,8 +68,11 @@ async function adminGetUser(reqBody){
     }
   }
 
-  if(process.env.APP_LOG_SWITCH === 'true'){
+  if(!response['source']){
     response['source'] = 'ciam';
+  }
+
+  if(process.env.APP_LOG_SWITCH === 'true'){
     console.log(response);
   }
   return response;

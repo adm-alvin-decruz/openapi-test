@@ -26,6 +26,7 @@ const emailService = require('./usersEmailService');
 const userDBService = require('./usersDBService');
 const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
+const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 
 /**
  * Function User signup service
@@ -39,7 +40,10 @@ async function userSignupService(req){
   // generate Mandai ID
   req.body['mandaiID'] = usersSignupHelper.generateMandaiID(req.body);
 
-  req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
+  // req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
+  let galaxyImportPass = await galaxyWPService.callMembershipPassApi(req.body);
+  req.body['galaxy'] = JSON.stringify(galaxyImportPass);
+  req.body['visualID'] = galaxyImportPass.visualId;
 
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
