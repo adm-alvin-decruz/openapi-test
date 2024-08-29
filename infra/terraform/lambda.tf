@@ -55,6 +55,7 @@ module "lambda_function_ciam_membership" {
   handler       = var.newrelic_handler
   runtime       = "nodejs20.x"
   timeout       = 30
+  memory_size   = var.memory_size
   create_package      = false
   ignore_source_code_hash = false
   cloudwatch_logs_retention_in_days = var.cloudwatch_logs_retention_in_days
