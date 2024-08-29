@@ -5,7 +5,7 @@
 
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
-  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
+  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const passwordService = require('../users/userPasswordService');
@@ -359,15 +359,22 @@ async function deleteMembership(req, membershipData){
     Username: req.body.email,
   }
 
-  var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
-
   const response = [];
   try {
-    // delete from cognito
-    response['delete_user_cognito'] = await client.send(setDeleteParams);
 
-    // delete from DB
-    response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(req.body, membershipData.db_user);
+    if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+      var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
+      // delete in DB
+      response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
+    }
+    if(['prod'].includes(process.env.APP_ENV) ){
+      var setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
+      // disable in DB
+      response['disable_user_db'] = await userDeleteHelper.disableDBUser(membershipData.db_user);
+    }
+
+    // delete/disable from cognito
+    response['delete_user_cognito'] = await client.send(setDeleteParams);
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, response);

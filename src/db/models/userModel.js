@@ -121,6 +121,21 @@ class User {
       throw error;
     }
   }
+
+  static async disableByUserID(user_id){
+    try{
+      const now = getCurrentUTCTimestamp();
+      const sql = 'UPDATE users SET active = false, updated_at = ? WHERE id = ?';
+      await pool.execute(sql, [now, user_id]);
+
+      return JSON.stringify({
+        sql_statement: commonService.replaceSqlPlaceholders(sql, [now, user_id]),
+      });
+    }
+    catch (error){
+      return error;
+    }
+  }
 }
 
 module.exports = User;

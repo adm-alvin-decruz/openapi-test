@@ -20,7 +20,7 @@ require('dotenv').config();
  * @param {json} userDBData
  * @returns
  */
-async function deleteDBUserInfo(reqBody, userDBData){
+async function deleteDBUserInfo(userDBData){
   const user_id = userDBData.id;
   const response = [];
   try{
@@ -40,11 +40,22 @@ async function deleteDBUserInfo(reqBody, userDBData){
     }
   }
   catch(error){
-    throw error;
+    response['error'] = error;
+  }
+}
+
+async function disableDBUser(userDBData){
+  const user_id = userDBData.id;
+  const response = [];
+  try{
+    return response['user'] = await userModel.disableByUserID(user_id);
+  }
+  catch(error){
     response['error'] = error;
   }
 }
 
 module.exports = {
-  deleteDBUserInfo
+  deleteDBUserInfo,
+  disableDBUser
 }

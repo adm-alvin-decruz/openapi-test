@@ -102,7 +102,7 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
   if(valAppID === true){
-    if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+    if(['dev', 'uat', 'prod'].includes(process.env.APP_ENV) ){
       let deleteMember = await userController.membershipDelete(req);
       return res.status(200).json({deleteMember});
     }
