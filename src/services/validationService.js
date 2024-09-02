@@ -9,12 +9,15 @@ const userConfig = require('../config/usersConfig');
  */
 function validateAppID(reqHeader){
 	var mwgAppID = reqHeader['mwg-app-id'];
+  let envAppIDArr = JSON.parse(process.env.APP_ID)
 
-	if(mwgAppID !== ''){
-		if(mwgAppID === process.env.AEM_APP_ID){
-			return true;
-		}
-	}
+  // method to check if the input exists in the JSON array
+  const valueExists = envAppIDArr.includes(mwgAppID);
+
+  if (valueExists) {
+    return true;
+  }
+
 	return false;
 }
 

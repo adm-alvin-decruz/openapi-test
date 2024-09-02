@@ -48,7 +48,7 @@ async function userSignupService(req){
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
-  // TODO: create user's wildpass card face first.
+  // create user's wildpass card face first.
   let genWPCardFace = prepareWPCardfaceInvoke(req);
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
@@ -99,12 +99,14 @@ async function cognitoCreateUser(req){
     // create user in Lambda
     var response = await client.send(newUserParams);
 
-    // send welcome email
-    response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
+    if(response.$metadata.httpStatusCode === 200){
+      // save to DB
+      req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
+      response['db'] = await usersSignupHelper.createUserSignupDB(req);
 
-    // save to DB
-    req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
-    response['db'] = await usersSignupHelper.createUserSignupDB(req);
+      // send welcome email
+      response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
+    }
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
