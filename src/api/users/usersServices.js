@@ -39,7 +39,7 @@ async function userSignupService(req){
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
-  // TODO: create user's wildpass card face first.
+  // create user's wildpass card face first.
   let genWPCardFace = prepareWPCardfaceInvoke(req);
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace

@@ -29,9 +29,9 @@ resource "aws_s3_bucket_acl" "ciam" {
 
 resource "aws_s3_bucket_public_access_block" "ciam" {
         bucket = aws_s3_bucket.ciam.id
-        ignore_public_acls = true   
+        ignore_public_acls = true
         restrict_public_buckets = true
-        block_public_policy = true 
+        block_public_policy = true
         block_public_acls = true
  }
 
@@ -78,7 +78,7 @@ module "lambda_function_ciam_membership" {
     AEM_URL = var.AEM_URL
     AEM_PATH_WILDPASS_CHECK_EMAIL = var.AEM_PATH_WILDPASS_CHECK_EMAIL
     AEM_PATH_RESEND_WILDPASS = var.AEM_PATH_RESEND_WILDPASS
-    AEM_APP_ID = var.AEM_APP_ID
+    APP_ID = var.APP_ID
     NEW_RELIC_ACCOUNT_ID = var.NEW_RELIC_ACCOUNT_ID
     NEW_RELIC_LAMBDA_HANDLER = var.handler
     NEW_RELIC_USE_ESM = var.NEW_RELIC_USE_ESM
