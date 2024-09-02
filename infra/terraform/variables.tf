@@ -83,7 +83,7 @@ variable "AEM_PATH_RESEND_WILDPASS" {
   default = ""
 }
 
-variable "APP_ID" {
+variable "AEM_APP_ID" {
   description = "AEM AppId"
   default = ""
 }

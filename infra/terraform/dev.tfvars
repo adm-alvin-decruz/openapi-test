@@ -10,7 +10,7 @@ AEM_PATH_RESEND_WILDPASS = "/bin/wrs/wildpass/wildpassresendecard"
 AEM_PATH_WILDPASS_CHECK_EMAIL = "/bin/wrs/wildpass/checkemail"
 AEM_URL = "https://uat-www.mandai.com"
 AEM_WILDPASS_EMAILCHECK_ROUTE = "true"
-APP_ID = ["aemUat.com.mandaiapi.ciam","gltUat.com.mandaiapi.ciam"]
+AEM_APP_ID = "aemDev.com.mandaiapi.ciam"
 APP_LOG_SWITCH = "true"
 
 #users
