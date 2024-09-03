@@ -1,4 +1,5 @@
 const userConfig = require('../config/usersConfig');
+const appConfig = require('../config/appConfig');
 
 /**
  * Validate App ID
@@ -9,7 +10,9 @@ const userConfig = require('../config/usersConfig');
  */
 function validateAppID(reqHeader){
 	var mwgAppID = reqHeader['mwg-app-id'];
-  let envAppIDArr = JSON.parse(process.env.APP_ID)
+  let appEnv = process.env.APP_ENV;
+  let appconfigKey = "APP_ID_"+appEnv.toUpperCase();
+  let envAppIDArr = JSON.parse(appConfig[appconfigKey]);
 
   // method to check if the input exists in the JSON array
   const valueExists = envAppIDArr.includes(mwgAppID);
@@ -28,8 +31,8 @@ function validateAppID(reqHeader){
  * @param {*} env
  * @param {*} reqBody
  */
-function validateParams(reqBody, envVarName){
-  const validationVar = JSON.parse(userConfig[envVarName]);
+function validateParams(reqBody, configName){
+  const validationVar = JSON.parse(userConfig[configName]);
 
   let errorObj = {'status': "success"};
   // check for invalid and dob

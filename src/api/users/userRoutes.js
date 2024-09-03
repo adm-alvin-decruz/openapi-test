@@ -32,6 +32,9 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
 
   if(valAppID === true){
     let newUser = await userController.adminCreateUser(req);
+    if(newUser.error){
+      return res.status(400).json(newUser);
+    }
 
     if('membership' in newUser && 'code' in newUser.membership){
       return res.status(newUser.membership.code).json(newUser);

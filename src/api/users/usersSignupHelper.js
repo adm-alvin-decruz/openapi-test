@@ -35,10 +35,10 @@ function generateMandaiID(reqBody) {
 
   // Validate inputs
   if (!sourceMappings[source]) {
-    throw new Error('Invalid source');
+    return {"error": 'Invalid source'};
   }
   if (!groupMappings[group]) {
-    throw new Error('Invalid group');
+    return {"error": 'Invalid group'};
   }
 
   // Generate the base string for hashing
