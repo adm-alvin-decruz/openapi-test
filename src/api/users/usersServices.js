@@ -32,7 +32,11 @@ async function userSignupService(req){
   req['body']['source'] = commonService.setSource(req.headers);
 
   // generate Mandai ID
-  req.body['mandaiID'] = usersSignupHelper.generateMandaiID(req.body);
+  let mandaiID = usersSignupHelper.generateMandaiID(req.body);
+  if(mandaiID.error){
+    return mandaiID;
+  }
+  req.body['mandaiID'] = mandaiID;
 
   req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
 
