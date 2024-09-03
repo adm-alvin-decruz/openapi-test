@@ -7,6 +7,8 @@ const responseHelper = require('../helpers/responseHelpers');
 const commonService = require('../services/commonService');
 
 async function lambdaInvokeFunction(event, functionName){
+  const timeLog = {};
+  timeLog[functionName +'_start'] = new Date(); // log mail start time
   // build input
   const input = { // InvocationRequest
     FunctionName: functionName, // required
@@ -22,13 +24,14 @@ async function lambdaInvokeFunction(event, functionName){
   try {
     // send to lambda
     const response = await lambdaClient.send(command);
-
+    timeLog[functionName +'_end'] = new Date(); // log mail end time
     // decode response base64
     // let decodedString = commonService.decodeBase64(response.LogResult);
     let decodedString = JSON.parse(Buffer.from(response.Payload));
     if(decodedString.body){
       decodedString["body"] = JSON.parse(decodedString.body);
     }
+    decodedString["time_log"] = timeLog;
 
     return decodedString;
 
