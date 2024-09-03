@@ -1,6 +1,6 @@
 const resConfig = {
 // source mapping
-  SOURCE_MAPPING:'{"aemDev.com.mandaiapi.ciam":"ORGANIC","aemUat.com.mandaiapi.ciam":"ORGANIC","aemProd.com.mandaiapi.ciam":"ORGANIC"}',
+  SOURCE_MAPPING:'{"aemDev.com.mandaiapi.ciam":"ORGANIC","aemUat.com.mandaiapi.ciam":"ORGANIC","aemProd.com.mandaiapi.ciam":"ORGANIC","gltDev.com.mandaiapi.ciam":"GLOBALTIX","gltUat.com.mandaiapi.ciam":"GLOBALTIX","gltProd.com.mandaiapi.ciam":"GLOBALTIX","tktDev.com.mandaiapi.ciam":"TICKETING","tktUat.com.mandaiapi.ciam":"TICKETING","tktProd.com.mandaiapi.ciam":"TICKETING"}',
 
   // users wildpass source - cognito mapping
   WILDPASS_SOURCE_COGNITO_MAPPING:'{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter"}',

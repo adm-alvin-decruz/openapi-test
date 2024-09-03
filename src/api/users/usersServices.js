@@ -32,7 +32,11 @@ async function userSignupService(req){
   req['body']['source'] = commonService.setSource(req.headers);
 
   // generate Mandai ID
-  req.body['mandaiID'] = usersSignupHelper.generateMandaiID(req.body);
+  let mandaiID = usersSignupHelper.generateMandaiID(req.body);
+  if(mandaiID.error){
+    return mandaiID;
+  }
+  req.body['mandaiID'] = mandaiID;
 
   req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
 
@@ -40,7 +44,9 @@ async function userSignupService(req){
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // create user's wildpass card face first.
-  let genWPCardFace = prepareWPCardfaceInvoke(req);
+  let genWPCardFace = await prepareWPCardfaceInvoke(req);
+  req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
+
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
   }
@@ -101,7 +107,8 @@ async function cognitoCreateUser(req){
     };
 
     // lambda invoke
-    response['email_trigger'] = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+    let emailTrigger = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+    response['email_trigger'] = JSON.stringify(emailTrigger); // add to log
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
@@ -331,22 +338,25 @@ async function prepareWPCardfaceInvoke(req){
    };
 
    try {
-    // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
-    if(response.statusCode === 200){
-      return response;
-    }
-    if([400, 500].includes(response.statusCode) ){
+      // lambda invoke
+      const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+      if(response.statusCode === 200){
+        return response;
+      }
+      if([400, 500].includes(response.statusCode) ){
+        // prepare logs
+        let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
+        // prepare response to client
+        return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+      }
+    } catch (error) {
       // prepare logs
-      let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
-      // prepare response to client
-      return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+      let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
+      // prepare log response
+      responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+
+      return error
     }
-  } catch (error) {
-
-
-    return error
-  }
 }
 
 /**
