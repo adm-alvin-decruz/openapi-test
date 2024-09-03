@@ -31,7 +31,7 @@ variable "handler" {
 variable "memory_size" {
   description = "Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments."
   default = 128
-} 
+}
 
 variable "AEM_WILDPASS_EMAILCHECK_ROUTE" {
   description = "AEM_WILDPASS_EMAILCHECK_ROUTE"
