@@ -19,7 +19,7 @@ const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
-const passkitService = require('../../services/passkitService');
+const appConfig = require('../../config/appConfig');
 const usersSignupHelper = require('./usersSignupHelper');
 const userConfig = require('../../config/usersConfig');
 const emailService = require('./usersEmailService');
@@ -55,6 +55,8 @@ async function userSignupService(req){
   // create user's wildpass card face first.
   let genWPCardFace = await prepareWPCardfaceInvoke(req);
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
+
+  let genPasskit = await prepareGenPasskitInvoke(req);
 
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
@@ -447,6 +449,40 @@ async function getUserMembershipCustom(req){
   loggerService.log('user', clientAPIData, getUserCommand, response, result);
 
   return result;
+}
+
+async function prepareGenPasskitInvoke(req){
+  // integrate with cardface lambda
+  let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
+
+  let dob = commonService.convertDateHyphenFormat(req.body.dob);
+  // event data
+  const event = {
+     name: req.body.lastName +' '+ req.body.firstName,
+     dateOfBirth: dob,
+     mandaiId: req.body.mandaiID
+  };
+
+  try {
+     // lambda invoke
+     const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+     if(response.statusCode === 200){
+       return response;
+     }
+     if([400, 500].includes(response.statusCode) ){
+       // prepare logs
+       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
+       // prepare response to client
+       return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+     }
+   } catch (error) {
+     // prepare logs
+     let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
+     // prepare log response
+     responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+
+   return error
+ }
 }
 
 
