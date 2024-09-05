@@ -159,10 +159,16 @@ function decodeBase64(base64String) {
   return decodedString;
 }
 
+/**
+ * Convert date with slashes / to hyphen -
+ * @param {string} inputDate
+ * @returns
+ */
 function convertDateHyphenFormat(inputDate) {
   const [day, month, year] = inputDate.split('/');
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
+
 /**
  * {"name":"wildpass","visualID":"24110876643220562330","expiry":""}
  *
@@ -191,6 +197,24 @@ function replaceSqlPlaceholders(sql, params) {
   });
 }
 
+function extractStringPart(input, index) {
+  if (typeof input !== 'string' || input.trim() === '') {
+    throw new Error('Input must be a non-empty string');
+  }
+
+  if (typeof index !== 'number' || index < 0 || !Number.isInteger(index)) {
+    throw new Error('Index must be a non-negative integer');
+  }
+
+  const parts = input.split('.');
+
+  if (index >= parts.length) {
+    throw new Error('Index out of bounds');
+  }
+
+  return parts[index];
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -203,5 +227,6 @@ module.exports = {
   findJsonObjValue,
   decodeBase64,
   convertDateHyphenFormat,
-  replaceSqlPlaceholders
+  replaceSqlPlaceholders,
+  extractStringPart
 }

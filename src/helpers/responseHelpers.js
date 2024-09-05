@@ -1,5 +1,6 @@
  const loggerService = require('../logs/logger');
  const userConfig = require('../config/usersConfig');
+ const commonService = require('../services/commonService');
 
 /**
  * Function process CIAM response
@@ -78,8 +79,19 @@ function formatMiddlewareRes(status, msg){
 }
 }
 
+function craftGetUserResponse(req, memberInfo, config){
+  requester = commonService.extractStringPart(req.headers['mwg-app-id'], 0);
+  group = req.body.group;
+  configName = config+'_'+group.toUpperCase()+'_'+requester.toUpperCase();
+  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo.data.db_user);
+  const date = new Date(resObj.dateOfBirth);
+  resObj['dateOfBirth'] = date.toISOString().split('T')[0];
+  return resObj;
+}
+
 module.exports = {
   craftUsersApiResponse,
+  craftGetMemberShipInternalRes,
   formatMiddlewareRes,
-  craftGetMemberShipInternalRes
+  craftGetUserResponse
 }

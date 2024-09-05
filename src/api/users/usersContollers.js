@@ -137,7 +137,7 @@ async function membershipResend(req){
 
     if(memberInfo.status === 'success'){
       // user exist, resend membership
-      var response = await usersService.resendUserMembership(req, memberInfo.data.UserAttributes);
+      var response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
       return response;
     }
     else if(memberInfo.status === 'not found'){
@@ -186,13 +186,29 @@ async function membershipDelete(req){
 }
 
 /**
- * simplified log and response
- * TODO: look into this again
+ * Function get membership
  */
-// function handleUserSignupError(moduleName, action, req, mwgCode, envFunc, endpoindReq, endpointRes) {
-//   const logObj = loggerService.build(moduleName, action, req, mwgCode, endpoindReq, endpointRes);
-//   return responseHelper.craftUsersApiResponse(action, endpointRes, mwgCode, envFunc, logObj);
-// }
+async function getUser(req){
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
+
+  // API validation
+  let validatedParams = validationService.validateParams(req.body, 'GET_USER_VALIDATE_PARAMS');
+
+  // return errorParams;
+  if(validatedParams.status === 'success'){
+    // get user's membership
+    var memberInfo = await usersService.getUserMembershipCustom(req);
+    // process response
+    if(req.body.group = 'wildpass'){
+      memberInfo = await responseHelper.craftGetUserResponse(req, memberInfo, 'GET_USER_API_RESPONSE_MAPPING');
+    }
+    return memberInfo;
+  }
+  else{
+    return validatedParams;
+  }
+}
 
 /**
  * User flow step 2 after signup
@@ -287,6 +303,7 @@ module.exports = {
   adminUpdateUser,
   membershipResend,
   membershipDelete,
+  getUser,
   adminSetUserPassword,
   userLogin,
   userResetPassword,

@@ -1,6 +1,8 @@
 require('dotenv').config()
 const express = require('express');
 const router = express.Router();
+const multer  = require('multer');
+const upload = multer();
 
 const userController = require("./usersContollers" );
 const commonService = require('../../services/commonService');
@@ -105,6 +107,7 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
   if(valAppID === true){
+    // allow dev, uat & prod to call. Prod will disable, no deletion
     if(['dev', 'uat', 'prod'].includes(process.env.APP_ENV) ){
       let deleteMember = await userController.membershipDelete(req);
       return res.status(200).json({deleteMember});
@@ -118,25 +121,42 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
   }
 })
 
-router.post('/users/set-password', async (req, res) => {
-    // let membersetPassword = await userController.adminSetUserPassword();
-    return res.json({membersetPassword});
-})
+router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
 
-router.post('/users/login', async (req, res) => {
-    // let memberLogin = await userController.userLogin();
-    return resjson({memberLogin});
-})
+  if(valAppID === true){
+    let getUser = await userController.getUser(req);
+    return res.status(200).json({getUser});
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
 
-router.post('/users/reset-password', async (req, res) => {
-    // let memberResetPassword = await memberships.userResetPassword();
-    return resjson({memberResetPassword});
-})
+  const user = users.find(user => user.id === parseInt(req.params.id));
+  if (!user) res.status(404).json({ message: 'User not found' });
+  return resjson(user);
+});
 
-router.post('/users/forgot-password', async (req, res) => {
-    // let memberResetPassword = await memberships.userResetPassword();
-    return resjson({memberResetPassword});
-})
+// router.post('/users/set-password', async (req, res) => {
+//     // let membersetPassword = await userController.adminSetUserPassword();
+//     return res.json({membersetPassword});
+// })
+
+// router.post('/users/login', async (req, res) => {
+//     // let memberLogin = await userController.userLogin();
+//     return resjson({memberLogin});
+// })
+
+// router.post('/users/reset-password', async (req, res) => {
+//     // let memberResetPassword = await memberships.userResetPassword();
+//     return resjson({memberResetPassword});
+// })
+
+// router.post('/users/forgot-password', async (req, res) => {
+//     // let memberResetPassword = await memberships.userResetPassword();
+//     return resjson({memberResetPassword});
+// })
 
 // router.get('/users/:id', (req, res) => {
 //     const user = users.find(user => user.id === parseInt(req.params.id));

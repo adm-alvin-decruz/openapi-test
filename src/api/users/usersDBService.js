@@ -1,4 +1,5 @@
 // db
+const pool = require('../../db/connections/mysqlConn');
 const userModel = require('../../db/models/userModel');
 const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
@@ -15,6 +16,20 @@ const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../util
  */
 async function getDBUserByEmail(reqBody){
   return await userModel.findByEmail(reqBody.email);
+}
+
+async function queryWPUserByEmail(reqBody) {
+  try{
+    const sql = `SELECT u.*, um.name,um.visual_id, un.type, un.subscribe FROM users u
+                INNER JOIN user_memberships um ON um.user_id = u.id
+                INNER JOIN user_newsletters un ON un.user_id = u.id
+                WHERE u.email = ? AND u.active=1`;
+    const rows = await pool.query(sql, [reqBody.email]);
+    return rows[0];
+  }
+  catch (error){
+    return error;
+  }
 }
 
 function prepareDBUpdateData(ciamAttrInput) {
@@ -62,5 +77,6 @@ function prepareDBUpdateData(ciamAttrInput) {
 
 module.exports = {
   getDBUserByEmail,
+  queryWPUserByEmail,
   prepareDBUpdateData
 }

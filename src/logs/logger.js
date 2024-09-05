@@ -37,7 +37,7 @@ function build(moduleName, action, req, mwgCode, endpointReqObj, responseFromEnd
   }
 
   logObj['endpoint_response'] = JSON.stringify(responseFromEndpoint);
-  if (JSON.stringify(responseFromEndpoint) === '[]') {
+  if (JSON.stringify(responseFromEndpoint) === '[]' || JSON.stringify(responseFromEndpoint) === '{}') {
     logObj['endpoint_response'] = responseFromEndpoint;
   }
 

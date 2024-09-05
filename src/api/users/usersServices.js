@@ -404,6 +404,51 @@ async function deleteMembership(req, membershipData){
   }
 }
 
+async function getUserMembershipCustom(req){
+  let getMemberJson = {
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: req.body.email
+  };
+
+  const getUserCommand = new AdminGetUserCommand(getMemberJson);
+  var response = {};
+  try {
+    // get from cognito
+    response['cognitoUser'] = await client.send(getUserCommand);
+    // read from database
+    if(req.body.group = 'wildpass'){
+      response['db_user'] = await userDBService.queryWPUserByEmail(req.body);
+    }else{
+      response['db_user'] = await userDBService.getDBUserByEmail(req.body);
+    }
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
+    // prepare response to client
+    let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
+    return responseToInternal;
+
+  } catch (error) {
+    if(error.name === 'UserNotFoundException'){
+      var result = {"status": "not found", "data": error};
+    }else{
+      var result = {"status": "failed", "data": error};
+    }
+  }
+
+  // prepare logs
+  const clientAPIData = {
+    "membership": req.body.group,
+    "action": "getUserMembership Service",
+    "api_header": req.headers,
+    "api_body": req.body,
+    "mwgCode": ""
+  }
+  loggerService.log('user', clientAPIData, getUserCommand, response, result);
+
+  return result;
+}
+
 
 
 // ***************************************************************
@@ -489,6 +534,7 @@ module.exports = {
   getUserMembership,
   resendUserMembership,
   deleteMembership,
+  getUserMembershipCustom,
   processError,
   genSecretHash,
   processErrors
