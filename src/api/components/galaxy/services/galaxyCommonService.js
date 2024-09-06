@@ -1,8 +1,8 @@
 async function mapImputToImportParams(input, importData) {
   // Helper function to format date
   function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    const [day, month, year] = dateString.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
   // Helper function to update nested properties

@@ -19,7 +19,7 @@ const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
-const passkitService = require('../../services/passkitService');
+const cognitoService = require('../../services/cognitoService');
 const usersSignupHelper = require('./usersSignupHelper');
 const userConfig = require('../../config/usersConfig');
 const emailService = require('./usersEmailService');
@@ -33,7 +33,7 @@ const galaxyWPService = require('../components/galaxy/services/galaxyWPService')
  * @param {json} req
  * @returns
  */
-async function userSignupService(req){
+async function userSignup(req){
   // set the source base on app ID
   req['body']['source'] = commonService.setSource(req.headers);
 
@@ -187,25 +187,21 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
 
-  // prepare update user array
-  const updateUserArray = {
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: req.body.email,
-    UserAttributes: ciamComparedParams
-  }
-
-  var setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
-
   const response = [];
 
   try {
-    response['update_user_cognito'] = await client.send(setUpdateParams);
+    // save to cognito
+    response['cognito'] = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
 
     // save to DB
-    response['update_user_db'] = await userUpdateHelper.updateDBUserInfo(req.body, prepareDBUpdateData, membershipData.db_user);
+    response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req.body, prepareDBUpdateData, membershipData.db_user);
+
+    // galaxy update
+    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req.body, ciamComparedParams, membershipData);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, response);
+    let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArr, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
@@ -213,7 +209,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
   } catch (error) {
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', updateUserArray, error);
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', response, error);
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
 
@@ -484,7 +480,7 @@ function isJSONObject(obj) {
 
 /** export the module */
 module.exports = {
-  userSignupService,
+  userSignup,
   adminUpdateUser,
   getUserMembership,
   resendUserMembership,

@@ -17,7 +17,10 @@ const resConfig = {
 
   // user model fields for prepare DB update data
   DB_USERS_MODEL_MAPPING: '{"given_name":"","family_name":"","birthdate":""}',
-  DB_USER_NEWSLETTER_MAPPING: '{"name":"","type":"","subscribe":""}'
+  DB_USER_NEWSLETTER_MAPPING: '{"name":"","type":"","subscribe":""}',
+
+  // update parameters that can trigger Galaxy update:
+  TRIGGER_GALAXY_UPDATE_PARAMS_WILDPASS:'["given_name","family_name","birthdate","custom:newsletter"]'
 };
 
 module.exports = resConfig;

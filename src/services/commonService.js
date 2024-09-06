@@ -191,6 +191,31 @@ function replaceSqlPlaceholders(sql, params) {
   });
 }
 
+/**
+ *
+ * // Example usage
+  * const a = [
+  *   {"Name":"birthdate","Value":"01/02/1992"},
+  *   {"Name":"name","Value":"Kay Liong"}
+  * ];
+  * const b = ["birthdate", "newsletter"];
+ * return ["birthdate"]
+ * @returns array
+ */
+/**
+ *
+ * @param {json} a input to check
+ * @param {json} b config arr
+ * @returns
+ */
+function detectAttrPresence(a, b){
+    // Create a Set of Names from 'a' for efficient lookup
+    const aNames = new Set(a.map(item => item.Name));
+
+    // Filter 'b' to only include items that are present in 'a'
+    return b.filter(item => aNames.has(item));
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -203,5 +228,6 @@ module.exports = {
   findJsonObjValue,
   decodeBase64,
   convertDateHyphenFormat,
-  replaceSqlPlaceholders
+  replaceSqlPlaceholders,
+  detectAttrPresence
 }
