@@ -111,10 +111,13 @@ async function updateGalaxyWildpass(reqBody, ciamComparedParams, membershipData)
     let galaxyUser = await galaxyQueryService.callQueryTicketApi(membershipCognito);
     // get galaxy visual ID
     let visualID = galaxyHelpers.findProductValue(galaxyUser, "visualID", "WILDPASS");
-    reqBody['visualId'] = visualID;
-    // update galaxy
-    let galaxyUpdate = await galaxyWPService.callMembershipUpdatePassApi(reqBody);
-    return JSON.stringify(galaxyUpdate);
+    if(visualID !== 'null'){
+      reqBody['visualId'] = visualID;
+      // update galaxy
+      let galaxyUpdate = await galaxyWPService.callMembershipUpdatePassApi(reqBody);
+      return JSON.stringify(galaxyUpdate);
+    }
+    return JSON.stringify(visualID);
   }
 }
 
