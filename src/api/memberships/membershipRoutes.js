@@ -20,7 +20,7 @@ router.get('/ping', async (req, res) => {
  * Get membership by email
  * Response
  */
-router.get('/users/memberships', upload.none(), async (req, res) => {
+router.post('/users/memberships', upload.none(), async (req, res) => {
   // if log turned on, log request
   if(process.env.APP_LOG_SWITCH){
     console.log(req.body);
