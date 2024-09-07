@@ -1,21 +1,41 @@
 const axios = require('axios');
-const tokenService = require('./tokenService');
-const utils = require('../utils/utils');
+const galaxyTokenService = require('./galaxyTokenService');
+const ApiUtils = require('../../../../utils/apiUtils');
 
-class QueryTicketService {
-  async callQueryTicket(inputData) {
-    const token = await tokenService.getToken();
-    const body = utils.mapInputToBody(inputData);
+/**
+ * Class that handle Galaxy Query
+ */
+class GalaxyQueryService {
+  constructor() {
+    this.apiEndpoint = process.env.GALAXY_URL + process.env.GALAXY_QUERY_TICKET_PATH;
+  }
 
-    const response = await axios.post('/QueryTicket-UATV1', body, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  async callQueryTicketApi(inputData) {
+    try {
+      const dbToken = await galaxyTokenService.getToken('galaxy');
+      const token  = dbToken.token;
 
-    return response.data;
+      const headers = {
+        'Authorization': `${token.token_type} ${token.access_token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const body = this.createRequestBody(inputData);
+
+      const response = await ApiUtils.makeRequest(this.apiEndpoint, 'get', headers, body);
+
+      return ApiUtils.handleResponse(response);
+    } catch (error) {
+
+      throw ApiUtils.handleError(error);
+    }
+  }
+
+  createRequestBody(inputData) {
+    return {
+      VisualID: [inputData.visualID]
+    };
   }
 }
 
-module.exports = new QueryTicketService();
+module.exports = new GalaxyQueryService();
