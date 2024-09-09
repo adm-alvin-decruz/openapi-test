@@ -427,7 +427,7 @@ async function getUserMembershipCustom(req){
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
     // prepare response to client
-    let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
+    let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', response, logObj);
     return responseToInternal;
 
   } catch (error) {

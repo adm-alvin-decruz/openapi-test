@@ -198,12 +198,7 @@ async function getUser(req){
   // return errorParams;
   if(validatedParams.status === 'success'){
     // get user's membership
-    var memberInfo = await usersService.getUserMembershipCustom(req);
-    // process response
-    if(req.body.group = 'wildpass'){
-      memberInfo = await responseHelper.craftGetUserResponse(req, memberInfo, 'GET_USER_API_RESPONSE_MAPPING');
-    }
-    return memberInfo;
+    return await usersService.getUserMembershipCustom(req);;
   }
   else{
     return validatedParams;

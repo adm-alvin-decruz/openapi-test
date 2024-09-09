@@ -49,10 +49,28 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
  * @param {*} logObj
  * @returns
  */
-function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logObj){
-  // craft response JSON
-  let responseToInternal = {"status": status, "data": response};
+function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
+  // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
+  let resConfigVar = JSON.parse(userConfig['GET_USER_MEMBERSHIPS_API_RESPONSE_CONFIG']);
+  let resConfig = resConfigVar[mwgCode];
 
+  // craft response JSON
+  if(req.body.group = 'wildpass'){
+    memberInfo = formatGetUserAPIResData(req, response, 'GET_USER_API_RESPONSE_MAPPING');
+  }
+
+  // response JSON
+  let responseStructure = {
+    "membership": {
+      "code": resConfig.code,
+      "mwgCode": mwgCode,
+      "message": resConfig.message
+    },
+    "status": resConfig.status,
+    "statusCode": resConfig.code
+  };
+
+  const responseToInternal = mergeJson(memberInfo, responseStructure);
   // prepare logs
   logObj['response_to_internal']= JSON.stringify(responseToInternal);
   loggerService.log(logObj);
@@ -79,19 +97,32 @@ function formatMiddlewareRes(status, msg){
 }
 }
 
-function craftGetUserResponse(req, memberInfo, config){
+function formatGetUserAPIResData(req, memberInfo, config){
+  // set response data using mapping
   requester = commonService.extractStringPart(req.headers['mwg-app-id'], 0);
   group = req.body.group;
   configName = config+'_'+group.toUpperCase()+'_'+requester.toUpperCase();
-  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo.data.db_user);
+  // map obj
+  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo.db_user);
+  // format DOB
   const date = new Date(resObj.dateOfBirth);
   resObj['dateOfBirth'] = date.toISOString().split('T')[0];
+
   return resObj;
+}
+
+function mergeJson(jsonA, jsonB) {
+  // Merge jsonA fields into the nested 'membership' object in jsonB
+  jsonB.membership = {
+    ...jsonB.membership,
+    ...jsonA
+  };
+
+  return jsonB;
 }
 
 module.exports = {
   craftUsersApiResponse,
-  craftGetMemberShipInternalRes,
-  formatMiddlewareRes,
-  craftGetUserResponse
+  craftGetUserApiInternalRes,
+  formatMiddlewareRes
 }

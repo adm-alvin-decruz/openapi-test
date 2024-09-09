@@ -127,15 +127,11 @@ router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, r
 
   if(valAppID === true){
     let getUser = await userController.getUser(req);
-    return res.status(200).json({getUser});
+    return res.status(200).json(getUser);
   }
   else{
     return res.status(401).send({ error: 'Unauthorized' });
   }
-
-  const user = users.find(user => user.id === parseInt(req.params.id));
-  if (!user) res.status(404).json({ message: 'User not found' });
-  return resjson(user);
 });
 
 // router.post('/users/set-password', async (req, res) => {

@@ -75,7 +75,6 @@ function isJsonNotEmpty(json) {
  */
 function mapJsonObjects(mappingJSON, inputJson) {
   const result = {};
-  let mappingJSONObj = JSON.parse(mappingJSON);
 
   for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
     if (valueA in inputJson) {
