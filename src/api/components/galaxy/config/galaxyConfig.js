@@ -101,4 +101,14 @@ module.exports = {
       }
     ]
   },
+  updateWPParams:
+  {
+    "galaxySourceID": "WRSWebStore",
+    "visualId": "",
+    "firstName": "",
+    "middleName": "",
+    "lastName": "",
+    "email": "",
+    "dob": ""
+  }
 };

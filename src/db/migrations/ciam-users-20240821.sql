@@ -1,3 +1,17 @@
+-- Create syntax for TABLE 'app_tokens'
+CREATE TABLE `app_tokens` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `client` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'GALAXY',
+  `credentials` json DEFAULT NULL,
+  `token` json DEFAULT NULL,
+  `configuration` json DEFAULT NULL,
+  `expires_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `client_UNIQUE` (`client`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Create syntax for TABLE 'user_credentials'
 CREATE TABLE `user_credentials` (
   `id` bigint NOT NULL AUTO_INCREMENT,

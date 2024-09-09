@@ -66,7 +66,7 @@ async function adminCreateUser (req){
         return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
       }else{
-        var response = await usersService.userSignupService(req);
+        var response = await usersService.userSignup(req);
       }
 
       return response;
@@ -108,14 +108,13 @@ async function adminUpdateUser (req, listedParams){
     }
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {}, memberInfo);
+    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {"success":"no data to update"}, memberInfo);
 
     // prepare error params response
     return responseHelper.craftUsersApiResponse('usersControllers.adminUpdateUser', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
     // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
 
   } catch (error) {
-    console.log(error);
     return error;
   }
 }
