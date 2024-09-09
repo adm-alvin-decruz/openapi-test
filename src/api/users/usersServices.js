@@ -108,7 +108,7 @@ async function cognitoCreateUser(req){
     if(response.$metadata.httpStatusCode === 200){
       // save to DB
       req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
-      response['db'] = await usersSignupHelper.createUserSignupDB(req);
+      response['db'] = JSON.stringify(await usersSignupHelper.createUserSignupDB(req));
 
       // send welcome email
       response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
@@ -189,7 +189,14 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
   const response = [];
 
+  // get mandai ID
+  req.body['mandaiID'] = membershipData.db_user.mandai_id;
+
   try {
+    // create user's wildpass card face first.
+    let genWPCardFace = await prepareWPCardfaceInvoke(req);
+    response['cardface'] = JSON.stringify({"cardface": genWPCardFace});
+
     // save to cognito
     response['cognito'] = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
 
@@ -198,6 +205,10 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
     // galaxy update
     response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req.body, ciamComparedParams, membershipData);
+
+    // send update email
+    req.body['emailType'] = 'update_wp';
+    response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
 
     // prepare logs
     let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]

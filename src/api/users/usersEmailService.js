@@ -11,6 +11,10 @@ async function lambdaSendEmail(reqBody){
     ID: reqBody.mandaiID
   };
 
+  if(reqBody.emailType){
+    emailTriggerData['emailType'] = reqBody.emailType;
+  }
+
   // lambda invoke
   return await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
 }

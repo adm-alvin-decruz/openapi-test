@@ -115,7 +115,6 @@ async function adminUpdateUser (req, listedParams){
     // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
 
   } catch (error) {
-    console.log(error);
     return error;
   }
 }
