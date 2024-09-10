@@ -1,6 +1,8 @@
 require('dotenv').config()
 const express = require('express');
 const router = express.Router();
+const multer  = require('multer');
+const upload = multer();
 
 const membershipsController = require('./membershipsControllers');
 const commonService = require('../../services/commonService')
@@ -19,6 +21,32 @@ router.get('/ping', async (req, res) => {
  * Response
  */
 router.post('/users/memberships', async (req, res) => {
+  // if log turned on, log request
+  if(process.env.APP_LOG_SWITCH){
+    console.log(req.body);
+    console.log(req.headers);
+  }
+
+  // clean the request data for possible white space
+  var reqBody = commonService.cleanData(req.body);
+
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
+  if(valAppID === false){
+    res.status(401).send('Unauthorized');
+  }
+  else{
+    let checkMemberResult = await membershipsController.adminGetUser(reqBody);
+    // response
+    res.status(200).json(checkMemberResult);
+  }
+});
+
+/**
+ * Get membership by email
+ * Response
+ */
+router.get('/users/memberships', upload.none(), async (req, res) => {
   // if log turned on, log request
   if(process.env.APP_LOG_SWITCH){
     console.log(req.body);
