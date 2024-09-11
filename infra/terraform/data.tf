@@ -1,5 +1,5 @@
 data "aws_secretsmanager_secret" "ciam" {
-  name = "${var.project}-${var.env}-db-user1-cred"
+  name = "ciam-${var.env}-db-user1-cred"
 }
 
 data "aws_secretsmanager_secret_version" "ciam" {
