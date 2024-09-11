@@ -49,3 +49,15 @@ data "terraform_remote_state" "card_face_generator_function" {
     external_id = "mandai-terraform-state-user"
     }
 }
+
+data "terraform_remote_state" "rds" {
+    backend = "s3"
+    workspace = terraform.workspace
+    config = {
+        bucket  = "mandai-terraform-state"
+        key     = "infra/ciam/rds/terraform.state"
+        region  = "ap-southeast-1"
+    role_arn = "arn:aws:iam::043448533573:role/mandai-terraform-state-role"
+    external_id = "mandai-terraform-state-user"
+    }
+}

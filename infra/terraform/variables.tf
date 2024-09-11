@@ -83,11 +83,6 @@ variable "AEM_PATH_RESEND_WILDPASS" {
   default = ""
 }
 
-variable "AEM_APP_ID" {
-  description = "AEM AppId"
-  default = ""
-}
-
 variable "APP_LOG_SWITCH" {
   description = "APP_LOG_SWITCH"
   default = ""
@@ -103,9 +98,36 @@ variable "USER_POOL_CLIENT_ID" {}
 variable "USER_POOL_CLIENT_SECRET" {}
 
 
-variable "GALAXY_URL_IMPORT_PASS" {}
+variable "GALAXY_IMPORT_PASS_PATH" {
+  description = "GALAXY_IMPORT_PASS_PATH"
+  default = "/api/MembershipPass"
+}
 
-variable "GALAXY_URL_UPDATE_PASS" {}
+variable "GALAXY_UPDATE_PASS_PATH" {
+  description = "GALAXY_UPDATE_PASS_PATH"
+  default = "/api/v1/MembershipUpdatePass"
+}
+
+variable "GALAXY_QUERY_TICKET_PATH" {
+  description = "GALAXY_QUERY_TICKET_PATH"
+  default = "/api/v1/tickets"
+}
+
+variable "MYSQL_MASTER_DATABASE" {
+  description = "MYSQL_MASTER_DATABASE"
+  default = "ciam"
+}
+
+variable "MYSQL_SLAVE_DATABASE" {
+  description = "MYSQL_SLAVE_DATABASE"
+  default = "ciam"
+}
+
+variable "SOURCE_DB_MAPPING" {
+  description = "SOURCE_DB_MAPPING"
+  default = {"ORGANIC":1,"TICKETING":2,"GLOBALTIX":3}
+}
+
 
 variable "github_hash" {
   description = "goithub commit hash"
