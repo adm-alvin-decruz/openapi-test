@@ -432,13 +432,18 @@ async function getUserMembershipCustom(req){
     }
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
+    let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, response);
     // prepare response to client
     let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', response, logObj);
     return responseToInternal;
 
   } catch (error) {
     if(error.name === 'UserNotFoundException'){
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, error);
+      // prepare response to client
+      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', response, logObj);
+      return responseToInternal;
       var result = {"status": "not found", "data": error};
     }else{
       var result = {"status": "failed", "data": error};
