@@ -97,6 +97,10 @@ variable "USER_POOL_CLIENT_ID" {}
 
 variable "USER_POOL_CLIENT_SECRET" {}
 
+variable "GALAXY_URL" {
+  description = "GALAXY_URL"
+  default = ""
+}
 
 variable "GALAXY_IMPORT_PASS_PATH" {
   description = "GALAXY_IMPORT_PASS_PATH"
