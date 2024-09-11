@@ -76,13 +76,13 @@ module "lambda_function_ciam_membership" {
     GALAXY_UPDATE_PASS_PATH = var.GALAXY_UPDATE_PASS_PATH
     GALAXY_QUERY_TICKET_PATH = var.GALAXY_QUERY_TICKET_PATH
     MYSQL_MASTER_HOST = data.terraform_remote_state.rds.outputs.cluster_endpoint
-    MYSQL_MASTER_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["username"]
-    MYSQL_MASTER_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["password"]
+    MYSQL_MASTER_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_user"]
+    MYSQL_MASTER_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_password"]
     MYSQL_MASTER_DATABASE = var.MYSQL_MASTER_DATABASE
     MYSQL_MASTER_PORT = data.terraform_remote_state.rds.outputs.cluster_port
     MYSQL_SLAVE_HOST = data.terraform_remote_state.rds.outputs.cluster_endpoint
-    MYSQL_SLAVE_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["username"]
-    MYSQL_SLAVE_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["password"]
+    MYSQL_SLAVE_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_user"]
+    MYSQL_SLAVE_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_password"]
     MYSQL_SLAVE_DATABASE = var.MYSQL_SLAVE_DATABASE
     MYSQL_SLAVE_PORT = data.terraform_remote_state.rds.outputs.cluster_port
     NEW_RELIC_LAMBDA_EXTENSION_ENABLED = "true"
