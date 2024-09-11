@@ -239,6 +239,12 @@ function detectAttrPresence(a, b){
     return b.filter(item => aNames.has(item));
 }
 
+// helper function to format date
+function formatDate(dateString) {
+  const [day, month, year] = dateString.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -253,5 +259,6 @@ module.exports = {
   convertDateHyphenFormat,
   replaceSqlPlaceholders,
   extractStringPart,
-  detectAttrPresence
+  detectAttrPresence,
+  formatDate
 }
