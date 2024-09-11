@@ -413,7 +413,7 @@ async function deleteMembership(req, membershipData){
   }
 }
 
-async function getUserMembershipCustom(req){
+async function getUserCustom(req){
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
@@ -442,11 +442,14 @@ async function getUserMembershipCustom(req){
       // prepare logs
       let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, error);
       // prepare response to client
-      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', response, logObj);
+      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL', '', logObj);
       return responseToInternal;
-      var result = {"status": "not found", "data": error};
     }else{
-      var result = {"status": "failed", "data": error};
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, error);
+      // prepare response to client
+      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_GET_ERROR', '', logObj);
+      return responseToInternal;
     }
   }
 
@@ -582,7 +585,7 @@ module.exports = {
   getUserMembership,
   resendUserMembership,
   deleteMembership,
-  getUserMembershipCustom,
+  getUserCustom,
   processError,
   genSecretHash,
   processErrors

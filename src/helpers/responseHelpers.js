@@ -49,15 +49,31 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
  * @param {*} logObj
  * @returns
  */
+function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logObj){
+  // craft response JSON
+  let responseToInternal = {"status": status, "data": response};
+
+  // prepare logs
+  logObj['response_to_internal']= JSON.stringify(responseToInternal);
+  loggerService.log(logObj);
+
+  return responseToInternal;
+}
+
+/**
+ * responseHelper.craftGetUserApiInternalRes('', req.body, 'success', response, logObj);
+ *
+ * @param {*} attr
+ * @param {*} reqBody
+ * @param {*} status
+ * @param {*} response
+ * @param {*} logObj
+ * @returns
+ */
 function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
   let resConfigVar = JSON.parse(userConfig['GET_USER_MEMBERSHIPS_API_RESPONSE_CONFIG']);
   let resConfig = resConfigVar[mwgCode];
-
-  // craft response JSON
-  if(req.body.group = 'wildpass'){
-    memberInfo = formatGetUserAPIResData(req, response, 'GET_USER_API_RESPONSE_MAPPING');
-  }
 
   // response JSON
   let responseStructure = {
@@ -70,7 +86,16 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
     "statusCode": resConfig.code
   };
 
-  const responseToInternal = mergeJson(memberInfo, responseStructure);
+  let responseToInternal = responseStructure;
+
+  // craft response JSON
+  if(req.body.group = 'wildpass'){
+    if(response !== ''){
+      memberInfo = formatGetUserAPIResData(req, response, 'GET_USER_API_RESPONSE_MAPPING');
+      responseToInternal = mergeJson(memberInfo, responseStructure);
+    }
+  }
+
   // prepare logs
   logObj['response_to_internal']= JSON.stringify(responseToInternal);
   loggerService.log(logObj);
@@ -123,6 +148,7 @@ function mergeJson(jsonA, jsonB) {
 
 module.exports = {
   craftUsersApiResponse,
+  craftGetMemberShipInternalRes,
   craftGetUserApiInternalRes,
   formatMiddlewareRes
 }
