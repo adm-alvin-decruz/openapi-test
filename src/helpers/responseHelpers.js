@@ -1,5 +1,6 @@
  const loggerService = require('../logs/logger');
  const userConfig = require('../config/usersConfig');
+ const commonService = require('../services/commonService');
 
 /**
  * Function process CIAM response
@@ -53,7 +54,50 @@ function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logOb
   let responseToInternal = {"status": status, "data": response};
 
   // prepare logs
-  logObj['response_to_internal']= responseToInternal;
+  logObj['response_to_internal']= JSON.stringify(responseToInternal);
+  loggerService.log(logObj);
+
+  return responseToInternal;
+}
+
+/**
+ * responseHelper.craftGetUserApiInternalRes('', req.body, 'success', response, logObj);
+ *
+ * @param {*} attr
+ * @param {*} reqBody
+ * @param {*} status
+ * @param {*} response
+ * @param {*} logObj
+ * @returns
+ */
+function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
+  // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
+  let resConfigVar = JSON.parse(userConfig['GET_USER_MEMBERSHIPS_API_RESPONSE_CONFIG']);
+  let resConfig = resConfigVar[mwgCode];
+
+  // response JSON
+  let responseStructure = {
+    "membership": {
+      "code": resConfig.code,
+      "mwgCode": mwgCode,
+      "message": resConfig.message
+    },
+    "status": resConfig.status,
+    "statusCode": resConfig.code
+  };
+
+  let responseToInternal = responseStructure;
+
+  // craft response JSON
+  if(req.body.group = 'wildpass'){
+    if(response !== ''){
+      memberInfo = formatGetUserAPIResData(req, response, 'GET_USER_API_RESPONSE_MAPPING');
+      responseToInternal = mergeJson(memberInfo, responseStructure);
+    }
+  }
+
+  // prepare logs
+  logObj['response_to_internal']= JSON.stringify(responseToInternal);
   loggerService.log(logObj);
 
   return responseToInternal;
@@ -78,8 +122,33 @@ function formatMiddlewareRes(status, msg){
 }
 }
 
+function formatGetUserAPIResData(req, memberInfo, config){
+  // set response data using mapping
+  requester = commonService.extractStringPart(req.headers['mwg-app-id'], 0);
+  group = req.body.group;
+  configName = config+'_'+group.toUpperCase()+'_'+requester.toUpperCase();
+  // map obj
+  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo.db_user);
+  // format DOB
+  const date = new Date(resObj.dateOfBirth);
+  resObj['dateOfBirth'] = date.toISOString().split('T')[0];
+
+  return resObj;
+}
+
+function mergeJson(jsonA, jsonB) {
+  // Merge jsonA fields into the nested 'membership' object in jsonB
+  jsonB.membership = {
+    ...jsonB.membership,
+    ...jsonA
+  };
+
+  return jsonB;
+}
+
 module.exports = {
   craftUsersApiResponse,
-  formatMiddlewareRes,
-  craftGetMemberShipInternalRes
+  craftGetMemberShipInternalRes,
+  craftGetUserApiInternalRes,
+  formatMiddlewareRes
 }

@@ -5,9 +5,10 @@
 
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
-  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand
+  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
+const passwordService = require('../users/userPasswordService');
 
 // use dotenv
 require('dotenv').config();
@@ -18,16 +19,21 @@ const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const usersUpdateHelpers = require('./usersUpdateHelpers');
 const lambdaService = require('../../services/lambdaService');
-const passkitService = require('../../services/passkitService');
+const cognitoService = require('../../services/cognitoService');
 const usersSignupHelper = require('./usersSignupHelper');
 const userConfig = require('../../config/usersConfig');
+const emailService = require('./usersEmailService');
+const userDBService = require('./usersDBService');
+const userUpdateHelper = require('./usersUpdateHelpers');
+const userDeleteHelper = require('./usersDeleteHelpers');
+const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 
 /**
  * Function User signup service
  * @param {json} req
  * @returns
  */
-async function userSignupService(req){
+async function userSignup(req){
   // set the source base on app ID
   req['body']['source'] = commonService.setSource(req.headers);
 
@@ -38,7 +44,10 @@ async function userSignupService(req){
   }
   req.body['mandaiID'] = mandaiID;
 
-  req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
+  // req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
+  let galaxyImportPass = await galaxyWPService.callMembershipPassApi(req.body);
+  req.body['galaxy'] = JSON.stringify(galaxyImportPass);
+  req.body['visualID'] = galaxyImportPass.visualId;
 
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
@@ -47,10 +56,11 @@ async function userSignupService(req){
   let genWPCardFace = await prepareWPCardfaceInvoke(req);
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
 
+  let genPasskit = await prepareGenPasskitInvoke(req);
+
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
   }
-  // TODO: save users into DB
 
   // call cognitoCreateUser function
   return cognitoCreateUser(req);
@@ -67,7 +77,7 @@ async function cognitoCreateUser(req){
   const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email,
-    TemporaryPassword: "Password123#",
+    TemporaryPassword: passwordService.generatePassword(8),
     DesiredDeliveryMediums: ["EMAIL"],
     MessageAction: "SUPPRESS", // disable send verification email temp password
     UserAttributes: [
@@ -97,18 +107,14 @@ async function cognitoCreateUser(req){
     // create user in Lambda
     var response = await client.send(newUserParams);
 
-    // send welcome email
-    let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
-    const emailTriggerData = {
-      email: req.body.email,
-      firstName: req.body.firstName,
-      group: req.body.group,
-      ID: req.body.mandaiID
-    };
+    if(response.$metadata.httpStatusCode === 200){
+      // save to DB
+      req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
+      response['db'] = JSON.stringify(await usersSignupHelper.createUserSignupDB(req));
 
-    // lambda invoke
-    let emailTrigger = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
-    response['email_trigger'] = JSON.stringify(emailTrigger); // add to log
+      // send welcome email
+      response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
+    }
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
@@ -141,16 +147,17 @@ async function getUserMembership(req){
   };
 
   const getUserCommand = new AdminGetUserCommand(getMemberJson);
-
+  var response = {};
   try {
-    var response = await client.send(getUserCommand);
-    // var result = {"status": "success", "data": response};
+    // get from cognito
+    response['cognitoUser'] = await client.send(getUserCommand);
+    // read from database
+    response['db_user'] = await userDBService.getDBUserByEmail(req.body);
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
     // prepare response to client
     let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
-    console.log(responseToInternal);
     return responseToInternal;
 
   } catch (error) {
@@ -177,39 +184,47 @@ async function getUserMembership(req){
 /**
  * Update user CIAM info
  */
-async function adminUpdateUser (req, listedParams, userAttributes){
-  // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
-
+async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
-  // let firstName = (reqBody.firstName === undefined) ? ''
-  let name = usersUpdateHelpers.createNameParameter(req.body, userAttributes);
-  listedParams.push(name);
+  let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
+  ciamComparedParams.push(name);
 
-  // prepare update user array
-  const updateUserArray = {
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: reqBody.email,
-    UserAttributes: listedParams
-  }
+  const response = [];
 
-  var setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
+  // get mandai ID
+  req.body['mandaiID'] = membershipData.db_user.mandai_id;
 
   try {
-    var responseFromCognito = await client.send(setUpdateParams);
+    // create user's wildpass card face first.
+    let genWPCardFace = await prepareWPCardfaceInvoke(req);
+    response['cardface'] = JSON.stringify({"cardface": genWPCardFace});
+
+    // save to cognito
+    response['cognito'] = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
+
+    // save to DB
+    response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req.body, prepareDBUpdateData, membershipData.db_user);
+
+    // galaxy update
+    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req.body, ciamComparedParams, membershipData);
+
+    // send update email
+    req.body['emailType'] = 'update_wp';
+    response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArray, responseFromCognito);
+    let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', updateUserArr, response);
     // prepare response to client
-    let responseToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
+    let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
     return responseToClient;
 
   } catch (error) {
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', updateUserArray, error);
+    let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', response, error);
     // prepare response to client
-    let responseErrorToClient = responseHelper.craftUsersApiResponse('', reqBody, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_UPDATE', logObj);
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
 
     return responseErrorToClient;
   }
@@ -291,23 +306,15 @@ async function resendUserMembership(req, memberAttributes){
   let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
 
   // find user attribute value for mandaiID
-  mandaiID = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
-  firstName = commonService.findUserAttributeValue(memberAttributes, 'given_name')
-
-  // event data
-  const event = {
-    email: reqBody.email,
-    firstName: firstName,
-    group: reqBody.group,
-    ID: mandaiID
-  };
+  reqBody['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
+  reqBody['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
 
   try {
-    // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+    // resend wildpass email
+    const response  = await emailService.lambdaSendEmail(reqBody);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', event, response);
+    let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', memberAttributes, response);
     // prepare response to client
     return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
 
@@ -355,8 +362,8 @@ async function prepareWPCardfaceInvoke(req){
       // prepare log response
       responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
-      return error
-    }
+    return error
+  }
 }
 
 /**
@@ -365,20 +372,32 @@ async function prepareWPCardfaceInvoke(req){
  * @param {json} req
  * @returns
  */
-async function deleteMembership(req){
+async function deleteMembership(req, membershipData){
   // prepare update user array
   const deleteUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email,
   }
 
-  var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
-
+  const response = [];
   try {
-    var responseFromCognito = await client.send(setDeleteParams);
+
+    if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+      var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
+      // delete in DB
+      response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
+    }
+    if(['prod'].includes(process.env.APP_ENV) ){
+      var setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
+      // disable in DB
+      response['disable_user_db'] = await userDeleteHelper.disableDBUser(membershipData.db_user);
+    }
+
+    // delete/disable from cognito
+    response['delete_user_cognito'] = await client.send(setDeleteParams);
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, responseFromCognito);
+    let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_SUCCESS', 'DELETE_MEMBERSHIP', logObj);
 
@@ -392,6 +411,93 @@ async function deleteMembership(req){
 
     return responseErrorToClient;
   }
+}
+
+async function getUserCustom(req){
+  let getMemberJson = {
+    UserPoolId: process.env.USER_POOL_ID,
+    Username: req.body.email
+  };
+
+  const getUserCommand = new AdminGetUserCommand(getMemberJson);
+  var response = {};
+  try {
+    // get from cognito
+    response['cognitoUser'] = await client.send(getUserCommand);
+    // read from database
+    if(req.body.group = 'wildpass'){
+      response['db_user'] = await userDBService.queryWPUserByEmail(req.body);
+    }else{
+      response['db_user'] = await userDBService.getDBUserByEmail(req.body);
+    }
+
+    // prepare logs
+    let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, response);
+    // prepare response to client
+    let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', response, logObj);
+    return responseToInternal;
+
+  } catch (error) {
+    if(error.name === 'UserNotFoundException'){
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, error);
+      // prepare response to client
+      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL', '', logObj);
+      return responseToInternal;
+    }else{
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersServices.getUserMembershipCustom', req, '', getMemberJson, error);
+      // prepare response to client
+      let responseToInternal = responseHelper.craftGetUserApiInternalRes('', req, 'MWG_CIAM_USERS_MEMBERSHIPS_GET_ERROR', '', logObj);
+      return responseToInternal;
+    }
+  }
+
+  // prepare logs
+  const clientAPIData = {
+    "membership": req.body.group,
+    "action": "getUserMembership Service",
+    "api_header": req.headers,
+    "api_body": req.body,
+    "mwgCode": ""
+  }
+  loggerService.log('user', clientAPIData, getUserCommand, response, result);
+
+  return result;
+}
+
+async function prepareGenPasskitInvoke(req){
+  // integrate with cardface lambda
+  let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
+
+  let dob = commonService.convertDateHyphenFormat(req.body.dob);
+  // event data
+  const event = {
+     name: req.body.lastName +' '+ req.body.firstName,
+     dateOfBirth: dob,
+     mandaiId: req.body.mandaiID
+  };
+
+  try {
+     // lambda invoke
+     const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+     if(response.statusCode === 200){
+       return response;
+     }
+     if([400, 500].includes(response.statusCode) ){
+       // prepare logs
+       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
+       // prepare response to client
+       return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+     }
+   } catch (error) {
+     // prepare logs
+     let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
+     // prepare log response
+     responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+
+   return error
+ }
 }
 
 
@@ -474,11 +580,12 @@ function isJSONObject(obj) {
 
 /** export the module */
 module.exports = {
-  userSignupService,
+  userSignup,
   adminUpdateUser,
   getUserMembership,
   resendUserMembership,
   deleteMembership,
+  getUserCustom,
   processError,
   genSecretHash,
   processErrors

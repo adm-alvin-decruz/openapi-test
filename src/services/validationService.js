@@ -1,5 +1,6 @@
 const userConfig = require('../config/usersConfig');
 const appConfig = require('../config/appConfig');
+const commonService = require('./commonService');
 
 /**
  * Validate App ID
@@ -43,7 +44,7 @@ function validateParams(reqBody, configName){
     if(key === 'dob' && reqBody[key] != undefined){
       // validate date of birth
       let dobVal = validateDOB(reqBody[key]);
-      if(!validateDOB(reqBody[key])){
+      if(!dobVal){
         errorObj['dob']= ['range_error'];
       }
     }
@@ -63,19 +64,27 @@ function validateParams(reqBody, configName){
   return errorObj;
 }
 
-function validateDOB(dateOfBirth){
-  const dob = new Date(dateOfBirth);
-  const today = new Date();
+function validateDOB(birthdate){
+  // Parse the birthdate string
+  const [day, month, year] = birthdate.split('/').map(Number);
+
+  // Create a Date object for the birthdate
+  // Note: months in JavaScript Date are 0-indexed, so we subtract 1 from the month
+  const birthdateObj = new Date(year, month - 1, day);
+
+  // Get the current date
+  const currentDate = new Date();
 
   // Calculate age
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
+  let age = currentDate.getFullYear() - birthdateObj.getFullYear();
 
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+  // Adjust age if birthday hasn't occurred this year
+  const monthDiff = currentDate.getMonth() - birthdateObj.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < birthdateObj.getDate())) {
     age--;
   }
 
-  // check if age is between 13 and 99
+  // Check if age is within the range [13, 99]
   return age >= 13 && age <= 99;
 }
 

@@ -13,6 +13,7 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const aemService = require('../../services/AEMService');
+const dbService = require('./usersDBService');
 
 /**
  * Function listAll users
@@ -65,7 +66,7 @@ async function adminCreateUser (req){
         return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
       }else{
-        var response = await usersService.userSignupService(req);
+        var response = await usersService.userSignup(req);
       }
 
       return response;
@@ -95,25 +96,25 @@ async function adminUpdateUser (req, listedParams){
     var memberInfo = await usersService.getUserMembership(req);
 
     // compare input data vs membership info
-    let listedComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.UserAttributes);
+    let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
+    let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-    if(commonService.isJsonNotEmpty(listedComparedParams) === true){
+    if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
       if(memberInfo.status === 'success'){
         // user exist, can update info
-        var response = await usersService.adminUpdateUser(req, listedParams, memberInfo.data.UserAttributes);
+        var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
         return response;
       }
     }
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {}, memberInfo);
+    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {"success":"no data to update"}, memberInfo);
 
     // prepare error params response
     return responseHelper.craftUsersApiResponse('usersControllers.adminUpdateUser', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
     // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
 
   } catch (error) {
-    console.log(error);
     return error;
   }
 }
@@ -135,7 +136,7 @@ async function membershipResend(req){
 
     if(memberInfo.status === 'success'){
       // user exist, resend membership
-      var response = await usersService.resendUserMembership(req, memberInfo.data.UserAttributes);
+      var response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
       return response;
     }
     else if(memberInfo.status === 'not found'){
@@ -175,7 +176,7 @@ async function membershipDelete(req){
 
   if(memberInfo.status === 'success'){
     // user exist, can update info
-    var response = await usersService.deleteMembership(req);
+    var response = await usersService.deleteMembership(req, memberInfo.data);
     return response;
   }
   let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, {});
@@ -184,13 +185,24 @@ async function membershipDelete(req){
 }
 
 /**
- * simplified log and response
- * TODO: look into this again
+ * Function get membership
  */
-// function handleUserSignupError(moduleName, action, req, mwgCode, envFunc, endpoindReq, endpointRes) {
-//   const logObj = loggerService.build(moduleName, action, req, mwgCode, endpoindReq, endpointRes);
-//   return responseHelper.craftUsersApiResponse(action, endpointRes, mwgCode, envFunc, logObj);
-// }
+async function getUser(req){
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
+
+  // API validation
+  let validatedParams = validationService.validateParams(req.body, 'GET_USER_VALIDATE_PARAMS');
+
+  // return errorParams;
+  if(validatedParams.status === 'success'){
+    // get user's membership
+    return await usersService.getUserCustom(req);;
+  }
+  else{
+    return validatedParams;
+  }
+}
 
 /**
  * User flow step 2 after signup
@@ -285,6 +297,7 @@ module.exports = {
   adminUpdateUser,
   membershipResend,
   membershipDelete,
+  getUser,
   adminSetUserPassword,
   userLogin,
   userResetPassword,

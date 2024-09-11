@@ -75,7 +75,6 @@ function isJsonNotEmpty(json) {
  */
 function mapJsonObjects(mappingJSON, inputJson) {
   const result = {};
-  let mappingJSONObj = JSON.parse(mappingJSON);
 
   for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
     if (valueA in inputJson) {
@@ -88,6 +87,10 @@ function mapJsonObjects(mappingJSON, inputJson) {
 
 /**
  * Create a new cognito format JSON by mapping 'mappingJSON' & an input JSON from request
+ * {
+        "Name": "given_name",
+        "Value": "Kay"
+    }
  *
  * @param {JSON} mappingJSON
  * @param {JSON} inputJson
@@ -113,6 +116,8 @@ function mapCognitoJsonObj(mappingJSON, inputJSON){
 }
 
 /**
+ * Map input JSON to source format. If no change, return empty
+ * If any params change, will return the changed name and value
  *
  * @param {json} inputJson
  * @param {json} sourceCompare
@@ -153,10 +158,16 @@ function decodeBase64(base64String) {
   return decodedString;
 }
 
+/**
+ * Convert date with slashes / to hyphen -
+ * @param {string} inputDate
+ * @returns
+ */
 function convertDateHyphenFormat(inputDate) {
   const [day, month, year] = inputDate.split('/');
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
+
 /**
  * {"name":"wildpass","visualID":"24110876643220562330","expiry":""}
  *
@@ -171,6 +182,69 @@ function findJsonObjValue(jsonObj, objKey){
   }
 }
 
+function replaceSqlPlaceholders(sql, params) {
+  let index = 0;
+  return sql.replace(/\?/g, () => {
+    const value = params[index++];
+    if (typeof value === 'string') {
+      return `'${value.replace(/'/g, "''")}'`;
+    } else if (value === null) {
+      return 'NULL';
+    } else {
+      return value;
+    }
+  });
+}
+
+function extractStringPart(input, index) {
+  if (typeof input !== 'string' || input.trim() === '') {
+    throw new Error('Input must be a non-empty string');
+  }
+
+  if (typeof index !== 'number' || index < 0 || !Number.isInteger(index)) {
+    throw new Error('Index must be a non-negative integer');
+  }
+
+  const parts = input.split('.');
+
+  if (index >= parts.length) {
+    throw new Error('Index out of bounds');
+  }
+
+  return parts[index];
+}
+
+/**
+ *
+ * // Example usage
+  * const a = [
+  *   {"Name":"birthdate","Value":"01/02/1992"},
+  *   {"Name":"name","Value":"Kay Liong"}
+  * ];
+  * const b = ["birthdate", "newsletter"];
+ * return ["birthdate"]
+ * @returns array
+ */
+/**
+ *
+ * @param {json} a input to check
+ * @param {json} b config arr
+ * @returns
+ */
+function detectAttrPresence(a, b){
+    // Create a Set of Names from 'a' for efficient lookup
+    const aNames = new Set(a.map(item => item.Name));
+
+    // Filter 'b' to only include items that are present in 'a'
+    return b.filter(item => aNames.has(item));
+}
+
+// helper function to format date
+function formatDate(dateString) {
+  const [day, month, year] = dateString.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -182,5 +256,9 @@ module.exports = {
   findUserAttributeValue,
   findJsonObjValue,
   decodeBase64,
-  convertDateHyphenFormat
+  convertDateHyphenFormat,
+  replaceSqlPlaceholders,
+  extractStringPart,
+  detectAttrPresence,
+  formatDate
 }
