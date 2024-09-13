@@ -12,6 +12,9 @@ const passwordService = require('../users/userPasswordService');
 
 // use dotenv
 require('dotenv').config();
+const util = require('util');
+const setTimeoutPromise = util.promisify(setTimeout);
+
 
 const crypto = require("crypto");
 const commonService = require('../../services/commonService');
@@ -44,8 +47,14 @@ async function userSignup(req){
   }
   req.body['mandaiID'] = mandaiID;
 
-  // req.body['visualID'] = usersSignupHelper.generateVisualID(req.body);
-  let galaxyImportPass = await galaxyWPService.callMembershipPassApi(req.body);
+  // import pass to Galaxy
+  const galaxyImportPass = await retryOperation(async () => {
+    return await galaxyWPService.callMembershipPassApi(req.body);
+  });
+  // return error when galaxy failed.
+  if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
+    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', 'MWG_CIAM_USER_SIGNUP_ERR', '', galaxyImportPass);
+  }
   req.body['galaxy'] = JSON.stringify(galaxyImportPass);
   req.body['visualID'] = galaxyImportPass.visualId;
 
@@ -104,24 +113,38 @@ async function cognitoCreateUser(req){
   var newUserParams = new AdminCreateUserCommand(newUserArray);
 
   try {
+
+    let response = {};
     // create user in Lambda
-    var response = await client.send(newUserParams);
+    const lambdaResponse = await retryOperation(async () => {
+      const lambdaRes =  await client.send(newUserParams);
+      if (lambdaRes.$metadata.httpStatusCode !== 200) {
+        return 'Lambda user creation failed';
+      }
+      return lambdaRes;
+    });
 
-    if(response.$metadata.httpStatusCode === 200){
-      // save to DB
-      req['body']['password'] = await passwordService.hashPassword(newUserArray.TemporaryPassword);
-      response['db'] = JSON.stringify(await usersSignupHelper.createUserSignupDB(req));
+    // save to DB
+    req.body.password = await passwordService.hashPassword(newUserArray.TemporaryPassword);
+    const dbResponse = await retryOperation(async () => {
+      return await usersSignupHelper.createUserSignupDB(req);
+    });
 
-      // send welcome email
-      response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
-    }
+    // send welcome email
+    const emailResponse = await retryOperation(async () => {
+      return await emailService.lambdaSendEmail(req.body);
+    });
+console.log(dbResponse);
+    response = {
+      lambda: lambdaResponse,
+      db: JSON.stringify(dbResponse),
+      email_trigger: emailResponse
+    };
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
-
-    //TODO: import pass to GALAXY
 
     return responseToClient;
 
@@ -413,7 +436,7 @@ async function deleteMembership(req, membershipData){
   }
 }
 
-async function getUserCustom(req){
+async function getUserCustomisable(req){
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
@@ -578,6 +601,21 @@ function isJSONObject(obj) {
   return Array.isArray(obj);
 }
 
+async function retryOperation(operation, maxRetries = 9, delay = 200) {
+  let lastError = [];
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError[`Attempt ${attempt + 1} `] = `Attempt ${attempt + 1} failed: ` + error.message;
+      // console.error(`Attempt ${attempt + 1} failed:`, error.message);
+      await setTimeoutPromise(delay);
+    }
+  }
+  // return new Error(`Operation failed after ${maxRetries} attempts. Last error: ${JSON.stringify(lastError)}`);
+  return lastError
+}
+
 /** export the module */
 module.exports = {
   userSignup,
@@ -585,7 +623,7 @@ module.exports = {
   getUserMembership,
   resendUserMembership,
   deleteMembership,
-  getUserCustom,
+  getUserCustomisable,
   processError,
   genSecretHash,
   processErrors

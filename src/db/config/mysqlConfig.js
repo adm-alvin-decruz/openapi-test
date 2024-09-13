@@ -1,3 +1,7 @@
+const fs = require('fs');
+const path = require('path');
+
+let cert = path.join(__dirname, '../certs/ap-southeast-1-bundle.pem');
 module.exports = {
   master: {
     host: process.env.MYSQL_MASTER_HOST,
@@ -9,6 +13,10 @@ module.exports = {
     connectionLimit: 10,
     queueLimit: 0,
     timezone: '+00:00', // UTC+0
+    ssl: {
+      ca: fs.readFileSync(cert),
+      rejectUnauthorized: false
+    }
   },
   slave: {
     host: process.env.MYSQL_SLAVE_HOST,
@@ -20,5 +28,9 @@ module.exports = {
     connectionLimit: 10,
     queueLimit: 0,
     timezone: '+00:00', // UTC+0
+    ssl: {
+      ca: fs.readFileSync(cert),
+      rejectUnauthorized: false
+    }
   }
 };

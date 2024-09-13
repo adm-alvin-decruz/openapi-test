@@ -197,7 +197,7 @@ async function getUser(req){
   // return errorParams;
   if(validatedParams.status === 'success'){
     // get user's membership
-    return await usersService.getUserCustom(req);;
+    return await usersService.getUserCustomisable(req);;
   }
   else{
     return validatedParams;
