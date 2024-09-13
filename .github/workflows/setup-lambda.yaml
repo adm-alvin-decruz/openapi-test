@@ -46,7 +46,7 @@ jobs:
 
     - name: upload package
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: lambda_package
         path: infra/terraform/files/app-${{ github.sha }}.zip
