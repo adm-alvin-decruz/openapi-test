@@ -12,6 +12,24 @@ CREATE TABLE `app_tokens` (
   UNIQUE KEY `client_UNIQUE` (`client`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Create syntax for TABLE 'users'
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
+  `given_name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
+  `family_name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
+  `birthdate` timestamp NOT NULL,
+  `mandai_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL,
+  `source` tinyint DEFAULT NULL COMMENT 'ORGANIC:1, TICKETING:2, GLOBALTIX:3',
+  `active` tinyint(1) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_email_mandai_id` (`email`,`mandai_id`),
+  KEY `idx_email` (`email`),
+  KEY `idx_mandai_id` (`mandai_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- Create syntax for TABLE 'user_credentials'
 CREATE TABLE `user_credentials` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -79,22 +97,4 @@ CREATE TABLE `user_newsletters` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_name` (`name`),
   CONSTRAINT `user_newsletters_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Create syntax for TABLE 'users'
-CREATE TABLE `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
-  `given_name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
-  `family_name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
-  `birthdate` timestamp NOT NULL,
-  `mandai_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL,
-  `source` tinyint DEFAULT NULL COMMENT 'ORGANIC:1, TICKETING:2, GLOBALTIX:3',
-  `active` tinyint(1) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_email_mandai_id` (`email`,`mandai_id`),
-  KEY `idx_email` (`email`),
-  KEY `idx_mandai_id` (`mandai_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
