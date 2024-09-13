@@ -27,6 +27,7 @@ jobs:
           aws-region: ap-southeast-1
           role-to-assume: ${{ secrets.role_arn }}
           role-external-id: ${{ secrets.external_id }}
+          role-skip-session-tagging: true
 
       - name: Run Backup Query
         run: echo "Run Backup Query to take backup of database/table impacted"
