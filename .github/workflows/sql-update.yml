@@ -1,0 +1,49 @@
+name: sql-update-action
+run-name: Sql Update ${{ github.repository }}. Job ${{ github.job }} started by ${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs: 
+      sql-environment:
+        type: environment
+        description: Select the environment
+
+jobs:
+  sql-update:
+    name: Run sql queries in ciam database
+    runs-on: commonservices-${{ github.event.inputs.sql-environment }}
+    environment: ${{ github.event.inputs.sql-environment }}
+
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.role_arn }}
+          role-external-id: ${{ secrets.external_id }}
+          role-skip-session-tagging: true
+
+      - name: Run Backup Query
+        run: echo "Run Backup Query to take backup of database/table impacted"
+
+      - name: verify Backup
+        run: echo "Run verify Backup Query to verify backup of database/table impacted"
+
+      - name: psql query execute
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          echo "Running ciam-users-20240821.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-users-20240821.sql
+          echo "running app-token-seeds.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/app-token-seeds.sql
+
+      - name: Verify Deployment
+        run:  echo "Run Query to verify db update/rollback  of database/table is successful"
