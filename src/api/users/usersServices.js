@@ -53,7 +53,7 @@ async function userSignup(req){
   });
   // return error when galaxy failed.
   if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
-    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', 'MWG_CIAM_USER_SIGNUP_ERR', '', galaxyImportPass);
+    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
   }
   req.body['galaxy'] = JSON.stringify(galaxyImportPass);
   req.body['visualID'] = galaxyImportPass.visualId;

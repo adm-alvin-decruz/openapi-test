@@ -10,8 +10,8 @@ class ApiUtils {
         data
       });
     } catch (error) {
-      let data = {method,url,headers,data, error}
-      throw new Error(`API request failed: ${data}`);
+      let reqData = {method,url,headers,data, error}
+      throw new Error(`API request failed: ${JSON.stringify(reqData)}`);
     }
   }
 

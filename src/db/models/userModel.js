@@ -53,11 +53,12 @@ class User {
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_newsletters un ON un.user_id = u.id
                   WHERE u.email = ? AND u.active=1`;
-      const rows = await pool.query(sql, [reqBody.email]);
-      if(JSON.stringify(rows[0] == '[]')){
-        throw new Error(`DB result is empty: ${commonService.replaceSqlPlaceholders(sql, params)}`);
+      const rows = await pool.query(sql, [email]);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+        data: rows[0]
       }
-      return rows[0];
     }
     catch (error){
       throw new Error(`Error queryWPUserByEmail: ${error}`);

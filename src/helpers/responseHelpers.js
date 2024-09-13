@@ -177,5 +177,6 @@ module.exports = {
   craftUsersApiResponse,
   craftGetMemberShipInternalRes,
   craftGetUserApiInternalRes,
-  formatMiddlewareRes
+  formatMiddlewareRes,
+  responseHandle
 }
