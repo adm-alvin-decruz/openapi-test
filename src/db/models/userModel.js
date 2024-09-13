@@ -46,6 +46,25 @@ class User {
     }
   }
 
+  /** Find wild pass user full data */
+  static async findWPFullData(email){
+    try{
+      const sql = `SELECT u.*, um.name,um.visual_id, un.type, un.subscribe FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  INNER JOIN user_newsletters un ON un.user_id = u.id
+                  WHERE u.email = ? AND u.active=1`;
+      const rows = await pool.query(sql, [email]);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+        data: rows[0]
+      }
+    }
+    catch (error){
+      throw new Error(`Error queryWPUserByEmail: ${error}`);
+    }
+  }
+
   // static async update(id, userData) {
   //   const now = getCurrentUTCTimestamp();
   //   const sql = `

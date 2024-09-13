@@ -17,6 +17,15 @@ app.use('/v1/galaxy', galaxyRoutes);
 
 const handler = serverless(app);
 
+const port = 3010;
+const startServer = async () => {
+    app.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}`);
+      });
+}
+
+startServer();
+
 module.exports.handler = (event, context, callback) => {
     const response = handler(event, context, callback);
     return response;

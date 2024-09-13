@@ -19,17 +19,12 @@ async function getDBUserByEmail(reqBody){
 }
 
 async function queryWPUserByEmail(reqBody) {
-  try{
-    const sql = `SELECT u.*, um.name,um.visual_id, un.type, un.subscribe FROM users u
-                INNER JOIN user_memberships um ON um.user_id = u.id
-                INNER JOIN user_newsletters un ON un.user_id = u.id
-                WHERE u.email = ? AND u.active=1`;
-    const rows = await pool.query(sql, [reqBody.email]);
-    return rows[0];
+  let result = userModel.findWPFullData(reqBody.email);
+
+  if(JSON.stringify(result.data == '[]')){
+    throw new Error(`DB result is empty: ${result.sql_statement}`);
   }
-  catch (error){
-    return error;
-  }
+  return result.data;
 }
 
 function prepareDBUpdateData(ciamAttrInput) {

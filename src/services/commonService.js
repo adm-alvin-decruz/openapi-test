@@ -245,6 +245,39 @@ function formatDate(dateString) {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
+/**
+ * {
+ *   "Name": "sub",
+ *   "Value": "90a4a7b1-1115-484f-8133-89ae1e6448b6"
+ * },
+ *
+ * @param {json} inputJson
+ * @returns
+ */
+function convertUserAttrToNormJson(inputJson) {
+  const outputJson = {};
+
+  for (const item of inputJson) {
+    let value = item.Value;
+
+    // Parse JSON strings if possible
+    try {
+      const parsedValue = JSON.parse(value);
+      value = parsedValue;
+    } catch (error) {
+      // If parsing fails, keep the original string value
+    }
+
+    // Convert "null" string to actual null value
+    if (value === "null") {
+      value = null;
+    }
+
+    outputJson[item.Name] = value;
+  }
+
+  return outputJson;
+}
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -260,5 +293,6 @@ module.exports = {
   replaceSqlPlaceholders,
   extractStringPart,
   detectAttrPresence,
-  formatDate
+  formatDate,
+  convertUserAttrToNormJson
 }

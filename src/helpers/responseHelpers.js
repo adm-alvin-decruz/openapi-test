@@ -1,6 +1,22 @@
  const loggerService = require('../logs/logger');
  const userConfig = require('../config/usersConfig');
  const commonService = require('../services/commonService');
+/**
+ *
+ * @param {string} module 'user'
+ * @param {string} moduleFunc 'usersServices.createUserService'
+ * @param {string} configModulePrefix 'USERS_SIGNUP', name prefix for response config
+ * @param {json} req 'the request obj'
+ * @param {string} mwgCode 'MWG_CIAM_USER_SIGNUP_ERR'
+ * @param {json} clientReqObj json obj or array use to request to client - Galaxy, Cognito, Passkit etc
+ * @param {json} clientResObj json obj or array response from client - Galaxy, Cognito, Passkit etc
+ * @returns
+ */
+function responseHandle(module='user', moduleFunc, configModulePrefix, req, mwgCode, clientReqObj='', clientResObj='') {
+  const logObj = loggerService.build(module, moduleFunc, req, mwgCode, clientReqObj, clientResObj);
+
+  return craftUsersApiResponse('', req.body, mwgCode, configModulePrefix, logObj);
+}
 
 /**
  * Function process CIAM response
@@ -91,8 +107,19 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
   // craft response JSON
   if(req.body.group = 'wildpass'){
     if(response !== ''){
-      memberInfo = formatGetUserAPIResData(req, response, 'GET_USER_API_RESPONSE_MAPPING');
-      responseToInternal = mergeJson(memberInfo, responseStructure);
+      // let stringDBUser = JSON.stringify(response.db_user);
+      if(response.db_user != undefined){
+        // if db user not exist
+        memberInfo = formatGetUserAPIResData(req, response.db_user, 'GET_USER_API_RESPONSE_MAPPING');
+        responseToInternal = mergeJson(memberInfo, responseStructure);
+      }else{
+        // re-format cognito user attributes to key:value for next mapping process
+        let cognitoUserJson = commonService.convertUserAttrToNormJson(response.cognitoUser.UserAttributes);
+        cognitoUserJson['visualId'] = cognitoUserJson['custom:membership'];
+        console.log("AAA", cognitoUserJson);
+        memberInfo = formatGetUserAPIResData(req, cognitoUserJson, 'GET_USER_API_RESPONSE_MAPPING');
+        responseToInternal = mergeJson(memberInfo, responseStructure);
+      }
     }
   }
 
@@ -128,7 +155,7 @@ function formatGetUserAPIResData(req, memberInfo, config){
   group = req.body.group;
   configName = config+'_'+group.toUpperCase()+'_'+requester.toUpperCase();
   // map obj
-  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo.db_user);
+  resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo);
   // format DOB
   const date = new Date(resObj.dateOfBirth);
   resObj['dateOfBirth'] = date.toISOString().split('T')[0];
@@ -150,5 +177,6 @@ module.exports = {
   craftUsersApiResponse,
   craftGetMemberShipInternalRes,
   craftGetUserApiInternalRes,
-  formatMiddlewareRes
+  formatMiddlewareRes,
+  responseHandle
 }

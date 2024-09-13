@@ -170,6 +170,7 @@ async function insertUser(req){
     return result;
 
   } catch (error) {
+    throw error
     return {error: error};
   }
 }
