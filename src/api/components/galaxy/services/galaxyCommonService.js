@@ -1,3 +1,5 @@
+const galaxyTokenService = require('./galaxyTokenService');
+
 async function mapImputToImportParams(input, importData) {
   // Helper function to format date
   function formatDate(dateString) {
@@ -56,6 +58,21 @@ async function mapImputToImportParams(input, importData) {
   return result;
 }
 
+async function setGlxReqHeader(){
+  const glxToken = await galaxyTokenService.useToken();
+
+  return await constructGlxHeader(glxToken);
+}
+
+async function constructGlxHeader(glxToken){
+  const headers = {
+    'Authorization': `${glxToken.token_type} ${glxToken.access_token}`,
+    'Content-Type': 'application/json'
+  };
+  return headers;
+}
+
 module.exports = {
-  mapImputToImportParams
+  mapImputToImportParams,
+  setGlxReqHeader
 };

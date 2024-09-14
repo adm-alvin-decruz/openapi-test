@@ -64,6 +64,24 @@ class TokenService {
 
     return await TokenModel.updateTokenData(dbToken);
   }
+
+  async useToken(){
+    const dbToken = await this.getToken('galaxy');
+    let tokenType = '';
+    let accessToken = '';
+    if(dbToken.token){
+      tokenType = dbToken.token.token_type;
+      accessToken = dbToken.token.access_token;
+    }else{
+      tokenType = dbToken.token_type;
+      accessToken = dbToken.access_token;
+    }
+
+    return {
+      token_type: tokenType,
+      access_token: accessToken
+    }
+  }
 }
 
 module.exports = new TokenService();
