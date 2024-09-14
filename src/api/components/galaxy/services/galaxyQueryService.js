@@ -13,10 +13,18 @@ class GalaxyQueryService {
   async callQueryTicketApi(inputData) {
     try {
       const dbToken = await galaxyTokenService.getToken('galaxy');
-      const token  = dbToken.token;
+      let tokenType = '';
+      let accessToken = '';
+      if(dbToken.token){
+        tokenType = dbToken.token.token_type;
+        accessToken = dbToken.token.access_token;
+      }else{
+        tokenType = dbToken.token_type;
+        accessToken = dbToken.access_token;
+      }
 
       const headers = {
-        'Authorization': `${token.token_type} ${token.access_token}`,
+        'Authorization': `${tokenType} ${accessToken}`,
         'Content-Type': 'application/json'
       };
 

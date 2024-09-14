@@ -21,7 +21,9 @@ class TokenService {
       const response = await ApiUtils.makeRequest(tokenURL, 'post', headers, data);
       const tokenData = ApiUtils.handleResponse(response);
 
-      return await this.updateTokenToDB(dbToken, tokenData);
+      const updateDBToken = await this.updateTokenToDB(dbToken, tokenData);
+
+      return tokenData;
     } catch (error) {
       throw ApiUtils.handleError(error);
     }
