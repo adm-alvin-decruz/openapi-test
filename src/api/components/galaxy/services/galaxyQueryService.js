@@ -1,5 +1,5 @@
 const axios = require('axios');
-const galaxyTokenService = require('./galaxyTokenService');
+const galaxyCmnService = require('./galaxyCommonService');
 const ApiUtils = require('../../../../utils/apiUtils');
 
 /**
@@ -12,22 +12,7 @@ class GalaxyQueryService {
 
   async callQueryTicketApi(inputData) {
     try {
-      const dbToken = await galaxyTokenService.getToken('galaxy');
-      let tokenType = '';
-      let accessToken = '';
-      if(dbToken.token){
-        tokenType = dbToken.token.token_type;
-        accessToken = dbToken.token.access_token;
-      }else{
-        tokenType = dbToken.token_type;
-        accessToken = dbToken.access_token;
-      }
-
-      const headers = {
-        'Authorization': `${tokenType} ${accessToken}`,
-        'Content-Type': 'application/json'
-      };
-
+      const headers = await galaxyCmnService.setGlxReqHeader();
       const body = this.createRequestBody(inputData);
 
       const response = await ApiUtils.makeRequest(this.apiEndpoint, 'get', headers, body);

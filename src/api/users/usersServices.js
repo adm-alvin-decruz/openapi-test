@@ -408,12 +408,17 @@ async function deleteMembership(req, membershipData){
     if(['dev', 'uat'].includes(process.env.APP_ENV) ){
       var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
       // delete in DB
-      response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
+      if(JSON.stringify(membershipData.db_user) != undefined){
+        response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
+      }
     }
+
     if(['prod'].includes(process.env.APP_ENV) ){
       var setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
       // disable in DB
-      response['disable_user_db'] = await userDeleteHelper.disableDBUser(membershipData.db_user);
+      if(JSON.stringify(membershipData.db_user) != undefined){
+        response['disable_user_db'] = await userDeleteHelper.disableDBUser(membershipData.db_user);
+      }
     }
 
     // delete/disable from cognito

@@ -1,5 +1,4 @@
 const ApiUtils = require('../../../../utils/apiUtils');
-const galaxyTokenService = require('./galaxyTokenService');
 const galaxyConf = require('../config/galaxyConfig');
 const galaxyCmnService = require('./galaxyCommonService');
 require('dotenv').config();
@@ -12,14 +11,7 @@ class GalaxyWPService {
 
   async callMembershipPassApi(inputData) {
     try {
-      const dbToken = await galaxyTokenService.getToken('galaxy');
-      const token  = dbToken.token;
-
-      const headers = {
-        'Authorization': `${token.token_type} ${token.access_token}`,
-        'Content-Type': 'application/json'
-      };
-
+      const headers = await galaxyCmnService.setGlxReqHeader();
       const body = await this.createRequestBody(inputData, galaxyConf.importWPParams);
 
       const response = await ApiUtils.makeRequest(this.apiImportEndpoint, 'post', headers, body);
@@ -35,14 +27,7 @@ class GalaxyWPService {
 
   async callMembershipUpdatePassApi(inputData){
     try {
-      const dbToken = await galaxyTokenService.getToken('galaxy');
-      const token  = dbToken.token;
-
-      const headers = {
-        'Authorization': `${token.token_type} ${token.access_token}`,
-        'Content-Type': 'application/json'
-      };
-
+      const headers = await galaxyCmnService.setGlxReqHeader();
       const body = await this.createRequestBody(inputData, galaxyConf.updateWPParams);
 
       const response = await ApiUtils.makeRequest(this.apiUpdateEndpoint, 'post', headers, body);
