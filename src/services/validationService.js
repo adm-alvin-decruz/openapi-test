@@ -9,10 +9,13 @@ const commonService = require('./commonService');
  * @param {*} reqHeader
  * @returns
  */
-function validateAppID(reqHeader){
+function validateAppID(reqHeader, module=''){
 	var mwgAppID = reqHeader['mwg-app-id'];
   let appEnv = process.env.APP_ENV;
   let appconfigKey = "APP_ID_"+appEnv.toUpperCase();
+  if(module === 'support'){
+    appconfigKey = "APP_ID_SUPPORT_"+appEnv.toUpperCase();
+  }
   let envAppIDArr = JSON.parse(appConfig[appconfigKey]);
 
   // method to check if the input exists in the JSON array
