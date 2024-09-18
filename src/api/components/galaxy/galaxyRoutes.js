@@ -30,7 +30,7 @@ if(['dev', 'uat'].includes(process.env.APP_ENV) ){
   });
 
   /**
-   * Test save tokens
+   * Import pass
    * Response
    */
   router.post('/import', async (req, res) => {
