@@ -76,8 +76,6 @@ async function getUserFullInfoByEmail(email) {
           created_at: row.user_created_at,
           updated_at: row.user_updated_at
         };
-      }else{
-        response.details = {null:null};
       }
 
       // Memberships (can be multiple)
@@ -90,8 +88,6 @@ async function getUserFullInfoByEmail(email) {
           created_at: row.membership_created_at,
           updated_at: row.membership_updated_at
         });
-      }else{
-        response.details = {null:null};
       }
 
       // Newsletters (can be multiple)
@@ -104,8 +100,6 @@ async function getUserFullInfoByEmail(email) {
           created_at: row.newsletter_created_at,
           updated_at: row.newsletter_updated_at
         });
-      }else{
-        response.details = {null:null};
       }
 
       // User details (only need to do this once)
@@ -123,9 +117,6 @@ async function getUserFullInfoByEmail(email) {
           updated_at: row.details_updated_at
         };
       }
-      else{
-        response.details = {null:null};
-      }
 
       // User credentials (only need to do this once)
       if (Object.keys(response.credentials).length === 0 && row.credentials_id) {
@@ -137,20 +128,10 @@ async function getUserFullInfoByEmail(email) {
           created_at: row.credentials_created_at,
           updated_at: row.credentials_updated_at
         };
-      }else{
-        response.details = {null:null};
       }
     });
 
-    // Remove empty arrays or objects
-    for (const key in response) {
-      if (Array.isArray(response[key]) && response[key].length === 0) {
-        delete response[key];
-      } else if (typeof response[key] === 'object' && Object.keys(response[key]).length === 0) {
-        delete response[key];
-      }
-    }
-
+    console.log(response);
     return response;
   } catch (error) {
     console.error('Error fetching user info:', error);
