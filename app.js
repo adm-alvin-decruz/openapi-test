@@ -16,7 +16,7 @@ app.use('/v1/ciam/', userRoutes);
 // testing galaxy
 app.use('/v1/galaxy', galaxyRoutes);
 // support route
-app.use('/v1/support', supportRoutes);
+app.use('/v1/ciam', supportRoutes);
 
 const handler = serverless(app);
 
