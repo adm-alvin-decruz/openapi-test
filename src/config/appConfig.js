@@ -11,6 +11,13 @@ const appConfig = {
   // App ID Prod
   APP_ID_PROD:'["aemProd.com.mandaiapi.ciam","gltProd.com.mandaiapi.ciam","tktUat.com.mandaiapi.ciam","passkit.Prod.internal.mandaiapi.ciam"]',
 
+  // App ID Support DEV
+  APP_ID_SUPPORT_DEV:'["support.Dev.internal.mandaiapi.ciam"]',
+  // App ID Support UAT
+  APP_ID_SUPPORT_UAT:'["support.Uat.internal.mandaiapi.ciam"]',
+  // App ID Support Prod
+  APP_ID_SUPPORT_PROD:'["support.Prod.internal.mandaiapi.ciam"]',
+
   // user signup generate passkit for send in the email
   signup_gen_passkit:true,
 
