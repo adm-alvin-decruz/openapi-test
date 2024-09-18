@@ -14,10 +14,6 @@ const pong = {'pong': 'pang'};
 
 router.use(express.json());
 
-router.get('/ping', async (req, res) => {
-  return res.json(pong);
-});
-
 /**
  * User signup, create new CIAM user
  */
@@ -80,7 +76,7 @@ router.get('/ping', async (req, res) => {
 
 
 
-router.get('/user', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
+router.get('/support/user', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers, 'support');
 
