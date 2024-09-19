@@ -9,7 +9,7 @@ const userDetailModel = require('../../db/models/userDetailsModel');
 const userConfig = require('../../config/usersConfig');
 const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
 
-async function getUserFullInfoByEmail(email) {
+async function getUserFullInfoByEmail(req) {
   const query = `
     SELECT
       u.id AS user_id, u.email, u.given_name, u.family_name, u.birthdate,
@@ -45,7 +45,7 @@ async function getUserFullInfoByEmail(email) {
   `;
 
   try {
-    const results = await pool.query(query, [email]);
+    const results = await pool.query(query, [req.body.email]);
 
     if (results.length === 0) {
       return null; // User not found
@@ -131,7 +131,6 @@ async function getUserFullInfoByEmail(email) {
       }
     });
 
-    console.log(response);
     return response;
   } catch (error) {
     console.error('Error fetching user info:', error);
