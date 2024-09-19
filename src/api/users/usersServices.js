@@ -334,6 +334,7 @@ async function resendUserMembership(req, memberAttributes){
 
   try {
     // resend wildpass email
+    reqBody['emailType'] = 'update_wp'; // use wildpass re-send template
     const response  = await emailService.lambdaSendEmail(reqBody);
 
     // prepare logs
