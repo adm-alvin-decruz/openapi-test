@@ -23,4 +23,4 @@ const appConfig = {
 
 };
 
-  module.exports = appConfig;
+module.exports = appConfig;
