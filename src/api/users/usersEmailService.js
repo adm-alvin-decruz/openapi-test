@@ -11,6 +11,7 @@ async function lambdaSendEmail(reqBody){
     ID: reqBody.mandaiID
   };
 
+  // email type to differentiate mail template
   if(reqBody.emailType){
     emailTriggerData['emailType'] = reqBody.emailType;
   }
