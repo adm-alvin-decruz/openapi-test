@@ -90,21 +90,46 @@ async function adminCreateUser (req){
  * @returns
  */
 async function adminUpdateUser (req, listedParams){
-
+  req.apiTimer.log('usersController.adminUpdateUser'); // log process time
   try {
     // check if user exist
     var memberInfo = await usersService.getUserMembership(req);
 
-    // compare input data vs membership info
-    let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
-    let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
+    // user exist, can update info
+    if(memberInfo.status === 'success'){
+      // API validation
+     let validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
 
-    if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
-      if(memberInfo.status === 'success'){
-        // user exist, can update info
-        var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
-        return response;
+      // return errorParams;
+      if(validatedParams.status === 'success'){
+        // compare input data vs membership info
+        let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
+        if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
+          let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
+
+          var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
+
+          req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+          return response;
+        }
+      }else{
+        // prepare error params response
+        errorConfig = commonService.processUserUpdateErrors(validatedParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
+        // prepare logs
+        let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+        // prepare error params response
+        return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_UPDATE', logObj);
       }
+
+    }else{
+      // prepare response data
+      let errorConfig = {
+            "email": "This email address does not have a Mandai Account."
+        }
+      // prepare logs
+      let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+      // prepare error params response
+      return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
     }
 
     // prepare logs
@@ -115,7 +140,7 @@ async function adminUpdateUser (req, listedParams){
     // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
 
   } catch (error) {
-    return error;
+    throw error;
   }
 }
 

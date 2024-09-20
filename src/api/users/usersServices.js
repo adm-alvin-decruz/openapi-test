@@ -134,7 +134,7 @@ async function cognitoCreateUser(req){
     const emailResponse = await retryOperation(async () => {
       return await emailService.lambdaSendEmail(req.body);
     });
-console.log(dbResponse);
+
     response = {
       lambda: lambdaResponse,
       db: JSON.stringify(dbResponse),
@@ -164,6 +164,7 @@ console.log(dbResponse);
  * @returns
  */
 async function getUserMembership(req){
+  req.apiTimer.log('usersServices.getUserMembership'); // log process time
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
@@ -181,9 +182,11 @@ async function getUserMembership(req){
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
     // prepare response to client
     let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
+    req.apiTimer.end('usersServices.getUserMembership'); // log end time
     return responseToInternal;
 
   } catch (error) {
+    req.apiTimer.end('usersServices.getUserMembership'); // log end time
     if(error.name === 'UserNotFoundException'){
       var result = {"status": "not found", "data": error};
     }else{
@@ -191,15 +194,8 @@ async function getUserMembership(req){
     }
   }
 
-  // prepare logs
-  const clientAPIData = {
-    "membership": req.body.group,
-    "action": "getUserMembership Service",
-    "api_header": req.headers,
-    "api_body": req.body,
-    "mwgCode": ""
-  }
-  loggerService.log('user', clientAPIData, getUserCommand, response, result);
+  let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, result);
+  loggerService.log(logObj);
 
   return result;
 }
@@ -208,6 +204,7 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
+  req.apiTimer.log('adminUpdateUser'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
@@ -226,14 +223,14 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     response['cognito'] = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
 
     // save to DB
-    response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req.body, prepareDBUpdateData, membershipData.db_user);
+    response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
     // galaxy update
-    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req.body, ciamComparedParams, membershipData);
+    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req, ciamComparedParams, membershipData);
 
     // send update email
     req.body['emailType'] = 'update_wp';
-    response['email_trigger'] = await emailService.lambdaSendEmail(req.body);
+    response['email_trigger'] = await emailService.lambdaSendEmail(req);
 
     // prepare logs
     let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]
@@ -241,6 +238,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
+    req.apiTimer.end('adminUpdateUser'); // log end time
     return responseToClient;
 
   } catch (error) {
@@ -248,7 +246,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', response, error);
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
-
+    req.apiTimer.end(); // log end time
     return responseErrorToClient;
   }
 }
@@ -357,6 +355,7 @@ async function resendUserMembership(req, memberAttributes){
  * @returns
  */
 async function prepareWPCardfaceInvoke(req){
+  req.apiTimer.log('usersServices.prepareWPCardfaceInvoke'); // log process time
    // integrate with cardface lambda
    let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
 
@@ -378,6 +377,7 @@ async function prepareWPCardfaceInvoke(req){
         // prepare logs
         let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
         // prepare response to client
+        req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
