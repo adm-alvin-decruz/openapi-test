@@ -10,7 +10,6 @@ const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
-const apiTimer = processTimer.apiRequestTimer();
 
 const pong = {'pong': 'pang'};
 
@@ -24,6 +23,7 @@ router.get('/ping', async (req, res) => {
  * User signup, create new CIAM user
  */
 router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
+  const apiTimer = processTimer.apiRequestTimer();
   req['apiTimer'] = apiTimer; // log time durations
   req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
 
@@ -59,6 +59,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  * Handling most HTTP validation here
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
+  const apiTimer = processTimer.apiRequestTimer();
   req['apiTimer'] = apiTimer; // log time durations
   req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
 
@@ -91,6 +92,7 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
  * Resend wildpass
  */
 router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
+  const apiTimer = processTimer.apiRequestTimer();
   req['apiTimer'] = apiTimer; // log time durations
   req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
 
@@ -116,6 +118,7 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
  * only in dev/UAT
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
+  const apiTimer = processTimer.apiRequestTimer();
   req['apiTimer'] = apiTimer; // log time durations
   req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
 
@@ -137,6 +140,7 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
 })
 
 router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
+  const apiTimer = processTimer.apiRequestTimer();
   req['apiTimer'] = apiTimer; // log time durations
   req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
 
