@@ -50,6 +50,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
 
 /**
  * CIAM Update user info
+ *
  * Handling most HTTP validation here
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {

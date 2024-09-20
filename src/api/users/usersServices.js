@@ -30,6 +30,7 @@ const userDBService = require('./usersDBService');
 const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
+const processTimer = require('../../utils/processTimer');
 
 /**
  * Function User signup service
@@ -191,15 +192,8 @@ async function getUserMembership(req){
     }
   }
 
-  // prepare logs
-  const clientAPIData = {
-    "membership": req.body.group,
-    "action": "getUserMembership Service",
-    "api_header": req.headers,
-    "api_body": req.body,
-    "mwgCode": ""
-  }
-  loggerService.log('user', clientAPIData, getUserCommand, response, result);
+  let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, result);
+  loggerService.log(logObj);
 
   return result;
 }
@@ -208,6 +202,7 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
+  const endTimer = processTimer('adminUpdateUser'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
@@ -241,6 +236,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
 
+    endTimer();
     return responseToClient;
 
   } catch (error) {
@@ -248,7 +244,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', response, error);
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
-
+    endTimer();
     return responseErrorToClient;
   }
 }

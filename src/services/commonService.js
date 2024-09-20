@@ -278,6 +278,33 @@ function convertUserAttrToNormJson(inputJson) {
 
   return outputJson;
 }
+
+function processUserUpdateErrors(attr, reqBody, mwgCode){
+  const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
+
+  let errors = {};
+  if(isJsonNotEmpty(attr) && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
+    if(isJsonNotEmpty(attr.invalid)){
+      Object.keys(attr.invalid).forEach(function(key) {
+        let msg = validationVar[attr.invalid[key]].invalid;
+        msg = msg.replace('%s', attr.invalid[key]);
+        errors[attr.invalid[key]]= msg;
+      })
+    }
+    if(isJsonNotEmpty(attr.dob)){
+      Object.keys(attr.dob).forEach(function(key) {
+        errors['dob']= validationVar['dob'].range_error;
+      })
+    }
+    if(isJsonNotEmpty(attr.newsletter)){
+      Object.keys(attr.newsletter).forEach(function(key) {
+        errors['newletter']= validationVar['newsletter'].subscribe_error;
+      })
+    }
+  }
+  return errors;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -294,5 +321,6 @@ module.exports = {
   extractStringPart,
   detectAttrPresence,
   formatDate,
-  convertUserAttrToNormJson
+  convertUserAttrToNormJson,
+  processUserUpdateErrors
 }

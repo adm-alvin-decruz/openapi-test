@@ -3,9 +3,10 @@ const {
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
-
+const processTimer = require('../utils/processTimer');
 class Cognito {
   static async cognitoAdminUpdateUser(req, ciamComparedParams){
+    const endTimer = processTimer('cognitoAdminUpdateUser'); // log process time
     const result = [];
     // prepare update user array
     const updateUserArray = {
@@ -21,6 +22,7 @@ class Cognito {
     }catch(error){
       result['cognitoUpdateError'] = JSON.stringify(error);
     }
+    endTimer(); // log process time
     return result;
   }
 }
