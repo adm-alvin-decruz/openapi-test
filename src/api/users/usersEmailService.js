@@ -1,23 +1,26 @@
 const lambdaService = require('../../services/lambdaService');
 require('dotenv').config();
 
-async function lambdaSendEmail(reqBody){
+async function lambdaSendEmail(req){
+  req.apiTimer.log('lambdaSendEmail'); // log process time
   // send wildpass email or resend wildpass
   let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
   const emailTriggerData = {
-    email: reqBody.email,
-    firstName: reqBody.firstName,
-    group: reqBody.group,
-    ID: reqBody.mandaiID
+    email: req.body.email,
+    firstName: req.body.firstName,
+    group: req.body.group,
+    ID: req.body.mandaiID
   };
 
-  // email type to differentiate mail template
-  if(reqBody.emailType){
-    emailTriggerData['emailType'] = reqBody.emailType;
+  if(req.body.emailType){
+    emailTriggerData['emailType'] = req.body.emailType;
   }
 
   // lambda invoke
-  return await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+  let emailLambda = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
+
+  req.apiTimer.end('lambdaSendEmail'); // log end time
+  return emailLambda;
 }
 
 module.exports={

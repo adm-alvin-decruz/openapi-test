@@ -8,6 +8,7 @@ const resConfig = {
   // validation
   SIGNUP_VALIDATE_PARAMS:'{"email":{"invalid":"The %s is invalid.","exist":"This address is already being used for a Mandai %s Account."},"firstName":{"invalid":"The %s is invalid."},"lastName":{"invalid":"The %s is invalid."},"dob":{"invalid":"The %s is invalid.","range_error":"The dob must between 13 and 99 years old."},"group":{"invalid":"The %s is invalid."},"newsletter":{"invalid":"The %s is invalid.","subscribe_error":"Must agree and subscribe to the newsletter."}}',
   RESEND_VALIDATE_PARAMS:'{"email":{"invalid":"The %s is invalid.","exist":"This address is already being used for a Mandai %s Account."},"group":{"invalid":"The %s is invalid."}}',
+  UPDATE_WP_VALIDATE_PARAMS:'{"email":{"invalid":"The %s is invalid.","not_exist":"This email address does not have a Mandai Account."},"dob":{"range_error":"The dob must between 13 and 99 years old."},"group":{"invalid":"The %s is invalid."}}',
 
   GET_USER_VALIDATE_PARAMS:'{"email":{"invalid":"The %s is invalid."},"group":{"invalid":"The %s is invalid."}}',
 

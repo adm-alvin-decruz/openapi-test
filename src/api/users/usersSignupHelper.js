@@ -116,6 +116,7 @@ function generateVisualID(reqBody) {
 }
 
 async function createUserSignupDB(req){
+  req.apiTimer.log('usersSignupHelper.createUserSignupDB'); // log process time
   // insert to user table
   let newUserResult= await insertUser(req);
   if(!newUserResult.error){
@@ -137,9 +138,11 @@ async function createUserSignupDB(req){
       response['newUserDetailResult'] = await insertUserDetail(req, newUserResult.user_id);
     }
 
+    req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
     return response;
   }
   else{
+    req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
     throw newUserResult;
   }
 
