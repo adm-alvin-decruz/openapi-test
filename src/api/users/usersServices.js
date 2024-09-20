@@ -133,7 +133,7 @@ async function cognitoCreateUser(req){
 
     // send welcome email
     const emailResponse = await retryOperation(async () => {
-      return await emailService.lambdaSendEmail(req.body);
+      return await emailService.lambdaSendEmail(req);
     });
 
     response = {
@@ -338,7 +338,7 @@ async function resendUserMembership(req, memberAttributes){
   try {
     // resend wildpass email
     reqBody['emailType'] = 'update_wp'; // use wildpass re-send template
-    const response  = await emailService.lambdaSendEmail(reqBody);
+    const response  = await emailService.lambdaSendEmail(req);
 
     // prepare logs
     let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', memberAttributes, response);
@@ -347,7 +347,7 @@ async function resendUserMembership(req, memberAttributes){
 
   } catch (error) {
    // prepare logs
-   let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIPS_ERR', event, error);
+   let logObj = loggerService.build('user', 'userServices.resendUserMembership', req, 'MWG_CIAM_RESEND_MEMBERSHIPS_ERR', memberAttributes, error);
    // prepare response to client
    return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_RESEND_MEMBERSHIPS_ERR', 'RESEND_MEMBERSHIP', logObj);
   }
