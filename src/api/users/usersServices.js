@@ -65,7 +65,7 @@ async function userSignup(req){
   let genWPCardFace = await prepareWPCardfaceInvoke(req);
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
 
-  let genPasskit = await prepareGenPasskitInvoke(req);
+  // let genPasskit = await prepareGenPasskitInvoke(req);
 
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
@@ -156,7 +156,7 @@ async function cognitoCreateUser(req){
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
-    req.apiTimer.end('usersServices.cognitoCreateUser'); // log end time
+    req.apiTimer.end('usersServices.cognitoCreateUser error'); // log end time
     return responseErrorToClient;
   }
 }
@@ -190,12 +190,12 @@ async function getUserMembership(req){
     return responseToInternal;
 
   } catch (error) {
-    req.apiTimer.end('usersServices.getUserMembership'); // log end time
     if(error.name === 'UserNotFoundException'){
       var result = {"status": "not found", "data": error};
     }else{
       var result = {"status": "failed", "data": error};
     }
+    req.apiTimer.end('usersServices.getUserMembership error'); // log end time
   }
 
   let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, result);
@@ -250,7 +250,8 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     let logObj = loggerService.build('user', 'usersServices.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_ERR', response, error);
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_UPDATE_ERR', 'USERS_UPDATE', logObj);
-    req.apiTimer.end(); // log end time
+
+    req.apiTimer.end('adminUpdateUser error'); // log end time
     return responseErrorToClient;
   }
 }
@@ -385,6 +386,7 @@ async function prepareWPCardfaceInvoke(req){
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
+      req.apiTimer.end('usersServices.prepareWPCardfaceInvoke error'); // log end time
       // prepare logs
       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
       // prepare log response

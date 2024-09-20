@@ -24,6 +24,9 @@ router.get('/ping', async (req, res) => {
  * User signup, create new CIAM user
  */
 router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
+  req['apiTimer'] = apiTimer; // log time durations
+  req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
+
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
 
@@ -88,6 +91,9 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
  * Resend wildpass
  */
 router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
+  req['apiTimer'] = apiTimer; // log time durations
+  req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
+
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
 
@@ -110,6 +116,9 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
  * only in dev/UAT
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
+  req['apiTimer'] = apiTimer; // log time durations
+  req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
+
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
   if(valAppID === true){
@@ -128,6 +137,9 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
 })
 
 router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
+  req['apiTimer'] = apiTimer; // log time durations
+  req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
+
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
 
