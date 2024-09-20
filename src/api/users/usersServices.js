@@ -82,6 +82,7 @@ async function userSignup(req){
  * @returns
  */
 async function cognitoCreateUser(req){
+  req.apiTimer.log('usersServices.cognitoCreateUser'); // log process time
   // prepare array  to create user
   const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
@@ -146,6 +147,7 @@ async function cognitoCreateUser(req){
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
 
+    req.apiTimer.end('usersServices.cognitoCreateUser'); // log end time
     return responseToClient;
 
   } catch (error) {
@@ -154,6 +156,7 @@ async function cognitoCreateUser(req){
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
+    req.apiTimer.end('usersServices.cognitoCreateUser'); // log end time
     return responseErrorToClient;
   }
 }
@@ -182,6 +185,7 @@ async function getUserMembership(req){
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
     // prepare response to client
     let responseToInternal = responseHelper.craftGetMemberShipInternalRes('', req.body, 'success', response, logObj);
+
     req.apiTimer.end('usersServices.getUserMembership'); // log end time
     return responseToInternal;
 
