@@ -9,6 +9,8 @@ const commonService = require('../../services/commonService');
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
+const processTimer = require('../../utils/processTimer');
+const apiTimer = processTimer.apiRequestTimer();
 
 const pong = {'pong': 'pang'};
 
@@ -54,6 +56,9 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  * Handling most HTTP validation here
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
+  req['apiTimer'] = apiTimer; // log time durations
+  req.apiTimerID = 'CIAMUpdateUser-'+req.apiTimer.getRequestId();
+
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
 

@@ -10,7 +10,6 @@ const galaxyQueryService = require('../components/galaxy/services/galaxyQuerySer
 const galaxyHelpers = require('../components/galaxy/galaxyHelpers');
 const commonService = require('../../services/commonService');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
-const processTimer = require('../../utils/processTimer');
 
 require('dotenv').config();
 
@@ -57,8 +56,8 @@ function createNameParameter(reqBody, userAttribute) {
  * *************************
  */
 
-async function updateDBUserInfo(reqBody, prepareDBUpdateData, userDBData){
-  const endTimer = processTimer('updateDBUserInfo'); // log process time
+async function updateDBUserInfo(req, prepareDBUpdateData, userDBData){
+  req.apiTimer.log('adminUpdateUser'); // log process time
   const user_id = userDBData.id;
   const response = [];
   try{
@@ -76,7 +75,7 @@ async function updateDBUserInfo(reqBody, prepareDBUpdateData, userDBData){
   catch(error){
     response['error'] = error;
   }
-  endTimer();
+  req.apiTimer.end('adminUpdateUser'); // log end time
 }
 
 const dbFunctions = {
@@ -99,14 +98,15 @@ const dbFunctions = {
  *
  *****************************
  */
-async function updateGalaxyPass(reqBody, ciamComparedParams, membershipData){
-  if(reqBody.group === 'wildpass'){
-    return updateGalaxyWildpass(reqBody, ciamComparedParams, membershipData);
+async function updateGalaxyPass(req, ciamComparedParams, membershipData){
+  if(req.body.group === 'wildpass'){
+    return updateGalaxyWildpass(req, ciamComparedParams, membershipData);
   }
 }
 
-async function updateGalaxyWildpass(reqBody, ciamComparedParams, membershipData){
-  const endTimer = processTimer('updateGalaxyWildpass'); // log process time
+async function updateGalaxyWildpass(req, ciamComparedParams, membershipData){
+  const reqBody = req.body;
+  req.apiTimer.log('updateGalaxyWildpass'); // log process time
   let attrExist = commonService.detectAttrPresence(ciamComparedParams, JSON.parse(userConfig.TRIGGER_GALAXY_UPDATE_PARAMS_WILDPASS));
   if(commonService.isJsonNotEmpty(attrExist)){
     // get user attribute from membershipData
@@ -119,7 +119,8 @@ async function updateGalaxyWildpass(reqBody, ciamComparedParams, membershipData)
       reqBody['visualId'] = visualID;
       // update galaxy
       let galaxyUpdate = await galaxyWPService.callMembershipUpdatePassApi(reqBody);
-      endTimer();
+
+      req.apiTimer.end('updateGalaxyWildpass'); // log end time
       return JSON.stringify(galaxyUpdate);
     }
     return JSON.stringify(visualID);

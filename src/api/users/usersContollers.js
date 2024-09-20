@@ -90,7 +90,7 @@ async function adminCreateUser (req){
  * @returns
  */
 async function adminUpdateUser (req, listedParams){
-
+  req.apiTimer.log('usersController.adminUpdateUser'); // log process time
   try {
     // check if user exist
     var memberInfo = await usersService.getUserMembership(req);
@@ -108,6 +108,8 @@ async function adminUpdateUser (req, listedParams){
           let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
           var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
+
+          req.apiTimer.end('usersController.adminUpdateUser'); // log end time
           return response;
         }
       }else{
