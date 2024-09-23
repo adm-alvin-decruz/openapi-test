@@ -6,6 +6,7 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
   static async cognitoAdminUpdateUser(req, ciamComparedParams){
+    req['apiTimer'] = req.processTimer.apiRequestTimer();
     req.apiTimer.log('cognitoAdminUpdateUser'); // log process time
     const result = [];
     // prepare update user array

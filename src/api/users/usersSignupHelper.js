@@ -6,7 +6,6 @@ const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
 const dbConfig = require('../../config/dbConfig');
-const log = [];
 
 /**
  * Generate mandaiID
@@ -116,7 +115,8 @@ function generateVisualID(reqBody) {
 }
 
 async function createUserSignupDB(req){
-  req.apiTimer.log('usersSignupHelper.createUserSignupDB'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersSignupHelper.createUserSignupDB starts'); // log process time
   // insert to user table
   let newUserResult= await insertUser(req);
   if(!newUserResult.error){

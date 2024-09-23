@@ -57,7 +57,8 @@ function createNameParameter(reqBody, userAttribute) {
  */
 
 async function updateDBUserInfo(req, prepareDBUpdateData, userDBData){
-  req.apiTimer.log('adminUpdateUser'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('userUpdateHelpers.updateDBUserInfo start'); // log process time
   const user_id = userDBData.id;
   const response = [];
   try{
@@ -71,11 +72,12 @@ async function updateDBUserInfo(req, prepareDBUpdateData, userDBData){
         response[key] = `Warning: Function ${key} not found`;
       }
     });
+    req.apiTimer.end('userUpdateHelpers.updateDBUserInfo'); // log end time
   }
   catch(error){
+    req.apiTimer.end('userUpdateHelpers.updateDBUserInfo Error'); // log end time
     response['error'] = error;
   }
-  req.apiTimer.end('adminUpdateUser'); // log end time
 }
 
 const dbFunctions = {
@@ -106,7 +108,8 @@ async function updateGalaxyPass(req, ciamComparedParams, membershipData){
 
 async function updateGalaxyWildpass(req, ciamComparedParams, membershipData){
   const reqBody = req.body;
-  req.apiTimer.log('updateGalaxyWildpass'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersUpdateHelpers.updateGalaxyWildpass start'); // log process time
   let attrExist = commonService.detectAttrPresence(ciamComparedParams, JSON.parse(userConfig.TRIGGER_GALAXY_UPDATE_PARAMS_WILDPASS));
   if(commonService.isJsonNotEmpty(attrExist)){
     // get user attribute from membershipData
@@ -123,6 +126,7 @@ async function updateGalaxyWildpass(req, ciamComparedParams, membershipData){
       req.apiTimer.end('updateGalaxyWildpass'); // log end time
       return JSON.stringify(galaxyUpdate);
     }
+    req.apiTimer.end('updateGalaxyWildpass'); // log end time
     return JSON.stringify(visualID);
   }
 }

@@ -90,7 +90,8 @@ async function adminCreateUser (req){
  * @returns
  */
 async function adminUpdateUser (req, listedParams){
-  req.apiTimer.log('usersController.adminUpdateUser'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersController.adminUpdateUser start'); // log process time
   try {
     // check if user exist
     var memberInfo = await usersService.getUserMembership(req);
@@ -118,6 +119,7 @@ async function adminUpdateUser (req, listedParams){
         // prepare logs
         let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
         // prepare error params response
+        req.apiTimer.end('usersController.adminUpdateUser'); // log end time
         return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_UPDATE', logObj);
       }
 
@@ -129,6 +131,7 @@ async function adminUpdateUser (req, listedParams){
       // prepare logs
       let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
       // prepare error params response
+      req.apiTimer.end('usersController.adminUpdateUser'); // log end time
       return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
     }
 
@@ -136,10 +139,11 @@ async function adminUpdateUser (req, listedParams){
     let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {"success":"no data to update"}, memberInfo);
 
     // prepare error params response
+    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     return responseHelper.craftUsersApiResponse('usersControllers.adminUpdateUser', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
-    // return handleUserSignupError('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', {}, memberInfo)
 
   } catch (error) {
+    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     throw error;
   }
 }

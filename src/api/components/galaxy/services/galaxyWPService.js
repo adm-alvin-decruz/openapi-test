@@ -9,14 +9,20 @@ class GalaxyWPService {
     this.apiUpdateEndpoint = process.env.GALAXY_URL + process.env.GALAXY_UPDATE_PASS_PATH;
   }
 
-  async callMembershipPassApi(inputData) {
+  async callMembershipPassApi(req) {
+    req['apiTimer'] = req.processTimer.apiRequestTimer();
+    req.apiTimer.log('GalaxyWPService.callMembershipPassApi starts');
+    const inputData = req.body;
     try {
       const headers = await galaxyCmnService.setGlxReqHeader();
       const body = await this.createRequestBody(inputData, galaxyConf.importWPParams);
 
       const response = await ApiUtils.makeRequest(this.apiImportEndpoint, 'post', headers, body);
+
+      req.apiTimer.end('GalaxyWPService.callMembershipPassApi'); // log end time
       return ApiUtils.handleResponse(response);
     } catch (error) {
+      req.apiTimer.end('GalaxyWPService.callMembershipPassApi Error'); // log end time
       return error
     }
   }
