@@ -1,8 +1,10 @@
 const lambdaService = require('../../services/lambdaService');
 require('dotenv').config();
+const processTimer = require('../../utils/processTimer');
 
 async function lambdaSendEmail(req){
-  req.apiTimer.log('lambdaSendEmail'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('lambdaSendEmail starts'); // log process time
   // send wildpass email or resend wildpass
   let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
   const emailTriggerData = {

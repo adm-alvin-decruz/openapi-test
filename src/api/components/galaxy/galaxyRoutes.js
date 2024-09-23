@@ -35,7 +35,7 @@ if(['dev', 'uat'].includes(process.env.APP_ENV) ){
    */
   router.post('/import', async (req, res) => {
     // let token = await galaxyTokenService.getTokenOnly('galaxy');
-    let importPass = await galaxyWPService.callMembershipPassApi(req.body);
+    let importPass = await galaxyWPService.callMembershipPassApi(req);
     res.status(200).json(importPass);
   });
 }

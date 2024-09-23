@@ -49,7 +49,7 @@ async function userSignup(req){
 
   // import pass to Galaxy
   const galaxyImportPass = await retryOperation(async () => {
-    return await galaxyWPService.callMembershipPassApi(req.body);
+    return await galaxyWPService.callMembershipPassApi(req);
   });
   // return error when galaxy failed.
   if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
@@ -82,7 +82,8 @@ async function userSignup(req){
  * @returns
  */
 async function cognitoCreateUser(req){
-  req.apiTimer.log('usersServices.cognitoCreateUser'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersServices.cognitoCreateUser start'); // log process time
   // prepare array  to create user
   const newUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
@@ -122,6 +123,7 @@ async function cognitoCreateUser(req){
       if (lambdaRes.$metadata.httpStatusCode !== 200) {
         return 'Lambda user creation failed';
       }
+      req.apiTimer.end('Cognito Create User ended');
       return lambdaRes;
     });
 
@@ -147,7 +149,6 @@ async function cognitoCreateUser(req){
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
 
-    req.apiTimer.end('usersServices.cognitoCreateUser'); // log end time
     return responseToClient;
 
   } catch (error) {
@@ -156,7 +157,6 @@ async function cognitoCreateUser(req){
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
-    req.apiTimer.end('usersServices.cognitoCreateUser error'); // log end time
     return responseErrorToClient;
   }
 }
@@ -167,7 +167,8 @@ async function cognitoCreateUser(req){
  * @returns
  */
 async function getUserMembership(req){
-  req.apiTimer.log('usersServices.getUserMembership'); // log process time
+  req['apiTimer'] = req['processTimer'].apiRequestTimer();
+  req.apiTimer.log('usersServices.getUserMembership starts'); // log process time
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
@@ -208,7 +209,8 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
-  req.apiTimer.log('adminUpdateUser'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
@@ -360,7 +362,8 @@ async function resendUserMembership(req, memberAttributes){
  * @returns
  */
 async function prepareWPCardfaceInvoke(req){
-  req.apiTimer.log('usersServices.prepareWPCardfaceInvoke'); // log process time
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersServices.prepareWPCardfaceInvoke start'); // log process time
    // integrate with cardface lambda
    let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
 
@@ -375,6 +378,7 @@ async function prepareWPCardfaceInvoke(req){
    try {
       // lambda invoke
       const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+      req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
       if(response.statusCode === 200){
         return response;
       }
@@ -382,7 +386,6 @@ async function prepareWPCardfaceInvoke(req){
         // prepare logs
         let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
         // prepare response to client
-        req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
@@ -403,6 +406,8 @@ async function prepareWPCardfaceInvoke(req){
  * @returns
  */
 async function deleteMembership(req, membershipData){
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersServices.deleteMembership start'); // log process time
   // prepare update user array
   const deleteUserArray = {
     UserPoolId: process.env.USER_POOL_ID,
@@ -436,6 +441,7 @@ async function deleteMembership(req, membershipData){
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_SUCCESS', 'DELETE_MEMBERSHIP', logObj);
 
+    req.apiTimer.end('usersServices.deleteMembership'); // log end time
     return responseToClient;
 
   } catch (error) {
@@ -444,6 +450,7 @@ async function deleteMembership(req, membershipData){
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_DELETE_ERR', 'DELETE_MEMBERSHIP', logObj);
 
+    req.apiTimer.end('usersServices.deleteMembership Error'); // log end time
     return responseErrorToClient;
   }
 }
