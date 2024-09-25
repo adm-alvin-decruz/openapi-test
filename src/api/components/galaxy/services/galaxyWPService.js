@@ -53,15 +53,17 @@ class GalaxyWPService {
     }
   }
 
-  async galaxyToSQS (req) {
+  async galaxyToSQS (req, action) {
     req['apiTimer'] = req.processTimer.apiRequestTimer();
     req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
+
+    let data = {"action":action,"data":req.body};
 
     const queueUrl = process.env.SQS_QUEUE_URL;
     // send SQS
     const command = new SendMessageCommand({
       QueueUrl: queueUrl,
-      MessageBody: JSON.stringify(req.body),
+      MessageBody: JSON.stringify(data),
     });
 
     await sqsClient.send(command);

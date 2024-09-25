@@ -146,7 +146,7 @@ async function cognitoCreateUser(req){
     });
 
     // push to queue for Galaxy Import Pass
-    const galaxySQS = await galaxyWPService.galaxyToSQS(req);
+    const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
 
     response = {
       lambda: lambdaResponse,
