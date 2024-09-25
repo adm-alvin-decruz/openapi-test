@@ -370,7 +370,7 @@ async function prepareWPCardfaceInvoke(req){
    let dob = commonService.convertDateHyphenFormat(req.body.dob);
    // event data
    const event = {
-      name: req.body.lastName +' '+ req.body.firstName,
+      name: req.body.firstName +' '+ req.body.lastName,
       dateOfBirth: dob,
       mandaiId: req.body.mandaiID
    };
@@ -587,6 +587,10 @@ function processGroup(attr, reqBody){
 
   return {[reqGroupName]: false}
 }
+
+/**************************/
+/** Reference code ended **/
+/**************************/
 
 /**
  * Function loop attribute to find the desire name or value
