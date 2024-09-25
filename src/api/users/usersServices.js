@@ -588,6 +588,10 @@ function processGroup(attr, reqBody){
   return {[reqGroupName]: false}
 }
 
+/**************************/
+/** Reference code ended **/
+/**************************/
+
 /**
  * Function loop attribute to find the desire name or value
  *
