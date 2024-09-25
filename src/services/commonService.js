@@ -31,7 +31,8 @@ function trimWhiteSpace (str){
 
 function prepareMembershipGroup(reqBody){
   // TODO: update expiry for future FOW, FOW+
-  return {"name":reqBody.group,"visualID": reqBody.visualID,"expiry":""};
+  let visualID = reqBody.visualID ? reqBody.visualID : ''; // visual ID will update in queue process
+  return {"name":reqBody.group,"visualID": visualID,"expiry":""};
 }
 
 function setSource(reqHeaders){

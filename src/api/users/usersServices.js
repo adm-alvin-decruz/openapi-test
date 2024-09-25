@@ -3,18 +3,24 @@
  * Process response after getting the result from cognito
  */
 
+// use dotenv
+require('dotenv').config();
+
+const awsRegion = () => {
+  const env = process.env.PRODUCTION;
+  if (!env) return 'ap-southeast-1';
+  if (env === "false") return 'ap-southeast-1';
+  return env;
+}
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
-const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
-const passwordService = require('../users/userPasswordService');
+const client = new CognitoIdentityProviderClient({ region: awsRegion });
 
-// use dotenv
-require('dotenv').config();
+const passwordService = require('../users/userPasswordService');
 const util = require('util');
 const setTimeoutPromise = util.promisify(setTimeout);
-
 
 const crypto = require("crypto");
 const commonService = require('../../services/commonService');
@@ -48,15 +54,16 @@ async function userSignup(req){
   req.body['mandaiID'] = mandaiID;
 
   // import pass to Galaxy
-  const galaxyImportPass = await retryOperation(async () => {
-    return await galaxyWPService.callMembershipPassApi(req);
-  });
-  // return error when galaxy failed.
-  if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
-    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
-  }
-  req.body['galaxy'] = JSON.stringify(galaxyImportPass);
-  req.body['visualID'] = galaxyImportPass.visualId;
+  /** move Galaxy Import Pass to Queue */
+  // const galaxyImportPass = await retryOperation(async () => {
+  //   return await galaxyWPService.callMembershipPassApi(req);
+  // });
+  // // return error when galaxy failed.
+  // if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
+  //   return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
+  // }
+  // req.body['galaxy'] = JSON.stringify(galaxyImportPass);
+  // req.body['visualID'] = galaxyImportPass.visualId;
 
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
@@ -137,6 +144,9 @@ async function cognitoCreateUser(req){
     const emailResponse = await retryOperation(async () => {
       return await emailService.lambdaSendEmail(req);
     });
+
+    // push to queue for Galaxy Import Pass
+    const galaxySQS = await galaxyWPService.galaxyToSQS(req);
 
     response = {
       lambda: lambdaResponse,

@@ -86,7 +86,7 @@ function getRandomChars(str, count) {
 }
 
 /**
- * Generate visualID
+ * (Not IN USE FOR NOW) Generate visualID
  * @param {json} reqBody
  * @returns
  */
@@ -197,7 +197,7 @@ async function insertUserMembership(req, dbUserID){
     const result = await userMembershipModel.create({
       user_id: dbUserID,
       name: req.body.group,
-      visual_id: req.body.visualID,
+      visual_id: req.body.visualID ? req.body.visualID : '',
       expires_at: expireDate
     });
 

@@ -3,13 +3,22 @@ const galaxyConf = require('../config/galaxyConfig');
 const galaxyCmnService = require('./galaxyCommonService');
 require('dotenv').config();
 
+const awsRegion = () => {
+  const env = process.env.PRODUCTION;
+  if (!env) return 'ap-southeast-1';
+  if (env === "false") return 'ap-southeast-1';
+  return env;
+}
+const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+const sqsClient = new SQSClient({ region: awsRegion });
+
 class GalaxyWPService {
   constructor() {
     this.apiImportEndpoint = process.env.GALAXY_URL + process.env.GALAXY_IMPORT_PASS_PATH;
     this.apiUpdateEndpoint = process.env.GALAXY_URL + process.env.GALAXY_UPDATE_PASS_PATH;
   }
 
-  async callMembershipPassApi(req) {
+  async callMembershipPassApi (req) {
     req['apiTimer'] = req.processTimer.apiRequestTimer();
     req.apiTimer.log('GalaxyWPService.callMembershipPassApi starts');
     const inputData = req.body;
@@ -27,11 +36,11 @@ class GalaxyWPService {
     }
   }
 
-  async createRequestBody(inputData, galaxyParams) {
+  async createRequestBody (inputData, galaxyParams) {
     return await galaxyCmnService.mapImputToImportParams(inputData, galaxyParams);
   }
 
-  async callMembershipUpdatePassApi(inputData){
+  async callMembershipUpdatePassApi (inputData) {
     try {
       const headers = await galaxyCmnService.setGlxReqHeader();
       const body = await this.createRequestBody(inputData, galaxyConf.updateWPParams);
@@ -42,6 +51,21 @@ class GalaxyWPService {
     } catch (error) {
       return error
     }
+  }
+
+  async galaxyToSQS (req) {
+    req['apiTimer'] = req.processTimer.apiRequestTimer();
+    req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
+
+    const queueUrl = process.env.SQS_QUEUE_URL;
+    // send SQS
+    const command = new SendMessageCommand({
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(req.body),
+    });
+
+    await sqsClient.send(command);
+    req.apiTimer.end('GalaxyWPService.galaxyToSQS'); // log end time
   }
 
   /**

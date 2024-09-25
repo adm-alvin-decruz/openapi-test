@@ -25,6 +25,7 @@ router.get('/ping', async (req, res) => {
 router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  let startTimer = process.hrtime();
 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
@@ -39,7 +40,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   if(valAppID === true){
     let newUser = await userController.adminCreateUser(req);
 
-    req.apiTimer.end('Route CIAM Signup User- '+req.apiTimer.getRequestId());
+    req.apiTimer.end('Route CIAM Signup User', startTimer);
     if(newUser.error){
       return res.status(400).json(newUser);
     }

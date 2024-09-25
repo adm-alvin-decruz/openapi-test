@@ -24,8 +24,12 @@ const apiRequestTimer = () => {
 
   return {
     log,
-    end: (message) => {
-      const end = process.hrtime(start);
+    end: (message, startTimeOvewrite='') => {
+      let startTime = start;
+      if (startTimeOvewrite != '') {
+        startTime = startTimeOvewrite
+      }
+      const end = process.hrtime(startTime);
       const duration = (end[0] * 1000 + end[1] / 1e6).toFixed(2);
       log(`${message} ended. Duration: ${duration}ms`);
     },
