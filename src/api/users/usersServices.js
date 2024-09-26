@@ -53,18 +53,6 @@ async function userSignup(req){
   }
   req.body['mandaiID'] = mandaiID;
 
-  // import pass to Galaxy
-  /** move Galaxy Import Pass to Queue */
-  // const galaxyImportPass = await retryOperation(async () => {
-  //   return await galaxyWPService.callMembershipPassApi(req);
-  // });
-  // // return error when galaxy failed.
-  // if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
-  //   return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
-  // }
-  // req.body['galaxy'] = JSON.stringify(galaxyImportPass);
-  // req.body['visualID'] = galaxyImportPass.visualId;
-
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
@@ -125,13 +113,13 @@ async function cognitoCreateUser(req){
 
     let response = {};
     // create user in Lambda
-    const lambdaResponse = await retryOperation(async () => {
-      const lambdaRes =  await client.send(newUserParams);
-      if (lambdaRes.$metadata.httpStatusCode !== 200) {
+    const cognitoResponse = await retryOperation(async () => {
+      const cognitoRes =  await client.send(newUserParams);
+      if (cognitoRes.$metadata.httpStatusCode !== 200) {
         return 'Lambda user creation failed';
       }
       req.apiTimer.end('Cognito Create User ended');
-      return lambdaRes;
+      return cognitoRes;
     });
 
     // save to DB
@@ -149,7 +137,7 @@ async function cognitoCreateUser(req){
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
 
     response = {
-      lambda: lambdaResponse,
+      cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
       email_trigger: emailResponse
     };

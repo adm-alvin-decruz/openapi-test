@@ -57,7 +57,7 @@ class GalaxyWPService {
     req['apiTimer'] = req.processTimer.apiRequestTimer();
     req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
 
-    let data = {"action":action,"data":req.body};
+    let data = {"action":action,"body":req.body};
 
     const queueUrl = process.env.SQS_QUEUE_URL;
     // send SQS
