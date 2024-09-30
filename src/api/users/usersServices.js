@@ -151,6 +151,7 @@ async function cognitoCreateUser(req){
     };
 
     // prepare logs
+    newUserArray.TemporaryPassword = ''; // fix clear-text logging of sensitive information
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);

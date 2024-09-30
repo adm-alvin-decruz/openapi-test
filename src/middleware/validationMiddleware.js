@@ -28,7 +28,7 @@ function validateEmail(req, res, next) {
       );
     }
 
-    // Optional: You can add more robust email validation here
+    // optional: You can add more robust email validation here
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json(
