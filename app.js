@@ -14,11 +14,20 @@ app.use(express.json());
 app.use('/v1/ciam/', membershipRoutes);
 app.use('/v1/ciam/', userRoutes);
 // testing galaxy
-app.use('/v1/galaxy', galaxyRoutes);
+app.use('/v1/ciam/galaxy', galaxyRoutes);
 // support route
 app.use('/v1/ciam', supportRoutes);
 
 const handler = serverless(app);
+
+const port = 3010;
+const startServer = async () => {
+    app.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}`);
+      });
+}
+
+startServer();
 
 module.exports.handler = (event, context, callback) => {
     const response = handler(event, context, callback);

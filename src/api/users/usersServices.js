@@ -7,7 +7,7 @@
 require('dotenv').config();
 
 const awsRegion = () => {
-  const env = process.env.PRODUCTION;
+  const env = process.env.AWS_REGION_NAME;
   if (!env) return 'ap-southeast-1';
   if (env === "false") return 'ap-southeast-1';
   return env;
@@ -36,6 +36,7 @@ const userDBService = require('./usersDBService');
 const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
+const switchService = require('../../services/switchService');
 
 /**
  * Function User signup service
@@ -43,6 +44,8 @@ const galaxyWPService = require('../components/galaxy/services/galaxyWPService')
  * @returns
  */
 async function userSignup(req){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   // set the source base on app ID
   req['body']['source'] = commonService.setSource(req.headers);
 
@@ -57,11 +60,11 @@ async function userSignup(req){
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // create user's wildpass card face first.
-  let genWPCardFace = await prepareWPCardfaceInvoke(req);
+  const genWPCardFace = await retryOperation(async () => {
+    return await prepareWPCardfaceInvoke(req);
+  });
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
-
-  // let genPasskit = await prepareGenPasskitInvoke(req);
-
+  console.log (genWPCardFace);
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
   }
@@ -129,9 +132,13 @@ async function cognitoCreateUser(req){
     });
 
     // send welcome email
-    const emailResponse = await retryOperation(async () => {
-      return await emailService.lambdaSendEmail(req);
-    });
+    let emailResponse = '';
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    if(wpPhase1a){
+      emailResponse = await retryOperation(async () => {
+        return await emailService.lambdaSendEmail(req);
+      });
+    }
 
     // push to queue for Galaxy Import Pass
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
@@ -139,7 +146,8 @@ async function cognitoCreateUser(req){
     response = {
       cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
-      email_trigger: emailResponse
+      email_trigger: emailResponse,
+      galaxy: galaxySQS
     };
 
     // prepare logs
@@ -230,11 +238,18 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
     // galaxy update
-    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req, ciamComparedParams, membershipData);
+    // move to sqs
+    // push to SQS queue for Galaxy Import Pass
+    req.body["ciamComparedParams"] = ciamComparedParams;
+    req.body["membershipData"] = membershipData;
+    response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
 
     // send update email
-    req.body['emailType'] = 'update_wp';
-    response['email_trigger'] = await emailService.lambdaSendEmail(req);
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    if(wpPhase1a){
+      req.body['emailType'] = 'update_wp';
+      response['email_trigger'] = await emailService.lambdaSendEmail(req);
+    }
 
     // prepare logs
     let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]

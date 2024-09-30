@@ -14,68 +14,6 @@ const pong = {'pong': 'pang'};
 
 router.use(express.json());
 
-/**
- * User signup, create new CIAM user
- */
-// router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
-//   // validate req app-id
-//   var valAppID = validationService.validateAppID(req.headers);
-
-//   // validate request params is listed, NOTE: listedParams doesn't have email
-//   var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
-
-//   if(commonService.isJsonNotEmpty(listedParams) === false){
-//     return res.status(400).json({ error: 'Bad Requests' });
-//   }
-
-//   if(valAppID === true){
-//     let newUser = await userController.adminCreateUser(req);
-//     if(newUser.error){
-//       return res.status(400).json(newUser);
-//     }
-
-//     if('membership' in newUser && 'code' in newUser.membership){
-//       return res.status(newUser.membership.code).json(newUser);
-//     }
-//     return res.status(200).json(newUser);
-//   }
-//   else{
-//     return res.status(401).send({ error: 'Unauthorized' });
-//   }
-// })
-
-/**
- * CIAM Update user info
- * Handling most HTTP validation here
- */
-// router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
-//   // validate req app-id
-//   var valAppID = validationService.validateAppID(req.headers);
-
-//   // clean the request data for possible white space
-//   req['body'] = commonService.cleanData(req.body);
-//   // validate request params is listed, NOTE: listedParams doesn't have email
-//   var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
-
-//   if(commonService.isJsonNotEmpty(listedParams) === false){
-//     return res.status(400).json({ error: 'Bad Requests' });
-//   }
-
-//   if(valAppID === true){
-//     let updateUser = await userController.adminUpdateUser(req, listedParams);
-
-//     if('membership' in updateUser && 'code' in updateUser.membership){
-//       return res.status(updateUser.membership.code).json(updateUser);
-//     }
-//     return res.status(200).json(updateUser);
-//   }
-//   else{
-//     return res.status(401).send({ error: 'Unauthorized' });
-//   }
-// })
-
-
-
 router.get('/support/user', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers, 'support');
@@ -89,10 +27,41 @@ router.get('/support/user', upload.none(), isEmptyRequest, validateEmail, async 
   }
 });
 
-// router.post('/users/set-password', async (req, res) => {
-//     // let membersetPassword = await userController.adminSetUserPassword();
-//     return res.json({membersetPassword});
-// })
+/** switches */
+router.get('/support/switches', upload.none(), isEmptyRequest, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let getUser = await supportController.getAllSwitches();
+    return res.status(200).json(getUser);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+// create switches
+router.post('/support/switches', async (req, res) => {
+    // let membersetPassword = await userController.adminSetUserPassword();
+    return res.json({membersetPassword});
+})
+
+// update switches
+router.put('/support/switches', upload.none(), isEmptyRequest, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let update = await supportController.updateSwitches(req);
+    return res.status(200).json(update);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+/** switches end */
 
 // router.post('/users/login', async (req, res) => {
 //     // let memberLogin = await userController.userLogin();
