@@ -48,15 +48,17 @@ async function userSignup(req){
   req.body['mandaiID'] = mandaiID;
 
   // import pass to Galaxy
-  const galaxyImportPass = await retryOperation(async () => {
-    return await galaxyWPService.callMembershipPassApi(req);
-  });
+  // const galaxyImportPass = await retryOperation(async () => {
+  //   return await galaxyWPService.callMembershipPassApi(req);
+  // });
   // return error when galaxy failed.
-  if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
-    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
-  }
-  req.body['galaxy'] = JSON.stringify(galaxyImportPass);
-  req.body['visualID'] = galaxyImportPass.visualId;
+  // if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
+  //   return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
+  // }
+  // req.body['galaxy'] = JSON.stringify(galaxyImportPass);
+  // req.body['visualID'] = galaxyImportPass.visualId;
+  // NOTE: disable galaxy import pass for now
+  // req.body['visualID'] = '';
 
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
@@ -380,23 +382,23 @@ async function prepareWPCardfaceInvoke(req){
       // lambda invoke
       const response = await lambdaService.lambdaInvokeFunction(event, functionName);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
+
       if(response.statusCode === 200){
         return response;
       }
-      if([400, 500].includes(response.statusCode) ){
+      if([400, 500].includes(response.statusCode) || response.errorType === 'Error'){
         // prepare logs
         let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
         // prepare response to client
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
+      error = new Error(`lambda invoke error: ${error}`);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke error'); // log end time
       // prepare logs
       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
       // prepare log response
-      responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-
-    return error
+      return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
   }
 }
 
