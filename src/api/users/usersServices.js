@@ -47,22 +47,28 @@ async function userSignup(req){
   }
   req.body['mandaiID'] = mandaiID;
 
+  /** Diable Galaxy import pass for Phase1A, move to queue later*/
   // import pass to Galaxy
-  const galaxyImportPass = await retryOperation(async () => {
-    return await galaxyWPService.callMembershipPassApi(req);
-  });
+  // const galaxyImportPass = await retryOperation(async () => {
+  //   return await galaxyWPService.callMembershipPassApi(req);
+  // });
   // return error when galaxy failed.
-  if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
-    return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
-  }
-  req.body['galaxy'] = JSON.stringify(galaxyImportPass);
-  req.body['visualID'] = galaxyImportPass.visualId;
+  // if(!galaxyImportPass.visualId || galaxyImportPass.visualId === 'undefined'){
+  //   return responseHelper.responseHandle('user', 'usersServices.createUserService', 'USERS_SIGNUP', req, 'MWG_CIAM_USER_SIGNUP_ERR', req.body, galaxyImportPass);
+  // }
+  // req.body['galaxy'] = JSON.stringify(galaxyImportPass);
+  // req.body['visualID'] = galaxyImportPass.visualId;
+  // NOTE: disable galaxy import pass for now
+  // req.body['visualID'] = '';
+  /** disable galaxy import pass end */
 
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // create user's wildpass card face first.
-  let genWPCardFace = await prepareWPCardfaceInvoke(req);
+  const genWPCardFace = await retryOperation(async () => {
+    return await prepareWPCardfaceInvoke(req);
+  });
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
 
   // let genPasskit = await prepareGenPasskitInvoke(req);
@@ -118,13 +124,13 @@ async function cognitoCreateUser(req){
 
     let response = {};
     // create user in Lambda
-    const lambdaResponse = await retryOperation(async () => {
-      const lambdaRes =  await client.send(newUserParams);
-      if (lambdaRes.$metadata.httpStatusCode !== 200) {
+    const cognitoResponse = await retryOperation(async () => {
+      const cognitoRes =  await client.send(newUserParams);
+      if (cognitoRes.$metadata.httpStatusCode !== 200) {
         return 'Lambda user creation failed';
       }
       req.apiTimer.end('Cognito Create User ended');
-      return lambdaRes;
+      return cognitoRes;
     });
 
     // save to DB
@@ -139,12 +145,13 @@ async function cognitoCreateUser(req){
     });
 
     response = {
-      lambda: lambdaResponse,
+      cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
       email_trigger: emailResponse
     };
 
     // prepare logs
+    newUserArray.TemporaryPassword = ''; // fix clear-text logging of sensitive information
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_SUCCESS', newUserArray, response);
     // prepare response to client
     let responseToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_SUCCESS', 'USERS_SIGNUP', logObj);
@@ -231,8 +238,10 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     // save to DB
     response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
+    /** Diable Galaxy import pass for Phase1A, move to queue later */
     // galaxy update
-    response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req, ciamComparedParams, membershipData);
+    // response['galaxyUpdate'] = await userUpdateHelper.updateGalaxyPass(req, ciamComparedParams, membershipData);
+    /**disable galaxy import pass end */
 
     // send update email
     req.body['emailType'] = 'update_wp';
@@ -379,23 +388,23 @@ async function prepareWPCardfaceInvoke(req){
       // lambda invoke
       const response = await lambdaService.lambdaInvokeFunction(event, functionName);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
+
       if(response.statusCode === 200){
         return response;
       }
-      if([400, 500].includes(response.statusCode) ){
+      if([400, 500].includes(response.statusCode) || response.errorType === 'Error'){
         // prepare logs
         let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
         // prepare response to client
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
+      error = new Error(`lambda invoke error: ${error}`);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke error'); // log end time
       // prepare logs
       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
       // prepare log response
-      responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-
-    return error
+      return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
   }
 }
 
