@@ -21,7 +21,7 @@ class TokenService {
       const response = await ApiUtils.makeRequest(tokenURL, 'post', headers, data);
       const tokenData = ApiUtils.handleResponse(response);
 
-      const updateDBToken = await this.updateTokenToDB(dbToken, tokenData);
+      await this.updateTokenToDB(dbToken, tokenData);
 
       return tokenData;
     } catch (error) {
@@ -33,7 +33,7 @@ class TokenService {
     try {
       const dbToken = await TokenModel.getLatestToken(client);
       if (!dbToken || this.isTokenExpired(dbToken)) {
-        return await this.generateToken(dbToken);
+        return this.generateToken(dbToken);
       }
 
       return dbToken;
@@ -62,7 +62,7 @@ class TokenService {
     const expiresIn = tokenData.expires_in || 0;
     dbToken['expires_at'] = new Date(Date.now() + expiresIn * 1000);
 
-    return await TokenModel.updateTokenData(dbToken);
+    return TokenModel.updateTokenData(dbToken);
   }
 
   async useToken(){

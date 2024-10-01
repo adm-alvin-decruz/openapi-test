@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express');
 const router = express.Router();
 const multer  = require('multer');
-const upload = multer();
+const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 
 const userController = require("./usersContollers" );
 const commonService = require('../../services/commonService');

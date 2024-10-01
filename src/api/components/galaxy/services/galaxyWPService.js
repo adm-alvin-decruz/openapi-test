@@ -28,7 +28,7 @@ class GalaxyWPService {
   }
 
   async createRequestBody(inputData, galaxyParams) {
-    return await galaxyCmnService.mapImputToImportParams(inputData, galaxyParams);
+    return galaxyCmnService.mapImputToImportParams(inputData, galaxyParams);
   }
 
   async callMembershipUpdatePassApi(inputData){
@@ -37,20 +37,13 @@ class GalaxyWPService {
       const body = await this.createRequestBody(inputData, galaxyConf.updateWPParams);
 
       const response = await ApiUtils.makeRequest(this.apiUpdateEndpoint, 'post', headers, body);
-      // console.log(response);
+
       return ApiUtils.handleResponse(response);
     } catch (error) {
       return error
     }
   }
 
-  /**
-   * testing only
-   * TODO: remove when test done
-   */
-  async importWPToGlx(inputData){
-    return this.createRequestBody(inputData);
-  }
 }
 
 module.exports = new GalaxyWPService();

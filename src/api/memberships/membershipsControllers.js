@@ -46,15 +46,14 @@ async function adminGetUser(reqBody){
     return paramsError;
   }
 
-  var result = {};
-
   const command = new AdminGetUserCommand({
     UserPoolId: process.env.USER_POOL_ID,
     Username: reqBody.email
   });
 
+  let response = '';
   try {
-    var response = await client.send(command);
+    response = await client.send(command);
     response = await membershipsService.processResponse(response, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
   } catch (error) {
     if(process.env.APP_LOG_SWITCH === 'true'){
@@ -113,6 +112,7 @@ async function checkEmailInAem(reqBody){
     var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
     var noMembership = aemResponse.data.valid;
 
+    let response = '';
     if(noMembership === 'true'){
       // means email has no membership in aem
       response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');

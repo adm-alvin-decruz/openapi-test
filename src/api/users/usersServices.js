@@ -503,18 +503,6 @@ async function getUserCustomisable(req){
       return responseToInternal;
     }
   }
-
-  // prepare logs
-  const clientAPIData = {
-    "membership": req.body.group,
-    "action": "getUserMembership Service",
-    "api_header": req.headers,
-    "api_body": req.body,
-    "mwgCode": ""
-  }
-  loggerService.log('user', clientAPIData, getUserCommand, response, result);
-
-  return result;
 }
 
 async function prepareGenPasskitInvoke(req){
