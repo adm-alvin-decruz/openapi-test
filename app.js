@@ -14,9 +14,9 @@ app.use(express.json());
 app.use('/v1/ciam/', membershipRoutes);
 app.use('/v1/ciam/', userRoutes);
 // testing galaxy
-app.use('/v1/galaxy', galaxyRoutes);
+app.use('/v1/ciam/galaxy', galaxyRoutes); // dev & uat env allowed only.
 // support route
-app.use('/v1/ciam', supportRoutes);
+app.use('/v1/ciam', supportRoutes); // controlled by app ID
 
 const handler = serverless(app);
 
