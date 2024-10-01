@@ -43,7 +43,7 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
         "statusCode": resConfig.code
   };
 
-  if(mwgCode === 'MWG_CIAM_PARAMS_ERR'){
+  if(mwgCode === 'MWG_CIAM_PARAMS_ERR' || mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
     // add error params
     responseToClient['membership']['error'] = reqBody;
   }

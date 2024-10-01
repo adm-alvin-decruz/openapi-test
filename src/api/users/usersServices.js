@@ -290,7 +290,7 @@ function genSecretHash(username, clientId, clientSecret) {
  * @param {string} mwgCode
  * @returns
  */
-function processError(attr='', reqBody, mwgCode){
+function processError(reqBody, mwgCode, attr=''){
   const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   if(attr === 'email' && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){

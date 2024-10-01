@@ -57,8 +57,7 @@ async function adminCreateUser (req){
 
       if(memberExist.status === 'success'){
         // response "member exist" error.... TODO: move below process two lines and below below same two lines into a func
-        let errorConfig = usersService.processError('user', req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
-        // let response = responseHelper.craftUsersApiResponse('email', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP');
+        let errorConfig = usersService.processError(req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'email');
 
         // prepare logs
         let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', {}, memberExist);
