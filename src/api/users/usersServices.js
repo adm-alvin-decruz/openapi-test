@@ -433,7 +433,7 @@ async function deleteMembership(req, membershipData){
         response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
       }
     }
-
+    // TODO: need to test again Prod env
     if(['prod'].includes(process.env.APP_ENV) ){
       var setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
       // disable in DB
@@ -546,21 +546,6 @@ async function prepareGenPasskitInvoke(req){
 // below codes for reference only, can remove once done dev
 // ********
 // ***************************************************************
-
-/**
- * Function to process membership data
- *
- * @param {JSON} data
- * @param {JSON} reqBody
- * @returns
- */
-function processMembership(data, reqBody){
-  var attr = data.UserAttributes;
-  member = loopAttr(attr, 'email', reqBody.email);
-  if(member !== false){
-    return responseHelper.craftUsersApiResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', 'USERS_SIGNUP');
-  }
-}
 
 /**
  * Function process group

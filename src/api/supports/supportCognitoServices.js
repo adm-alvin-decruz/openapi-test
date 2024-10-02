@@ -16,10 +16,11 @@ async function getUserCognitoInfo(req){
     // get from cognito
     return await client.send(getUserCommand);
   } catch (error) {
+    let result = '';
     if(error.name === 'UserNotFoundException'){
-      var result = {"status": "not found", "data": error};
+      result = {"status": "not found", "data": error};
     }else{
-      var result = {"status": "failed", "data": error};
+      result = {"status": "failed", "data": error};
     }
     return result;
   }

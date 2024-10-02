@@ -15,7 +15,7 @@ const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../util
  * @returns
  */
 async function getDBUserByEmail(reqBody){
-  return await userModel.findByEmail(reqBody.email);
+  return userModel.findByEmail(reqBody.email);
 }
 
 async function queryWPUserByEmail(reqBody) {
@@ -30,7 +30,7 @@ async function queryWPUserByEmail(reqBody) {
 function prepareDBUpdateData(ciamAttrInput) {
   const USER_CFG_MAP = JSON.parse(userConfig.DB_USERS_MODEL_MAPPING);
   const USER_NEWS_CFG_MAP = JSON.parse(userConfig.DB_USER_NEWSLETTER_MAPPING);
-  var result = {
+  let result = {
     updateUsersModel: {},
     updateUserNewsletterModel: {}
   };
@@ -47,7 +47,7 @@ function prepareDBUpdateData(ciamAttrInput) {
     // handle custom:newsletter separately
     if (item.Name === 'custom:newsletter') {
       try {
-        var newsletterData = JSON.parse(item.Value);
+        let newsletterData = JSON.parse(item.Value);
         Object.keys(USER_NEWS_CFG_MAP).forEach(function(key) {
           if (newsletterData.hasOwnProperty(key)) {
             result.updateUserNewsletterModel[key] = newsletterData[key];
