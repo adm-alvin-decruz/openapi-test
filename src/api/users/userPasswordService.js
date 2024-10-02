@@ -17,23 +17,60 @@ class PasswordService {
     const allChars = uppercase + lowercase + numbers + special;
 
     let password = '';
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += special[Math.floor(Math.random() * special.length)];
+    password += this.getRandomChar(uppercase);
+    password += this.getRandomChar(lowercase);
+    password += this.getRandomChar(numbers);
+    password += this.getRandomChar(special);
 
     for (let i = password.length; i < length; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)];
+      password += this.getRandomChar(allChars);
     }
 
     return this.shuffleString(password);
   }
 
-  // Helper function to shuffle the password string
+  /**
+   * Helper function to get a random character from a string
+   *
+   * @param {string} str
+   * @returns
+   */
+  static getRandomChar(str) {
+    const randomIndex = this.getSecureRandomInt(0, str.length);
+    return str[randomIndex];
+  }
+
+  /**
+   * Helper function to generate a secure random integer within a range
+   *
+   * @param {int} min
+   * @param {int} max
+   * @returns
+   */
+  static getSecureRandomInt(min, max) {
+    const range = max - min;
+    const bytesNeeded = Math.ceil(Math.log2(range) / 8);
+    const maxNum = Math.pow(256, bytesNeeded);
+    const cutoff = maxNum - (maxNum % range);
+
+    let randomInt;
+    do {
+      randomInt = parseInt(crypto.randomBytes(bytesNeeded).toString('hex'), 16);
+    } while (randomInt >= cutoff);
+
+    return min + (randomInt % range);
+  }
+
+  /**
+   * Helper function to shuffle the password string
+   *
+   * @param {string} str
+   * @returns
+   */
   static shuffleString(str) {
     const arr = str.split('');
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = this.getSecureRandomInt(0, i + 1);
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr.join('');
