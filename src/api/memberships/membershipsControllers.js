@@ -108,11 +108,11 @@ function validationParams(reqBody){
 
 async function checkEmailInAem(reqBody){
   // check route if true
+  let response = '';
   if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
     var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
     var noMembership = aemResponse.data.valid;
 
-    let response = '';
     if(noMembership === 'true'){
       // means email has no membership in aem
       response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');

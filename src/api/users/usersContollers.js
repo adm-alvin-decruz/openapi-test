@@ -174,7 +174,7 @@ async function membershipResend(req){
       // need to check to AEM and resend from there
       let response = await aemService.aemResendWildpass(req.body);
 
-      if(response.data.statusCode === 200){
+      if (response.data && typeof response.data === 'object') {
         // prepare response resend success
         let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, response);
         // prepare error params response

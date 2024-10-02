@@ -168,9 +168,14 @@ async function getUserMembership(req){
   let response = {};
   try {
     // get from cognito
-    response['cognitoUser'] = await client.send(getUserCommand);
+    let cognitoUserRes = await client.send(getUserCommand);
     // read from database
-    response['db_user'] = await userDBService.getDBUserByEmail(req.body);
+    let dbUserRes = await userDBService.getDBUserByEmail(req.body);
+
+    response = {
+      cognitoUser: cognitoUserRes,
+      db_user: dbUserRes
+    };
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
@@ -182,7 +187,7 @@ async function getUserMembership(req){
 
   } catch (error) {
     if(error.name === 'UserNotFoundException'){
-      respponse = {"status": "not found", "data": error};
+      response = {"status": "not found", "data": error};
     }else{
       response = {"status": "failed", "data": error};
     }
