@@ -55,7 +55,7 @@ async function deleteDBUserInfo(userDBData){
 async function disableDBUser(userDBData){
   const user_id = userDBData.id;
   try{
-    return userModel.disableByUserID(user_id);
+    return await userModel.disableByUserID(user_id);
   }
   catch(error){
     let err = new Error(`usersDeleteHelpers.deleteDBUserInfo error: ${error}`);
