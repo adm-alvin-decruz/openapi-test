@@ -168,17 +168,22 @@ async function membershipResend(req){
     if(memberInfo.status === 'success'){
       // user exist, resend membership
       response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
+      response['source'] = 'ciam';
       return response;
     }
     else if(memberInfo.status === 'not found'){
       // need to check to AEM and resend from there
-      let response = await aemService.aemResendWildpass(req.body);
+      let aemResponse = await aemService.aemResendWildpass(req.body);
 
-      if (response.data && typeof response.data === 'object') {
-        // prepare response resend success
-        let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, response);
-        // prepare error params response
-        return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', response, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
+      if (aemResponse.data && typeof aemResponse.data === 'object'){
+        if(aemResponse.data.statusCode === '200' || aemResponse.data.statusCode === 200) {
+          // prepare response resend success
+          let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, aemResponse);
+          // prepare error params response
+          response = responseHelper.craftUsersApiResponse('usersControllers.membershipResend', aemResponse, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
+          response['source'] = 'aem';
+          return response;
+        }
       }
     }
     // Prepare response membership not found
