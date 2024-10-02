@@ -52,13 +52,13 @@ async function adminCreateUser (req){
   if(validatedParams.status === 'success'){
     // continue
     try {
+      let response;
       // check if user exist
       var memberExist = await usersService.getUserMembership(req);
 
       if(memberExist.status === 'success'){
         // response "member exist" error.... TODO: move below process two lines and below below same two lines into a func
-        let errorConfig = usersService.processError('user', req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
-        // let response = responseHelper.craftUsersApiResponse('email', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP');
+        let errorConfig = usersService.processError('email', req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
 
         // prepare logs
         let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', {}, memberExist);
@@ -66,7 +66,7 @@ async function adminCreateUser (req){
         return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 
       }else{
-        var response = await usersService.userSignup(req);
+        response = await usersService.userSignup(req);
       }
 
       return response;
@@ -103,12 +103,13 @@ async function adminUpdateUser (req, listedParams){
 
       // return errorParams;
       if(validatedParams.status === 'success'){
+        let response;
         // compare input data vs membership info
         let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
         if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
           let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-          var response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
+          response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
 
           req.apiTimer.end('usersController.adminUpdateUser'); // log end time
           return response;
@@ -160,12 +161,13 @@ async function membershipResend(req){
 
   // if params no error, status success
   if(validatedParams.status === 'success'){
+    let response;
     // check if user exist
-    var memberInfo = await usersService.getUserMembership(req);
+    const memberInfo = await usersService.getUserMembership(req);
 
     if(memberInfo.status === 'success'){
       // user exist, resend membership
-      var response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
+      response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
       return response;
     }
     else if(memberInfo.status === 'not found'){
@@ -226,7 +228,7 @@ async function getUser(req){
   // return errorParams;
   if(validatedParams.status === 'success'){
     // get user's membership
-    return await usersService.getUserCustomisable(req);;
+    return usersService.getUserCustomisable(req);
   }
   else{
     return validatedParams;

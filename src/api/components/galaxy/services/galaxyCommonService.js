@@ -61,7 +61,7 @@ async function mapImputToImportParams(input, importData) {
 async function setGlxReqHeader(){
   const glxToken = await galaxyTokenService.useToken();
 
-  return await constructGlxHeader(glxToken);
+  return constructGlxHeader(glxToken);
 }
 
 async function constructGlxHeader(glxToken){

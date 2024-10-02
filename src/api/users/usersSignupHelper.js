@@ -134,7 +134,6 @@ async function createUserSignupDB(req){
       newUserCredentialResult: JSON.stringify(newUserCredentialResult)
     }
     if(req.body.group !== 'wildpass'){
-      // TODO: insert user details
       response['newUserDetailResult'] = await insertUserDetail(req, newUserResult.user_id);
     }
 
@@ -173,8 +172,9 @@ async function insertUser(req){
     return result;
 
   } catch (error) {
-    throw error
-    return {error: error};
+    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    console.log(catchError);
+    return catchError;
   }
 }
 
@@ -187,9 +187,9 @@ async function insertUser(req){
  */
 async function insertUserMembership(req, dbUserID){
   // process membership data
-  let expireDate = null; //TODO: update expiry for fow fow+
+  let expireDate = null; // future todo: update expiry for fow fow+
   if(req.body.group === 'wildpass'){
-    let expireDate = null;
+    expireDate = null;
   }
 
   try {
@@ -204,7 +204,9 @@ async function insertUserMembership(req, dbUserID){
     return result;
 
   } catch (error) {
-    throw error
+    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    console.log(catchError);
+    return catchError;
   }
 }
 
@@ -217,10 +219,13 @@ async function insertUserMembership(req, dbUserID){
  */
 async function insertUserNewletter(req, dbUserID){
   // process newsletter
+  let newsletterName;
+  let newslettertype;
+  let newsletterSubs;
   if(typeof req.body.newsletter != 'undefined'){
-    var newsletterName = req.body.newsletter.name;
-    var newslettertype = req.body.newsletter.type;
-    var newsletterSubs = req.body.newsletter.subscribe;
+    newsletterName = req.body.newsletter.name;
+    newslettertype = req.body.newsletter.type;
+    newsletterSubs = req.body.newsletter.subscribe;
   }
   try {
     // Create a new user
@@ -234,7 +239,9 @@ async function insertUserNewletter(req, dbUserID){
     return result;
 
   } catch (error) {
-    throw error;
+    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    console.log(catchError);
+    return catchError;
   }
 }
 /**
@@ -260,7 +267,9 @@ async function insertUserCredential(req, dbUserID){
     return result;
 
   } catch (error) {
-    throw error;
+    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    console.log(catchError);
+    return catchError;
   }
 }
 
@@ -289,7 +298,9 @@ async function insertUserDetail(req, dbUserID){
     return result;
 
   } catch (error) {
-    throw error;
+    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    console.log(catchError);
+    return catchError;
   }
 }
 
