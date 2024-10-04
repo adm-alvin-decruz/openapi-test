@@ -9,7 +9,7 @@ const appConfig = {
   // App ID UAT
   APP_ID_UAT:'["aemUat.com.mandaiapi.ciam","gltUat.com.mandaiapi.ciam","tktUat.com.mandaiapi.ciam","passkit.Uat.internal.mandaiapi.ciam"]',
   // App ID Prod
-  APP_ID_PROD:'["aemProd.com.mandaiapi.ciam","gltProd.com.mandaiapi.ciam","tktUat.com.mandaiapi.ciam","passkit.Prod.internal.mandaiapi.ciam"]',
+  APP_ID_PROD:'["aemProd.com.mandaiapi.ciam","gltProd.com.mandaiapi.ciam","tktProd.com.mandaiapi.ciam","passkit.Prod.internal.mandaiapi.ciam"]',
 
   // App ID Support DEV
   APP_ID_SUPPORT_DEV:'["support.Dev.internal.mandaiapi.ciam"]',
