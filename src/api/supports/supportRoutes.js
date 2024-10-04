@@ -2,15 +2,11 @@ require('dotenv').config()
 const express = require('express');
 const router = express.Router();
 const multer  = require('multer');
-const upload = multer();
+const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 
 const supportController = require("./supportControllers" );
-const commonService = require('../../services/commonService');
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
-const userConfig = require('../../config/usersConfig');
-
-const pong = {'pong': 'pang'};
 
 router.use(express.json());
 
@@ -60,54 +56,5 @@ router.put('/support/switches', upload.none(), isEmptyRequest, async (req, res) 
     return res.status(401).send({ error: 'Unauthorized' });
   }
 });
-
-/** switches end */
-
-// router.post('/users/login', async (req, res) => {
-//     // let memberLogin = await userController.userLogin();
-//     return resjson({memberLogin});
-// })
-
-// router.post('/users/reset-password', async (req, res) => {
-//     // let memberResetPassword = await memberships.userResetPassword();
-//     return resjson({memberResetPassword});
-// })
-
-// router.post('/users/forgot-password', async (req, res) => {
-//     // let memberResetPassword = await memberships.userResetPassword();
-//     return resjson({memberResetPassword});
-// })
-
-// router.get('/users/:id', (req, res) => {
-//     const user = users.find(user => user.id === parseInt(req.params.id));
-//     if (!user) res.status(404).json({ message: 'User not found' });
-//     return resjson(user);
-// });
-
-// router.post('/users', async (req, res) => {
-//     console.log(req.body.toJSON());
-//     const user = {
-//         id: users.length + 1,
-//         name: req.body.name,
-//         company: req.body.company,
-//     };
-//     users.push(user);
-//     return resjson(user);
-// });
-
-// router.delete('/users/:id', async (req, res) => {
-//     const userIndex = users.findIndex(user => user.id === parseInt(req.params.id));
-//     if (userIndex === -1) res.status(404).json({ message: 'User not found' });
-//     users.splice(userIndex, 1);
-//     return resjson({ message: 'User deleted' });
-// });
-
-// router.put('/users/:id', async (req, res) => {
-//     let user = users.find(user => user.id === parseInt(req.params.id));
-//     if (!user) res.status(404).json({ message: 'User not found' });
-//     user.name = req.body.name;
-//     user.company = req.body.company;
-//     return resjson(user);
-// });
 
 module.exports = router;

@@ -22,36 +22,45 @@ require('dotenv').config();
  */
 async function deleteDBUserInfo(userDBData){
   const user_id = userDBData.id;
-  const response = [];
+
   try{
     if(['dev', 'uat'].includes(process.env.APP_ENV) ){
       // delete from user's details table
-      response['user_detail'] = await userDetailModel.deletebyUserID(user_id);
+      let userDetail = await userDetailModel.deletebyUserID(user_id);
       // delete from user's memberships table
-      response['user_membership'] = await userMembershipModel.deletebyUserID(user_id);
+      let userMembership = await userMembershipModel.deletebyUserID(user_id);
       // delete from user's newsletter table
-      response['user_newsletter'] = await userNewsletterModel.deletebyUserID(user_id);
+      let userNewsletter = await userNewsletterModel.deletebyUserID(user_id);
       // delete from user's credential table
-      response['user_credential'] = await userCredentialModel.deletebyUserID(user_id);
+      let userCredential = await userCredentialModel.deletebyUserID(user_id);
       // delete from users table
-      response['user'] = await userModel.deletebyUserID(user_id);
+      let user = await userModel.deletebyUserID(user_id);
 
-      return response;
+      return {
+        user_detail: userDetail,
+        user_membership: userMembership,
+        user_newsletter: userNewsletter,
+        user_credential: userCredential,
+        user: user
+      };
     }
   }
   catch(error){
-    response['error'] = error;
+    let err = new Error(`usersDeleteHelpers.deleteDBUserInfo error: ${error}`);
+    console.log(err);
+    return err;
   }
 }
 
 async function disableDBUser(userDBData){
   const user_id = userDBData.id;
-  const response = [];
   try{
-    return response['user'] = await userModel.disableByUserID(user_id);
+    return await userModel.disableByUserID(user_id);
   }
   catch(error){
-    response['error'] = error;
+    let err = new Error(`usersDeleteHelpers.deleteDBUserInfo error: ${error}`);
+    console.log(err);
+    return err;
   }
 }
 

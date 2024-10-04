@@ -1,8 +1,6 @@
 require('dotenv').config()
 const express = require('express');
 const router = express.Router();
-const multer  = require('multer');
-const upload = multer();
 
 router.use(express.json());
 
@@ -34,7 +32,6 @@ if(['dev', 'uat'].includes(process.env.APP_ENV) ){
    * Response
    */
   router.post('/import', async (req, res) => {
-    // let token = await galaxyTokenService.getTokenOnly('galaxy');
     let importPass = await galaxyWPService.callMembershipPassApi(req);
     res.status(200).json(importPass);
   });

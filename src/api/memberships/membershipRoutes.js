@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express');
 const router = express.Router();
 const multer  = require('multer');
-const upload = multer();
+const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 
 const membershipsController = require('./membershipsControllers');
 const commonService = require('../../services/commonService')
@@ -54,10 +54,10 @@ router.get('/users/memberships', upload.none(), async (req, res) => {
   }
 
   // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
+  let reqBody = commonService.cleanData(req.body);
 
   // validate req app-id
-  var valAppID = validationService.validateAppID(req.headers);
+  let valAppID = validationService.validateAppID(req.headers);
   if(valAppID === false){
     res.status(401).send('Unauthorized');
   }

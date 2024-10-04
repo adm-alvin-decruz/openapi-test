@@ -8,21 +8,6 @@ require('dotenv').config();
 const responseConfig = require('../../config/membershipConfig');
 
 /**
- * Function to process membership data
- *
- * @param {JSON} data
- * @param {JSON} reqBody
- * @returns
- */
-function processMembership(data, reqBody){
-  var attr = data.UserAttributes;
-  member = loopAttr(attr, 'email', reqBody.email);
-  if(member !== false){
-    return processResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
-  }
-}
-
-/**
  * Function process response
  *
  * @param {JSON} attr attribute section of the cognito response
@@ -33,15 +18,16 @@ function processMembership(data, reqBody){
  */
 async function processResponse(attr='', reqBody, mwgCode){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  var resConfigVar = JSON.parse(responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG);
-  var resConfig = resConfigVar[mwgCode];
+  let resConfigVar = JSON.parse(responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG);
+  let resConfig = resConfigVar[mwgCode];
 
   // step2: process membership group
   // check if attr is JSON with consideration of aem checkemail response
   const isJsonAttr = isJSONObject(attr.UserAttributes);
 
+  var group = '';
   if(resConfig.status === 'success' && isJsonAttr){
-    var group = processMembership(attr, reqBody);
+    group = processMembership(attr, reqBody);
   }
   // handle aem checkemail api response
   else if (!isJsonAttr && attr === 'aem'){
@@ -49,7 +35,7 @@ async function processResponse(attr='', reqBody, mwgCode){
     if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
         exist = false;
     }
-    var group = processAemGroup(reqBody, exist);
+    group = processAemGroup(reqBody, exist);
   }
 
   // step3: craft response JSON
@@ -82,7 +68,8 @@ function processMembership(attr, reqBody){
   // parse JSON
   if(grpAttr != false){
     let grpJson = JSON.parse(grpAttr.Value);
-    if(grpJson != false){
+    // check if not null
+    if(grpJson != null){
       return {[grpJson.name]: true};
     }
   }
@@ -99,7 +86,7 @@ function processMembership(attr, reqBody){
  * @returns json object
  */
 function loopAttr(attr, name, value=''){
-  var foundAttr = false;
+  let foundAttr = false;
   let userAttr = attr.UserAttributes;
 
   Object.keys(userAttr).forEach(key => {

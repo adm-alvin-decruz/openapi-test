@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express');
 const router = express.Router();
 const multer  = require('multer');
-const upload = multer();
+const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 
 const userController = require("./usersContollers" );
 const commonService = require('../../services/commonService');
@@ -28,10 +28,10 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   const startTimer = process.hrtime();
 
   // validate req app-id
-  var valAppID = validationService.validateAppID(req.headers);
+  const valAppID = validationService.validateAppID(req.headers);
 
   // validate request params is listed, NOTE: listedParams doesn't have email
-  var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
+  const listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
   if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
@@ -160,7 +160,7 @@ router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, r
   const startTimer = process.hrtime();
 
   // validate req app-id
-  var valAppID = validationService.validateAppID(req.headers);
+  const valAppID = validationService.validateAppID(req.headers);
 
   if(valAppID === true){
     let getUser = await userController.getUser(req);

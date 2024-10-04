@@ -61,10 +61,10 @@ async function userSignup(req){
 
   // create user's wildpass card face first.
   const genWPCardFace = await retryOperation(async () => {
-    return await prepareWPCardfaceInvoke(req);
+    return prepareWPCardfaceInvoke(req);
   });
   req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
-  console.log (genWPCardFace);
+
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
   }
@@ -128,7 +128,7 @@ async function cognitoCreateUser(req){
     // save to DB
     req.body.password = await passwordService.hashPassword(newUserArray.TemporaryPassword);
     const dbResponse = await retryOperation(async () => {
-      return await usersSignupHelper.createUserSignupDB(req);
+      return usersSignupHelper.createUserSignupDB(req);
     });
 
     // send welcome email
@@ -182,12 +182,17 @@ async function getUserMembership(req){
   };
 
   const getUserCommand = new AdminGetUserCommand(getMemberJson);
-  var response = {};
+  let response = {};
   try {
     // get from cognito
-    response['cognitoUser'] = await client.send(getUserCommand);
+    let cognitoUserRes = await client.send(getUserCommand);
     // read from database
-    response['db_user'] = await userDBService.getDBUserByEmail(req.body);
+    let dbUserRes = await userDBService.getDBUserByEmail(req.body);
+
+    response = {
+      cognitoUser: cognitoUserRes,
+      db_user: dbUserRes
+    };
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
@@ -199,17 +204,17 @@ async function getUserMembership(req){
 
   } catch (error) {
     if(error.name === 'UserNotFoundException'){
-      var result = {"status": "not found", "data": error};
+      response = {"status": "not found", "data": error};
     }else{
-      var result = {"status": "failed", "data": error};
+      response = {"status": "failed", "data": error};
     }
     req.apiTimer.end('usersServices.getUserMembership error'); // log end time
   }
 
-  let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, result);
+  let logObj = loggerService.build('user', 'usersServices.getUserMembership', req, '', getMemberJson, response);
   loggerService.log(logObj);
 
-  return result;
+  return response;
 }
 
 /**
@@ -222,7 +227,7 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
 
-  const response = [];
+  let response = {};
 
   // get mandai ID
   req.body['mandaiID'] = membershipData.db_user.mandai_id;
@@ -230,13 +235,13 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
   try {
     // create user's wildpass card face first.
     let genWPCardFace = await prepareWPCardfaceInvoke(req);
-    response['cardface'] = JSON.stringify({"cardface": genWPCardFace});
+    let cardfaceRes = JSON.stringify({"cardface": genWPCardFace});
 
     // save to cognito
-    response['cognito'] = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
+    let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
 
     // save to DB
-    response['updateDb'] = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
+    let updateDBRes = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
     // galaxy update
     // move to sqs
@@ -247,10 +252,18 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
     // send update email
     let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    let emailTriggerRes;
     if(wpPhase1a){
       req.body['emailType'] = 'update_wp';
-      response['email_trigger'] = await emailService.lambdaSendEmail(req);
+      emailTriggerRes = await emailService.lambdaSendEmail(req);
     }
+
+    response = {
+      cardface: cardfaceRes,
+      cognito: cognitoRes,
+      updateDB: updateDBRes,
+      emailTrigger: emailTriggerRes
+    };
 
     // prepare logs
     let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData]
@@ -295,7 +308,7 @@ function genSecretHash(username, clientId, clientSecret) {
  * @param {string} mwgCode
  * @returns
  */
-function processError(attr='', reqBody, mwgCode){
+function processError(reqBody, mwgCode, attr=''){
   const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   if(attr === 'email' && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
@@ -344,9 +357,6 @@ async function resendUserMembership(req, memberAttributes){
   // clean the request data for possible white space
   var reqBody = commonService.cleanData(req.body);
 
-  // invokesend email lambda
-  let functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION;
-
   // find user attribute value for mandaiID
   reqBody['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
   reqBody['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
@@ -393,23 +403,23 @@ async function prepareWPCardfaceInvoke(req){
       // lambda invoke
       const response = await lambdaService.lambdaInvokeFunction(event, functionName);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
+
       if(response.statusCode === 200){
         return response;
       }
-      if([400, 500].includes(response.statusCode) ){
+      if([400, 500].includes(response.statusCode) || response.errorType === 'Error'){
         // prepare logs
         let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
         // prepare response to client
         return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
       }
     } catch (error) {
+      error = new Error(`lambda invoke error: ${error}`);
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke error'); // log end time
       // prepare logs
       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
       // prepare log response
-      responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-
-    return error
+      return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
   }
 }
 
@@ -428,27 +438,34 @@ async function deleteMembership(req, membershipData){
     Username: req.body.email,
   }
 
-  const response = [];
+  let response = {};
+  let setDeleteParams;
+  let dbRes;
   try {
 
     if(['dev', 'uat'].includes(process.env.APP_ENV) ){
-      var setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
+      setDeleteParams = new AdminDeleteUserCommand(deleteUserArray);
       // delete in DB
       if(JSON.stringify(membershipData.db_user) != undefined){
-        response['delete_user_db'] = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
+        dbRes = await userDeleteHelper.deleteDBUserInfo(membershipData.db_user);
       }
     }
-
+    // TODO: need to test again Prod env
     if(['prod'].includes(process.env.APP_ENV) ){
-      var setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
+      setDeleteParams = new AdminDisableUserCommand(deleteUserArray);
       // disable in DB
       if(JSON.stringify(membershipData.db_user) != undefined){
-        response['disable_user_db'] = await userDeleteHelper.disableDBUser(membershipData.db_user);
+        dbRes = await userDeleteHelper.disableDBUser(membershipData.db_user);
       }
     }
 
     // delete/disable from cognito
-    response['delete_user_cognito'] = await client.send(setDeleteParams);
+    let cognitoRes = await client.send(setDeleteParams);
+
+    response = {
+      delete_user_db: dbRes,
+      delete_user_cognito: cognitoRes
+    };
 
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.deleteMembership', req, 'MWG_CIAM_USER_DELETE_SUCCESS', deleteUserArray, response);
@@ -476,12 +493,12 @@ async function getUserCustomisable(req){
   };
 
   const getUserCommand = new AdminGetUserCommand(getMemberJson);
-  var response = {};
+  let response = {};
   try {
     // get from cognito
     response['cognitoUser'] = await client.send(getUserCommand);
     // read from database
-    if(req.body.group = 'wildpass'){
+    if(req.body.group === 'wildpass'){
       response['db_user'] = await userDBService.queryWPUserByEmail(req.body);
     }else{
       response['db_user'] = await userDBService.getDBUserByEmail(req.body);
@@ -508,18 +525,6 @@ async function getUserCustomisable(req){
       return responseToInternal;
     }
   }
-
-  // prepare logs
-  const clientAPIData = {
-    "membership": req.body.group,
-    "action": "getUserMembership Service",
-    "api_header": req.headers,
-    "api_body": req.body,
-    "mwgCode": ""
-  }
-  loggerService.log('user', clientAPIData, getUserCommand, response, result);
-
-  return result;
 }
 
 async function prepareGenPasskitInvoke(req){
@@ -563,21 +568,6 @@ async function prepareGenPasskitInvoke(req){
 // below codes for reference only, can remove once done dev
 // ********
 // ***************************************************************
-
-/**
- * Function to process membership data
- *
- * @param {JSON} data
- * @param {JSON} reqBody
- * @returns
- */
-function processMembership(data, reqBody){
-  var attr = data.UserAttributes;
-  member = loopAttr(attr, 'email', reqBody.email);
-  if(member !== false){
-    return responseHelper.craftUsersApiResponse(attr, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS', 'USERS_SIGNUP');
-  }
-}
 
 /**
  * Function process group
@@ -644,12 +634,11 @@ async function retryOperation(operation, maxRetries = 9, delay = 200) {
     try {
       return await operation();
     } catch (error) {
-      lastError[`Attempt ${attempt + 1} `] = `Attempt ${attempt + 1} failed: ` + error.message;
-      // console.error(`Attempt ${attempt + 1} failed:`, error.message);
+      lastError[attempt+1] = `Attempt ${attempt + 1} failed: ` + error.message;
       await setTimeoutPromise(delay);
     }
   }
-  // return new Error(`Operation failed after ${maxRetries} attempts. Last error: ${JSON.stringify(lastError)}`);
+
   return lastError
 }
 
