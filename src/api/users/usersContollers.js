@@ -59,9 +59,13 @@ async function adminCreateUser (req){
 
       // if signup check aem flag true, check user exist in AEM
       let aemResponse, aemNoMembership;
+      let responseSource = 'ciam';
       if(appConfig.SIGNUP_CHECK_AEM === true){
         aemResponse = await aemService.aemCheckWildPassByEmail(req.body);
         aemNoMembership = aemResponse.data.valid; // no membership in AEM 'true'/'false'
+        if (aemNoMembership === 'false') {
+          responseSource = 'aem';
+        }
       }
 
       if(memberExist.status === 'success' || aemNoMembership === 'false'){
@@ -71,7 +75,9 @@ async function adminCreateUser (req){
         // prepare logs
         let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', {}, errorConfig);
         // prepare error params response
-        return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+        response = responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+        response['source'] = responseSource;
+        return response;
 
       }else{
         response = await usersService.userSignup(req);
