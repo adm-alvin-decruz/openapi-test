@@ -10,12 +10,27 @@ const { isEmptyRequest, validateEmail } = require('../../middleware/validationMi
 
 router.use(express.json());
 
+// get single user (DB & cognito) data
 router.get('/support/user', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers, 'support');
 
   if(valAppID === true){
     let getUser = await supportController.getUserAll(req);
+    return res.status(200).json(getUser);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+// get list of user with pagination and custom field
+router.get('/support/user/list', upload.none(), isEmptyRequest, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let getUser = await supportController.getUsersPaginationCustom(req);
     return res.status(200).json(getUser);
   }
   else{

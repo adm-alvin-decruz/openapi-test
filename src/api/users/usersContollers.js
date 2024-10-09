@@ -14,6 +14,7 @@ const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const aemService = require('../../services/AEMService');
 const dbService = require('./usersDBService');
+const appConfig = require('../../config/appConfig');
 
 /**
  * Function listAll users
@@ -56,7 +57,14 @@ async function adminCreateUser (req){
       // check if user exist
       var memberExist = await usersService.getUserMembership(req);
 
-      if(memberExist.status === 'success'){
+      // if signup check aem flag true, check user exist in AEM
+      let aemResponse, aemNoMembership;
+      if(appConfig.SIGNUP_CHECK_AEM === true){
+        aemResponse = await aemService.aemCheckWildPassByEmail(req.body);
+        aemNoMembership = aemResponse.data.valid; // no membership in AEM 'true'/'false'
+      }
+
+      if(memberExist.status === 'success' || aemNoMembership === 'false'){
         // prepare response
         let errorConfig = usersService.processError(req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'email');
 
