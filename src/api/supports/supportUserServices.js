@@ -13,8 +13,10 @@ class SupportUserServices {
   }
 
   static async getUsersPaginationCustomService(req){
-    let result;
-    return await supportDBService.getUserPageCustomField(req);
+    let result =  await supportDBService.getUserPageCustomField(req);
+
+    console.log("SupportUserServices getUsersPaginationCustomService", result);
+    return result;
   }
 }
 
