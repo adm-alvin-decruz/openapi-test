@@ -138,6 +138,24 @@ async function getUserFullInfoByEmail(req) {
   }
 }
 
+async function getUserPageCustomField(req){
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const columns = req.query.columns ? req.query.columns.split(',') : ['*'];
+    const filters = req.query.filters ? JSON.parse(req.query.filters) : {};
+    const maxPageSize = userConfig.DEFAULT_PAGE_SIZE;
+    let pageSize = parseInt(req.query.pageSize) || maxPageSize;
+    pageSize = (pageSize < maxPageSize) ? pageSize : maxPageSize;
+
+    const result = await userModel.queryUsersWithPagination(page, pageSize, columns, filters);
+
+    return result;
+  } catch (error) {
+    console.error('Error in getUsersHandler:', error);
+    return { error: 'Internal Server Error' };
+  }
+}
+
 module.exports = {
-  getUserFullInfoByEmail
+  getUserFullInfoByEmail, getUserPageCustomField
 }

@@ -26,7 +26,10 @@ const resConfig = {
   DB_USER_NEWSLETTER_MAPPING: '{"name":"","type":"","subscribe":""}',
 
   // update parameters that can trigger Galaxy update:
-  TRIGGER_GALAXY_UPDATE_PARAMS_WILDPASS:'["given_name","family_name","birthdate","custom:newsletter"]'
+  TRIGGER_GALAXY_UPDATE_PARAMS_WILDPASS:'["given_name","family_name","birthdate","custom:newsletter"]',
+
+  // db page size limit
+  DEFAULT_PAGE_SIZE: 250
 };
 
 module.exports = resConfig;
