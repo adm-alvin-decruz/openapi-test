@@ -1,5 +1,5 @@
 name: sql-update-action
-run-name: Sql Update ${{ github.repository }}. Job ${{ github.job }} started by ${{ github.actor }}
+run-name: ${{ github.event.inputs.sql-environment }} Sql Update. Job ${{ github.job }} started by ${{ github.actor }}
 
 on:
   workflow_dispatch:
