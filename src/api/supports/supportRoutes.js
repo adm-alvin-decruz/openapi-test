@@ -38,4 +38,17 @@ router.get('/support/user/list', upload.none(), isEmptyRequest, async (req, res)
   }
 });
 
+router.post('/support/user/list', upload.none(), isEmptyRequest, async (req, res) => {
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let getUser = await supportController.getUsersPaginationCustom(req);
+    return res.status(200).json(getUser);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
 module.exports = router;
