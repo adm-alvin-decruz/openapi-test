@@ -140,11 +140,29 @@ async function getUserFullInfoByEmail(req) {
 
 async function getUserPageCustomField(req){
   try {
-    const page = parseInt(req.query.page) || 1;
-    const columns = req.query.columns ? req.query.columns.split(',') : ['*'];
-    const filters = req.query.filters ? JSON.parse(req.query.filters) : {};
+    // const { page = 1, columns = ['*'], filters = {} } = req.body;
+
+    // // Ensure page is a number
+    // const pageNumber = parseInt(page, 10);
+    // if (isNaN(pageNumber) || pageNumber < 1) {
+    //   return res.status(400).json({ error: 'Invalid page number' });
+    // }
+
+    // // Ensure columns is an array
+    // const columnArray = Array.isArray(columns) ? columns : [columns].filter(Boolean);
+
+    // // Validate filters
+    // if (typeof filters !== 'object' || Array.isArray(filters)) {
+    //   return res.status(400).json({ error: 'Filters must be an object' });
+    // }
+    const data = req.method === 'POST' ? req.body : req.query;
+    // Parse parameters
+    const page = parseInt(data.page) || 1;
+    const columns = parseColumns(data.columns);
+    const filters = parseFilters(data.filters);
+
     const maxPageSize = userConfig.DEFAULT_PAGE_SIZE;
-    let pageSize = parseInt(req.query.pageSize) || maxPageSize;
+    let pageSize = parseInt(data.pageSize) || maxPageSize;
     pageSize = (pageSize < maxPageSize) ? pageSize : maxPageSize;
 
     const result = await userModel.queryUsersWithPagination(page, pageSize, columns, filters);
@@ -155,6 +173,31 @@ async function getUserPageCustomField(req){
     console.log(logError);
     return { error: logError };
   }
+}
+
+function parseColumns(columns) {
+  if (Array.isArray(columns)) {
+    return columns;
+  }
+  if (typeof columns === 'string') {
+    return columns.split(',').map(col => col.trim());
+  }
+  return ['*'];
+}
+
+function parseFilters(filters) {
+  if (typeof filters === 'string') {
+    try {
+      return JSON.parse(filters);
+    } catch (error) {
+      console.error('Error parsing filters:', error);
+      return {};
+    }
+  }
+  if (typeof filters === 'object' && filters !== null) {
+    return filters;
+  }
+  return {};
 }
 
 module.exports = {
