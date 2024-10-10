@@ -151,8 +151,9 @@ async function getUserPageCustomField(req){
 
     return result;
   } catch (error) {
-    console.error('Error in getUsersHandler:', error);
-    return { error: 'Internal Server Error' };
+    let logError = (new Error(`Error in suppportDBServices.getUserPageCustomField: ${error}`));
+    console.log(logError);
+    return { error: logError };
   }
 }
 
