@@ -65,28 +65,6 @@ class User {
     }
   }
 
-  // static async update(id, userData) {
-  //   const now = getCurrentUTCTimestamp();
-  //   const sql = `
-  //     UPDATE users
-  //     SET email = ?, given_name = ?, family_name = ?, birthdate = ?,
-  //         mandai_id = ?, source = ?, active = ?, updated_at = ?
-  //     WHERE id = ?
-  //   `;
-  //   const params = [
-  //     userData.email,
-  //     userData.given_name,
-  //     userData.family_name,
-  //     userData.birthdate,
-  //     userData.mandai_id,
-  //     userData.source,
-  //     userData.active,
-  //     now,
-  //     id
-  //   ];
-  //   await pool.execute(sql, params);
-  // }
-
   static async update(id, userData) {
     const now = getCurrentUTCTimestamp();
 
@@ -153,6 +131,74 @@ class User {
     }
     catch (error){
       return error;
+    }
+  }
+
+  static async queryUsersWithPagination(page = 1, pageSize, columns = ['*'], filters = {}) {
+    const offset = (page - 1) * pageSize;
+    try {
+      // Validate and sanitize column names
+      const validColumns = [
+        'id', 'email', 'given_name', 'family_name', 'birthdate',
+        'mandai_id', 'source', 'active', 'created_at', 'updated_at'
+      ];
+
+      // Ensure columns is an array
+      let selectedColumns = Array.isArray(columns) ? columns : [columns];
+
+      // Handle '*' case
+      if (selectedColumns.includes('*') || selectedColumns[0] === '*') {
+        selectedColumns = validColumns;
+      } else {
+        selectedColumns = selectedColumns.filter(col => validColumns.includes(col));
+      }
+
+      if (selectedColumns.length === 0) {
+        throw new Error('No valid columns selected');
+      }
+
+      // Construct WHERE clause based on filters
+      const whereConditions = [];
+      const values = [];
+      for (const [key, value] of Object.entries(filters)) {
+        if (validColumns.includes(key)) {
+          whereConditions.push(`${key} = ?`);
+          values.push(value);
+        }
+      }
+      const whereClause = whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
+
+      // Construct the query
+      const query = `
+        SELECT ${selectedColumns.join(', ')}
+        FROM users
+        ${whereClause}
+        ORDER BY id
+        LIMIT ? OFFSET ?
+      `;
+
+      // Add LIMIT and OFFSET values
+      values.push(pageSize + 1, offset);  // Fetch one extra to check for next page
+
+      const rows = await pool.query(query, values);
+      console.log(commonService.replaceSqlPlaceholders(query, values));
+
+      const hasNextPage = rows.length > pageSize;
+      const results = rows.slice(0, pageSize);  // Remove the extra item if it exists
+
+      return {
+        users: results,
+        currentPage: page,
+        nextPage: hasNextPage ? page + 1 : null,
+        pageSize: pageSize,
+        totalResults: results.length
+      };
+    } catch (error) {
+      let logError = (new Error(`Error in userModel.queryUsersWithPagination: ${error}`));
+      console.log(logError);
+      return { error: logError };
     }
   }
 }

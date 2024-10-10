@@ -11,6 +11,13 @@ class SupportUserServices {
     console.log(result);
     return result;
   }
+
+  static async getUsersPaginationCustomService(req){
+    let result =  await supportDBService.getUserPageCustomField(req);
+
+    console.log("SupportUserServices getUsersPaginationCustomService", result);
+    return result;
+  }
 }
 
 module.exports = SupportUserServices;
