@@ -13,5 +13,9 @@ class SupportController{
   static async updateSwitches (req) {
     return SupportSwitchesServices.updateSwitchesService(req);
   }
+
+  static async getUsersPaginationCustom(req){
+    return SupportUserServices.getUsersPaginationCustomService(req);
+  }
 }
 module.exports = SupportController;
