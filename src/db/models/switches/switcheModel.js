@@ -9,10 +9,11 @@ class Switch {
    * @returns
    */
   static async create(data) {
-    try {
-      const sql = `INSERT INTO switches (name, switch, description, created_at, updated_at)
+    const sql = `INSERT INTO switches (name, switch, description, created_at, updated_at)
                   VALUES (?, ?, ?, NOW(), NOW())`;
-      const params = [data.name, data.switch, data.description];
+    const params = [data.name, data.switch, data.description];
+
+    try {
       const result = await pool.execute(sql, params);
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
@@ -25,38 +26,40 @@ class Switch {
   }
 
   static async findByName(name) {
+    const sql = 'SELECT * FROM switches WHERE name = ?';
     try {
-      const sql = 'SELECT * FROM switches WHERE name = ?';
       const rows = await pool.query(sql, [name]);
       return rows[0];
     } catch (error) {
-      console.error('Error reading switch by name:', commonService.replaceSqlPlaceholders(sql, params));
+      console.error('Error reading all switches SQL:', sql);
       throw new Error(`Error reading switch by name: ${error}`);
     }
   }
 
   static async findAll() {
+    const sql = 'SELECT * FROM switches';
+
     try {
-      const sql = 'SELECT * FROM switches';
       return await pool.query(sql);
     } catch (error) {
-      console.error('Error reading all switches:', commonService.replaceSqlPlaceholders(sql, params));
+      console.error('Error reading all switches SQL:', sql);
       throw new Error(`Error reading all switches: ${error}`);
     }
   }
 
   static async update(id, data) {
-    try {
-      const sql = `UPDATE switches
+    const sql = `UPDATE switches
                    SET name = ?, switch = ?, description = ?, updated_at = NOW()
                    WHERE id = ?`;
+
+    try {
       const result = await pool.execute(sql, [data.name, data.switch, data.description, id]);
       return {
-        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        sql_statement: commonService.replaceSqlPlaceholders(sql, data),
         newsletter_id: result.affectedRows
       };
     } catch (error) {
-      console.error('Error updating switch:', commonService.replaceSqlPlaceholders(sql, params));
+      console.error('Error updating switch:', commonService.replaceSqlPlaceholders(sql, data));
       throw new Error(`Error updating switch: ${error}`);
     }
   }
