@@ -17,5 +17,9 @@ class SupportController{
   static async getUsersPaginationCustom(req){
     return SupportUserServices.getUsersPaginationCustomService(req);
   }
+
+  static async batchPatchUser(req){
+    return SupportUserServices.batchPatchUserService(req);
+  }
 }
 module.exports = SupportController;

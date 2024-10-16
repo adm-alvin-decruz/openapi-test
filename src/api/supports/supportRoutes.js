@@ -7,6 +7,7 @@ const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 const supportController = require("./supportControllers" );
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
+const processTimer = require('../../utils/processTimer');
 
 router.use(express.json());
 
@@ -79,6 +80,29 @@ router.post('/support/user/list', upload.none(), isEmptyRequest, async (req, res
   if(valAppID === true){
     let getUser = await supportController.getUsersPaginationCustom(req);
     return res.status(200).json(getUser);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+router.post('/support/user/batchpatch', upload.none(), isEmptyRequest, async (req, res) => {
+  req['processTimer'] = processTimer;
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let patchUser;
+    try {
+      patchUser = await supportController.batchPatchUser(req);
+      res.status(200).json({ success: true, affectedEmails: patchUser });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+    req.apiTimer.end('[CIAM-SUPPORT] batch patch end', startTimer);
   }
   else{
     return res.status(401).send({ error: 'Unauthorized' });
