@@ -24,7 +24,7 @@ router.get('/ping', async (req, res) => {
  */
 router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
   // validate req app-id
@@ -63,7 +63,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
   // validate req app-id
@@ -98,7 +98,7 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
  */
 router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
   // validate req app-id
@@ -127,7 +127,7 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
   // validate req app-id
@@ -156,7 +156,7 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
  */
 router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
   // validate req app-id

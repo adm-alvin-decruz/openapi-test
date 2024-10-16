@@ -221,6 +221,8 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
