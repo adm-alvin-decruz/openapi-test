@@ -162,8 +162,8 @@ async function cognitoCreateUser(req){
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
     // prepare response to client
-    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', '', 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+    console.log('usersServices.createUserService', new Error(`[CIAM-MAIN] Signup Error: ${error}`))
     return responseErrorToClient;
   }
 }

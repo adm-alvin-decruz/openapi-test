@@ -22,7 +22,7 @@ function responseHandle(module='user', moduleFunc, configModulePrefix, req, mwgC
  * Function process CIAM response
  *
  * @param {JSON} attr attribute section of the cognito response
- * @param {JSON} reqBody request body
+ * @param {JSON} reqBody request body || in case of error, will be errors object
  * @param {string} status status text success | failed
  * @param {int} statusCode status code 200 | 400 | 501
  * @returns
