@@ -3,18 +3,24 @@
  * Process response after getting the result from cognito
  */
 
+// use dotenv
+require('dotenv').config();
+
+const awsRegion = () => {
+  const env = process.env.AWS_REGION_NAME;
+  if (!env) return 'ap-southeast-1';
+  if (env === "false") return 'ap-southeast-1';
+  return env;
+}
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
-const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
-const passwordService = require('../users/userPasswordService');
+const client = new CognitoIdentityProviderClient({ region: awsRegion });
 
-// use dotenv
-require('dotenv').config();
+const passwordService = require('../users/userPasswordService');
 const util = require('util');
 const setTimeoutPromise = util.promisify(setTimeout);
-
 
 const crypto = require("crypto");
 const commonService = require('../../services/commonService');
@@ -30,6 +36,7 @@ const userDBService = require('./usersDBService');
 const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
+const switchService = require('../../services/switchService');
 
 /**
  * Function User signup service
@@ -37,6 +44,8 @@ const galaxyWPService = require('../components/galaxy/services/galaxyWPService')
  * @returns
  */
 async function userSignup(req){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   // set the source base on app ID
   req['body']['source'] = commonService.setSource(req.headers);
 
@@ -123,14 +132,22 @@ async function cognitoCreateUser(req){
     });
 
     // send welcome email
-    const emailResponse = await retryOperation(async () => {
-      return emailService.lambdaSendEmail(req);
-    });
+    let emailResponse = '';
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    if(wpPhase1a){
+      emailResponse = await retryOperation(async () => {
+        return await emailService.lambdaSendEmail(req);
+      });
+    }
+
+    // push to queue for Galaxy Import Pass
+    const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
 
     response = {
       cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
-      email_trigger: emailResponse
+      email_trigger: emailResponse,
+      galaxy: galaxySQS
     };
 
     // prepare logs
@@ -204,6 +221,8 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
@@ -226,9 +245,20 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     // save to DB
     let updateDBRes = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
+    // galaxy update
+    // move to sqs
+    // push to SQS queue for Galaxy Import Pass
+    req.body["ciamComparedParams"] = ciamComparedParams;
+    req.body["membershipData"] = membershipData;
+    response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
+
     // send update email
-    req.body['emailType'] = 'update_wp';
-    let emailTriggerRes = await emailService.lambdaSendEmail(req);
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    let emailTriggerRes;
+    if(wpPhase1a){
+      req.body['emailType'] = 'update_wp';
+      emailTriggerRes = await emailService.lambdaSendEmail(req);
+    }
 
     response = {
       cardface: cardfaceRes,
