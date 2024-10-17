@@ -140,21 +140,6 @@ async function getUserFullInfoByEmail(req) {
 
 async function getUserPageCustomField(req){
   try {
-    // const { page = 1, columns = ['*'], filters = {} } = req.body;
-
-    // // Ensure page is a number
-    // const pageNumber = parseInt(page, 10);
-    // if (isNaN(pageNumber) || pageNumber < 1) {
-    //   return res.status(400).json({ error: 'Invalid page number' });
-    // }
-
-    // // Ensure columns is an array
-    // const columnArray = Array.isArray(columns) ? columns : [columns].filter(Boolean);
-
-    // // Validate filters
-    // if (typeof filters !== 'object' || Array.isArray(filters)) {
-    //   return res.status(400).json({ error: 'Filters must be an object' });
-    // }
     const data = req.method === 'POST' ? req.body : req.query;
     // Parse parameters
     const page = parseInt(data.page) || 1;
