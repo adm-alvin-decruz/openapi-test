@@ -46,8 +46,9 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/app-token-seeds.sql
           # echo "running switches-20240927.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/switches-20240927.sql
-          echo "running CDT-119-bug-fix.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-bug-fix.sql
-
+          # echo "running CDT-119-bug-fix.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-bug-fix.sql
+          echo "running ciam-user-migrations-20241021.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-20241021.sql
       - name: Verify Deployment
         run:  echo "Run Query to verify db update/rollback  of database/table is successful"
