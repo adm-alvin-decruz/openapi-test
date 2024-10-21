@@ -134,7 +134,7 @@ async function cognitoCreateUser(req){
     // send welcome email
     let emailResponse = '';
     let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
-    if(wpPhase1a){
+    if(wpPhase1a && !req.body.migrations){
       emailResponse = await retryOperation(async () => {
         return await emailService.lambdaSendEmail(req);
       });
