@@ -1,0 +1,17 @@
+CREATE TABLE `user_migrations` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `dispatch_sqs` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `signup_request` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `passkit_email` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `passkit_req` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `batch_no` timestamp NULL DEFAULT NULL,
+  `pass_type` tinyint DEFAULT NULL COMMENT '1: wp, 2: fow, 3: fow+',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_email_pass` (`email`,`pass_type`),
+  KEY `idx_email` (`email`),
+  KEY `idx_pass_type` (`pass_type`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
