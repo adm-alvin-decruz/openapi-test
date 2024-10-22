@@ -31,8 +31,8 @@ module.exports = {
     "isPrimary": "YES",
     "identificationNo": "000P",
     "passAcct": "",
-    "dateOpened": "2022-04-06 00:00:00", // need to ask Lwin
-    "validFrom": "2022-05-06 00:00:00", // need to ask Lwin
+    // "dateOpened": "2022-04-06 00:00:00", // need to ask Lwin
+    "validFrom": "2022-05-06 00:00:00", // Membership start date
     "validUntil": "",
     "maxParty": "",
     "plu": "MSWEBWP211",
