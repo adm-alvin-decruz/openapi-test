@@ -1,4 +1,5 @@
 const galaxyTokenService = require('./galaxyTokenService');
+const commonService = require('../../../../services/commonService');
 
 async function mapImputToImportParams(input, importData) {
   // Helper function to format date
@@ -54,6 +55,9 @@ async function mapImputToImportParams(input, importData) {
   if ('mandaiID' in input && typeof input.mandaiID === 'string') {
     result.user10 = input.mandaiID;
   }
+
+  // add validFrom date
+  result.validFrom = commonService.getDateTimeUTC8();
 
   return result;
 }
