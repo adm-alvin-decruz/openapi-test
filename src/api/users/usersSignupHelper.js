@@ -5,6 +5,7 @@ const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
+const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const dbConfig = require('../../config/dbConfig');
 
 /**
@@ -126,6 +127,11 @@ async function createUserSignupDB(req){
     let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id);
     // insert to credential table
     let newUserCredentialResult = await insertUserCredential(req, newUserResult.user_id);
+
+    // user migrations - update user_migrations user ID
+    if(req.body.migrations) {
+      let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
+    }
     // if group non wildpass, insert user credential
     let response = {
       newUserResult: JSON.stringify(newUserResult),
@@ -301,6 +307,26 @@ async function insertUserDetail(req, dbUserID){
     let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
+  }
+}
+
+async function updateUserMigration(req, dbUserID){
+  try {
+    const sql = `
+        UPDATE user_migrations
+        SET
+          user_id = ?,
+          updated_at = NOW()
+        WHERE email = ? AND batch_no = FROM_UNIXTIME(?)
+      `;
+    const params = [
+      dbUserID,
+      req.body.email,
+      req.body.batchNo,
+    ];
+    await userMigrationsModel.runCustomSQL(sql, params);
+  } catch (error) {
+    console.log(new Error(`Update User Migrations user_id failed: ${error}`));
   }
 }
 
