@@ -48,8 +48,8 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/switches-20240927.sql
           # echo "running CDT-119-bug-fix.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-bug-fix.sql
-          echo "running ciam-user-migrations-20241021.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-20241021.sql
+          # echo "running ciam-user-migrations-20241021.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-20241021.sql
           echo "running wildpass_user_emp-kay-email-20221022.sql script"
           mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/wildpass_user_emp-kay-email-20221022.sql
       - name: Verify Deployment
