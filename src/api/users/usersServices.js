@@ -143,6 +143,13 @@ async function cognitoCreateUser(req){
     // push to queue for Galaxy Import Pass
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
 
+    // user migration - update user_migrations table for signup & sqs status
+    if(req.body.migrations){
+      if(galaxySQS.$metadata.httpStatusCode === 200) {
+        await userDBService.updateUserMigration(req, 'signup', 'signupSQS');
+      }
+    }
+
     response = {
       cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),

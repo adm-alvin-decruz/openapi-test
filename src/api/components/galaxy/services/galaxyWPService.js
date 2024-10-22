@@ -66,8 +66,10 @@ class GalaxyWPService {
       MessageBody: JSON.stringify(data),
     });
 
-    await sqsClient.send(command);
+    let result = await sqsClient.send(command);
+
     req.apiTimer.end('GalaxyWPService.galaxyToSQS'); // log end time
+    return result;
   }
 
   /**
