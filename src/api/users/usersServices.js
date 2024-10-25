@@ -47,7 +47,7 @@ async function userSignup(req){
   // get switches from DB
   req['dbSwitch'] = await switchService.getAllSwitches();
   // set the source base on app ID
-  req['body']['source'] = commonService.setSource(req.headers);
+  req['body']['source'] = commonService.setSource(req);
 
   // generate Mandai ID
   let mandaiID = usersSignupHelper.generateMandaiID(req.body);

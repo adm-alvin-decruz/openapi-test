@@ -35,10 +35,14 @@ function prepareMembershipGroup(reqBody){
   return {"name":reqBody.group,"visualID": visualID,"expiry":""};
 }
 
-function setSource(reqHeaders){
-  const mwgAppID = reqHeaders['mwg-app-id'];
+function setSource(req){
+  let reqBody = req.body;
+  let reqHeaders = req.headers;
   let sourceMap = JSON.parse(userConfig.SOURCE_MAPPING);
-  return sourceMap[mwgAppID];
+  if (reqBody && reqBody.source) {
+    return reqBody.source;
+  }
+  return sourceMap[reqHeaders['mwg-app-id']] || 'ORGANIC';
 }
 
 /**

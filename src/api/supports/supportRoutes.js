@@ -7,7 +7,6 @@ const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 const supportController = require("./supportControllers" );
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
-const processTimer = require('../../utils/processTimer');
 
 router.use(express.json());
 
@@ -107,6 +106,34 @@ router.post('/support/user/batchpatch', upload.none(), isEmptyRequest, async (re
   else{
     return res.status(401).send({ error: 'Unauthorized' });
   }
+});
+
+router.get('/support/token', upload.none(), isEmptyRequest, async (req, res) => {
+  req['processTimer'] = processTimer;
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true){
+    let token;
+    try {
+      token = await supportController.getTokenByClient(req);
+      res.status(200).json({ success: true, token: token });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+    req.apiTimer.end('[CIAM-SUPPORT] get token ended', startTimer);
+  }
+  else{
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+
+});
+
+router.put('/support/token', isEmptyRequest, async (req, res) => {
+  return await supportController.updateToken(req, res);
 });
 
 module.exports = router;
