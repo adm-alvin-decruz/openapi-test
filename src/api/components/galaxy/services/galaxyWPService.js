@@ -31,6 +31,7 @@ class GalaxyWPService {
       req.apiTimer.end('GalaxyWPService.callMembershipPassApi'); // log end time
       return ApiUtils.handleResponse(response);
     } catch (error) {
+      console.log(new Error(`GalaxyWPService.callMembershipPassApi Error ${error}`));
       req.apiTimer.end('GalaxyWPService.callMembershipPassApi Error'); // log end time
       return error
     }
