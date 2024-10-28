@@ -11,7 +11,8 @@ CREATE TABLE `switches` (
 
 INSERT INTO `switches` (`name`, `switch`, `description`, `created_at`, `updated_at`)
 VALUES
-	('signup_gen_passkit', '1', 'Generate passkit for user signup, true/false', '2024-09-18 11:32:49', '2024-09-18 11:32:49'),
-	('signup_email_passkit', '1', 'Send welcome email with passkit link', '2024-09-18 11:32:49', '2024-09-18 11:32:49'),
-	('wp_phase1a', '1', 'Wildpass Phase1A', '2024-09-25 15:46:28', '2024-09-25 15:46:28'),
-	('wp_phase1b', '1', 'Wildpass Phase1B', '2024-09-25 15:46:28', '2024-09-25 15:46:28');
+	('signup_gen_passkit', '0', 'Generate passkit for user signup, true/false', '2024-09-18 11:32:49', '2024-09-27 16:43:57'),
+	('signup_email_passkit', '0', 'Send welcome email with passkit link', '2024-09-18 11:32:49', '2024-09-27 16:43:39'),
+	('wp_phase1a', '1', 'Wildpass Phase1A', '2024-09-25 15:46:28', '2024-09-27 16:43:39'),
+	('wp_phase1b', '1', 'Phase1b Wildpass users migrations', '2024-09-25 15:46:28', '2024-09-27 16:44:21');
+
