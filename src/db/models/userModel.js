@@ -18,7 +18,7 @@ class User {
       userData.mandai_id,
       userData.source,
       userData.active,
-      now,
+      userData.created_at,
       now
     ];
     const result = await pool.execute(sql, params);

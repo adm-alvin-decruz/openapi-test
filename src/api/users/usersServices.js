@@ -94,9 +94,10 @@ async function cognitoCreateUser(req){
       {"Name": "given_name"    , "Value": req.body.firstName},
       {"Name": "family_name"   , "Value": req.body.lastName},
       {"Name": "preferred_username", "Value": req.body.email},
-      {"Name": "name"   , "Value": req.body.firstName +" "+req.body.lastName},
+      {"Name": "name"          , "Value": req.body.firstName +" "+req.body.lastName},
       {"Name": "email"         , "Value": req.body.email},
-      {"Name": "birthdate"     , "Value": req.body.dob}, //TODO, convert birthdate to timestamp
+      {"Name": "birthdate"     , "Value": req.body.dob},
+      {"Name": "address"       , "Value": req.body.address ? req.body.address : ''},
       // custom fields
       {"Name": "custom:membership", "Value": JSON.stringify(req.body.membershipGroup)},
       {"Name": "custom:mandai_id", "Value": req.body.mandaiID},
@@ -106,7 +107,8 @@ async function cognitoCreateUser(req){
       {"Name": "custom:vehicle_iu", "Value": "null"},
       {"Name": "custom:vehicle_plate", "Value": "null"},
       {"Name": "custom:last_login", "Value": "null"},
-      {"Name": "custom:source", "Value": req.body.source}
+      {"Name": "custom:source", "Value": req.body.source},
+      {"Name": "custom:1", "Value": req.body.registerTime ? req.body.registerTime : ''},
     ],
   };
 
