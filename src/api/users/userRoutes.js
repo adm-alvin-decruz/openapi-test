@@ -10,6 +10,8 @@ const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
+const crypto = require('crypto');
+const uuid = crypto.randomUUID();
 
 const pong = {'pong': 'pang'};
 
@@ -38,6 +40,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   }
 
   if(valAppID === true){
+    req.body.uuid = uuid;
     let newUser = await userController.adminCreateUser(req);
 
     req.apiTimer.end('Route CIAM Signup User', startTimer);
