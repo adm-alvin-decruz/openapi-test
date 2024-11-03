@@ -9,7 +9,8 @@ const {
   CognitoIdentityProviderClient,
   AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
-  ListUsersCommand
+  ListUsersCommand,
+  UserNotFoundException
 } = require("@aws-sdk/client-cognito-identity-provider");
 
 const db = require('../../db/connections/mysqlConn');
@@ -27,75 +28,147 @@ class DataPatcher {
       patchTo,
       patchFieldsFrom,
       patchFieldsTo,
-      patchToQueryConditions,
-      limit = Infinity  // Default to no limit if not specified
+      patchToQueryConditions
     } = input;
 
+    // Validate input parameters
+    this.validateQueryConditions(patchFromQueryConditions);
+    this.validateQueryConditions(patchToQueryConditions);
+    this.validateFieldArrays(patchFieldsFrom, patchFieldsTo);
+
     let patchToRecords;
+    let patchTarget = patchTo;
     try {
-    if (patchTo === 'DB') {
-      patchToRecords = await this.queryDB(patchToQueryConditions, limit);
-    } else if (patchTo === 'Cognito') {
-      patchToRecords = await this.queryCognito(patchToQueryConditions, limit);
-    } else {
-      throw new Error('Invalid patchTo source');
-    }
+      if (patchTarget === 'DB') {
+        const { sql, params } = this.buildSelectQuery(patchToQueryConditions);
+        patchToRecords = await this.queryDB(sql, params);
+      } else if (patchTarget === 'Cognito') {
+        patchToRecords = await this.queryCognito(patchToQueryConditions);
+      } else {
+        throw new Error('Invalid patchTo source');
+      }
+
+      if (!patchToRecords || patchToRecords.length === 0) {
+        console.log(`No records found in ${patchTarget} to patch. Skipping.`);
+        return;
+      }
     } catch (error) {
-      console.log(`No records found in ${patchTo} to patch. Skipping.`);
+      console.error('Error querying patch target: %s', patchTarget, error);
       return;
     }
-    const affectedEmails = [];
 
     for (const record of patchToRecords) {
-      const email = record.email || record.Username;
+      const email = record.email;
       let patchFromData;
 
       try {
-      if (patchFrom === 'DB') {
-        patchFromData = await this.queryDB({ ...patchFromQueryConditions, email });
-      } else if (patchFrom === 'Cognito') {
-        patchFromData = await this.queryCognito({ Username: email });
-      } else {
-        throw new Error('Invalid patchFrom source');
-      }
+        if (patchFrom === 'DB') {
+          const conditions = { ...patchFromQueryConditions, email };
+          const { sql, params } = this.buildSelectQuery(conditions);
+          patchFromData = await this.queryDB(sql, params);
+        } else if (patchFrom === 'Cognito') {
+          patchFromData = await this.queryCognito({ ...patchFromQueryConditions, Username: email });
+        } else {
+          throw new Error('Invalid patchFrom source');
+        }
 
         if (!patchFromData || (Array.isArray(patchFromData) && patchFromData.length === 0)) {
           console.log(`No data found in ${patchFrom} for email: ${email}. Skipping this record.`);
           continue;
         }
 
-      const updateData = this.prepareUpdateData(patchFromData[0], patchFieldsFrom, patchFieldsTo);
+        const updateData = this.prepareUpdateData(patchFromData, patchFieldsFrom, patchFieldsTo);
 
-      if (patchTo === 'DB') {
-        await this.updateDB(updateData, email);
-      } else if (patchTo === 'Cognito') {
-        await this.updateCognito(updateData, email);
-      }
+        if (patchTo === 'DB') {
+          const { sql, params } = this.buildUpdateQuery(updateData, email);
+          await this.executeDB(sql, params);
+        } else if (patchTo === 'Cognito') {
+          await this.updateCognito(updateData, email);
+        }
 
-      affectedEmails.push(email);
-
-      console.log('Patch operation:', {
-        patchDataFrom: patchFromData[0],
-        patchDataTo: record,
-        updatedData: updateData
+        console.log('Patch operation successful:', {
+          email,
+          source: patchFrom,
+          destination: patchTo,
+          updatedFields: Object.keys(updateData)
         });
+        return email;
       } catch (error) {
         console.error(`Error processing record for email ${email}:`, error);
         continue;
       }
     }
-    return affectedEmails;
   }
 
-  async queryDB(conditions, limit) {
+  validateQueryConditions(conditions) {
+    if (!conditions || typeof conditions !== 'object') {
+      throw new Error('Query conditions must be an object');
+    }
+
+    if (conditions.table) {
+      // Validate table name - only allow alphanumeric and underscore
+      if (!/^[a-zA-Z0-9_]+$/.test(conditions.table)) {
+        throw new Error('Invalid table name format');
+      }
+    }
+
+    // Validate condition values
+    Object.values(conditions).forEach(value => {
+      if (value === undefined || value === null) {
+        throw new Error('Query conditions cannot contain null or undefined values');
+      }
+    });
+  }
+
+  validateFieldArrays(fromFields, toFields) {
+    if (!Array.isArray(fromFields) || !Array.isArray(toFields)) {
+      throw new Error('Field mappings must be arrays');
+    }
+    if (fromFields.length !== toFields.length) {
+      throw new Error('Field mapping arrays must have the same length');
+    }
+    if (fromFields.length === 0) {
+      throw new Error('Field mapping arrays cannot be empty');
+    }
+  }
+
+  buildSelectQuery(conditions) {
     const { table, ...whereConditions } = conditions;
-    const whereClause = Object.entries(whereConditions)
-      .map(([key, value]) => `${key} = ?`)
-      .join(' AND ');
+    const whereClause = [];
+    const params = [];
 
-    const sql = `SELECT * FROM ${table} WHERE ${whereClause} LIMIT ?`;
-    const params = [...Object.values(whereConditions), limit];
+    for (const [key, value] of Object.entries(whereConditions)) {
+      whereClause.push(`${key} = ?`);
+      params.push(value);
+    }
 
+    const sql = `SELECT * FROM ${table} WHERE ${whereClause.join(' AND ')}`;
+    return { sql, params };
+  }
+
+  buildUpdateQuery(updateData, email) {
+    const setClause = [];
+    const params = [];
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (key === 'birthdate' && value) {
+        // Parse the date and format it correctly for MySQL
+        const parsedDate = commonService.convertDateHyphenFormat(value);
+        setClause.push(`${key} = ?`);
+        params.push(parsedDate);
+      } else {
+        setClause.push(`${key} = ?`);
+        params.push(value);
+      }
+    }
+
+    params.push(email); // Add email parameter for WHERE clause
+    const sql = `UPDATE users SET ${setClause.join(', ')} WHERE email = ?`;
+
+    return { sql, params };
+  }
+
+  async queryDB(sql, params) {
     const results = await db.query(sql, params);
     if (results.length === 0) {
       throw new Error('No user found in DB');
@@ -103,7 +176,11 @@ class DataPatcher {
     return results;
   }
 
-  async queryCognito(conditions, limit) {
+  async executeDB(sql, params) {
+    return await db.execute(sql, params);
+  }
+
+  async queryCognito(conditions) {
     if (conditions.Username) {
       const params = {
         UserPoolId: process.env.USER_POOL_ID,
@@ -121,8 +198,9 @@ class DataPatcher {
       }
     } else {
       const params = {
-        UserPoolId: process.env.USER_POOL_ID,
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
         Filter: Object.entries(conditions)
+          .filter(([key]) => key !== 'table') // Exclude table property from Cognito filter
           .map(([key, value]) => `${key} = "${value}"`)
           .join(' and ')
       };
@@ -137,57 +215,33 @@ class DataPatcher {
 
   formatCognitoUser(user) {
     const attributes = {};
-    const userAttributes = user.UserAttributes || user.Attributes;
-
-    if (userAttributes && Array.isArray(userAttributes)) {
-      userAttributes.forEach(attr => {
-        attributes[attr.Name] = attr.Value;
-      });
-    }
-
-    return {
-      ...user,
-      ...attributes,
-      Username: user.Username || attributes.email || attributes.sub
-    };
+    user.UserAttributes.forEach(attr => {
+      attributes[attr.Name] = attr.Value;
+    });
+    return { ...user, ...attributes };
   }
 
   prepareUpdateData(patchFromData, patchFieldsFrom, patchFieldsTo) {
     const updateData = {};
+    const sourceData = Array.isArray(patchFromData) ? patchFromData[0] : patchFromData;
     patchFieldsFrom.forEach((field, index) => {
-      updateData[patchFieldsTo[index]] = patchFromData[field];
+      if (sourceData[field] !== undefined) {
+        updateData[patchFieldsTo[index]] = sourceData[field];
+      }
     });
     return updateData;
   }
 
-  async updateDB(updateData, email) {
-    const setClause = [];
-    const params = [];
-
-    for (const [key, value] of Object.entries(updateData)) {
-      if (key === 'birthdate' && value) {
-        // Parse the date and format it correctly for MySQL
-        const parsedDate = commonService.convertDateHyphenFormat(value);
-        setClause.push(`${key} = ?`);
-        params.push(parsedDate);
-      } else {
-        setClause.push(`${key} = ?`);
-        params.push(value);
-      }
-    }
-
-    const sql = `UPDATE users SET ${setClause.join(', ')} WHERE email = ?`;
-    params.push(email);
-
-    return await db.execute(sql, params);
-  }
-
-
   async updateCognito(updateData, email) {
     const params = {
-      UserPoolId: process.env.USER_POOL_ID,
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: email,
-      UserAttributes: Object.entries(updateData).map(([Name, Value]) => ({ Name, Value: Value?.toString() ?? '' }))
+      UserAttributes: Object.entries(updateData)
+        .filter(([_, value]) => value !== null && value !== undefined)
+        .map(([Name, Value]) => ({
+          Name,
+          Value: Value.toString()
+        }))
     };
 
     const command = new AdminUpdateUserAttributesCommand(params);
@@ -196,3 +250,4 @@ class DataPatcher {
 }
 
 module.exports = DataPatcher;
+

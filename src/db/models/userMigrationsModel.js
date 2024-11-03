@@ -43,12 +43,12 @@ class UserMigrationsModel {
       ];
       const result = await pool.execute(sql, params);
 
-    console.log( {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.info
-    });
+      console.log( {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.info
+      });
 
-
+      return result;
     } catch (error) {
       throw new Error (`UserMigrationModel: ${error}`);
     }

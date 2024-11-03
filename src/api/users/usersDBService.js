@@ -82,7 +82,7 @@ async function updateUserMigration(req, param1, param2) {
     reqBody.signup_sqs = true;
   }
 
-  userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
+  return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
 
 }
 

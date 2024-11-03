@@ -116,7 +116,7 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
         // re-format cognito user attributes to key:value for next mapping process
         let cognitoUserJson = commonService.convertUserAttrToNormJson(response.cognitoUser.UserAttributes);
         cognitoUserJson['visualId'] = cognitoUserJson['custom:membership'];
-        console.log("AAA", cognitoUserJson);
+
         memberInfo = formatGetUserAPIResData(req, cognitoUserJson, 'GET_USER_API_RESPONSE_MAPPING');
         responseToInternal = mergeJson(memberInfo, responseStructure);
       }

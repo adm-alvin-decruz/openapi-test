@@ -55,22 +55,26 @@ class GalaxyWPService {
   }
 
   async galaxyToSQS (req, action) {
-    req['apiTimer'] = req.processTimer.apiRequestTimer();
-    req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
+    try {
+      req['apiTimer'] = req.processTimer.apiRequestTimer();
+      req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
 
-    let data = {"action":action,"body":req.body};
+      let data = {"action":action,"body":req.body};
 
-    const queueUrl = process.env.SQS_QUEUE_URL;
-    // send SQS
-    const command = new SendMessageCommand({
-      QueueUrl: queueUrl,
-      MessageBody: JSON.stringify(data),
-    });
+      const queueUrl = process.env.SQS_QUEUE_URL;
+      // send SQS
+      const command = new SendMessageCommand({
+        QueueUrl: queueUrl,
+        MessageBody: JSON.stringify(data),
+      });
 
-    let result = await sqsClient.send(command);
+      let result = await sqsClient.send(command);
 
-    req.apiTimer.end('GalaxyWPService.galaxyToSQS'); // log end time
-    return result;
+      req.apiTimer.end('GalaxyWPService.galaxyToSQS'); // log end time
+      return result;
+    } catch (error) {
+      console.error(new Error(`GalaxyWPService.galaxyToSQS Error ${error}`));
+    }
   }
 
   /**
