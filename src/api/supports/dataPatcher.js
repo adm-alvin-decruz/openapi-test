@@ -37,22 +37,23 @@ class DataPatcher {
     this.validateFieldArrays(patchFieldsFrom, patchFieldsTo);
 
     let patchToRecords;
+    let patchTarget = patchTo;
     try {
-      if (patchTo === 'DB') {
+      if (patchTarget === 'DB') {
         const { sql, params } = this.buildSelectQuery(patchToQueryConditions);
         patchToRecords = await this.queryDB(sql, params);
-      } else if (patchTo === 'Cognito') {
+      } else if (patchTarget === 'Cognito') {
         patchToRecords = await this.queryCognito(patchToQueryConditions);
       } else {
         throw new Error('Invalid patchTo source');
       }
 
       if (!patchToRecords || patchToRecords.length === 0) {
-        console.log(`No records found in ${patchTo} to patch. Skipping.`);
+        console.log(`No records found in ${patchTarget} to patch. Skipping.`);
         return;
       }
     } catch (error) {
-      console.error(`Error querying ${patchTo}:`, error);
+      console.error('Error querying patch target: %s', patchTarget, error);
       return;
     }
 
