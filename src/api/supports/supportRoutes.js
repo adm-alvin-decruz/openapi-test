@@ -137,4 +137,14 @@ router.put('/support/token', isEmptyRequest, async (req, res) => {
   return await supportController.updateToken(req, res);
 });
 
+/** get list Support failed jobs table */
+router.post('/support/failed-jobs',isEmptyRequest, async (req, res) => {
+  return await supportController.getFailedJobs(req, res);
+});
+
+/** get list Support failed jobs table */
+router.post('/support/failed-jobs/retrigger',isEmptyRequest, async (req, res) => {
+  return await supportController.triggerFailedJobsCtr(req, res);
+});
+
 module.exports = router;

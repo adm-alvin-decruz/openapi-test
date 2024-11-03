@@ -1,6 +1,7 @@
 const SupportUserServices = require('./supportUserServices');
 const SupportSwitchesServices = require('./supportSwitchesServices');
 const SupportTokenServices = require('./supportTokenServices');
+const SupportFailedJobsServices = require('./supportFailedJobsService');
 const processTimer = require('../../utils/processTimer');
 const validationService = require('../../services/validationService');
 
@@ -51,5 +52,45 @@ class SupportController{
       return res.status(401).send({ error: 'Unauthorized' });
     }
   }
+
+  static async getFailedJobs(req, res) {
+    return await this.failedJobsCtrlToService(req, res, 'getFailedJobsWithPagination')
+  }
+
+  static async triggerFailedJobsCtr(req, res) {
+    return await this.failedJobsCtrlToService(req, res, 'receivedTriggerReq')
+  }
+
+  static async failedJobsCtrlToService(req, res, faileJobMethodName) {
+    req = SupportController.addProcessTimer(req);
+    const startTimer = process.hrtime();
+
+    // validate req app-id
+    var valAppID = validationService.validateAppID(req.headers, 'support');
+
+    if(valAppID === true){
+      let jobs;
+      try {
+        jobs = await SupportFailedJobsServices.execute(faileJobMethodName, req);
+        res.status(200).json({ status: jobs.status, jobs: jobs });
+      } catch (error) {
+        console.error(`SupportController.failedJobsCtrlToService error: ${error}`);
+        res.status(500).json({ status: 'failed', error: error.message });
+      }
+      req.apiTimer.end('[CIAM-SUPPORT] get failed jobs ended', startTimer);
+    }
+    else{
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+
+  static addProcessTimer(req) {
+    req['processTimer'] = processTimer;
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+
+    return req;
+  }
+
 }
+
 module.exports = SupportController;
