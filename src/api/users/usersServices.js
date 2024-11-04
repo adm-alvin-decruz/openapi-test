@@ -3,18 +3,24 @@
  * Process response after getting the result from cognito
  */
 
+// use dotenv
+require('dotenv').config();
+
+const awsRegion = () => {
+  const env = process.env.AWS_REGION_NAME;
+  if (!env) return 'ap-southeast-1';
+  if (env === "false") return 'ap-southeast-1';
+  return env;
+}
 const {
   CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
-const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
-const passwordService = require('../users/userPasswordService');
+const client = new CognitoIdentityProviderClient({ region: awsRegion });
 
-// use dotenv
-require('dotenv').config();
+const passwordService = require('../users/userPasswordService');
 const util = require('util');
 const setTimeoutPromise = util.promisify(setTimeout);
-
 
 const crypto = require("crypto");
 const commonService = require('../../services/commonService');
@@ -30,6 +36,7 @@ const userDBService = require('./usersDBService');
 const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
+const switchService = require('../../services/switchService');
 
 /**
  * Function User signup service
@@ -37,8 +44,10 @@ const galaxyWPService = require('../components/galaxy/services/galaxyWPService')
  * @returns
  */
 async function userSignup(req){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   // set the source base on app ID
-  req['body']['source'] = commonService.setSource(req.headers);
+  req['body']['source'] = commonService.setSource(req);
 
   // generate Mandai ID
   let mandaiID = usersSignupHelper.generateMandaiID(req.body);
@@ -85,9 +94,10 @@ async function cognitoCreateUser(req){
       {"Name": "given_name"    , "Value": req.body.firstName},
       {"Name": "family_name"   , "Value": req.body.lastName},
       {"Name": "preferred_username", "Value": req.body.email},
-      {"Name": "name"   , "Value": req.body.firstName +" "+req.body.lastName},
+      {"Name": "name"          , "Value": req.body.firstName +" "+req.body.lastName},
       {"Name": "email"         , "Value": req.body.email},
-      {"Name": "birthdate"     , "Value": req.body.dob}, //TODO, convert birthdate to timestamp
+      {"Name": "birthdate"     , "Value": req.body.dob},
+      {"Name": "address"       , "Value": req.body.address ? req.body.address : ''},
       // custom fields
       {"Name": "custom:membership", "Value": JSON.stringify(req.body.membershipGroup)},
       {"Name": "custom:mandai_id", "Value": req.body.mandaiID},
@@ -97,7 +107,8 @@ async function cognitoCreateUser(req){
       {"Name": "custom:vehicle_iu", "Value": "null"},
       {"Name": "custom:vehicle_plate", "Value": "null"},
       {"Name": "custom:last_login", "Value": "null"},
-      {"Name": "custom:source", "Value": req.body.source}
+      {"Name": "custom:source", "Value": req.body.source},
+      {"Name": "custom:1", "Value": req.body.registerTime ? req.body.registerTime : ''},
     ],
   };
 
@@ -123,14 +134,29 @@ async function cognitoCreateUser(req){
     });
 
     // send welcome email
-    const emailResponse = await retryOperation(async () => {
-      return emailService.lambdaSendEmail(req);
-    });
+    let emailResponse = '';
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    if(wpPhase1a && !req.body.migrations){
+      emailResponse = await retryOperation(async () => {
+        return await emailService.lambdaSendEmail(req);
+      });
+    }
+
+    // push to queue for Galaxy Import Pass
+    const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
+
+    // user migration - update user_migrations table for signup & sqs status
+    if(req.body.migrations){
+      if(galaxySQS.$metadata.httpStatusCode === 200) {
+        await userDBService.updateUserMigration(req, 'signup', 'signupSQS');
+      }
+    }
 
     response = {
       cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
-      email_trigger: emailResponse
+      email_trigger: emailResponse,
+      galaxy: galaxySQS
     };
 
     // prepare logs
@@ -145,8 +171,8 @@ async function cognitoCreateUser(req){
     // prepare logs
     let logObj = loggerService.build('user', 'usersServices.createUserService', req, 'MWG_CIAM_USER_SIGNUP_ERR', newUserArray, error);
     // prepare response to client
-    let responseErrorToClient = responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-
+    let responseErrorToClient = responseHelper.craftUsersApiResponse('', '', 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
+    console.log('usersServices.createUserService', new Error(`[CIAM-MAIN] Signup Error: ${error}`))
     return responseErrorToClient;
   }
 }
@@ -204,6 +230,8 @@ async function getUserMembership(req){
  * Update user CIAM info
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
+  // get switches from DB
+  req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
@@ -226,9 +254,20 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
     // save to DB
     let updateDBRes = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
+    // galaxy update
+    // move to sqs
+    // push to SQS queue for Galaxy Import Pass
+    req.body["ciamComparedParams"] = ciamComparedParams;
+    req.body["membershipData"] = membershipData;
+    response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
+
     // send update email
-    req.body['emailType'] = 'update_wp';
-    let emailTriggerRes = await emailService.lambdaSendEmail(req);
+    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+    let emailTriggerRes;
+    if(wpPhase1a){
+      req.body['emailType'] = 'update_wp';
+      emailTriggerRes = await emailService.lambdaSendEmail(req);
+    }
 
     response = {
       cardface: cardfaceRes,

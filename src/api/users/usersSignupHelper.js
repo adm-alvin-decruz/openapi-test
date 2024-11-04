@@ -5,7 +5,9 @@ const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
+const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const dbConfig = require('../../config/dbConfig');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
 
 /**
  * Generate mandaiID
@@ -126,15 +128,20 @@ async function createUserSignupDB(req){
     let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id);
     // insert to credential table
     let newUserCredentialResult = await insertUserCredential(req, newUserResult.user_id);
+    // insert to detail table
+    let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id);
+
+    // user migrations - update user_migrations user ID
+    if(req.body.migrations) {
+      let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
+    }
     // if group non wildpass, insert user credential
     let response = {
       newUserResult: JSON.stringify(newUserResult),
       newMembershipResult: JSON.stringify(newMembershipResult),
       newUserNewsLetterResult: JSON.stringify(newUserNewsLetterResult),
-      newUserCredentialResult: JSON.stringify(newUserCredentialResult)
-    }
-    if(req.body.group !== 'wildpass'){
-      response['newUserDetailResult'] = await insertUserDetail(req, newUserResult.user_id);
+      newUserCredentialResult: JSON.stringify(newUserCredentialResult),
+      newUserDetailResult: JSON.stringify(newUserDetailResult)
     }
 
     req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
@@ -166,7 +173,8 @@ async function insertUser(req){
       birthdate: req.body.dob,
       mandai_id: req.body.mandaiID,
       source: envSource[req.body.source],
-      active: true
+      active: true,
+      created_at: req.body.registerTime ? req.body.registerTime : getCurrentUTCTimestamp()
     });
 
     return result;
@@ -286,13 +294,13 @@ async function insertUserDetail(req, dbUserID){
     // Create a new user
     const result = await userDetailModel.create({
       user_id: dbUserID,
-      phone_number: '+1234567890',
-      zoneinfo: 'SG',
-      address: '123 Main St, City, Country',
-      picture: null,
-      vehicle_iu: 'IU123456',
-      vehicle_plate: 'ABC123',
-      extra: { favorite_color: 'blue' }
+      phone_number: req.body.phone ? req.body.phone : null,
+      zoneinfo: req.body.zone ? req.body.zone : null,
+      address: req.body.address ? req.body.address : null,
+      picture: req.body.picture ? req.body.picture : null,
+      vehicle_iu: req.body.vehicleIU ? req.body.vehicleIU : null,
+      vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : null,
+      extra: req.body.extra ? req.body.extra : null
     });
 
     return result;
@@ -301,6 +309,26 @@ async function insertUserDetail(req, dbUserID){
     let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
+  }
+}
+
+async function updateUserMigration(req, dbUserID){
+  try {
+    const sql = `
+        UPDATE user_migrations
+        SET
+          user_id = ?,
+          updated_at = NOW()
+        WHERE email = ? AND batch_no = FROM_UNIXTIME(?)
+      `;
+    const params = [
+      dbUserID,
+      req.body.email,
+      req.body.batchNo,
+    ];
+    await userMigrationsModel.runCustomSQL(sql, params);
+  } catch (error) {
+    console.log(new Error(`Update User Migrations user_id failed: ${error}`));
   }
 }
 

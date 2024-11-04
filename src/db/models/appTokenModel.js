@@ -34,23 +34,27 @@ class AppTokenModel {
   //   });
   // }
 
-  static async updateTokenData(dbToken) {
-    const now = getCurrentUTCTimestamp();
-    const sql = 'UPDATE app_tokens SET token = ?, expires_at = ?, updated_at = ? WHERE id = ?';
+  /**
+   * Update token data in database
+   * @param {string} sql - SQL statement
+   * @param {Array} values - Values for prepared statement
+   * @returns {Promise<Object>} Updated token data
+   */
+  static async updateTokenData(sql, params) {
+    try {
+        const result = await pool.execute(sql, params);
 
-    const params = [
-      JSON.stringify(dbToken.token),
-      formatDateToMySQLDateTime(dbToken.expires_at),
-      now,
-      dbToken.id
-    ];
+        if (result.affectedRows === 0) {
+            throw new Error('No rows updated. Invalid id or client.');
+        }
 
-    const result = await pool.execute(sql, params);
-
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      update_result: result
-    };
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        update_result: result
+      };
+    } catch (error) {
+      console.log(new Error(`Database error: ${error}`));
+    }
   }
 }
 

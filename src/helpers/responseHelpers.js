@@ -22,7 +22,7 @@ function responseHandle(module='user', moduleFunc, configModulePrefix, req, mwgC
  * Function process CIAM response
  *
  * @param {JSON} attr attribute section of the cognito response
- * @param {JSON} reqBody request body
+ * @param {JSON} reqBody request body || in case of error, will be errors object
  * @param {string} status status text success | failed
  * @param {int} statusCode status code 200 | 400 | 501
  * @returns
@@ -116,7 +116,7 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
         // re-format cognito user attributes to key:value for next mapping process
         let cognitoUserJson = commonService.convertUserAttrToNormJson(response.cognitoUser.UserAttributes);
         cognitoUserJson['visualId'] = cognitoUserJson['custom:membership'];
-        console.log("AAA", cognitoUserJson);
+
         memberInfo = formatGetUserAPIResData(req, cognitoUserJson, 'GET_USER_API_RESPONSE_MAPPING');
         responseToInternal = mergeJson(memberInfo, responseStructure);
       }

@@ -35,10 +35,14 @@ function prepareMembershipGroup(reqBody){
   return {"name":reqBody.group,"visualID": visualID,"expiry":""};
 }
 
-function setSource(reqHeaders){
-  const mwgAppID = reqHeaders['mwg-app-id'];
+function setSource(req){
+  let reqBody = req.body;
+  let reqHeaders = req.headers;
   let sourceMap = JSON.parse(userConfig.SOURCE_MAPPING);
-  return sourceMap[mwgAppID];
+  if (reqBody && reqBody.source) {
+    return reqBody.source;
+  }
+  return sourceMap[reqHeaders['mwg-app-id']] || 'ORGANIC';
 }
 
 /**
@@ -305,6 +309,32 @@ function processUserUpdateErrors(attr, reqBody, mwgCode){
   }
   return errors;
 }
+/**
+ * Generate Date in UTC+8, time always 00:00:00
+ * @returns 2024-10-22 00:00:00
+ */
+function getDateTimeUTC8() {
+  // Create date object for current time
+  const now = new Date();
+
+  // Convert to UTC+8
+  const utc8Offset = 8 * 60; // UTC+8 offset in minutes
+  const localOffset = now.getTimezoneOffset();
+  const totalOffset = utc8Offset + localOffset;
+
+  // Add offset to get UTC+8 time
+  const utc8Date = new Date(now.getTime() + totalOffset * 60000);
+
+  // Set time to 00:00:00
+  utc8Date.setHours(0, 0, 0, 0);
+
+  // Format the date to remove T and .000Z
+  const year = utc8Date.getFullYear();
+  const month = String(utc8Date.getMonth() + 1).padStart(2, '0');
+  const day = String(utc8Date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day} 00:00:00`;
+}
 
 module.exports = {
   cleanData,
@@ -323,5 +353,6 @@ module.exports = {
   detectAttrPresence,
   formatDate,
   convertUserAttrToNormJson,
-  processUserUpdateErrors
+  processUserUpdateErrors,
+  getDateTimeUTC8
 }

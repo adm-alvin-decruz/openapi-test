@@ -10,6 +10,8 @@ const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
+const crypto = require('crypto');
+const uuid = crypto.randomUUID();
 
 const pong = {'pong': 'pang'};
 
@@ -24,7 +26,8 @@ router.get('/ping', async (req, res) => {
  */
 router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
@@ -37,9 +40,10 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   }
 
   if(valAppID === true){
+    req.body.uuid = uuid;
     let newUser = await userController.adminCreateUser(req);
 
-    req.apiTimer.end('Route CIAM Signup User- '+req.apiTimer.getRequestId());
+    req.apiTimer.end('Route CIAM Signup User', startTimer);
     if(newUser.error){
       return res.status(400).json(newUser);
     }
@@ -50,6 +54,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
     return res.status(200).json(newUser);
   }
   else{
+    req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
     return res.status(401).send({ error: 'Unauthorized' });
   }
 })
@@ -61,7 +66,8 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  */
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
@@ -78,14 +84,14 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   if(valAppID === true){
     let updateUser = await userController.adminUpdateUser(req, listedParams);
 
-    req.apiTimer.end('Route CIAM Update User- '+req.apiTimer.getRequestId());
+    req.apiTimer.end('Route CIAM Update User ', startTimer);
     if('membership' in updateUser && 'code' in updateUser.membership){
       return res.status(updateUser.membership.code).json(updateUser);
     }
     return res.status(200).json(updateUser);
   }
   else{
-    req.apiTimer.end('Route CIAM Update User- '+req.apiTimer.getRequestId());
+    req.apiTimer.end('Route CIAM Update User Error Unauthorized', startTimer);
     return res.status(401).send({ error: 'Unauthorized' });
   }
 })
@@ -95,7 +101,8 @@ router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
  */
 router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
@@ -103,6 +110,7 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
   if(valAppID === true){
     let resendUser = await userController.membershipResend(req);
 
+    req.apiTimer.end('Route CIAM Resend Membership ', startTimer);
     let code = 200;
     if('membership' in resendUser && 'code' in resendUser.membership){
       code = resendUser.membership.code;
@@ -110,6 +118,8 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
     return res.status(200).json(resendUser);
   }
   else{
+
+    req.apiTimer.end('Route CIAM Resend Membership Error 401 Unauthorized', startTimer);
     return res.status(401).send({ error: 'Unauthorized' });
   }
 })
@@ -120,7 +130,8 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
   // validate req app-id
   var valAppID = validationService.validateAppID(req.headers);
@@ -129,16 +140,16 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
     if(['dev', 'uat', 'prod'].includes(process.env.APP_ENV) ){
       let deleteMember = await userController.membershipDelete(req);
 
-      req.apiTimer.end('Route CIAM Delete User- '+req.apiTimer.getRequestId());
+      req.apiTimer.end('Route CIAM Delete User', startTimer);
       return res.status(200).json({deleteMember});
     }
     else{
-      req.apiTimer.end('Route CIAM Delete User- '+req.apiTimer.getRequestId());
+      req.apiTimer.end('Route CIAM Delete User Error 501 Not Implemented', startTimer);
       return res.status(501).json({error: 'Not Implemented'});
     }
   }
   else{
-    req.apiTimer.end('Route CIAM Delete User- '+req.apiTimer.getRequestId());
+    req.apiTimer.end('Route CIAM Delete User Error 401 Unauthorized', startTimer);
     return res.status(401).send({ error: 'Unauthorized' });
   }
 })
@@ -148,16 +159,20 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
  */
 router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(); // log time durations
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
 
   if(valAppID === true){
     let getUser = await userController.getUser(req);
+
+    req.apiTimer.end('Route CIAM Get User', startTimer);
     return res.status(200).json(getUser);
   }
   else{
+    req.apiTimer.end('Route CIAM Get User Error 401 Unauthorized', startTimer);
     return res.status(401).send({ error: 'Unauthorized' });
   }
 });

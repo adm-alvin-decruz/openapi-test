@@ -5,6 +5,7 @@ const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
+const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
 const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
 
@@ -70,8 +71,24 @@ function prepareDBUpdateData(ciamAttrInput) {
   return result;
 }
 
+async function updateUserMigration(req, param1, param2) {
+  let reqBody = req.body;
+  reqBody.signup = false;
+  reqBody.signup_sqs = false;
+  if(param1 === 'signup'){
+    reqBody.signup = true;
+  }
+  if(param2 === 'signupSQS'){
+    reqBody.signup_sqs = true;
+  }
+
+  return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
+
+}
+
 module.exports = {
   getDBUserByEmail,
   queryWPUserByEmail,
-  prepareDBUpdateData
+  prepareDBUpdateData,
+  updateUserMigration
 }
