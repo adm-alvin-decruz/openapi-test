@@ -1,18 +1,18 @@
 const request = require('supertest');
 const express = require('express');
-const router = require('./userRoutes'); // Adjust this path as needed
-
-// Mocks
-jest.mock('../services/validationService');
-jest.mock('../services/commonService');
-jest.mock('../controllers/userController');
-jest.mock('../config/userConfig', () => ({
-  WILDPASS_SOURCE_COGNITO_MAPPING: {}
-}));
-
+const router = require('../../../api/users/userRoutes');
 const validationService = require('../../../services/validationService');
 const commonService = require('../../../services/commonService');
-const userController = require('../controllers/userController');
+const userController = require('../../../api/users/usersContollers');
+const usersConfig = require('../../../config/usersConfig');
+
+// Mocks
+jest.mock('../../../services/validationService');
+jest.mock('../../../services/commonService');
+jest.mock('../../../api/users/usersContollers');
+jest.mock('../../../config/usersConfig', () => ({
+  WILDPASS_SOURCE_COGNITO_MAPPING: {}
+}));
 
 describe('PUT /users route', () => {
   let app;
@@ -62,14 +62,14 @@ describe('PUT /users route', () => {
     validationService.validateAppID.mockReturnValue(true);
     commonService.cleanData.mockImplementation(data => data);
     commonService.mapCognitoJsonObj.mockReturnValue({ someParam: 'value' });
-    userController.adminUpdateUser.mockResolvedValue({ id: '123', name: 'Updated User' });
+    userController.adminUpdateUser.mockResolvedValue({"email":"kwanoun.liong@mandai.com","firstName":"KayC","lastName":"Liong","dob":"13/04/1963","group":"wildpass","newsletter":{"type":"1","name":"wildpass","subscribe":true}});
 
     const response = await request(app)
       .put('/users')
       .send({ someData: 'value' });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ id: '123', name: 'Updated User' });
+    expect(response.body).toEqual({"email":"kwanoun.liong@mandai.com","firstName":"KayC","lastName":"Liong","dob":"13/04/1963","group":"wildpass","newsletter":{"type":"1","name":"wildpass","subscribe":true}});
   });
 
   it('should return membership code if present in the updateUser response', async () => {
