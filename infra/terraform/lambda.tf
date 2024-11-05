@@ -97,7 +97,7 @@ module "lambda_function_ciam_membership" {
     NEW_RELIC_LICENSE_KEY_SECRET = var.NEW_RELIC_LICENSE_KEY_SECRET
     AWS_REGION_NAME = var.region
     SQS_QUEUE_URL = data.terraform_remote_state.sqs.outputs.sqs_queue_url
-    LAMBDA_CIAM_SIGNUP_TRIGGER_PASSKIT_MAIL_FUNCTION = data.terraform_remote_state.passkit_email_trigger_function.outputs.lambda_name 
+    #LAMBDA_CIAM_SIGNUP_TRIGGER_PASSKIT_MAIL_FUNCTION = data.terraform_remote_state.passkit_email_trigger_function.outputs.lambda_name 
   }
 #  allowed_triggers = {
 #    apigateway = {
