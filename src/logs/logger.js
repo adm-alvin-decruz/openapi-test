@@ -1,5 +1,6 @@
 // use dotenv
 require('dotenv').config();
+const appConfig = require('../config/appConfig');
 
 /**
  * log function
@@ -44,7 +45,22 @@ function build(moduleName, action, req, mwgCode, endpointReqObj, responseFromEnd
   return logObj;
 }
 
+/**
+ * Log error
+ * @param {mix} logObj json or string message
+ * @param {*} req request object
+ */
+function error (logObj, req) {
+  if(process.env.APP_LOG_SWITCH === 'true'){
+    let apiPath = 'path:'+req.apiPath;
+    if (req.apiPath === undefined) {
+      apiPath = '';
+    }
+    console.error(appConfig.LOG_APP_PREFIX + ' '+ apiPath +' ' + logObj);
+  }
+}
+
 /** export the module */
 module.exports = {
-  log, build
+  log, build, error
 };

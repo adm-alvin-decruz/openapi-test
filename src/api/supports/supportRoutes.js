@@ -133,6 +133,7 @@ router.get('/support/token', upload.none(), isEmptyRequest, async (req, res) => 
 
 });
 
+// update token table's data
 router.put('/support/token', isEmptyRequest, async (req, res) => {
   return await supportController.updateToken(req, res);
 });
@@ -142,9 +143,15 @@ router.post('/support/failed-jobs',isEmptyRequest, async (req, res) => {
   return await supportController.getFailedJobs(req, res);
 });
 
-/** get list Support failed jobs table */
+/** retrigger failed jobs in failed jobs table */
 router.post('/support/failed-jobs/retrigger',isEmptyRequest, async (req, res) => {
   return await supportController.triggerFailedJobsCtr(req, res);
+});
+
+/** re-trigger empty visual ID due to galaxy pass import not run earlier phase1a-1 or future any errors */
+router.post('/support/user/galaxy/import',isEmptyRequest, async (req, res) => {
+  req.apiPath = '/support/user/galaxy/import';
+  return await supportController.triggerGalaxyWPImportCtrl(req, res);
 });
 
 module.exports = router;

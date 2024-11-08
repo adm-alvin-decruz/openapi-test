@@ -38,6 +38,7 @@ class GalaxyWPService {
   }
 
   async createRequestBody(inputData, galaxyParams) {
+    console.log("AAA", inputData);
     return galaxyCmnService.mapImputToImportParams(inputData, galaxyParams);
   }
 

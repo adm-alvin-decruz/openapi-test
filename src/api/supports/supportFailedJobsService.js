@@ -34,6 +34,14 @@ class FailedJobsSupportService {
     PASSKIT: 3
   };
 
+  // dynamic function caller using string method name
+  async execute(methodName, ...args) {
+    if (typeof this[methodName] === 'function') {
+        return this[methodName](...args);
+    }
+    throw new Error(`Method ${methodName} not found`);
+  }
+
   /**
    * Retrieve failed jobs with pagination and filters
    * @param {Object} options - Query options
@@ -183,23 +191,15 @@ class FailedJobsSupportService {
     // find failed job by uuid
     let failedJob = await failedJobsModel.findByUuid(req.body.uuid);
     if (!failedJob) {
-      throw new Error('Failed job not found');
+      console.log(new Error('Failed job not found in DB'));
     }
 
     let retrigger = await this.retriggerByType(req, failedJob);
 
-    let updateFailedJob;
     if (retrigger) {
-      // update failed job status to retriggered
-      updateFailedJob = await failedJobsModel.update(failedJob.id, {
-        status: FailedJobsSupportService.STATUS_MAP.RETRIGGERED,
-        triggered_at: "2024-11-02 00:00:00"
-      });
-    }
-    if (updateFailedJob) {
       return {
         message: `Successfully retriggered failed job: ${req.body.uuid}`,
-        data: failedJob,
+        data: retrigger,
         status: 'success'
       };
     } else {
@@ -223,22 +223,17 @@ class FailedJobsSupportService {
 
       // user migration - update user_migrations table for signup & sqs status
       let dbUpdate;
-      if(failedJob.data.body.migrations){
-        if(galaxySQS.$metadata.httpStatusCode === 200) {
+      if(galaxySQS.$metadata.httpStatusCode === 200) {
+        if(failedJob.data.body.migrations){
+          // update user migration table
           dbUpdate = await userDBService.updateUserMigration(req, 'signup', 'signupSQS');
         }
+        // update failed job status
+        dbUpdate = await this.updateJobStatus(failedJob.id, FailedJobsSupportService.STATUS_MAP.RETRIGGERED);
       }
       return dbUpdate;
     }
     return false;
-  }
-
-  // dynamic function caller using string method name
-  async execute(methodName, ...args) {
-    if (typeof this[methodName] === 'function') {
-        return this[methodName](...args);
-    }
-    throw new Error(`Method ${methodName} not found`);
   }
 
   /**
@@ -249,51 +244,27 @@ class FailedJobsSupportService {
    * @returns {Promise<Object>} Updated job
    */
   async updateJobStatus(id, status, supportNotes = {}) {
+
     try {
       // Validate status
       if (!Object.values(FailedJobsSupportService.STATUS_MAP).includes(status)) {
-        throw new Error('Invalid status value');
+        console.error(new Error('Invalid status value'));
       }
 
       const job = await failedJobsModel.findById(id);
       if (!job) {
-        throw new Error('Job not found');
+        console.error(new Error('Job not found'));
       }
-
-      // Prepare updated data with support notes
-      const currentData = job.data || {};
-      const updatedData = {
-        ...currentData,
-        support: {
-          ...(currentData.support || {}),
-          lastUpdate: {
-            timestamp: new Date().toISOString(),
-            status: status,
-            notes: supportNotes.notes || '',
-            updatedBy: supportNotes.updatedBy || 'support_system'
-          },
-          history: [
-            ...(currentData.support?.history || []),
-            {
-              timestamp: new Date().toISOString(),
-              status: status,
-              notes: supportNotes.notes || '',
-              updatedBy: supportNotes.updatedBy || 'support_system'
-            }
-          ]
-        }
-      };
 
       // Update job
       await failedJobsModel.update(id, {
         status,
-        data: updatedData,
-        triggered_at: supportNotes.retriggeredAt || job.triggered_at
+        triggered_at: new Date()
       });
 
       return await failedJobsModel.findById(id);
     } catch (error) {
-      throw new Error(`Failed to update job status: ${error.message}`);
+      console.error(new Error(`Failed to update job status: ${error}`));
     }
   }
 
@@ -342,7 +313,7 @@ class FailedJobsSupportService {
 
       return true;
     } catch (error) {
-      throw new Error(`Failed to mark job as resolved: ${error.message}`);
+      console.error(new Error(`Failed to mark job as resolved: ${error}`));
     }
   }
 
