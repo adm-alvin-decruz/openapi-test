@@ -76,11 +76,6 @@ class FailedJobsSupportService {
       // Validate and sanitize field selection
       const selectedFields = this.validateFields(fields);
 
-      // Validate sort field
-      if (!this.allowedFields.includes(sortBy)) {
-        sortBy = 'created_at';
-      }
-
       const offset = (page - 1) * limit;
       const conditions = [];
       const params = [];

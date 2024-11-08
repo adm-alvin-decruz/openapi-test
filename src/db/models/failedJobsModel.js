@@ -100,7 +100,6 @@ class FailedJobsModel {
     Object.entries(updateData).forEach(([key, value]) => {
       if (allowedFields.includes(key)) {
         updates.push(`${key} = ?`);
-        values.push(key === 'status' ? value : value);
       }
     });
 
