@@ -3,6 +3,7 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const userConfig = require('../config/usersConfig');
+const loggerService = require('../logs/logger');
 
 /**
  * Function cleanData
@@ -46,7 +47,7 @@ function setSource(req){
 }
 
 /**
- * Detail check JSON empty or not
+ * Detail check JSON array empty or not
  *
  * @param {JSON} json
  * @returns
@@ -69,6 +70,51 @@ function isJsonNotEmpty(json) {
 
   // if it's an object, check if it has any own properties
   return Object.keys(json).length > 0;
+}
+
+function valJsonObjOrArray(input, req) {
+  try {
+    // First check if input exists
+    if (!input) {
+      loggerService.error(new Error('CommonService.valJsonObjOrArray Input is required'), req);
+      return false;
+    }
+
+    // Check if input is an array
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        loggerService.error(new Error('CommonService.valJsonObjOrArray Array input cannot be empty'), req);
+        return false
+      }
+
+      // Validate each object in array
+      input.forEach((item, index) => {
+        if (!Object.keys(item).length) {
+          loggerService.log(`CommonService.valJsonObjOrArray Object at index ${index} is empty`);
+        }
+      });
+
+      // console.log('Valid array input with', input.length, 'items');
+      return true;
+    }
+
+    // Check if input is an object
+    if (typeof input === 'object' && input !== null) {
+      if (Object.keys(input).length === 0) {
+        loggerService.log(new Error('CommonService.valJsonObjOrArray Object input cannot be empty'), req);
+        return false;
+      }
+
+      loggerService.log('CommonService.valJsonObjOrArray Valid object input with', Object.keys(input).length, 'properties');
+      return true;
+    }
+
+    loggerService.error(new Error('CommonService.valJsonObjOrArray Input must be either an array or an object'), req);
+
+  } catch (error) {
+    loggerService.error('CommonService.valJsonObjOrArray Validation Error:', error);
+    return false;
+  }
 }
 
 /**
@@ -354,5 +400,6 @@ module.exports = {
   formatDate,
   convertUserAttrToNormJson,
   processUserUpdateErrors,
-  getDateTimeUTC8
+  getDateTimeUTC8,
+  valJsonObjOrArray
 }

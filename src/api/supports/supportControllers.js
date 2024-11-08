@@ -2,10 +2,21 @@ const SupportUserServices = require('./supportUserServices');
 const SupportSwitchesServices = require('./supportSwitchesServices');
 const SupportTokenServices = require('./supportTokenServices');
 const SupportFailedJobsServices = require('./supportFailedJobsService');
+const SupportGalaxyServices = require('./supportGalaxyServices');
 const processTimer = require('../../utils/processTimer');
 const validationService = require('../../services/validationService');
+const loggerService = require('../../logs/logger');
+
 
 class SupportController{
+  // to add process timer
+  static addProcessTimer(req) {
+    req['processTimer'] = processTimer;
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+
+    return req;
+  }
+
   static async getUserAll (req) {
     return SupportUserServices.getUserAllInfoService(req);
   }
@@ -84,13 +95,32 @@ class SupportController{
     }
   }
 
-  static addProcessTimer(req) {
-    req['processTimer'] = processTimer;
-    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
-
-    return req;
+  static async triggerGalaxyWPImportCtrl(req, res) {
+    return await this.supportGalaxyFunc(req, res, 'triggerGalaxyImportSvc')
   }
 
+  static async supportGalaxyFunc(req, res, faileJobMethodName) {
+    req = SupportController.addProcessTimer(req);
+    const startTimer = process.hrtime();
+
+    // validate req app-id
+    var valAppID = validationService.validateAppID(req.headers, 'support');
+
+    if(valAppID === true){
+      let jobs;
+      try {
+        jobs = await SupportGalaxyServices.execute(faileJobMethodName, req);
+        res.status(200).json({ status: jobs.status, jobs: jobs });
+      } catch (error) {
+        loggerService.error(new Error(`SupportController.supportGalaxyFunc error: ${error}`), req);
+        res.status(500).json({ status: 'failed', error: error.message });
+      }
+      req.apiTimer.end('[CIAM-SUPPORT] galaxy jobs ended', startTimer);
+    }
+    else{
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+  }
 }
 
 module.exports = SupportController;

@@ -71,10 +71,10 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [id]);
+      const rows = await this.pool.execute(query, [id]);
       return rows[0];
     } catch (error) {
-      throw new Error(`Failed to find job: ${error.message}`);
+      console.error(new Error(`Failed to find job: ${error}`));
     }
   }
 
@@ -85,8 +85,8 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [uuid]);
-      return rows;
+      const row = await this.pool.execute(query, [uuid]);
+      return row[0];
     } catch (error) {
       throw new Error(`Failed to find job: ${error.message}`);
     }
@@ -143,7 +143,7 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [limit]);
+      const rows = await this.pool.execute(query, [limit]);
       return rows;
     } catch (error) {
       throw new Error(`Failed to fetch failed jobs: ${error.message}`);

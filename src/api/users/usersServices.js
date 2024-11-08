@@ -63,7 +63,6 @@ async function userSignup(req){
   const genWPCardFace = await retryOperation(async () => {
     return prepareWPCardfaceInvoke(req);
   });
-  req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
 
   if(genWPCardFace.status === 'failed'){
     return genWPCardFace
@@ -416,6 +415,7 @@ async function prepareWPCardfaceInvoke(req){
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
 
       if(response.statusCode === 200){
+        console.log("[CIAM MAIN] Generate cardface", response);
         return response;
       }
       if([400, 500].includes(response.statusCode) || response.errorType === 'Error'){
