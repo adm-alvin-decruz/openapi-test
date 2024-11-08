@@ -189,6 +189,33 @@ function parseFilters(filters) {
   return {};
 }
 
+async function findUserWithEmptyVisualID (req) {
+  const maxLimit = 90;
+  let limit = req.body.limit || maxLimit;
+  if(req.body.limit > maxLimit){
+    limit = maxLimit;
+  }
+
+  const query = `
+    SELECT u.id, u.email, u.given_name AS firstName, u.family_name AS lastName, DATE_FORMAT(u.birthdate,'%d/%m/%Y') AS dob,
+      u.mandai_id AS mandaiID, u.source, um2.signup_sqs as migrations, UNIX_TIMESTAMP(um2.batch_no) AS batchNo,
+      json_object('name', un.name, 'type', un.type, 'subscribe', un.subscribe) AS newsletter
+    FROM users u
+    LEFT JOIN user_memberships um ON u.id = um.user_id
+    LEFT JOIN user_newsletters un ON u.id = un.user_id
+    LEFT JOIN user_migrations um2 ON u.id = um2.user_id
+    WHERE um.visual_id IS NULL OR um.visual_id = '' ORDER BY id LIMIT ${limit};
+  `;
+
+  try {
+    const results = await pool.query(query);
+    return results;
+  } catch (error) {
+    console.error('Error finding users with empty visual ID:', error);
+    throw error;
+  }
+}
+
 module.exports = {
-  getUserFullInfoByEmail, getUserPageCustomField
+  getUserFullInfoByEmail, getUserPageCustomField, findUserWithEmptyVisualID
 }
