@@ -40,6 +40,17 @@ data "aws_iam_policy_document" "lambda" {
       data.aws_cognito_user_pool.cognito.arn
     ]
   }
+  statement {
+    sid = "2"
+
+    actions = [
+      "sqs:*",
+    ]
+
+    resources = [
+      data.terraform_remote_state.sqs.outputs.sqs_queue_arn
+    ]
+  }
 }
 
 resource "aws_iam_policy" "lambda" {

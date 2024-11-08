@@ -1,1 +1,1 @@
-test
+Do not delete the files folder and text.txt file. It's required for the pipeline to upload artifacts.
