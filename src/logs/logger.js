@@ -50,9 +50,9 @@ function build(moduleName, action, req, mwgCode, endpointReqObj, responseFromEnd
  * @param {mix} logObj json or string message
  * @param {*} req request object
  */
-function error (logObj, req) {
+function error (logObj, req={}) {
   if(process.env.APP_LOG_SWITCH === 'true'){
-    let apiPath = 'path:'+req.apiPath;
+    let apiPath = (req.apiPath != undefined) ? 'path:'+req.apiPath : undefined;
     if (req.apiPath === undefined) {
       apiPath = '';
     }
