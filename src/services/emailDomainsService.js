@@ -142,7 +142,7 @@ class EmailDomainService {
   }
 
   async getCheckDomainSwitch () {
-    if (process.env.APP_ENV == 'development' || process.env.APP_ENV == 'uat') {
+    if (process.env.APP_ENV == 'dev' || process.env.APP_ENV == 'uat') {
       // get switches from DB
       let dbSwitch = await switchService.findByName('email_domain_check');
       return dbSwitch.switch === 1;
