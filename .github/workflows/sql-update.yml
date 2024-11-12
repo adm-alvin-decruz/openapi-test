@@ -44,16 +44,18 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-users-20240821.sql
           # echo "running app-token-seeds.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/app-token-seeds.sql
-          echo "running switches-20240927.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/switches-20240927.sql
-          echo "running CDT-119-birthdate-bug-fix.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-birthdate-bug-fix.sql
-          echo "running ciam-user-migrations-table-20241021.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-table-20241021.sql
-          echo "running wildpass-user-emp-ori-for-prod.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/wildpass-user-emp-ori-for-prod.sql
-          echo "running create-failed_jobs-table-20241031.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
+          # echo "running switches-20240927.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/switches-20240927.sql
+          # echo "running CDT-119-birthdate-bug-fix.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-birthdate-bug-fix.sql
+          # echo "running ciam-user-migrations-table-20241021.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-table-20241021.sql
+          # echo "running wildpass-user-emp-ori-for-prod.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/wildpass-user-emp-ori-for-prod.sql
+          # echo "running create-failed_jobs-table-20241031.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
+          echo "running CDT-159-bug-user-migration-fix.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
 
       - name: Verify Deployment
         run:  echo "Run Query to verify db update/rollback  of database/table is successful"
