@@ -1,5 +1,5 @@
 const supportDBService = require('./supportDBServices');
-const SwitchesModel = require('../../db/models/switches/switcheModel');
+const SwitchesModel = require('../../db/models/switches/switchesModel');
 
 class SupportSwitchesServices {
 
