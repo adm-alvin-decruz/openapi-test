@@ -69,11 +69,13 @@ class Switch {
       var result = [];
       var statement = [];
       var key = 0;
+      let params = [];
       for (const record of reqBody) {
+        params = [record.name, record.switch, record.description, record.id];
         key ++;
-        queries = `UPDATE switches SET switch = ?, description = ?, updated_at=now() WHERE id= ? `;
-        result[key] = await pool.execute(queries, [record.switch, record.description, record.id]);
-        statement[key] = commonService.replaceSqlPlaceholders(queries, [record.switch, record.description, record.id]);
+        queries = `UPDATE switches SET name = ?, switch = ?, description = ?, updated_at=now() WHERE id= ? `;
+        result[key] = await pool.execute(queries, params);
+        statement[key] = commonService.replaceSqlPlaceholders(queries, params);
       }
 
       return {
