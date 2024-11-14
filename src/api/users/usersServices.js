@@ -363,17 +363,18 @@ function processErrors(attr, reqBody, mwgCode){
  * @returns
  */
 async function resendUserMembership(req, memberAttributes){
-
+  req['dbSwitch'] = await switchService.getAllSwitches();
   // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
+  req.body = commonService.cleanData(req.body);
 
   // find user attribute value for mandaiID
-  reqBody['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
-  reqBody['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
+  req.body['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
+  req.body['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
 
   try {
     // resend wildpass email
-    reqBody['emailType'] = 'update_wp'; // use wildpass re-send template
+    req.body['emailType'] = 'update_wp'; // use wildpass re-send template
+    req.body['resendWpWithPasskit'] = await switchService.findSwitchValue(req.dbSwitch, "signup_email_passkit");
     const response  = await emailService.lambdaSendEmail(req);
 
     // prepare logs
