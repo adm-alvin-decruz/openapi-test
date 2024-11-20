@@ -16,6 +16,10 @@ function cleanData(reqData){
     if(typeof reqData[key] === "string"){
 			reqData[key] = trimWhiteSpace (reqData[key]);
     }
+    if(key === "email"){
+      // case sensitive email handling
+      reqData[key] = reqData[key].toLowerCase();
+    }
 	})
 	return reqData;
 }

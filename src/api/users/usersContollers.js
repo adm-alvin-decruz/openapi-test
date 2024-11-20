@@ -107,6 +107,10 @@ async function adminCreateUser (req){
 async function adminUpdateUser (req, listedParams){
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersController.adminUpdateUser start'); // log process time
+
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
+
   try {
     // check if user exist
     var memberInfo = await usersService.getUserMembership(req);
@@ -173,6 +177,9 @@ async function adminUpdateUser (req, listedParams){
 async function membershipResend(req){
   // API validation
   let validatedParams = validationService.validateParams(req.body, 'RESEND_VALIDATE_PARAMS');
+
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
 
   // if params no error, status success
   if(validatedParams.status === 'success'){
