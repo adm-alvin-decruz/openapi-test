@@ -16,17 +16,21 @@ async function lambdaSendEmail(req){
     ID: req.body.mandaiID
   };
 
-  // if signup email passkit is true, send email
+  // process emailType
+  if(req.body.emailType){
+    emailTriggerData['emailType'] = req.body.emailType;
+  }
+
+  // if switch 'signup_email_passkit' is true, send email
   if(req.body.resendWpWithPasskit){
+    // map emailType
+    let emailType = await mapEmailType(req.body.emailType);
     functionName = process.env.LAMBDA_CIAM_SIGNUP_TRIGGER_PASSKIT_MAIL_FUNCTION;
     emailTriggerData = {
       email: req.body.email,
       passType: req.body.group,
+      emailType: emailType
     };
-  }
-
-  if(req.body.emailType){
-    emailTriggerData['emailType'] = req.body.emailType;
   }
 
   // lambda invoke
@@ -34,6 +38,21 @@ async function lambdaSendEmail(req){
 
   req.apiTimer.end('lambdaSendEmail'); // log end time
   return emailLambda;
+}
+
+async function mapEmailType(emailType){
+  switch (emailType) {
+    case 'resend_wp':
+      emailType = 'resend';
+      break;
+    case 'update_wp':
+      emailType = 'resend';
+      break;
+    default:
+      emailType = 'signup';
+      break;
+  }
+  return emailType;
 }
 
 module.exports={

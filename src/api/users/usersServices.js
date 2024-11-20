@@ -60,12 +60,15 @@ async function userSignup(req){
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // create user's wildpass card face first.
-  const genWPCardFace = await retryOperation(async () => {
-    return prepareWPCardfaceInvoke(req);
-  });
+  let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
+  if(wpPhase1a){
+    const genWPCardFace = await retryOperation(async () => {
+      return prepareWPCardfaceInvoke(req);
+    });
 
-  if(genWPCardFace.status === 'failed'){
-    return genWPCardFace
+    if(genWPCardFace.status === 'failed'){
+      return genWPCardFace
+    }
   }
 
   // call cognitoCreateUser function
@@ -184,6 +187,7 @@ async function cognitoCreateUser(req){
 async function getUserMembership(req){
   req['apiTimer'] = req['processTimer'].apiRequestTimer();
   req.apiTimer.log('usersServices.getUserMembership starts'); // log process time
+
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
