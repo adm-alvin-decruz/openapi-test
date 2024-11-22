@@ -49,7 +49,7 @@ class User {
   /** Find wild pass user full data */
   static async findWPFullData(email){
     try{
-      const sql = `SELECT u.*, um.name,um.visual_id, un.type, un.subscribe FROM users u
+      const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_newsletters un ON un.user_id = u.id
                   WHERE u.email = ? AND u.active=1`;
@@ -61,7 +61,7 @@ class User {
       }
     }
     catch (error){
-      throw new Error(`Error queryWPUserByEmail: ${error}`);
+      console.error(new Error(`Error queryWPUserByEmail: ${error}`));
     }
   }
 
