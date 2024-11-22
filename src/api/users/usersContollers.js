@@ -229,6 +229,9 @@ async function membershipResend(req){
  * @returns
  */
 async function membershipDelete(req){
+  // clean the request data for possible white space
+  req['body'] = commonService.cleanData(req.body);
+
   // check if user exist
   var memberInfo = await usersService.getUserMembership(req);
 
