@@ -29,7 +29,8 @@ async function lambdaSendEmail(req){
     emailTriggerData = {
       email: req.body.email,
       passType: req.body.group,
-      emailType: emailType
+      emailType: emailType,
+      caller: 'ciam'
     };
   }
 
