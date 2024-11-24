@@ -93,15 +93,8 @@ class FailedJobsModel {
   }
 
   async update(id, updateData) {
-    const allowedFields = ['status', 'triggered_at'];
-    const updates = [];
-    const values = [];
-
-    Object.entries(updateData).forEach(([key, value]) => {
-      if (allowedFields.includes(key)) {
-        updates.push(`${key} = ?`);
-      }
-    });
+    const updates = updateData.updates;
+    const values = updateData.values;
 
     if (updates.length === 0) return false;
 
@@ -110,7 +103,9 @@ class FailedJobsModel {
       SET ${updates.join(', ')}
       WHERE id = ?
     `;
+
     console.log("FailedJobsModel.update statement", commonService.replaceSqlPlaceholders(sql, [...values, id]))
+
     try {
       const result = await this.pool.execute(sql, [...values, id]);
       return result.affectedRows > 0;

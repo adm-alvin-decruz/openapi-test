@@ -2,6 +2,7 @@
 const failedJobsModel = require('../../db/models/failedJobsModel');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 const userDBService = require('../users/usersDBService');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
 
 class FailedJobsSupportService {
   constructor() {
@@ -251,11 +252,27 @@ class FailedJobsSupportService {
         console.error(new Error('Job not found'));
       }
 
-      // Update job
-      await failedJobsModel.update(id, {
-        status,
-        triggered_at: new Date()
+      const allowedFields = ['status', 'triggered_at'];
+
+      let updateData = {
+            status: status,
+            triggered_at: getCurrentUTCTimestamp()
+      }
+
+      const updates = [];
+      const values = [];
+
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (allowedFields.includes(key)) {
+          updates.push(`${key} = ?`);
+          values.push(key === 'status' ? value : value)
+        }
       });
+
+      updateData = {updates: updates, values: values}
+
+      // Update job
+      await failedJobsModel.update(id, updateData);
 
       return await failedJobsModel.findById(id);
     } catch (error) {
