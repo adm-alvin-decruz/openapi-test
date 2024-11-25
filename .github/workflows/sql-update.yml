@@ -10,7 +10,7 @@ on:
 
 jobs:
   sql-update:
-    name: Run sql queries in ciam database
+    name: Run sql query in ciam database
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
 
