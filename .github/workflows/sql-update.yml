@@ -57,7 +57,7 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
           # echo "running CDT-159-bug-user-migration-fix.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
-            mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users.csv
+            mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" > ./reports/users.csv
 
       - name: Upload Query Results
         uses: actions/upload-artifact@v4
