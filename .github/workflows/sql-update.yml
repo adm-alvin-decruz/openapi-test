@@ -34,7 +34,7 @@ jobs:
 
       - name: verify Backup
         run: echo "Run verify Backup Query to verify backup of database/table impacted"
-    :
+
       - name: psql query execute
         run: |
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
