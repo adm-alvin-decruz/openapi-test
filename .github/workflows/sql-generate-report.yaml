@@ -34,7 +34,7 @@ jobs:
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          echo "TIMESTAMP=$(date +%d%m%y-%R)" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
           mkdir -p ./reports
           mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
 
