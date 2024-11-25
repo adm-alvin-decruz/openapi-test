@@ -40,8 +40,6 @@ jobs:
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          echo "TIMESTAMP= date( +%d%m%y)" >> $GITHUB_ENV
-          mkdir -p ./reports
           # echo "Running ciam-users-20240821.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-users-20240821.sql
           # echo "running app-token-seeds.sql script"
@@ -56,16 +54,8 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/wildpass-user-emp-ori-for-prod.sql
           # echo "running create-failed_jobs-table-20241031.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
-          # echo "running CDT-159-bug-user-migration-fix.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
-            mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users.csv
-
-      - name: Upload Query Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: wildpass-users-report-${{env.TIMESTAMP}}
-          path: ./reports/users.csv
-          retention-days: 30
+          echo "running CDT-159-bug-user-migration-fix.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
 
       - name: Verify Deployment
         run:  echo "Run Query to verify db update/rollback  of database/table is successful"

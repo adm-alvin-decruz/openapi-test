@@ -1,0 +1,50 @@
+name: sql-generate-report
+run-name: SQL Generate Report ${{ github.event.inputs.sql-environment }}. Job ${{ github.job }} started by ${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      sql-environment:
+        type: environment
+        description: Select the environment
+
+jobs:
+  sql-generate-report:
+    name: Run SELECT statements in ciam database to generate csv reports
+    runs-on: commonservices-${{ github.event.inputs.sql-environment }}
+    environment: ${{ github.event.inputs.sql-environment }}
+
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.role_arn }}
+          role-external-id: ${{ secrets.external_id }}
+          role-skip-session-tagging: true
+
+      - name: mysql query execute
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          echo "TIMESTAMP=$(date +%d%m%y-%R)" >> $GITHUB_ENV
+          mkdir -p ./reports
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
+
+      - name: Wildpass Users Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: wildpass-user-report-${{env.TIMESTAMP}}
+          path: ./reports/users-*.csv
+          retention-days: 30
+
+      - name: Verify all reports generated
+        run: echo "All reports have been generated, please download reports in the artifacts"
+
