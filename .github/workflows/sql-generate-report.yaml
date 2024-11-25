@@ -10,7 +10,7 @@ on:
 
 jobs:
   sql-generate-report:
-    name: Run SELECT statements in ciam database to generate csv reports
+    name: Run SQL Statements
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
 
@@ -29,16 +29,18 @@ jobs:
           role-external-id: ${{ secrets.external_id }}
           role-skip-session-tagging: true
 
+      - name: Get Timestamp
+        run: echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
+        
       - name: mysql query execute
         run: |
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
           mkdir -p ./reports
           mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
 
-      - name: Wildpass Users Report
+      - name: Generate Wildpass User Reports
         uses: actions/upload-artifact@v4
         with:
           name: wildpass-user-report-${{env.TIMESTAMP}}
