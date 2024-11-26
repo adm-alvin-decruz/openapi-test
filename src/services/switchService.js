@@ -1,8 +1,12 @@
-const switchDBModel = require('../db/models/switches/switcheModel');
+const switchDBModel = require('../db/models/switches/switchesModel');
 
 class SwitchService {
   static async getAllSwitches() {
     return await switchDBModel.findAll();
+  }
+
+  static async findByName(name) {
+    return await switchDBModel.findByName(name);
   }
 
   static async findSwitchValue(data, name) {

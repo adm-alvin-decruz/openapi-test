@@ -23,7 +23,7 @@ class SupportTokenServices {
         this.validateRequiredParams(data);
 
         // Prepare update statement
-        const { sqlParts, values } = this.prepareUpdateStatement(data);
+        let { sqlParts, values } = this.prepareUpdateStatement(data);
 
         if (sqlParts.length === 0) {
           throw new Error('No fields to update');

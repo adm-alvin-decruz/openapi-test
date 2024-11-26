@@ -67,6 +67,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
 router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+  req.body.uuid = uuid;
   const startTimer = process.hrtime();
 
   // validate req app-id

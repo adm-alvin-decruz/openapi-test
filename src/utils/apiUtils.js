@@ -3,14 +3,23 @@ const axios = require('axios');
 class ApiUtils {
   static async makeRequest(url, method, headers, data) {
     try {
-      return await axios({
+      let axiosConfig = {
         method,
         url,
-        headers,
-        data
-      });
+        headers
+      };
+
+      // Handle GET requests separately
+      if (method.toLowerCase() === 'get') {
+        axiosConfig.params = data;
+      } else {
+        axiosConfig.data = data;
+      }
+
+      const response = await axios(axiosConfig);
+      return this.handleResponse(response);
     } catch (error) {
-      let reqData = {method,url,headers,data, error}
+      let reqData = { method, url, headers, data, error };
       throw new Error(`API request failed: ${JSON.stringify(reqData)}`);
     }
   }

@@ -21,6 +21,8 @@ const appConfig = {
   // user signup generate passkit for send in the email
   SIGNUP_CHECK_AEM:true,
 
+  LOG_APP_PREFIX:'[CIAM-MAIN]'
+
 };
 
 module.exports = appConfig;

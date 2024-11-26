@@ -1,6 +1,7 @@
 const pool = require('../../connections/mysqlConn');
 const { getCurrentUTCTimestamp } = require('../../../utils/dateUtils');
 const commonService = require('../../../services/commonService');
+const loggerService = require('../../../logs/logger');
 
 class Switch {
   /**
@@ -20,8 +21,7 @@ class Switch {
         newsletter_id: result.insertId
       };
     } catch (error) {
-      console.error('Error creating switch:', commonService.replaceSqlPlaceholders(sql, params));
-      throw new Error(`Error creating switch: ${error}`);
+      console.error(`Error creating switch: ${commonService.replaceSqlPlaceholders(sql, params)}`);
     }
   }
 
@@ -31,8 +31,7 @@ class Switch {
       const rows = await pool.query(sql, [name]);
       return rows[0];
     } catch (error) {
-      console.error('Error reading all switches SQL:', sql);
-      throw new Error(`Error reading switch by name: ${error}`);
+      loggerService.error(`Error reading switches by name. SQL: ${sql}. Error: ${error}`);
     }
   }
 
@@ -70,11 +69,13 @@ class Switch {
       var result = [];
       var statement = [];
       var key = 0;
+      let params = [];
       for (const record of reqBody) {
+        params = [record.name, record.switch, record.description, record.id];
         key ++;
-        queries = `UPDATE switches SET switch = ?, description = ?, updated_at=now() WHERE id= ? `;
-        result[key] = await pool.execute(queries, [record.switch, record.description, record.id]);
-        statement[key] = commonService.replaceSqlPlaceholders(queries, [record.switch, record.description, record.id]);
+        queries = `UPDATE switches SET name = ?, switch = ?, description = ?, updated_at=now() WHERE id= ? `;
+        result[key] = await pool.execute(queries, params);
+        statement[key] = commonService.replaceSqlPlaceholders(queries, params);
       }
 
       return {
@@ -87,9 +88,10 @@ class Switch {
   }
 
   static  async delete(id) {
+    const sql = 'DELETE FROM switches WHERE id = ?';
+    const params = [id];
     try {
-      const sql = 'DELETE FROM switches WHERE id = ?';
-      const result = await pool.execute(sql, [id]);
+      const result = await pool.execute(sql, params);
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         newsletter_id: result.affectedRows

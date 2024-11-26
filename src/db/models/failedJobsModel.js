@@ -71,10 +71,10 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [id]);
+      const rows = await this.pool.execute(query, [id]);
       return rows[0];
     } catch (error) {
-      throw new Error(`Failed to find job: ${error.message}`);
+      console.error(new Error(`Failed to find job: ${error}`));
     }
   }
 
@@ -85,24 +85,16 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [uuid]);
-      return rows;
+      const row = await this.pool.execute(query, [uuid]);
+      return row[0];
     } catch (error) {
       throw new Error(`Failed to find job: ${error.message}`);
     }
   }
 
   async update(id, updateData) {
-    const allowedFields = ['status', 'triggered_at'];
-    const updates = [];
-    const values = [];
-
-    Object.entries(updateData).forEach(([key, value]) => {
-      if (allowedFields.includes(key)) {
-        updates.push(`${key} = ?`);
-        values.push(key === 'status' ? value : value);
-      }
-    });
+    const updates = updateData.updates;
+    const values = updateData.values;
 
     if (updates.length === 0) return false;
 
@@ -111,7 +103,9 @@ class FailedJobsModel {
       SET ${updates.join(', ')}
       WHERE id = ?
     `;
+
     console.log("FailedJobsModel.update statement", commonService.replaceSqlPlaceholders(sql, [...values, id]))
+
     try {
       const result = await this.pool.execute(sql, [...values, id]);
       return result.affectedRows > 0;
@@ -143,7 +137,7 @@ class FailedJobsModel {
     `;
 
     try {
-      const [rows] = await this.pool.execute(query, [limit]);
+      const rows = await this.pool.execute(query, [limit]);
       return rows;
     } catch (error) {
       throw new Error(`Failed to fetch failed jobs: ${error.message}`);

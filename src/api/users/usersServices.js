@@ -59,16 +59,6 @@ async function userSignup(req){
   // prepare membership group
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
-  // create user's wildpass card face first.
-  const genWPCardFace = await retryOperation(async () => {
-    return prepareWPCardfaceInvoke(req);
-  });
-  req['body']['log'] = JSON.stringify({"cardface": genWPCardFace});
-
-  if(genWPCardFace.status === 'failed'){
-    return genWPCardFace
-  }
-
   // call cognitoCreateUser function
   return cognitoCreateUser(req);
 }
@@ -133,15 +123,6 @@ async function cognitoCreateUser(req){
       return usersSignupHelper.createUserSignupDB(req);
     });
 
-    // send welcome email
-    let emailResponse = '';
-    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
-    if(wpPhase1a && !req.body.migrations){
-      emailResponse = await retryOperation(async () => {
-        return await emailService.lambdaSendEmail(req);
-      });
-    }
-
     // push to queue for Galaxy Import Pass
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, 'userSignup');
 
@@ -155,7 +136,6 @@ async function cognitoCreateUser(req){
     response = {
       cognito: cognitoResponse,
       db: JSON.stringify(dbResponse),
-      email_trigger: emailResponse,
       galaxy: galaxySQS
     };
 
@@ -185,6 +165,7 @@ async function cognitoCreateUser(req){
 async function getUserMembership(req){
   req['apiTimer'] = req['processTimer'].apiRequestTimer();
   req.apiTimer.log('usersServices.getUserMembership starts'); // log process time
+
   let getMemberJson = {
     UserPoolId: process.env.USER_POOL_ID,
     Username: req.body.email
@@ -195,8 +176,14 @@ async function getUserMembership(req){
   try {
     // get from cognito
     let cognitoUserRes = await client.send(getUserCommand);
+
     // read from database
-    let dbUserRes = await userDBService.getDBUserByEmail(req.body);
+    let dbUserRes;
+    if(req.body.group === 'wildpass'){
+      dbUserRes = await userDBService.queryWPUserByEmail(req.body);
+    }else{
+      dbUserRes = await userDBService.getDBUserByEmail(req.body);
+    }
 
     response = {
       cognitoUser: cognitoUserRes,
@@ -228,12 +215,14 @@ async function getUserMembership(req){
 
 /**
  * Update user CIAM info
+ * NOTE: new cardface will generate by passkit email trigger
  */
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
   // get switches from DB
   req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
+
   // add name params to cognito request, make sure update value if there's changes otherwise no change.
   let name = usersUpdateHelpers.createNameParameter(req.body, membershipData.cognitoUser.UserAttributes);
   ciamComparedParams.push(name);
@@ -242,38 +231,23 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
   // get mandai ID
   req.body['mandaiID'] = membershipData.db_user.mandai_id;
+  req.body['visualID'] = membershipData.db_user.visual_id;
 
   try {
-    // create user's wildpass card face first.
-    let genWPCardFace = await prepareWPCardfaceInvoke(req);
-    let cardfaceRes = JSON.stringify({"cardface": genWPCardFace});
-
     // save to cognito
     let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams)
 
     // save to DB
     let updateDBRes = await userUpdateHelper.updateDBUserInfo(req, prepareDBUpdateData, membershipData.db_user);
 
-    // galaxy update
-    // move to sqs
-    // push to SQS queue for Galaxy Import Pass
+    // galaxy update move to sqs. Push to SQS queue for Galaxy Import Pass
     req.body["ciamComparedParams"] = ciamComparedParams;
     req.body["membershipData"] = membershipData;
     response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
 
-    // send update email
-    let wpPhase1a = await switchService.findSwitchValue(req.dbSwitch, "wp_phase1a");
-    let emailTriggerRes;
-    if(wpPhase1a){
-      req.body['emailType'] = 'update_wp';
-      emailTriggerRes = await emailService.lambdaSendEmail(req);
-    }
-
     response = {
-      cardface: cardfaceRes,
       cognito: cognitoRes,
       updateDB: updateDBRes,
-      emailTrigger: emailTriggerRes
     };
 
     // prepare logs
@@ -364,17 +338,18 @@ function processErrors(attr, reqBody, mwgCode){
  * @returns
  */
 async function resendUserMembership(req, memberAttributes){
-
+  req['dbSwitch'] = await switchService.getAllSwitches();
   // clean the request data for possible white space
-  var reqBody = commonService.cleanData(req.body);
+  req.body = commonService.cleanData(req.body);
 
   // find user attribute value for mandaiID
-  reqBody['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
-  reqBody['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
+  req.body['mandaiID'] = commonService.findUserAttributeValue(memberAttributes, 'custom:mandai_id');
+  req.body['firstName'] = commonService.findUserAttributeValue(memberAttributes, 'given_name')
 
   try {
     // resend wildpass email
-    reqBody['emailType'] = 'update_wp'; // use wildpass re-send template
+    req.body['emailType'] = 'update_wp'; // use wildpass re-send template
+    req.body['resendWpWithPasskit'] = await switchService.findSwitchValue(req.dbSwitch, "signup_email_passkit");
     const response  = await emailService.lambdaSendEmail(req);
 
     // prepare logs
@@ -405,17 +380,22 @@ async function prepareWPCardfaceInvoke(req){
    let dob = commonService.convertDateHyphenFormat(req.body.dob);
    // event data
    const event = {
-      name: req.body.firstName +' '+ req.body.lastName,
-      dateOfBirth: dob,
-      mandaiId: req.body.mandaiID
-   };
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        dateOfBirth: dob,
+        mandaiId: req.body.mandaiID,
+        visualId: req.body.visualID,
+        passType: "wildpass"
+    };
 
    try {
       // lambda invoke
       const response = await lambdaService.lambdaInvokeFunction(event, functionName);
+
       req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
 
       if(response.statusCode === 200){
+        console.log("[CIAM MAIN] Generate cardface", response);
         return response;
       }
       if([400, 500].includes(response.statusCode) || response.errorType === 'Error'){
@@ -558,13 +538,13 @@ async function prepareGenPasskitInvoke(req){
      }
      if([400, 500].includes(response.statusCode) ){
        // prepare logs
-       let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
+       let logObj = loggerService.build('user', 'usersServices.prepareGenPasskitInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, response);
        // prepare response to client
        return responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
      }
    } catch (error) {
      // prepare logs
-     let logObj = loggerService.build('user', 'usersServices.prepareWPCardfaceInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
+     let logObj = loggerService.build('user', 'usersServices.prepareGenPasskitInvoke', req, 'MWG_CIAM_USER_SIGNUP_ERR', event, error);
      // prepare log response
      responseHelper.craftUsersApiResponse('', req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
 

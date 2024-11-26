@@ -30,7 +30,7 @@ async function processResponse(attr='', reqBody, mwgCode){
     group = processMembership(attr, reqBody);
   }
   // handle aem checkemail api response
-  else if (!isJsonAttr && attr === 'aem'){
+  else if (!isJsonAttr && attr == 'aem'){
     var exist = true;
     if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
         exist = false;

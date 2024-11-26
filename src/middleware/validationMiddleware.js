@@ -1,4 +1,6 @@
 const resHelper = require('../helpers/responseHelpers');
+const EmailDomainService = require('../services/emailDomainsService');
+const loggerService = require('../logs/logger');
 
 /**
  * Validate empty request
@@ -10,36 +12,46 @@ const resHelper = require('../helpers/responseHelpers');
 function isEmptyRequest(req, res, next) {
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     if (Object.keys(req.body).length === 0) {
-      return res.status(400).json(
-        resHelper.formatMiddlewareRes(400, 'Request body is empty')
-      );
+      return resStatusFormatter (res, 400, 'Request body is empty');
     }
   }
   next();
 }
 
-function validateEmail(req, res, next) {
+async function validateEmail(req, res, next) {
     const { email } = req.body;
     let msg = 'The email is invalid';
 
     if (!email) {
-      return res.status(400).json(
-        resHelper.formatMiddlewareRes(400, msg)
-      );
+      return resStatusFormatter (res, 400, msg);
     }
 
     // optional: You can add more robust email validation here
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json(
-        resHelper.formatMiddlewareRes(400, msg)
-      );
+    if (!await EmailDomainService.emailFormatTest(email)) {
+      loggerService.error(`Invalid email format ${email}`, req);
+      return resStatusFormatter (res, 400, msg);
+    }
+
+    // if check domain switch turned on ( 1 )
+    if(await EmailDomainService.getCheckDomainSwitch() === true){
+       // validate email domain to DB
+      let validDomain = await EmailDomainService.validateEmailDomain(email);
+      if (!validDomain) {
+        return resStatusFormatter (res, 400, msg);
+      }
     }
 
     next();
 }
 
+function resStatusFormatter (res, status, msg) {
+  return res.status(status).json(
+    resHelper.formatMiddlewareRes(status, msg)
+  );
+}
+
 module.exports = {
   isEmptyRequest,
-  validateEmail
+  validateEmail,
+  resStatusFormatter
 }
