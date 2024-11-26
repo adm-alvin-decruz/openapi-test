@@ -11,7 +11,6 @@ on:
         description: "SQL Query to Execute"
         required: true
         type: string
-        default: "SELECT em.first_name AS given_name, em.last_name AS family_name, em.email, em.date_of_birth AS birthdate, CASE u.source WHEN 1 THEN 'ORGANIC' WHEN 2 THEN 'TICKETING' WHEN 3 THEN 'GLOBALTIX' END as signup_source, CONVERT_TZ(u.created_at, 'UTC', 'Asia/Singapore') AS signup_date FROM wildpass_user_emp em INNER JOIN users u ON u.email=em.email INNER JOIN user_memberships ums ON u.id=ums.user_id WHERE ums.visual_id != '' AND u.active=1 AND em.picked=1 ORDER BY u.updated_at ASC"
 
 jobs:
   sql-generate-report:
