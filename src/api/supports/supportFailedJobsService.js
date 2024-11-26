@@ -229,6 +229,7 @@ class FailedJobsSupportService {
       }
       return dbUpdate;
     }
+    console.log(new Error(`[supportFailedJobsService] Failed job name: ${failedJob.name} and failed job action: ${failedJob.action} not supported`));
     return false;
   }
 
