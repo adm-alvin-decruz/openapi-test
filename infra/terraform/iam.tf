@@ -71,8 +71,11 @@ data "aws_iam_policy_document" "ciam-backup-assume-role-policy" {
   }
 }
 
-data "aws_db_instance" "ciam" {
-  db_instance_identifier = "ciam-${var.env}"
+data "aws_rds_clusters" "ciam" {
+  filter {
+    name = "db-cluster-id"
+    values = ["ciam-${var.env}"]
+  }
 }
 
 data "aws_iam_policy_document" "ciam-backup" {
@@ -90,8 +93,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.aws_db_instance.ciam.db_instance_arn,
-      "${data.aws_db_instance.ciam.db_instance_arn}:*"
+      data.aws_rds_clusters.ciam.cluster_arns,
+      "${data.aws_rds_clusters.ciam.cluster_arns}:*"
     ]
   }
   
@@ -118,8 +121,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.aws_db_instance.ciam.db_instance_arn,
-      "${data.aws_db_instance.ciam.db_instance_arn}:*",
+      data.aws_rds_clusters.ciam.cluster_arns,
+      "${data.aws_rds_clusters.ciam.cluster_arns}:*",
       aws_s3_bucket.ciam.arn,
       "${aws_s3_bucket.ciam.arn}:*"
     ]
