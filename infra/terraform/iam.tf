@@ -131,7 +131,7 @@ resource "aws_iam_policy" "ciam-backup" {
 resource "aws_iam_role" "ciam-backup" {
   name = "${var.project}-${var.env}-backup-role"
   path = "/"
-  assume_role_policy = data.aws_iam_policy_document.ciam-backup-assume-role-policy
+  assume_role_policy = data.aws_iam_policy_document.ciam-backup-assume-role-policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "ciam-backup" {
