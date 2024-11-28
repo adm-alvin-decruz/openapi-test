@@ -38,7 +38,7 @@ jobs:
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
           mkdir ./backups
           BACKUP_FILE="./backups/ciam-${{ github.event.inputs.sql-environment }}-aurora-mysql-backup-$TIMESTAMP.sql.gz"
-          mysqldump -h $DB_SERVER_ENDPOINT -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers --all-databases | gzip > $BACKUP_FILE
+          mysqldump -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers --all-databases | gzip > $BACKUP_FILE
 
       - name: Upload to S3
         run: |
