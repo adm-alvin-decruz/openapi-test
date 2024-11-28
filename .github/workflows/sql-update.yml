@@ -9,8 +9,53 @@ on:
         description: Select the environment
 
 jobs:
+  sql-backup:
+    runs-on: commonservices-${{ github.event.inputs.sql-environment }}
+    environment: ${{ github.event.inputs.sql-environment }}
+    steps:
+      - name: checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.backup_role_arn }}
+          role-external-id: ${{ secrets.external_id }}
+          role-skip-session-tagging: true
+
+      - name: Get Timestamp
+        env:
+          TZ: Asia/Singapore
+        run: echo "TIMESTAMP=$(date +%d%m%y-%H%M%S)" >> $GITHUB_ENV
+
+      - name: Create Backup
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          mkdir ./backups
+          BACKUP_FILE="./backups/ciam-${{ github.event.inputs.sql-environment }}-aurora-mysql-backup-$TIMESTAMP.sql.gz
+          mysqldump -h $DB_SERVER_ENDPOINT -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers --all-databases | gzip > $BACKUP_FILE
+
+      - name: Upload to S3
+        run: |
+          S3_BUCKET=$(aws s3 ls | awk '{print $3}' | grep 'ciam-membership-${{ github.event.inputs.sql-environment }}')
+          echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
+          aws s3 sync ./backups s3://$S3_BUCKET/ciam-rds-backups/
+
+      - name: Upload Backup as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciam-rds-backup
+          path: ./backups
+          retention-days: 7
+
   sql-update:
     name: Run sql query in ciam database
+    needs: sql-backup
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
 
