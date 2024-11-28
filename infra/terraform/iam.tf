@@ -86,8 +86,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.terraform_remote_state.rds.outputs.db_instance_arn,
-      "${data.terraform_remote_state.rds.outputs.db_instance_arn}:*"
+      data.terraform_remote_state.rds.outputs.arn,
+      "${data.terraform_remote_state.rds.outputs.arn}:*"
     ]
   }
   
@@ -114,8 +114,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.terraform_remote_state.rds.outputs.db_instance_arn,
-      "${data.terraform_remote_state.rds.outputs.db_instance_arn}:*",
+      data.terraform_remote_state.rds.outputs.arn,
+      "${data.terraform_remote_state.rds.outputs.arn}:*",
       aws_s3_object.ciam.arn,
       "${aws_s3_object.ciam.arn}:*"
     ]
