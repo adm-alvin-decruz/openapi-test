@@ -58,3 +58,81 @@ resource "aws_iam_policy" "lambda" {
   description = "policy for lambda"
   policy = data.aws_iam_policy_document.lambda.json
 }
+
+data "aws_iam_policy_document" "ciam-backup-assume-role-policy" {
+  statement {
+    effect = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+} 
+
+data "aws_iam_policy_document" "ciam-backup" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "rds:CreateDBSnapshot",
+      "rds:DeleteDBSnapshot",
+      "rds:DescribeDBSnapshots",
+      "rds:StartExportTask",
+      "rds:DescribeExportTasks",
+      "rds:AddTagsToResource",
+      "rds:ListTagsForResource"
+    ]
+
+    resources = [
+      data.terraform_remote_state.rds.outputs.db_instance_arn,
+      "${data.terraform_remote_state.rds.outputs.db_instance_arn}:*"
+    ]
+  }
+  
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetBucketLocation"
+    ]
+
+    resources = [
+      data.terraform_remote_state.s3.outputs.arn,
+      "${data.terraform_remote_state.rds.outputs.arn}:*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt"
+    ]
+
+    resources = [
+      data.terraform_remote_state.rds.outputs.db_instance_arn
+      data.terraform_remote_state.rds.outputs.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ciam-backup" {
+  name        = "${var.project}-${var.env}-backup-policy"
+  description = "policy for backing up ciam RDS"
+  policy = data.aws_iam_policy_document.ciam-backup.json
+}
+
+resource "aws_iam_role" "ciam-backup" {
+  name = "${var.project}-${var.env}-backup-role"
+  path = "/"
+  assume_role_policy = data.aws_iam_policy_document.ciam-backup-assume-role-policy
+}
+
+resource "aws_iam_role_policy_attachment" "ciam-backup" {
+  role = aws_iam_role.ciam-backup.name
+  policy_arn = aws_iam_policy.ciam-backup.arn
+}
