@@ -38,7 +38,7 @@ jobs:
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
           mkdir ./backups
           BACKUP_FILE="./backups/ciam-${{ github.event.inputs.sql-environment }}-aurora-mysql-backup-$TIMESTAMP.sql.gz"
-          mysqldump -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers --all-databases | gzip > $BACKUP_FILE
+          mysqldump -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers -D ciam | gzip > $BACKUP_FILE
 
       - name: Upload to S3
         run: |
@@ -101,8 +101,8 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
           # echo "running CDT-159-bug-user-migration-fix.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
-          echo "running email-domains-table-20241109.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
+          # echo "running email-domains-table-20241109.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
 
       - name: Verify Deployment
         run:  echo "Run Query to verify db update/rollback  of database/table is successful"
