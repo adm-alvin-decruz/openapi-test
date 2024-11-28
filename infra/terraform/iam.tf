@@ -93,8 +93,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.aws_rds_clusters.ciam.cluster_arns,
-      "${data.aws_rds_clusters.ciam.cluster_arns}:*"
+      tolist(data.aws_rds_clusters.ciam.cluster_arns)[0],
+      "${tolist(data.aws_rds_clusters.ciam.cluster_arns)[0]}:*"
     ]
   }
   
@@ -121,8 +121,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.aws_rds_clusters.ciam.cluster_arns,
-      "${data.aws_rds_clusters.ciam.cluster_arns}:*",
+      tolist(data.aws_rds_clusters.ciam.cluster_arns)[0],
+      "${tolist(data.aws_rds_clusters.ciam.cluster_arns)[0]}:*",
       aws_s3_bucket.ciam.arn,
       "${aws_s3_bucket.ciam.arn}:*"
     ]
