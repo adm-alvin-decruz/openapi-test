@@ -40,7 +40,7 @@ jobs:
           BACKUP_FILE="./backups/ciam-${{ github.event.inputs.sql-environment }}-aurora-mysql-backup-$TIMESTAMP.sql.gz"
           mysqldump -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers -B ciam -y | gzip > $BACKUP_FILE
 
-          if [ ! -s "$BACKUP_FILE ]; then
+          if [ ! -s "$BACKUP_FILE" ]; then
             echo "Backup file is empty. Terminating job."
             exit 1
           fi
