@@ -69,7 +69,11 @@ data "aws_iam_policy_document" "ciam-backup-assume-role-policy" {
       identifiers = ["ec2.amazonaws.com"]
     }
   }
-} 
+}
+
+data "aws_db_instance" "ciam" {
+  db_instance_identifier = "ciam-${var.env}"
+}
 
 data "aws_iam_policy_document" "ciam-backup" {
   statement {
@@ -86,8 +90,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.terraform_remote_state.rds.outputs.arn,
-      "${data.terraform_remote_state.rds.outputs.arn}:*"
+      data.aws_db_instance.ciam.db_instance_arn,
+      "${data.aws_db_instance.ciam.db_instance_arn}:*"
     ]
   }
   
@@ -100,8 +104,8 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      aws_s3_object.ciam.arn,
-      "${aws_s3_object.ciam.arn}:*"
+      aws_s3_bucket.ciam.arn,
+      "${aws_s3_bucket.ciam.arn}:*"
     ]
   }
 
@@ -114,10 +118,10 @@ data "aws_iam_policy_document" "ciam-backup" {
     ]
 
     resources = [
-      data.terraform_remote_state.rds.outputs.arn,
-      "${data.terraform_remote_state.rds.outputs.arn}:*",
-      aws_s3_object.ciam.arn,
-      "${aws_s3_object.ciam.arn}:*"
+      data.aws_db_instance.ciam.db_instance_arn,
+      "${data.aws_db_instance.ciam.db_instance_arn}:*",
+      aws_s3_bucket.ciam.arn,
+      "${aws_s3_bucket.ciam.arn}:*"
     ]
   }
 }
