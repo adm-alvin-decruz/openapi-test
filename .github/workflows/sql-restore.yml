@@ -36,7 +36,7 @@ jobs:
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          BEFORE_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
+          BEFORE_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
           echo "before_count=$BEFORE_TABLE_COUNT" >> $GITHUB_OUTPUT
           echo "Tables before restoration: $BEFORE_TABLE_COUNT"
 
@@ -61,7 +61,7 @@ jobs:
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          AFTER_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
+          AFTER_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
           echo "after_count=$AFTER_TABLE_COUNT" >> $GITHUB_OUTPUT
           echo "Tables after restoration: $AFTER_TABLE_COUNT"
         
