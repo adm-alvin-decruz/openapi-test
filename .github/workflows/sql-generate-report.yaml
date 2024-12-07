@@ -40,7 +40,7 @@ jobs:
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
           mkdir -p ./reports
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT em.first_name AS given_name, em.last_name AS family_name, em.email, em.date_of_birth AS birthdate, CASE u.source WHEN 1 THEN 'ORGANIC' WHEN 2 THEN 'TICKETING' WHEN 3 THEN 'GLOBALTIX' END as signup_source, CONVERT_TZ(u.created_at, 'UTC', 'Asia/Singapore') AS signup_date, CONVERT_TZ(u.updated_at, 'UTC', 'Asia/Singapore') AS ciam_export_date FROM wildpass_user_emp em INNER JOIN users u ON u.email=em.email INNER JOIN user_memberships ums ON u.id=ums.user_id WHERE ums.visual_id != '' AND u.active=1 AND em.picked=1 ORDER BY u.updated_at ASC" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
 
       - name: Generate Wildpass User Report
         uses: actions/upload-artifact@v4
