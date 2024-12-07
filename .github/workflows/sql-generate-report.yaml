@@ -40,7 +40,7 @@ jobs:
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
           mkdir -p ./reports
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM users" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM user_memberships" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
 
       - name: Generate Wildpass User Report
         uses: actions/upload-artifact@v4
