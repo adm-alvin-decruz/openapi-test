@@ -5,27 +5,23 @@ const commonService = require('./commonService');
 /**
  * Validate App ID
  *
- * @param {*} env
  * @param {*} reqHeader
+ * @param module
  * @returns
  */
 function validateAppID(reqHeader, module=''){
-	var mwgAppID = reqHeader['mwg-app-id'];
+  const mwgAppID = reqHeader['mwg-app-id'];
   let appEnv = process.env.APP_ENV;
-  let appconfigKey = "APP_ID_"+appEnv.toUpperCase();
+  let appConfigKey = "APP_ID_"+appEnv.toUpperCase();
   if(module === 'support'){
-    appconfigKey = "APP_ID_SUPPORT_"+appEnv.toUpperCase();
+    appConfigKey = "APP_ID_SUPPORT_"+appEnv.toUpperCase();
   }
-  let envAppIDArr = JSON.parse(appConfig[appconfigKey]);
+  let envAppIDArr = JSON.parse(appConfig[appConfigKey]);
 
   // method to check if the input exists in the JSON array
   const valueExists = envAppIDArr.includes(mwgAppID);
 
-  if (valueExists) {
-    return true;
-  }
-
-	return false;
+  return !!valueExists;
 }
 
 /**
