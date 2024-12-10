@@ -1,21 +1,30 @@
 // use dotenv
-require('dotenv').config()
+require("dotenv").config();
 
 const {
-  CognitoIdentityProviderClient, ListUsersCommand, AdminGetUserCommand, AdminInitiateAuthCommand, AdminResetUserPasswordCommand,
-  ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand
+  CognitoIdentityProviderClient,
+  ListUsersCommand,
+  AdminInitiateAuthCommand,
+  AdminResetUserPasswordCommand,
+  ForgotPasswordCommand,
+  AdminSetUserPasswordCommand,
+  AdminCreateUserCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const membershipsService = require('./membershipsServices');
-const AEMService = require('../../services/AEMService');
+const membershipsService = require("./membershipsServices");
+const AEMService = require("../../services/AEMService");
+const {
+  GROUPS,
+  GR_WILDPASS,
+} = require("../../utils/membershipGroups.constant");
 
 /**
  * Function listAll users
  *
  * @returns array all users in userspool
  */
-async function listAll(){
+async function listAll() {
   const command = new ListUsersCommand({
     UserPoolId: process.env.USER_POOL_ID,
   });
@@ -23,7 +32,7 @@ async function listAll(){
   try {
     var response = await client.send(command);
   } catch (error) {
-    if(process.env.APP_LOG_SWITCH){
+    if (process.env.APP_LOG_SWITCH) {
       console.log(error);
     }
   }
@@ -36,45 +45,78 @@ async function listAll(){
  *
  * @returns JSON user
  */
-async function adminGetUser(reqBody){
+async function adminGetUser(reqBody) {
   // validate request params
-  if(validationParams(reqBody) === 'error'){
-    let paramsError = membershipsService.processResponse('', reqBody, 'MWG_CIAM_PARAMS_ERR');
-    if(process.env.APP_LOG_SWITCH){
+  if (validationParams(reqBody) === "error") {
+    let paramsError = membershipsService.prepareResponse(
+      reqBody.email,
+      "",
+      "MWG_CIAM_PARAMS_ERR"
+    );
+    if (process.env.APP_LOG_SWITCH) {
       console.log(paramsError);
     }
     return paramsError;
   }
 
-  const command = new AdminGetUserCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: reqBody.email
-  });
-
-  let response = '';
   try {
-    response = await client.send(command);
-    response = await membershipsService.processResponse(response, reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+    //1st: check membership group: Cognito
+    const userMembershipFromCognito =
+      await membershipsService.checkUserMembershipCognito(reqBody);
+
+    //step 2nd is optional: check AEM if userMembershipFromCognito not match & group requested checking is wildpass
+    if (
+      reqBody.group === GR_WILDPASS &&
+      userMembershipFromCognito.statusCode === 200 &&
+      userMembershipFromCognito.membership.mwgCode ===
+        "MWG_CIAM_USERS_MEMBERSHIPS_NULL"
+    ) {
+      const userMembershipAEM = await membershipsService.checkUserMembershipAEM(
+        reqBody
+      );
+      return userMembershipAEM ? userMembershipAEM : userMembershipFromCognito;
+    }
+    return userMembershipFromCognito;
   } catch (error) {
-    if(process.env.APP_LOG_SWITCH === 'true'){
-      console.error(error);
-    }
-    if(error.name === 'UserNotFoundException'){
-      // check to AEM checkemail for group = wildpass
-      response = await checkEmailInAem(reqBody);
-    }else{
-      response = await membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
-    }
+    return error;
   }
-
-  if(!response['source']){
-    response['source'] = 'ciam';
-  }
-
-  if(process.env.APP_LOG_SWITCH === 'true'){
-    console.log(response);
-  }
-  return response;
+  // const command = new AdminGetUserCommand({
+  //   UserPoolId: process.env.USER_POOL_ID,
+  //   Username: reqBody.email,
+  // });
+  //
+  // let response = "";
+  // try {
+  //   response = await client.send(command);
+  //   response = await membershipsService.processResponse(
+  //     response,
+  //     reqBody,
+  //     "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS"
+  //   );
+  // } catch (error) {
+  //   if (process.env.APP_LOG_SWITCH === "true") {
+  //     console.error(error);
+  //   }
+  //   if (error.name === "UserNotFoundException") {
+  //     // check to AEM checkemail for group = wildpass
+  //     response = await checkEmailInAem(reqBody);
+  //   } else {
+  //     response = await membershipsService.processResponse(
+  //       "",
+  //       reqBody,
+  //       "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR"
+  //     );
+  //   }
+  // }
+  //
+  // if (!response["source"]) {
+  //   response["source"] = "ciam";
+  // }
+  //
+  // if (process.env.APP_LOG_SWITCH === "true") {
+  //   console.log(response);
+  // }
+  // return response;
 }
 
 /**
@@ -83,50 +125,68 @@ async function adminGetUser(reqBody){
  * @param {JSON} reqBody
  * @returns string
  */
-function validationParams(reqBody){
+function validationParams(reqBody) {
+  if (Object.keys(reqBody).length > 3) {
+    if (process.env.APP_LOG_SWITCH) {
+      console.log("Too many parameters.");
+    }
+    return "error";
+  }
+  if (!reqBody.email) {
+    if (process.env.APP_LOG_SWITCH) {
+      console.log("email param not exist.");
+    }
+    return "error";
+  }
+  if (!reqBody.group) {
+    if (process.env.APP_LOG_SWITCH) {
+      console.log("group param not exist.");
+    }
 
-  if(Object.keys(reqBody).length > 2){
-    if(process.env.APP_LOG_SWITCH){
-      console.log('Too many parameters.');
-    }
     return "error";
   }
-  if(typeof reqBody.email == 'undefined'){
-    if(process.env.APP_LOG_SWITCH){
-      console.log('email param not exist.');
-    }
-    return "error";
-  }
-  if(typeof reqBody.group == 'undefined'){
-    if(process.env.APP_LOG_SWITCH){
-      console.log('group param not exist.');
+
+  if (!GROUPS.includes(reqBody.group)) {
+    if (process.env.APP_LOG_SWITCH) {
+      console.log("group param is not allow.");
     }
 
     return "error";
   }
 }
 
-async function checkEmailInAem(reqBody){
+async function checkEmailInAem(reqBody) {
   // check route if true
-  let response = '';
-  if(process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === 'true' && reqBody.group === 'wildpass'){
+  let response = "";
+  if (
+    process.env.AEM_WILDPASS_EMAILCHECK_ROUTE === "true" &&
+    reqBody.group === "wildpass"
+  ) {
     var aemResponse = await AEMService.aemCheckWildPassByEmail(reqBody);
     var noMembership = aemResponse.data.valid;
 
-    if(noMembership === 'true'){
+    if (noMembership === "true") {
       // means email has no membership in aem
-      response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_NULL');
-    }else {
+      response = await membershipsService.processResponse(
+        "aem",
+        reqBody,
+        "MWG_CIAM_USERS_MEMBERSHIPS_NULL"
+      );
+    } else {
       // has membership in aem and success
-      response = await membershipsService.processResponse('aem', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS');
+      response = await membershipsService.processResponse(
+        "aem",
+        reqBody,
+        "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS"
+      );
     }
-    if(process.env.APP_LOG_SWITCH === 'true'){
-      response['source'] = 'aem';
+    if (process.env.APP_LOG_SWITCH === "true") {
+      response["source"] = "aem";
       console.log(aemResponse);
       // NOTE: don't log response here because caller function (adminGetUser) is logged
     }
   }
-  return response
+  return response;
 }
 
 /**
@@ -135,7 +195,7 @@ async function checkEmailInAem(reqBody){
  * User flow step 1 signup
  * User created and with  password
  */
-async function adminCreateUser (){
+async function adminCreateUser() {
   var setPasswordParams = new AdminCreateUserCommand({
     UserPoolId: process.env.USER_POOL_ID,
     Username: "kwanoun.liong@mandai.com",
@@ -144,25 +204,25 @@ async function adminCreateUser (){
     UserAttributes: [
       {
         Name: "email_verified",
-        Value: "true"
+        Value: "true",
       },
       {
         Name: "given_name",
-        Value: "kwanoun"
+        Value: "kwanoun",
       },
       {
         Name: "family_name",
-        Value: "Liong"
+        Value: "Liong",
       },
       {
         Name: "email",
-        Value: "kwanoun.liong@mandai.com"
+        Value: "kwanoun.liong@mandai.com",
       },
       {
         Name: "phone_number",
-        Value: "+6599889998"
-      }
-   ],
+        Value: "+6599889998",
+      },
+    ],
   });
 
   try {
@@ -179,12 +239,12 @@ async function adminCreateUser (){
  * User created and in "force change password" status
  * Send Admin set user password
  */
-async function adminSetUserPassword (){
+async function adminSetUserPassword() {
   var setPasswordParams = new AdminSetUserPasswordCommand({
     UserPoolId: process.env.USER_POOL_ID,
     Username: "kwanoun.liong@mandai.com",
     Password: "Password123",
-    Permanent: true
+    Permanent: true,
   });
 
   try {
@@ -195,15 +255,15 @@ async function adminSetUserPassword (){
   }
 }
 
-async function userLogin (){
+async function userLogin() {
   var userSigninParams = new AdminInitiateAuthCommand({
     AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
     UserPoolId: process.env.USER_POOL_ID,
     ClientId: process.env.CLIENT_ID,
     AuthParameters: {
       USERNAME: "kwanoun.liong@mandai.com",
-      PASSWORD: "Password123"
-    }
+      PASSWORD: "Password123",
+    },
   });
 
   try {
@@ -214,10 +274,10 @@ async function userLogin (){
   return response;
 }
 
-async function userResetPassword (){
+async function userResetPassword() {
   var resetPasswordParams = new AdminResetUserPasswordCommand({
     UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
+    Username: "kwanoun.liong@mandai.com",
   });
 
   try {
@@ -228,10 +288,10 @@ async function userResetPassword (){
   }
 }
 
-async function userForgotPassword (){
+async function userForgotPassword() {
   var forgotPasswordParams = new ForgotPasswordCommand({
     UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
+    Username: "kwanoun.liong@mandai.com",
   });
 
   try {
@@ -249,6 +309,5 @@ module.exports = {
   adminSetUserPassword,
   userLogin,
   userResetPassword,
-  userForgotPassword
+  userForgotPassword,
 };
-
