@@ -4,8 +4,8 @@
  */
 
 // use dotenv
-require("dotenv").config();
-const responseConfig = require("../../config/membershipConfig");
+require('dotenv').config();
+const responseConfig = require('../../config/membershipConfig');
 const {
   getUserCognitoInfo,
 } = require("../../api/supports/supportCognitoServices");
@@ -47,15 +47,15 @@ async function processResponse(attr = "", reqBody, mwgCode) {
   // check if attr is JSON with consideration of aem checkemail response
   const isJsonAttr = isJSONObject(attr.UserAttributes);
 
-  var group = "";
-  if (resConfig.status === "success" && isJsonAttr) {
+  var group = '';
+  if(resConfig.status === 'success' && isJsonAttr){
     group = processMembership(attr, reqBody);
   }
   // handle aem checkemail api response
-  else if (!isJsonAttr && attr == "aem") {
+  else if (!isJsonAttr && attr == 'aem'){
     var exist = true;
-    if (mwgCode === "MWG_CIAM_USERS_MEMBERSHIPS_NULL") {
-      exist = false;
+    if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
+        exist = false;
     }
     group = processAemGroup(reqBody, exist);
   }
@@ -113,20 +113,20 @@ async function prepareResponse(reqBody, group, mwgCode) {
  * @param {json} reqBody request body
  * @returns json group object
  */
-function processMembership(attr, reqBody) {
+function processMembership(attr, reqBody){
   var reqGroupName = reqBody.group;
-  let grpAttr = loopAttr(attr, "custom:membership", "");
+  let grpAttr = loopAttr(attr, 'custom:membership', '');
 
   // parse JSON
-  if (grpAttr != false) {
+  if(grpAttr != false){
     let grpJson = JSON.parse(grpAttr.Value);
     // check if not null
-    if (grpJson != null) {
-      return { [grpJson.name]: true };
+    if(grpJson != null){
+      return {[grpJson.name]: true};
     }
   }
 
-  return { [reqGroupName]: false };
+  return {[reqGroupName]: false}
 }
 
 /**
@@ -137,15 +137,15 @@ function processMembership(attr, reqBody) {
  * @param {*} value value of attribute to be found
  * @returns json object
  */
-function loopAttr(attr, name, value = "") {
+function loopAttr(attr, name, value=''){
   let foundAttr = false;
   let userAttr = attr.UserAttributes;
 
-  Object.keys(userAttr).forEach((key) => {
-    if (userAttr[key].Name === name || key === name) {
-      if (value != "" || userAttr[key].Value === value) {
-        // attr found, return
-        foundAttr = key;
+  Object.keys(userAttr).forEach(key => {
+    if(userAttr[key].Name === name || key === name){
+      if(value != '' || userAttr[key].Value === value){
+      // attr found, return
+      foundAttr = key;
       } else {
         foundAttr = userAttr[key];
       }
@@ -154,9 +154,9 @@ function loopAttr(attr, name, value = "") {
   return foundAttr;
 }
 
-function processAemGroup(reqBody, exist) {
+function processAemGroup(reqBody, exist){
   // AEM only has wildpass
-  return { ["wildpass"]: exist };
+  return {["wildpass"]: exist}
 }
 
 function isJSONObject(obj) {
@@ -172,7 +172,6 @@ async function checkUserMembershipCognito(reqBody) {
     },
   });
 
-  console.log("userCognito", userCognito);
   //if user not found -> return record not found
   if (["failed", "not found"].includes(userCognito.status)) {
     return prepareResponse(reqBody, "", "MWG_CIAM_USERS_MEMBERSHIPS_NULL");
