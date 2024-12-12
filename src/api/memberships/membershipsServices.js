@@ -10,16 +10,17 @@ const {
   getUserCognitoInfo,
 } = require("../../api/supports/supportCognitoServices");
 const AEMService = require("../../services/AEMService");
+const { LANGUAGE_CODE } = require("../../utils/constants");
 
 function messageMultipleLanguage(code) {
   switch (code) {
-    case "jp": {
+    case LANGUAGE_CODE.JAPAN: {
       return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_JP;
     }
-    case "kr": {
+    case LANGUAGE_CODE.KOREAN: {
       return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_KR;
     }
-    case "zh": {
+    case LANGUAGE_CODE.CHINA: {
       return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_ZH;
     }
     default:

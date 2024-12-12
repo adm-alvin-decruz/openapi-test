@@ -14,11 +14,7 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 const membershipsService = require('./membershipsServices');
 const AEMService = require('../../services/AEMService');
-const {
-  GROUPS,
-  GR_WILDPASS,
-} = require("../../utils/membershipGroups.constant");
-
+const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 /**
  * Function listAll users
  *
@@ -66,7 +62,7 @@ async function adminGetUser(reqBody) {
 
     //step 2nd is optional: check AEM if userMembershipFromCognito not match & group requested checking is wildpass
     if (
-      reqBody.group === GR_WILDPASS &&
+      reqBody.group === GROUP.WILD_PASS &&
       userMembershipFromCognito.statusCode === 200 &&
       userMembershipFromCognito.membership.mwgCode ===
         "MWG_CIAM_USERS_MEMBERSHIPS_NULL"
@@ -146,7 +142,7 @@ function validationParams(reqBody) {
     return "error";
   }
 
-  if (!GROUPS.includes(reqBody.group)) {
+  if (!GROUPS_SUPPORTS.includes(reqBody.group)) {
     if (process.env.APP_LOG_SWITCH) {
       console.log("group param is not allow.");
     }
