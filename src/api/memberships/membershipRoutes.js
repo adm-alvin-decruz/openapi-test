@@ -32,13 +32,13 @@ router.post("/users/memberships", async (req, res) => {
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    res.status(401).send({ message: "Unauthorized" });
+    return res.status(401).send({ message: "Unauthorized" });
   }
   try {
     const checkMemberResult = await membershipsController.adminGetUser(reqBody);
-    res.status(200).send(checkMemberResult);
+    return res.status(200).send(checkMemberResult);
   } catch (error) {
-    res.status(500).send({
+    return res.status(500).send({
       message: "Internal server error",
     });
   }

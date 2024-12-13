@@ -1,15 +1,15 @@
-const supportCognitoServices = require("../../../api/supports/supportCognitoServices");
+const cognitoService = require("../../../services/cognitoService");
 const membershipService = require("../../../api/memberships/membershipsServices");
 
-jest.mock("../../../api/supports/supportCognitoServices", () => ({
-  getUserCognitoInfo: jest.fn(),
+jest.mock("../../../services/cognitoService", () => ({
+  cognitoAdminGetUser: jest.fn(),
 }));
 
 describe("MembershipService", () => {
   describe("checkUserMembershipCognito", () => {
     it("should throw error MWG_CIAM_USERS_MEMBERSHIPS_NULL when cognito not found user", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           status: "failed",
         });
@@ -30,7 +30,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when cognito not set user member group", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -58,7 +58,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when cognito have user member group", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -88,7 +88,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when cognito have user member group fow/fow+", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -118,7 +118,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when cognito have user member group fow/fow+ but group request is wildpass", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -150,7 +150,7 @@ describe("MembershipService", () => {
   describe("message multiple language", () => {
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS default language (EN)", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -180,7 +180,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS based on country JP", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {
@@ -193,7 +193,7 @@ describe("MembershipService", () => {
       const rs = await membershipService.checkUserMembershipCognito({
         email: "test-email@gmail.com",
         group: "wildpass",
-        language: "jp",
+        language: "ja",
       });
       expect(rs).toEqual({
         membership: {
@@ -211,7 +211,7 @@ describe("MembershipService", () => {
     });
     it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS default language (EN) when request language not setup", async () => {
       jest
-        .spyOn(supportCognitoServices, "getUserCognitoInfo")
+        .spyOn(cognitoService, "cognitoAdminGetUser")
         .mockResolvedValue({
           UserAttributes: [
             {

@@ -6,9 +6,7 @@
 // use dotenv
 require('dotenv').config();
 const responseConfig = require('../../config/membershipConfig');
-const {
-  getUserCognitoInfo,
-} = require("../../api/supports/supportCognitoServices");
+const cognitoService = require('../../services/cognitoService');
 const AEMService = require("../../services/AEMService");
 const { LANGUAGE_CODE } = require("../../utils/constants");
 
@@ -167,7 +165,7 @@ function isJSONObject(obj) {
 //Check user membership group in Cognito [fow, fow+, wildpass]
 async function checkUserMembershipCognito(reqBody) {
   //get user from Cognito
-  const userCognito = await getUserCognitoInfo({
+  const userCognito = await cognitoService.cognitoAdminGetUser({
     body: {
       email: reqBody.email,
     },
