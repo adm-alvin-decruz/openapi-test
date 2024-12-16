@@ -93,5 +93,6 @@ function validateDOB(birthdate){
 
 module.exports = {
   validateAppID,
-  validateParams
+  validateParams,
+  validateDOB
 }
