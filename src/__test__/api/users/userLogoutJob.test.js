@@ -6,51 +6,69 @@ jest.mock("../../../api/users/userLogoutServices", () => ({
 }));
 
 describe("UserLogoutJob", () => {
-  describe("failed", () => {
-    it("should throw an error when failed is called", () => {
-      expect(() => userLogoutJob.failed("Logout Failed")).toThrow(
-        "Logout Failed"
-      );
-    });
-  });
-
   describe("success", () => {
     it("should return the result passed to success method", () => {
-      const result = { message: "Logout successfully" };
-      const rs = userLogoutJob.success(result);
-      expect(rs).toEqual(result);
-    });
-  });
-
-  describe("execute", () => {
-    it("should call UserLoginService.execute and return UserLoginService.user", async () => {
-      await userLogoutJob.execute("123");
-      expect(UserLogoutService.execute).toHaveBeenCalledWith("123");
+      const rs = userLogoutJob.success("test@gmail.com");
+      expect(rs).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
+          message: "Logout success.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
     });
   });
 
   describe("perform", () => {
     it("should call failed when there is an errorMessage in the response", async () => {
-      jest.spyOn(userLogoutJob, "execute").mockResolvedValue({
-        errorMessage: "Login Failed",
-      });
-      jest.spyOn(userLogoutJob, "failed");
-      await expect(userLogoutJob.perform("123")).rejects.toBe('"Login Failed"');
-      expect(userLogoutJob.failed).toHaveBeenCalledWith("Login Failed");
+      jest.spyOn(UserLogoutService, "execute").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+      await expect(userLogoutJob.perform("123")).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
     });
 
     it("should call success when the response is valid", async () => {
       jest
-        .spyOn(userLogoutJob, "execute")
-        .mockResolvedValue({ message: "Logout successfully" });
-      jest.spyOn(userLogoutJob, "success");
+        .spyOn(UserLogoutService, "execute")
+        .mockResolvedValue({ email: "test@gmail.com" });
 
       const response = await userLogoutJob.perform("123");
 
-      expect(userLogoutJob.success).toHaveBeenCalledWith({
-        message: "Logout successfully",
+      expect(response).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
+          message: "Logout success.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
       });
-      expect(response).toEqual({ message: "Logout successfully" });
     });
   });
 });

@@ -1,77 +1,97 @@
-const userLoginJob = require('../../../api/users/userLoginJob');
-const UserLoginService = require ('../../../api/users/userLoginServices');
+const userLoginJob = require("../../../api/users/userLoginJob");
+const UserLoginService = require("../../../api/users/userLoginServices");
 
-jest.mock('../../../api/users/userLoginServices', () => ({
-    execute: jest.fn(),
-    user: {},
+jest.mock("../../../api/users/userLoginServices", () => ({
+  execute: jest.fn(),
 }));
 
-describe('UserLoginJob', () => {
-    describe('failed', () => {
-        it('should throw an error when failed is called', () => {
-            expect(() => userLoginJob.failed('Login Failed')).toThrow('Login Failed');
-        });
+describe("UserLoginJob", () => {
+  describe("success", () => {
+    it("should return the result passed to success method", () => {
+      const result = {
+        mandaiId: 1,
+        accessToken: "test",
+        email: "test@gmail.com",
+      };
+      const rs = userLoginJob.success(result);
+      expect(rs).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
+          message: "Login success.",
+          accessToken: "test",
+          mandaiId: 1,
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+
+  describe("perform", () => {
+    it("should call failed when service login execute failed", async () => {
+      jest.spyOn(UserLoginService, "execute").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 501,
+              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+              message: "Not implemented",
+            },
+            status: "failed",
+            statusCode: 501,
+          })
+        )
+      );
+
+      await expect(
+        userLoginJob.perform({
+          body: {
+            email: "test-user",
+            password: "password",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 501,
+              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+              message: "Not implemented",
+            },
+            status: "failed",
+            statusCode: 501,
+          })
+        )
+      );
     });
 
-    describe('success', () => {
-        it('should return the result passed to success method', () => {
-            const result = { userId: 1, username: 'test-user' };
-            const rs = userLoginJob.success(result)
-            expect(rs).toEqual(result);
-        });
+    it("should call failed when service login execute pass", async () => {
+      jest.spyOn(UserLoginService, "execute").mockResolvedValue({
+        accessToken: "test-access",
+        mandaiId: "example-id",
+        email: "test@gmail.com",
+      });
+      const response = await userLoginJob.perform({
+        body: {
+          email: "test@gmail.com",
+          password: "password",
+        },
+      });
+
+      expect(response).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
+          message: "Login success.",
+          accessToken: "test-access",
+          mandaiId: 'example-id',
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
     });
-
-    describe('execute', () => {
-        it('should call UserLoginService.execute and return UserLoginService.user', async () => {
-            const req = {
-                body: {
-                    email: 'test-user', password: 'password'
-                }
-            };
-            const mockedUser = { userId: 1, username: 'test-user' };
-            UserLoginService.user = mockedUser;
-            await userLoginJob.execute(req);
-            expect(UserLoginService.execute).toHaveBeenCalledWith(req);
-            expect(UserLoginService.user).toBe(mockedUser);
-        });
-    });
-
-    describe('perform', () => {
-        it('should call failed when there is an errorMessage in the response', async () => {
-            const req = {
-                body: {
-                    email: 'test-user', password: 'password'
-                }
-            };
-
-            jest.spyOn(userLoginJob, 'execute').mockResolvedValue({
-               errorMessage: 'Invalid credentials'
-            });
-            jest.spyOn(userLoginJob, 'failed')
-            UserLoginService.user = {
-               errorMessage: 'Invalid credentials'
-            };
-
-            await expect(userLoginJob.perform(req)).rejects.toBe("\"Invalid credentials\"")
-            expect(userLoginJob.failed).toHaveBeenCalledWith('Invalid credentials');
-        });
-
-        it('should call success when the response is valid', async () => {
-            const req = {
-                body: {
-                    email: 'test-user', password: 'password'
-                }
-            };
-            const result = { userId: 1, username: 'test-user' };
-
-            jest.spyOn(userLoginJob, 'execute').mockResolvedValue(result);
-            jest.spyOn(userLoginJob, 'success');
-
-            const response = await userLoginJob.perform(req);
-
-            expect(userLoginJob.success).toHaveBeenCalledWith(result);
-            expect(response).toEqual(result);
-        });
-    });
-})
-
+  });
+});

@@ -1,108 +1,94 @@
-const SupportUserServices = require("../../api/supports/supportUserServices");
 const usersService = require("./usersServices");
 const cognitoService = require("../../services/cognitoService");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const LoginErrors = require("../../config/https/errors/loginErrors");
+const { getOrCheck } = require("../../utils/cognitoAttributes");
+const loggerService = require("../../logs/logger");
 
 class UserLoginService {
-  constructor() {
-    this.user = null;
-  }
-
   async login(req) {
     const hashSecret = usersService.genSecretHash(
       req.body.email,
       process.env.USER_POOL_CLIENT_ID,
       process.env.USER_POOL_CLIENT_SECRET
     );
-    const loginResult = await cognitoService.cognitoUserLogin(req, hashSecret);
-    if (loginResult["cognitoLoginError"]) {
-      return {
-        errorMessage: loginResult["cognitoLoginError"],
-      };
+    try {
+      return await cognitoService.cognitoUserLogin(req, hashSecret);
+    } catch (error) {
+      loggerService.error(`Error UserLoginService.login. Error: ${error}`);
+      //will using class error common later on
+      throw new Error(
+        JSON.stringify({
+          membership: {
+            code: 501,
+            mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+            message: "Not implemented",
+          },
+          status: "failed",
+          statusCode: 501,
+        })
+      );
     }
-    return {
-      ...loginResult["cognitoLoginResult"],
-    };
   }
 
   async getUser(req) {
-    const result = await SupportUserServices.getUserAllInfoService(req);
-    if (["failed", "not found"].includes(result.cognito.status) || !result.db) {
+    try {
+      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
+        req.body.email
+      );
+      const userDB = await userCredentialModel.findByUserEmail(req.body.email);
       return {
-        errorMessage: "User not exist",
+        email: getOrCheck(userCognito, "email"),
+        mandaiId: getOrCheck(userCognito, "custom:mandai_id"),
+        userId: userDB.user_id ? userDB.user_id : "",
       };
+    } catch (error) {
+      loggerService.error(`Error UserLoginService.getUser. Error: ${error}`);
+      throw new Error(
+        JSON.stringify(LoginErrors.ciamLoginUserNotFound(req.body.email))
+      );
     }
-    const cognitoUser = {};
-    result.cognito.UserAttributes.map((ele) => {
-      const key = ele.Name.includes("custom:")
-        ? ele.Name.replace(/custom:/g, "")
-        : ele.Name;
-      const value = ele.Value;
-      return Object.assign(cognitoUser, {
-        [key]: value,
-      });
-    });
-    return {
-      db: result.db,
-      cognito: {
-        ...cognitoUser,
-        membership: cognitoUser.membership
-          ? JSON.parse(cognitoUser.membership)
-          : [],
-        createdAt: result.cognito.UserCreateDate,
-        updatedAt: result.cognito.UserLastModifiedDate,
-        status: result.cognito.UserStatus,
-        id: result.cognito.Username,
-      },
-    };
   }
 
   async updateUser(id, tokens) {
     try {
       await userCredentialModel.updateTokens(id, tokens);
-      return {
-        message: "success",
-      };
     } catch (error) {
-      return {
-        message: JSON.stringify(error),
-      };
+      loggerService.error(`Error UserLoginService.updateUser. Error: ${error}`);
+      //will using class error common later on
+      throw new Error(
+        JSON.stringify({
+          membership: {
+            code: 500,
+            mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
+            message: "Internal Server Error",
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
     }
   }
 
   async execute(req) {
-    // check user existed
     const userInfo = await this.getUser(req);
-    if (userInfo.errorMessage) {
-      return (this.user = {
-        errorMessage: userInfo.errorMessage,
-      });
+    if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
+      throw new Error(
+        JSON.stringify(LoginErrors.ciamLoginUserNotFound(req.body.email))
+      );
     }
-
-    // login
-    const loginSession = await this.login(req);
-    if (loginSession.errorMessage) {
-      return (this.user = {
-        errorMessage: loginSession.errorMessage,
-      });
+    try {
+      const loginSession = await this.login(req);
+      await this.updateUser(userInfo.userId, loginSession);
+      return {
+        accessToken: loginSession.accessToken,
+        mandaiId: userInfo.mandaiId,
+        email: userInfo.email,
+      };
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      throw new Error(JSON.stringify(errorMessage));
     }
-
-    //update user tokens
-    const updateRecord = await this.updateUser(userInfo.db.credentials.id, {
-      tokens: loginSession,
-      last_login: userInfo.cognito.updatedAt,
-    });
-    if (updateRecord.message !== "success") {
-      return (this.user = {
-        errorMessage: updateRecord.message,
-      });
-    }
-
-    return (this.user = {
-      ...userInfo,
-      accessToken: loginSession.accessToken,
-      refreshToken: loginSession.refreshToken,
-    });
   }
 }
 

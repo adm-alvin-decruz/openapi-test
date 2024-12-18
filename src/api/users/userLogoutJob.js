@@ -1,25 +1,27 @@
 const UserLogoutService = require("./userLogoutServices");
 
 class UserLogoutJob {
-  failed(error) {
-    throw JSON.stringify(error);
-  }
-
-  success(result) {
-    return result;
-  }
-
-  async execute(token) {
-    return await UserLogoutService.execute(token);
+  success(email) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
+        message: "Logout success.",
+        email: email,
+      },
+      status: "success",
+      statusCode: 200,
+    };
   }
 
   async perform(token) {
-    //execute logout process
-    const rs = await this.execute(token);
-    if (rs.errorMessage) {
-      return this.failed(rs.errorMessage);
+    try {
+      const rs = await UserLogoutService.execute(token);
+      return this.success(rs.email);
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      throw new Error(JSON.stringify(errorMessage))
     }
-    return this.success(rs);
   }
 }
 

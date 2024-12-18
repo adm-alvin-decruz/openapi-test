@@ -61,10 +61,10 @@ class UserCredential {
     const sql = `
       UPDATE user_credentials
       SET tokens = ?, updated_at = ?, last_login = ?
-      WHERE id = ?
+      WHERE user_id = ?
     `;
     const params = [
-      credentialData.tokens ? JSON.stringify(credentialData.tokens) : null,
+      credentialData && credentialData.accessToken ? JSON.stringify(credentialData) : null,
       now,
       now,
       id,

@@ -301,8 +301,8 @@ async function userLogin(req) {
   try {
     return await UserLoginJob.perform(req);
   } catch (error) {
-    loggerService.error(`Error User login API. Error: ${error}`);
-    throw error;
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
   }
 }
 
@@ -310,8 +310,8 @@ async function userLogout(token) {
   try {
     return await UserLogoutJob.perform(token);
   } catch (error) {
-    loggerService.error(`Error User logout API. Error: ${error}`);
-    throw error;
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
   }
 }
 /**

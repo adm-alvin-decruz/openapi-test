@@ -5,8 +5,13 @@ const validationService = require("../../../services/validationService");
 const userController = require("../../../api/users/usersContollers");
 const emailDomainService = require("../../../services/emailDomainsService");
 // Mocks
-jest.mock("../../../services/validationService");
-jest.mock("../../../api/users/usersContollers");
+jest.mock("../../../services/validationService", () => ({
+  validateAppID: jest.fn(),
+}));
+jest.mock("../../../api/users/usersContollers", () => ({
+  userLogin: jest.fn(),
+  userLogout: jest.fn(),
+}));
 
 describe("User Routes", () => {
   let app;
@@ -96,7 +101,11 @@ describe("User Routes", () => {
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
       const response = await request(app)
-        .post("/users/sessions")
+        .post("/users/sessions", {
+          headers: {
+            "mwg-app-id": "",
+          },
+        })
         .send({ email: "example-email@gmail.com", password: "123456" });
 
       expect(response.status).toBe(401);
@@ -104,35 +113,54 @@ describe("User Routes", () => {
     });
     it("should return 200 and user information if everything ok", async () => {
       const mockResponse = {
-        db: {
-          user: "example-email@gmail.com",
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
+          message: "Login success.",
+          accessToken: "test-access",
+          mandaiId: "example-id",
+          email: "test@gmail.com",
         },
-        cognito: {
-          user: "example-email@gmail.com",
-        },
-        accessToken: "access-token",
-        refreshToken: "refresh-token",
+        status: "success",
+        statusCode: 200,
       };
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
       jest.spyOn(userController, "userLogin").mockResolvedValue(mockResponse);
       const response = await request(app)
         .post("/users/sessions")
-        .send({ email: "example-email@gmail.com", password: "123456" });
+        .send({ email: "test@gmail.com", password: "123456" });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockResponse);
     });
-    it("should return 500 if meet abnormal case", async () => {
+    it("should throw error when login failed", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest
-        .spyOn(userController, "userLogin")
-        .mockRejectedValue(JSON.stringify("NotAuthorizedException"));
+      jest.spyOn(userController, "userLogin").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 501,
+              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+              message: "Not implemented",
+            },
+            status: "failed",
+            statusCode: 501,
+          })
+        )
+      );
       const response = await request(app)
         .post("/users/sessions")
         .send({ email: "example-email@gmail.com", password: "123456" });
-
-      expect(response.status).toBe(500);
-      expect(response.body).toEqual({ message: "NotAuthorizedException" });
+      expect(response.status).toBe(501);
+      expect(response.body).toEqual({
+        membership: {
+          code: 501,
+          mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+          message: "Not implemented",
+        },
+        status: "failed",
+        statusCode: 501,
+      });
     });
   });
   describe("DELETE:/users/sessions - Logout API", () => {
@@ -162,28 +190,30 @@ describe("User Routes", () => {
     it("should return 200 and logout successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
       jest.spyOn(userController, "userLogout").mockResolvedValue({
-        message: "Logout Successfully",
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
+          message: "Logout success.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
       });
       const response = await request(app)
         .delete("/users/sessions")
-        .set("Authorization", "Bearer 123basd");
+        .set("Authorization", 'Bearer' + Math.random());
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
-        message: "Logout Successfully",
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
+          message: "Logout success.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
       });
-    });
-    it("should return 500 if meet abnormal case", async () => {
-      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest
-        .spyOn(userController, "userLogout")
-        .mockRejectedValue(JSON.stringify("NotAuthorizedException"));
-      const response = await request(app)
-        .delete("/users/sessions")
-        .set("Authorization", "Bearer 123basd");
-
-      expect(response.status).toBe(500);
-      expect(response.body).toEqual({ message: "NotAuthorizedException" });
     });
   });
 });

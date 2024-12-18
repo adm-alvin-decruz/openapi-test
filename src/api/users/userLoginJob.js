@@ -1,26 +1,30 @@
 const UserLoginService = require("./userLoginServices");
 
 class UserLoginJob {
-  failed(error) {
-    throw JSON.stringify(error);
-  }
-
   success(result) {
-    return result;
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
+        message: "Login success.",
+        accessToken: result.accessToken,
+        mandaiId: result.mandaiId,
+        email: result.email,
+      },
+      status: "success",
+      statusCode: 200,
+    };
   }
 
-  async execute(req) {
-    await UserLoginService.execute(req);
-    return UserLoginService.user;
-  }
-
-  async perform(token) {
+  async perform(req) {
     //execute login process
-    const rs = await this.execute(token);
-    if (rs.errorMessage) {
-      return this.failed(rs.errorMessage);
+    try {
+      const rs = await UserLoginService.execute(req);
+      return this.success(rs);
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      throw new Error(JSON.stringify(errorMessage));
     }
-    return this.success(rs);
   }
 }
 

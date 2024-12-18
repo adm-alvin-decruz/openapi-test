@@ -182,6 +182,9 @@ router.get('/users', upload.none(), isEmptyRequest, validateEmail, async (req, r
   }
 });
 
+/**
+ * User Login API (Method POST)
+ */
 router.post(
   "/users/sessions",
   isEmptyRequest,
@@ -197,19 +200,21 @@ router.post(
         "Route CIAM Login User Error 401 Unauthorized",
         startTimer
       );
-      res.status(401).send({ message: "Unauthorized" });
+      return res.status(401).send({ message: "Unauthorized" });
     }
     try {
       const data = await userController.userLogin(req);
-      return res.status(200).json(data);
+      return res.status(data.statusCode).json(data);
     } catch (error) {
-      res.status(500).json({
-        message: JSON.parse(error),
-      });
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage);
     }
   }
 );
 
+/**
+ * User Logout API (Method DELETE)
+ */
 router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
@@ -221,7 +226,7 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
       "Route CIAM Logout User Error 401 Unauthorized",
       startTimer
     );
-    res.status(401).send({ message: "Unauthorized" });
+    return res.status(401).send({ message: "Unauthorized" });
   }
   const token = req.headers.authorization.substring(
     7,
@@ -229,11 +234,10 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
   );
   try {
     const data = await userController.userLogout(token);
-    return res.status(200).json(data);
+    return res.status(data.statusCode).json(data);
   } catch (error) {
-    res.status(500).json({
-      message: JSON.parse(error),
-    });
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
 

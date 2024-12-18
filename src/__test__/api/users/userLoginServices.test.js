@@ -1,4 +1,3 @@
-const SupportUserServices = require("../../../api/supports/supportUserServices");
 const usersService = require("../../../api/users/usersServices");
 const cognitoService = require("../../../services/cognitoService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
@@ -9,12 +8,11 @@ jest.mock("../../../api/users/usersServices", () => ({
 }));
 jest.mock("../../../services/cognitoService", () => ({
   cognitoUserLogin: jest.fn(),
-}));
-jest.mock("../../../api/supports/supportUserServices", () => ({
-  getUserAllInfoService: jest.fn(),
+  cognitoAdminGetUserByEmail: jest.fn(),
 }));
 jest.mock("../../../db/models/userCredentialModel", () => ({
   updateTokens: jest.fn(),
+  findByUserEmail: jest.fn(),
 }));
 
 describe("UserLoginService", () => {
@@ -27,42 +25,57 @@ describe("UserLoginService", () => {
   });
   describe("login", () => {
     it("should throw an error when failed login Cognito", async () => {
-      const result = [];
-      result["cognitoLoginError"] = "Login Cognito Error";
       jest
         .spyOn(usersService, "genSecretHash")
         .mockReturnValue("example-hash-secret");
-      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue(result);
-      const rs = await userLoginServices.login({
-        body: {
-          email: "example-email@gmail.com",
-          password: "123",
-        },
+      jest.spyOn(cognitoService, "cognitoUserLogin").mockRejectedValue({
+        status: "failed",
       });
-      expect(rs).toEqual({
-        errorMessage: "Login Cognito Error",
-      });
+      await expect(
+        userLoginServices.login({
+          body: {
+            email: "test@gmail.com",
+            password: "123",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 501,
+              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+              message: "Not implemented",
+            },
+            status: "failed",
+            statusCode: 501,
+          })
+        )
+      );
       expect(usersService.genSecretHash).toBeCalledTimes(1);
     });
     it("should return login session when login cognito success", async () => {
-      const result = [];
-      result["cognitoLoginResult"] = {
-        accessToken: "accessToken-example",
-        refreshToken: "refreshToken-example",
-        idToken: "idToken-example",
-      };
       jest.spyOn(usersService, "genSecretHash");
-      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue(result);
+      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue({
+        UserAttributes: [
+          {
+            Name: "email",
+            Value: "test@gmail.com",
+          },
+        ],
+      });
       const rs = await userLoginServices.login({
         body: {
-          email: "example-email@gmail.com",
+          email: "test@gmail.com",
           password: "123",
         },
       });
       expect(rs).toEqual({
-        accessToken: "accessToken-example",
-        refreshToken: "refreshToken-example",
-        idToken: "idToken-example",
+        UserAttributes: [
+          {
+            Name: "email",
+            Value: "test@gmail.com",
+          },
+        ],
       });
       expect(usersService.genSecretHash).toBeCalledTimes(1);
     });
@@ -70,137 +83,91 @@ describe("UserLoginService", () => {
   describe("getUser", () => {
     it("should throw an error when user not found in Cognito", async () => {
       jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-          },
-          cognito: {
-            status: "not found",
-          },
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockRejectedValue({
+          status: "failed",
         });
-      const rs = await userLoginServices.getUser({
-        body: {
-          email: "example-email@gmail.com",
-          password: "123",
-        },
-      });
-      expect(rs).toEqual({
-        errorMessage: "User not exist",
-      });
-      expect(SupportUserServices.getUserAllInfoService).toBeCalledTimes(1);
+      await expect(
+        userLoginServices.getUser({
+          body: {
+            email: "test@gmail.com",
+            password: "123",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
     });
     it("should throw an error when user not found in db", async () => {
       jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
         .mockResolvedValue({
-          db: null,
-          cognito: {
-            status: "user not found",
-          },
-        });
-      const rs = await userLoginServices.getUser({
-        body: {
-          email: "example-email@gmail.com",
-          password: "123",
-        },
-      });
-      expect(rs).toEqual({
-        errorMessage: "User not exist",
-      });
-      expect(SupportUserServices.getUserAllInfoService).toBeCalledTimes(1);
-    });
-    it("should return user info if query success", async () => {
-      jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-          },
-          cognito: {
-            UserCreateDate: "2024-12-06T13:16:06.189Z",
-            UserLastModifiedDate: "2024-12-09T07:51:31.003Z",
-            UserStatus: "CONFIRMED",
-            Username: "1",
-            UserAttributes: [
-              { Name: "sub", Value: "1" },
-              { Name: "birthdate", Value: "03/05/1997" },
-              { Name: "custom:vehicle_iu", Value: "null" },
-              {
-                Name: "preferred_username",
-                Value: "test-user@gmail.com",
-              },
-              { Name: "custom:visual_id", Value: "null" },
-              { Name: "custom:vehicle_plate", Value: "null" },
-              { Name: "updated_at", Value: "1733490966" },
-              { Name: "email", Value: "test-user@gmail.com" },
-              { Name: "custom:terms_conditions", Value: "null" },
-              { Name: "custom:source", Value: "ORGANIC" },
-              { Name: "email_verified", Value: "true" },
-              { Name: "given_name", Value: "test" },
-              {
-                Name: "custom:membership",
-                Value:
-                  '[{"name":"group1","visualID":"","expiry":""},{"name":"group2","visualID":"","expiry":"08/12/2025"},{"name":"group+","visualID":"","expiry":"23/12/2025"}]',
-              },
-              { Name: "custom:mandai_id", Value: "123" },
-              { Name: "name", Value: "Test User" },
-              { Name: "custom:last_login", Value: "null" },
-              { Name: "family_name", Value: "Test" },
-            ],
-          },
-        });
-      const rs = await userLoginServices.getUser({
-        body: {
-          email: "test-user@gmail.com",
-          password: "123",
-        },
-      });
-      expect(rs).toEqual({
-        db: {
-          username: "test-user",
-        },
-        cognito: {
-          sub: "1",
-          birthdate: "03/05/1997",
-          vehicle_iu: "null",
-          preferred_username: "test-user@gmail.com",
-          visual_id: "null",
-          vehicle_plate: "null",
-          updated_at: "1733490966",
-          email: "test-user@gmail.com",
-          terms_conditions: "null",
-          source: "ORGANIC",
-          email_verified: "true",
-          given_name: "test",
-          membership: [
+          UserAttributes: [
             {
-              name: "group1",
-              visualID: "",
-              expiry: "",
-            },
-            {
-              name: "group2",
-              visualID: "",
-              expiry: "08/12/2025",
-            },
-            {
-              name: "group+",
-              visualID: "",
-              expiry: "23/12/2025",
+              Name: "email",
+              Value: "test@gmail.com",
             },
           ],
-          mandai_id: "123",
-          name: "Test User",
-          last_login: "null",
-          family_name: "Test",
-          createdAt: "2024-12-06T13:16:06.189Z",
-          updatedAt: "2024-12-09T07:51:31.003Z",
-          status: "CONFIRMED",
-          id: "1",
+        });
+      jest
+        .spyOn(userCredentialModel, "findByUserEmail")
+        .mockResolvedValue(undefined);
+      await expect(
+        userLoginServices.getUser({
+          body: {
+            email: "test@gmail.com",
+            password: "123",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("return user info when user exists", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            { Name: "email", Value: "test-user@gmail.com" },
+            { Name: "custom:mandai_id", Value: "2" },
+          ],
+        });
+      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
+        user_id: "1",
+      });
+      const rs = await userLoginServices.getUser({
+        body: {
+          email: "test-user@gmail.com",
+          password: "123",
         },
       });
-      expect(SupportUserServices.getUserAllInfoService).toBeCalledTimes(1);
+      expect(rs).toEqual({
+        email: "test-user@gmail.com",
+        mandaiId: "2",
+        userId: "1",
+      });
     });
   });
   describe("updateUser", () => {
@@ -208,238 +175,136 @@ describe("UserLoginService", () => {
       jest
         .spyOn(userCredentialModel, "updateTokens")
         .mockRejectedValue("update db failed");
-      const rs = await userLoginServices.updateUser(1, {
-        accessToken: "example-token",
-        refreshToken: "refresh-token",
-        idToken: "id-token",
-      });
-      expect(rs).toEqual({
-        message: '"update db failed"',
-      });
+      await expect(
+        userLoginServices.updateUser(1, {
+          accessToken: "example-token",
+          refreshToken: "refresh-token",
+          idToken: "id-token",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 500,
+              mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
+              message: "Internal Server Error",
+            },
+            status: "failed",
+            statusCode: 500,
+          })
+        )
+      );
       expect(userCredentialModel.updateTokens).toBeCalledTimes(1);
-    });
-    it("should return success when update process finish", async () => {
-      jest.spyOn(userCredentialModel, "updateTokens").mockResolvedValue({
-        fieldCount: 0,
-        affectedRows: 1,
-        insertId: 0,
-        info: "Rows matched: 1  Changed: 1  Warnings: 0",
-        serverStatus: 2,
-        warningStatus: 0,
-        changedRows: 1,
-      });
-      const rs = await userLoginServices.updateUser(1, {
-        accessToken: "example-token",
-        refreshToken: "refresh-token",
-        idToken: "id-token",
-      });
-      expect(rs).toEqual({
-        message: "success",
-      });
     });
   });
   describe("execute", () => {
-    it("throw error when getUserInfo failed", async () => {
+    it("throw error when getUser failed", async () => {
       jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-          },
-          cognito: {
-            status: "not found",
-          },
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockRejectedValue({
+          status: "failed",
         });
-      const rs = await userLoginServices.execute({
-        body: {
-          email: "test-email@gmail.com",
-          password: "123",
-        },
-      });
-      expect(rs).toEqual({
-        errorMessage: "User not exist",
-      });
+      await expect(
+        userLoginServices.execute({
+          body: {
+            email: "test@gmail.com",
+            password: "123",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
     });
     it("throw error when login failed", async () => {
-      jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-          },
-          cognito: {
-            UserCreateDate: "2024-12-06T13:16:06.189Z",
-            UserLastModifiedDate: "2024-12-09T07:51:31.003Z",
-            UserStatus: "CONFIRMED",
-            Username: "1",
-            UserAttributes: [
-              { Name: "sub", Value: "1" },
-              { Name: "birthdate", Value: "03/05/1997" },
-              { Name: "custom:vehicle_iu", Value: "null" },
-              {
-                Name: "preferred_username",
-                Value: "test-user@gmail.com",
-              },
-              { Name: "custom:visual_id", Value: "null" },
-              { Name: "custom:vehicle_plate", Value: "null" },
-              { Name: "updated_at", Value: "1733490966" },
-              { Name: "email", Value: "test-user@gmail.com" },
-              { Name: "custom:terms_conditions", Value: "null" },
-              { Name: "custom:source", Value: "ORGANIC" },
-              { Name: "email_verified", Value: "true" },
-              { Name: "given_name", Value: "test" },
-              {
-                Name: "custom:membership",
-                Value:
-                  '[{"name":"group1","visualID":"","expiry":""},{"name":"group2","visualID":"","expiry":"08/12/2025"},{"name":"group+","visualID":"","expiry":"23/12/2025"}]',
-              },
-              { Name: "custom:mandai_id", Value: "123" },
-              { Name: "name", Value: "Test User" },
-              { Name: "custom:last_login", Value: "null" },
-              { Name: "family_name", Value: "Test" },
-            ],
-          },
-        });
-      const result = [];
-      result["cognitoLoginError"] = "Login Cognito Error";
-      jest
-        .spyOn(usersService, "genSecretHash")
-        .mockReturnValue("example-hash-secret");
-      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue(result);
-      const rs = await userLoginServices.execute({
-        body: {
-          email: "test-email@gmail.com",
-          password: "123",
-        },
+      jest.spyOn(userLoginServices, "getUser").mockImplementationOnce(() => {
+        return {
+          email: "test@gmail.com",
+          mandaiId: "1",
+          userId: "2"
+        };
       });
-      expect(rs).toEqual({
-        errorMessage: "Login Cognito Error",
-      });
-    });
-    it("throw error when updateToken failed", async () => {
       jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-            credentials: {
-              id: 1,
+        .spyOn(cognitoService, "cognitoUserLogin")
+        .mockRejectedValue(new Error(JSON.stringify({ status: "failed" })));
+      await expect(
+        userLoginServices.execute({
+          body: {
+            email: "test-email@gmail.com",
+            password: "123",
+          },
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 501,
+              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
+              message: "Not implemented",
             },
-          },
-          cognito: {
-            UserCreateDate: "2024-12-06T13:16:06.189Z",
-            UserLastModifiedDate: "2024-12-09T07:51:31.003Z",
-            UserStatus: "CONFIRMED",
-            Username: "1",
-            UserAttributes: [
-              { Name: "sub", Value: "1" },
-              { Name: "birthdate", Value: "03/05/1997" },
-              { Name: "custom:vehicle_iu", Value: "null" },
-              {
-                Name: "preferred_username",
-                Value: "test-user@gmail.com",
-              },
-              { Name: "custom:visual_id", Value: "null" },
-              { Name: "custom:vehicle_plate", Value: "null" },
-              { Name: "updated_at", Value: "1733490966" },
-              { Name: "email", Value: "test-user@gmail.com" },
-              { Name: "custom:terms_conditions", Value: "null" },
-              { Name: "custom:source", Value: "ORGANIC" },
-              { Name: "email_verified", Value: "true" },
-              { Name: "given_name", Value: "test" },
-              {
-                Name: "custom:membership",
-                Value:
-                  '[{"name":"group1","visualID":"","expiry":""},{"name":"group2","visualID":"","expiry":"08/12/2025"},{"name":"group+","visualID":"","expiry":"23/12/2025"}]',
-              },
-              { Name: "custom:mandai_id", Value: "123" },
-              { Name: "name", Value: "Test User" },
-              { Name: "custom:last_login", Value: "null" },
-              { Name: "family_name", Value: "Test" },
-            ],
-          },
-        });
-      const result = [];
-      result["cognitoLoginResult"] = {
-        accessToken: "accessToken-example",
-        refreshToken: "refreshToken-example",
-        idToken: "idToken-example",
-      };
-      jest.spyOn(usersService, "genSecretHash");
-      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue(result);
+            status: "failed",
+            statusCode: 501,
+          })
+        )
+      );
+    });
+    it("throw error when updateUser failed", async () => {
+      jest.spyOn(userLoginServices, "getUser").mockImplementationOnce(() => {
+        return {
+          email: "test@gmail.com",
+          mandaiId: "1",
+          userId: "2"
+        };
+      });
+      jest.spyOn(userLoginServices, "login").mockImplementationOnce(() => {
+        return {
+          accessToken: "test-access",
+        };
+      });
       jest
         .spyOn(userCredentialModel, "updateTokens")
         .mockRejectedValue("update db failed");
-      const rs = await userLoginServices.execute({
+      await expect(userLoginServices.execute({
         body: {
           email: "test-email@gmail.com",
           password: "123",
         },
-      });
-      expect(rs).toEqual({
-        errorMessage: '"update db failed"',
-      });
+      })).rejects.toThrow(new Error(JSON.stringify({
+        membership: {
+          code: 500,
+          mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
+          message: "Internal Server Error",
+        },
+        status: "failed",
+        statusCode: 500,
+      })));
     });
     it("should return user when execute process success", async () => {
-      jest
-        .spyOn(SupportUserServices, "getUserAllInfoService")
-        .mockResolvedValue({
-          db: {
-            username: "test-user",
-            credentials: {
-              id: 1,
-            },
-          },
-          cognito: {
-            UserCreateDate: "2024-12-06T13:16:06.189Z",
-            UserLastModifiedDate: "2024-12-09T07:51:31.003Z",
-            UserStatus: "CONFIRMED",
-            Username: "1",
-            UserAttributes: [
-              { Name: "sub", Value: "1" },
-              { Name: "birthdate", Value: "03/05/1997" },
-              { Name: "custom:vehicle_iu", Value: "null" },
-              {
-                Name: "preferred_username",
-                Value: "test-user@gmail.com",
-              },
-              { Name: "custom:visual_id", Value: "null" },
-              { Name: "custom:vehicle_plate", Value: "null" },
-              { Name: "updated_at", Value: "1733490966" },
-              { Name: "email", Value: "test-user@gmail.com" },
-              { Name: "custom:terms_conditions", Value: "null" },
-              { Name: "custom:source", Value: "ORGANIC" },
-              { Name: "email_verified", Value: "true" },
-              { Name: "given_name", Value: "test" },
-              {
-                Name: "custom:membership",
-                Value:
-                  '[{"name":"group1","visualID":"","expiry":""},{"name":"group2","visualID":"","expiry":"08/12/2025"},{"name":"group+","visualID":"","expiry":"23/12/2025"}]',
-              },
-              { Name: "custom:mandai_id", Value: "123" },
-              { Name: "name", Value: "Test User" },
-              { Name: "custom:last_login", Value: "null" },
-              { Name: "family_name", Value: "Test" },
-            ],
-          },
-        });
-      const result = [];
-      result["cognitoLoginResult"] = {
-        accessToken: "accessToken-example",
-        refreshToken: "refreshToken-example",
-        idToken: "idToken-example",
-      };
-      jest.spyOn(usersService, "genSecretHash");
-      jest.spyOn(cognitoService, "cognitoUserLogin").mockResolvedValue(result);
-      jest.spyOn(userCredentialModel, "updateTokens").mockResolvedValue({
-        fieldCount: 0,
-        affectedRows: 1,
-        insertId: 0,
-        info: "Rows matched: 1  Changed: 1  Warnings: 0",
-        serverStatus: 2,
-        warningStatus: 0,
-        changedRows: 1,
+      jest.spyOn(userLoginServices, "getUser").mockImplementationOnce(() => {
+        return {
+          email: "test@gmail.com",
+          mandaiId: "1",
+          userId: "2"
+        };
       });
+      jest.spyOn(userLoginServices, "login").mockImplementationOnce(() => {
+        return {
+          accessToken: "test-access",
+        };
+      });
+      jest
+          .spyOn(userCredentialModel, "updateTokens")
+          .mockResolvedValue("update db success");
       const rs = await userLoginServices.execute({
         body: {
           email: "test-email@gmail.com",
@@ -447,53 +312,9 @@ describe("UserLoginService", () => {
         },
       });
       expect(rs).toEqual({
-        accessToken: "accessToken-example",
-        cognito: {
-          birthdate: "03/05/1997",
-          createdAt: "2024-12-06T13:16:06.189Z",
-          email: "test-user@gmail.com",
-          email_verified: "true",
-          family_name: "Test",
-          given_name: "test",
-          id: "1",
-          last_login: "null",
-          mandai_id: "123",
-          membership: [
-            {
-              expiry: "",
-              name: "group1",
-              visualID: "",
-            },
-            {
-              expiry: "08/12/2025",
-              name: "group2",
-              visualID: "",
-            },
-            {
-              expiry: "23/12/2025",
-              name: "group+",
-              visualID: "",
-            },
-          ],
-          name: "Test User",
-          preferred_username: "test-user@gmail.com",
-          source: "ORGANIC",
-          status: "CONFIRMED",
-          sub: "1",
-          terms_conditions: "null",
-          updatedAt: "2024-12-09T07:51:31.003Z",
-          updated_at: "1733490966",
-          vehicle_iu: "null",
-          vehicle_plate: "null",
-          visual_id: "null",
-        },
-        db: {
-          credentials: {
-            id: 1,
-          },
-          username: "test-user",
-        },
-        refreshToken: "refreshToken-example",
+        accessToken: "test-access",
+        mandaiId: "1",
+        email: "test@gmail.com"
       });
     });
   });

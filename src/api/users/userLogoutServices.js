@@ -1,73 +1,53 @@
-const {
-  getUserCognitoInfoByAccessToken,
-} = require("../../api/supports/supportCognitoServices");
 const cognitoService = require("../../services/cognitoService");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const { getOrCheck } = require("../../utils/cognitoAttributes");
+const loggerService = require("../../logs/logger");
+const LogoutErrors = require("../../config/https/errors/logoutErrors");
 
 class UserLogoutService {
-  constructor() {
-    this.message = null;
-  }
-
-  async getUserEmailCognito(token) {
-    const result = await getUserCognitoInfoByAccessToken(token);
-    if (["failed", "not found"].includes(result.status)) {
-      return "";
-    }
-    return result.UserAttributes.find((ele) => ele.Name === "email").Value;
-  }
-
-  async updateUser(id) {
+  async getUser(token) {
     try {
-      await userCredentialModel.updateTokens(id, {
-        tokens: null,
-      });
+      const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(
+        token
+      );
+      const email = getOrCheck(userCognito, "email");
+      const userDB = await userCredentialModel.findByUserEmail(email);
       return {
-        message: "success",
+        userId: userDB.user_id ? userDB.user_id : "",
+        email: email ? email : "",
       };
     } catch (error) {
-      return {
-        message: JSON.stringify(error),
-      };
+      loggerService.error(`Error UserLogoutService.getUser. Error: ${error}`);
+      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound()));
     }
   }
 
   async execute(token) {
-    // check user existed in cognito
-    const userEmail = await this.getUserEmailCognito(token);
-    if (!userEmail) {
-      return {
-        errorMessage: "User not exists",
-      };
+    const userInfo = await this.getUser(token);
+
+    if (!userInfo.userId || !userInfo.email) {
+      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound()));
     }
 
-    //check user existed in db
-    const userInfo = await userCredentialModel.findByUserEmail(userEmail);
-    if (!userInfo.id) {
+    try {
+      await cognitoService.cognitoUserLogout(userInfo.email);
+      await userCredentialModel.updateTokens(userInfo.userId, null);
       return {
-        errorMessage: "User not exists",
+        email: userInfo.email,
       };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          membership: {
+            code: 500,
+            mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
+            message: "Internal Server Error",
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
     }
-
-    //logout
-    const logoutSession = await cognitoService.cognitoUserLogout(userEmail);
-    if (logoutSession.message !== "success") {
-      return {
-        errorMessage: logoutSession.message,
-      };
-    }
-
-    //update user tokens
-    const updateRecord = await this.updateUser(userInfo.id);
-    if (updateRecord.message !== "success") {
-      return {
-        errorMessage: updateRecord.message,
-      };
-    }
-
-    return {
-      message: "Logout successfully",
-    };
   }
 }
 
