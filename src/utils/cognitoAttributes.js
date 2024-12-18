@@ -1,5 +1,8 @@
 function getOrCheck(attr, name, value = "") {
-  let userAttr = attr.UserAttributes && attr.UserAttributes.length > 0 ? attr.UserAttributes : [];
+  const userAttr =
+    attr.UserAttributes && attr.UserAttributes.length > 0
+      ? attr.UserAttributes
+      : [];
 
   if (userAttr.length > 0) {
     const findAttrMatched = userAttr.find((attr) => attr.Name === name);

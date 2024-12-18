@@ -1,10 +1,9 @@
+const crypto = require("crypto");
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { getSource, getGroup } = require("../../utils/common");
 const loggerService = require("../../logs/logger");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
-const userConfig = require("../../config/usersConfig");
-const crypto = require("crypto");
 const passwordService = require("./userPasswordService");
 const userModel = require("../../db/models/userModel");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
@@ -13,21 +12,27 @@ const userNewsletterModel = require("../../db/models/userNewletterModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const userDetailModel = require("../../db/models/userDetailsModel");
 const pool = require("../../db/connections/mysqlConn");
+const CommonErrors = require("../../config/https/errors/common");
 
 class UserSignupService {
-  async isUserExistedInCognito(req) {
-    let userCognito = null;
+  async isUserExistedInCognito(email) {
     try {
-      userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-        req.body.email
+      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
+        email
       );
-    } catch (error) {
-      loggerService.error("UserSignupService.isUserExisted Error:", error);
-      throw error;
-    }
 
-    if (getOrCheck(userCognito, "custom:mandai_id")) {
-      throw SignUpErrors.ciamEmailExists(req.body.language);
+      return getOrCheck(userCognito, "custom:mandai_id");
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+      if (errorData.name && errorData.name === "UserNotFoundException") {
+        return false;
+      }
+
+      if (errorMessage.status === "failed") {
+        throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
+      }
     }
   }
 
@@ -53,7 +58,6 @@ class UserSignupService {
     try {
       await pool.transaction(async () => {
         //insert user
-        console.log('1')
         const user = await userModel.create({
           email: req.body.email,
           given_name: req.body.firstName,
@@ -65,7 +69,6 @@ class UserSignupService {
           created_at: getCurrentUTCTimestamp(),
         });
 
-        console.log('2')
         //insert userMembership
         await userMembershipModel.create({
           user_id: user.user_id,
@@ -74,18 +77,16 @@ class UserSignupService {
           expires_at: null, // todo: update expiry for fow fow+
         });
 
-        console.log('3')
         //insert userNewsletter
         if (req.body.newsletter.subscribe) {
           await userNewsletterModel.create({
             user_id: user.user_id,
             name: req.body.newsletter.name ? req.body.newsletter.name : "",
-            type: req.body.newsletter.type ? req.body.newsletter.type : '',
+            type: req.body.newsletter.type ? req.body.newsletter.type : "",
             subscribe: req.body.newsletter.subscribe,
           });
         }
 
-        console.log('4')
         //insert userCredential
         await userCredentialModel.create({
           user_id: user.user_id,
@@ -95,7 +96,6 @@ class UserSignupService {
           last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
         });
 
-        console.log('5')
         //insert userDetail
         await userDetailModel.create({
           user_id: user.user_id,
@@ -107,87 +107,89 @@ class UserSignupService {
           vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : null,
           extra: req.body.extra ? req.body.extra : null,
         });
-
-        console.log('6')
-        return {
-          success: "save into db success",
-        };
       });
     } catch (error) {
-      console.log('error', error)
-      return {
-        failed: "save into db failed",
-      };
+      loggerService.error(`userSignupService.saveUserDB Error: ${error}`);
+      throw new Error(
+        JSON.stringify({
+          dbProceed: "failed",
+        })
+      );
     }
   }
 
   async signup(req) {
     //check user exists
-    await this.isUserExistedInCognito(req);
-    const mandaiId = this.generateMandaiId(req);
-    /*TODO
-     * Generate CardFace need to be confirm
-     */
-    //hash password
-    const hashPassword = await passwordService.hashPassword(
-      req.body.password.toString()
-    );
-
-    const cognitoCreateUser = await cognitoService.cognitoAdminCreateUser({
-      email: req.body.email,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      birthdate: req.body.dob,
-      address: req.body.address,
-      groups: [
-        {
-          name: req.body.group,
-          visualID: "",
-          expiry: "",
-        },
-      ],
-      mandaiId: mandaiId,
-      newsletter: req.body.newsletter.subscribe
-        ? {
-            name: req.body.newsletter.name ? req.body.newsletter.name :  "",
-            type: req.body.newsletter.type ? req.body.newsletter.type : "",
-            subscribe: req.body.newsletter.subscribe,
-          }
-        : null,
-      source: getSource(req.headers["mwg-app-id"]).source ? getSource(req.headers["mwg-app-id"]).source : "",
-    });
-    if (cognitoCreateUser.status && cognitoCreateUser.status === "failed") {
-      loggerService.error(
-        `cognitoService.cognitoAdminCreateUser Error: ${cognitoCreateUser.data}`
+    const isUserExisted = await this.isUserExistedInCognito(req.body.email);
+    if (isUserExisted) {
+      throw new Error(
+        JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
-      throw SignUpErrors.ciamSignUpErr(req.body.language);
     }
-
-    const cognitoSetPassword = await cognitoService.cognitoAdminSetUserPassword(
-      req.body.email,
-      req.body.password
-    );
-    if (cognitoSetPassword.status && cognitoSetPassword.status === "failed") {
-      loggerService.error(
-        `cognitoService.cognitoAdminCreateUser Error: ${cognitoSetPassword.data}`
+    try {
+      const mandaiId = this.generateMandaiId(req);
+      /*TODO
+       * Generate CardFace need to be confirm
+       */
+      //hash password
+      const hashPassword = await passwordService.hashPassword(
+        req.body.password.toString()
       );
-      throw SignUpErrors.ciamSignUpErr(req.body.language);
-    }
 
-    //update user into db - apply rollback mechanism
-    const saveUser = await this.saveUserDB({
-      req,
-      mandaiId,
-      hashPassword,
-    });
-    console.log('saveUser', saveUser)
-    if (saveUser && saveUser.failed) {
-      loggerService.error("UserSignupService.saveUserDB Error:");
-      throw SignUpErrors.ciamSignUpErr(req.body.language);
+      await cognitoService.cognitoAdminCreateUser({
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        birthdate: req.body.dob,
+        address: req.body.address,
+        groups: [
+          {
+            name: req.body.group,
+            visualID: "",
+            expiry: "",
+          },
+        ],
+        mandaiId: mandaiId,
+        newsletter:
+          req.body.newsletter && req.body.newsletter.subscribe
+            ? {
+                name: req.body.newsletter.name ? req.body.newsletter.name : "",
+                type: req.body.newsletter.type ? req.body.newsletter.type : "",
+                subscribe: req.body.newsletter.subscribe,
+              }
+            : null,
+        source: getSource(req.headers["mwg-app-id"]).source
+          ? getSource(req.headers["mwg-app-id"]).source
+          : "",
+      });
+      await cognitoService.cognitoAdminSetUserPassword(
+        req.body.email,
+        req.body.password
+      );
+
+      //update user into db - apply rollback mechanism
+      await this.saveUserDB({
+        req,
+        mandaiId,
+        hashPassword,
+      });
+
+      return {
+        mandaiId,
+      };
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      if (errorMessage.dbProceed) {
+        //need align with Kay about rollback user when saveDB failed
+        await cognitoService.cognitoAdminDeleteUser(req.body.email);
+      }
+      if (errorMessage.dbProceed || errorMessage.status === "failed") {
+        throw new Error(
+          JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language))
+        );
+      }
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
-    return {
-      mandaiId,
-    };
   }
 }
 

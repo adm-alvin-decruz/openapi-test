@@ -12,9 +12,7 @@ const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
-const UserSignUpValidation = require("./validations/UserSignupValidation");
 const CommonErrors = require("../../config/https/errors/common");
-const loggerService = require("../../logs/logger");
 
 const pong = {'pong': 'pang'};
 
@@ -47,9 +45,9 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
       req.apiTimer.end('Route CIAM Signup User Error', startTimer);
-      return res.status(501).send(CommonErrors.InternalServerError())
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage)
     }
-
   }
   //#endregion
 

@@ -107,9 +107,14 @@ async function adminCreateUser (req){
 async function adminCreateNewUser(req) {
   const message = UserSignUpValidation.execute(req.body);
   if (!!message) {
-    return message;
+    throw new Error(JSON.stringify(message));
   }
-  return await UserSignupJob.perform(req)
+  try {
+    await UserSignupJob.perform(req);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
 }
 
 /**

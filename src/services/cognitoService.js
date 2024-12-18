@@ -3,6 +3,7 @@ const {
   AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
+const loggerService = require("../logs/logger");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -38,13 +39,12 @@ class Cognito {
       // get from cognito
       return await client.send(getUserCommand);
     } catch (error) {
-      let result = '';
-      if(error.name === 'UserNotFoundException'){
-        result = {status: 'not found', data: JSON.stringify(error)};
-      }else{
-        result = {status: 'failed', data: JSON.stringify(error)};
-      }
-      return result;
+      loggerService.error(
+          `cognitoService.cognitoAdminGetUserByEmail Error: ${error}`
+      );
+      throw new Error(JSON.stringify({
+        status: 'failed', data: error
+      }))
     }
   }
 
@@ -92,7 +92,13 @@ class Cognito {
     try {
       return await client.send(newUserParams);
     } catch (error) {
-      return {status: 'failed', data: JSON.stringify(error)};
+      loggerService.error(
+          `cognitoService.cognitoAdminCreateUser Error: ${error}`
+      );
+      throw new Error(JSON.stringify({
+        status: 'failed',
+        data: error
+      }));
     }
   }
 
@@ -106,7 +112,31 @@ class Cognito {
     try {
       await client.send(setPasswordParams);
     } catch (error) {
-      return {status: 'failed', data: JSON.stringify(error)};
+      loggerService.error(
+          `cognitoService.cognitoAdminSetUserPassword Error: ${error}`
+      );
+      throw new Error(JSON.stringify({
+        status: 'failed',
+        data: error
+      }));
+    }
+  }
+
+  static async cognitoAdminDeleteUser(email) {
+    const setDeleteUserParams = new AdminDeleteUserCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+    });
+    try {
+      await client.send(setDeleteUserParams);
+    } catch (error) {
+      loggerService.error(
+          `cognitoService.cognitoAdminDeleteUser Error: ${error}`
+      );
+      throw new Error(JSON.stringify({
+        status: 'failed',
+        data: error
+      }));
     }
   }
 }

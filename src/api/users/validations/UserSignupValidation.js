@@ -43,7 +43,7 @@ class UserSignupValidation {
       }
     }
 
-    if (req.country.length > 2) {
+    if (req.country.length !== 2) {
       return (this.error = SignupErrors.ciamWrongParams(
         "country",
         req.language

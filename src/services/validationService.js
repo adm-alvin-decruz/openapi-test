@@ -1,6 +1,5 @@
 const userConfig = require('../config/usersConfig');
 const appConfig = require('../config/appConfig');
-const commonService = require('./commonService');
 
 /**
  * Validate App ID
