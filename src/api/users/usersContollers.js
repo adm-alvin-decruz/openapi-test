@@ -2,8 +2,12 @@
 require('dotenv').config()
 
 const {
-  CognitoIdentityProviderClient, AdminInitiateAuthCommand, AdminResetUserPasswordCommand,
-  ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminUpdateUserAttributesCommand
+  CognitoIdentityProviderClient,
+  AdminInitiateAuthCommand,
+  AdminResetUserPasswordCommand,
+  ForgotPasswordCommand,
+  AdminSetUserPasswordCommand,
+  AdminUpdateUserAttributesCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
@@ -15,6 +19,10 @@ const responseHelper = require('../../helpers/responseHelpers');
 const aemService = require('../../services/AEMService');
 const dbService = require('./usersDBService');
 const appConfig = require('../../config/appConfig');
+const UserLoginJob = require("./userLoginJob");
+const UserLogoutJob = require("./userLogoutJob");
+const UserSignupJob = require("./userSignupJob");
+const UserSignUpValidation = require("./validations/UserSignupValidation");
 
 /**
  * Function listAll users
@@ -97,6 +105,22 @@ async function adminCreateUser (req){
     let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
     // prepare error params response
     return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
+}
+
+/**
+ * User created and with password FOW/FOW+
+ */
+async function adminCreateNewUser(req) {
+  const message = UserSignUpValidation.execute(req.body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await UserSignupJob.perform(req);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
 }
 
 /**
@@ -292,30 +316,23 @@ async function adminSetUserPassword (){
  *
  * @returns
  */
-async function userLogin (){
-  // hash secret
-  let hashSecret = usersService.genSecretHash("kwanoun.liong@mandai.com", process.env.USER_POOL_CLIENT_ID, process.env.USER_POOL_CLIENT_SECRET);
-
-  var userSigninParams = new AdminInitiateAuthCommand({
-    AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
-    UserPoolId: process.env.USER_POOL_ID,
-    ClientId: process.env.USER_POOL_CLIENT_ID,
-    AuthParameters: {
-      SECRET_HASH: hashSecret,
-      USERNAME: "kwanoun.liong@mandai.com",
-      PASSWORD: "Password123##"
-    }
-  });
-
+async function userLogin(req) {
   try {
-    var response = await client.send(userSigninParams);
+    return await UserLoginJob.perform(req);
   } catch (error) {
-    console.log(error);
-    response = error;
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
   }
-  return response;
 }
 
+async function userLogout(token, lang) {
+  try {
+    return await UserLogoutJob.perform(token, lang);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
+}
 /**
  * TODO: Move to user service
  *
@@ -361,7 +378,9 @@ module.exports = {
   getUser,
   adminSetUserPassword,
   userLogin,
+  userLogout,
   userResetPassword,
-  userForgotPassword
+  userForgotPassword,
+  adminCreateNewUser
 };
 

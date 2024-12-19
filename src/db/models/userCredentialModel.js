@@ -32,6 +32,12 @@ class UserCredential {
     return rows[0];
   }
 
+  static async findByUserEmail(email) {
+    const sql = "SELECT * FROM user_credentials WHERE username = ?";
+    const [rows] = await pool.query(sql, [email]);
+    return rows;
+  }
+
   static async update(id, credentialData) {
     const now = getCurrentUTCTimestamp();
     const sql = `
@@ -45,7 +51,23 @@ class UserCredential {
       JSON.stringify(credentialData.tokens),
       credentialData.last_login,
       now,
-      id
+      id,
+    ];
+    await pool.execute(sql, params);
+  }
+
+  static async updateTokens(id, credentialData) {
+    const now = getCurrentUTCTimestamp();
+    const sql = `
+      UPDATE user_credentials
+      SET tokens = ?, updated_at = ?, last_login = ?
+      WHERE user_id = ?
+    `;
+    const params = [
+      credentialData && credentialData.accessToken ? JSON.stringify(credentialData) : null,
+      now,
+      now,
+      id,
     ];
     await pool.execute(sql, params);
   }

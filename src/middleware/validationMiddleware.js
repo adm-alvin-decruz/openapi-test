@@ -50,8 +50,18 @@ function resStatusFormatter (res, status, msg) {
   );
 }
 
+async function isEmptyAccessToken(req, res, next) {
+  if (!req.headers.authorization) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+  next();
+}
+
 module.exports = {
   isEmptyRequest,
   validateEmail,
-  resStatusFormatter
-}
+  resStatusFormatter,
+  isEmptyAccessToken,
+};
