@@ -3,9 +3,10 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const LogoutErrors = require("../../config/https/errors/logoutErrors");
+const CommonErrors = require("../../config/https/errors/common");
 
 class UserLogoutService {
-  async getUser(token) {
+  async getUser(token, lang) {
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(
         token
@@ -18,15 +19,19 @@ class UserLogoutService {
       };
     } catch (error) {
       loggerService.error(`Error UserLogoutService.getUser. Error: ${error}`);
-      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound()));
+      throw new Error(
+        JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(lang))
+      );
     }
   }
 
-  async execute(token) {
-    const userInfo = await this.getUser(token);
+  async execute(token, lang) {
+    const userInfo = await this.getUser(token, lang);
 
     if (!userInfo.userId || !userInfo.email) {
-      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound()));
+      throw new Error(
+        JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(lang))
+      );
     }
 
     try {
@@ -36,17 +41,7 @@ class UserLogoutService {
         email: userInfo.email,
       };
     } catch (error) {
-      throw new Error(
-        JSON.stringify({
-          membership: {
-            code: 500,
-            mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
-            message: "Internal Server Error",
-          },
-          status: "failed",
-          statusCode: 500,
-        })
-      );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 }

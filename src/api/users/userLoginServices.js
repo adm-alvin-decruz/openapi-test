@@ -4,6 +4,7 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const LoginErrors = require("../../config/https/errors/loginErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
+const CommonErrors = require("../../config/https/errors/common");
 
 class UserLoginService {
   async login(req) {
@@ -16,18 +17,7 @@ class UserLoginService {
       return await cognitoService.cognitoUserLogin(req, hashSecret);
     } catch (error) {
       loggerService.error(`Error UserLoginService.login. Error: ${error}`);
-      //will using class error common later on
-      throw new Error(
-        JSON.stringify({
-          membership: {
-            code: 501,
-            mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
-            message: "Not implemented",
-          },
-          status: "failed",
-          statusCode: 501,
-        })
-      );
+      throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }
   }
 
@@ -45,7 +35,9 @@ class UserLoginService {
     } catch (error) {
       loggerService.error(`Error UserLoginService.getUser. Error: ${error}`);
       throw new Error(
-        JSON.stringify(LoginErrors.ciamLoginUserNotFound(req.body.email))
+        JSON.stringify(
+          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+        )
       );
     }
   }
@@ -55,18 +47,7 @@ class UserLoginService {
       await userCredentialModel.updateTokens(id, tokens);
     } catch (error) {
       loggerService.error(`Error UserLoginService.updateUser. Error: ${error}`);
-      //will using class error common later on
-      throw new Error(
-        JSON.stringify({
-          membership: {
-            code: 500,
-            mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
-            message: "Internal Server Error",
-          },
-          status: "failed",
-          statusCode: 500,
-        })
-      );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
@@ -74,7 +55,9 @@ class UserLoginService {
     const userInfo = await this.getUser(req);
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
       throw new Error(
-        JSON.stringify(LoginErrors.ciamLoginUserNotFound(req.body.email))
+        JSON.stringify(
+          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+        )
       );
     }
     try {

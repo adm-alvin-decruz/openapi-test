@@ -11,6 +11,7 @@ jest.mock("../../../services/validationService", () => ({
 jest.mock("../../../api/users/usersContollers", () => ({
   userLogin: jest.fn(),
   userLogout: jest.fn(),
+  adminCreateNewUser: jest.fn()
 }));
 
 describe("User Routes", () => {
@@ -201,7 +202,7 @@ describe("User Routes", () => {
       });
       const response = await request(app)
         .delete("/users/sessions")
-        .set("Authorization", 'Bearer' + Math.random());
+        .set("Authorization", "Bearer" + Math.random());
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -210,6 +211,47 @@ describe("User Routes", () => {
           mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
           message: "Logout success.",
           email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("POST:/users - Signup API", () => {
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app).post("/users",{
+        headers: {
+          "mwg-app-id": "",
+        },
+      }).send({
+        email: "test@gmail.com"
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: "Unauthorized" });
+    });
+    it("should return 200 and signup successfully", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "adminCreateNewUser").mockResolvedValue({
+        membership: {
+          code: 200,
+          mandaiId: "123",
+          message: "New user signed up successfully.",
+          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app).post("/users").send({ email: "test@gmail.com", group: "fow+" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mandaiId: "123",
+          message: "New user signed up successfully.",
+          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
         },
         status: "success",
         statusCode: 200,

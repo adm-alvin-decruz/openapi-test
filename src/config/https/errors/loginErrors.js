@@ -1,24 +1,26 @@
 /*TODO update multiple language later*/
+const { messageLang } = require("../../../utils/common");
+
 class LoginErrors {
-  static ciamLoginUserNotFound(email) {
+  static ciamLoginUserNotFound(email, lang) {
     return {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-        message: "No record found.",
-        email: email
+        message: messageLang("email_no_record", lang),
+        email: email,
       },
       status: "success",
       statusCode: 200,
     };
   }
-  static ciamLoginEmailInvalid(email) {
+  static ciamLoginEmailInvalid(email, lang) {
     return {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
-        message: "Requested email is invalid or empty.",
-        email: email
+        message: messageLang("membership_email_invalid", lang),
+        email: email,
       },
       status: "success",
       statusCode: 200,

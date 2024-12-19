@@ -325,9 +325,9 @@ async function userLogin(req) {
   }
 }
 
-async function userLogout(token) {
+async function userLogout(token, lang) {
   try {
-    return await UserLogoutJob.perform(token);
+    return await UserLogoutJob.perform(token, lang);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));

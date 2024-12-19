@@ -13,7 +13,11 @@ module.exports = {
     signup_password: "Password does not meet complexity requirements.",
     signup_confirmPassword: "Passwords do not match.",
     signup_success: "New user signed up successfully.",
-    signup_error: "New user signup error."
+    signup_error: "New user signup error.",
+    login_success: "Login success.",
+    email_no_record: "No record found.",
+    membership_email_invalid: "Requested email is invalid or empty.",
+    logout_success: "Logout success."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -27,7 +31,11 @@ module.exports = {
     signup_password: "密码不符合复杂性要求。",
     signup_confirmPassword: "密码不匹配。",
     signup_success: "新用户注册成功。",
-    signup_error: "新用户注册错误。"
+    signup_error: "新用户注册错误。",
+    login_success: "登录成功。",
+    email_no_record: "未找到记录。",
+    membership_email_invalid: "请求的电子邮件无效或为空。",
+    logout_success: "注销成功."
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -42,7 +50,11 @@ module.exports = {
     signup_password: "비밀번호가 일치하지 않습니다.",
     signup_confirmPassword: "비밀번호가 일치하지 않습니다.",
     signup_success: "기록을 찾을 수 없습니다.",
-    signup_error: "새 사용자 등록 오류입니다."
+    signup_error: "새 사용자 등록 오류입니다.",
+    login_success: "로그인 성공.",
+    email_no_record: "기록을 찾을 수 없습니다.",
+    membership_email_invalid: "요청된 이메일이 유효하지 않거나 비어 있습니다.",
+    logout_success: "로그아웃 성공."
   },
   ja: {
     signup_email:
@@ -57,6 +69,10 @@ module.exports = {
     signup_password: "パスワードが複雑性の要件を満たしていません。",
     signup_confirmPassword: "パスワードが一致しません。",
     signup_success: "記録が見つかりませんでした。",
-    signup_error: "新規ユーザー登録エラーです。"
+    signup_error: "新規ユーザー登録エラーです。",
+    login_success: "ログイン成功。",
+    email_no_record: "記録が見つかりません。",
+    membership_email_invalid: "要求されたメールアドレスが無効または空です。",
+    logout_success: "ログアウト成功."
   },
 };

@@ -1,12 +1,13 @@
 const UserLogoutService = require("./userLogoutServices");
+const {messageLang} = require("../../utils/common");
 
 class UserLogoutJob {
-  success(email) {
+  success(email, lang) {
     return {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
-        message: "Logout success.",
+        message: messageLang("logout_success", lang),
         email: email,
       },
       status: "success",
@@ -14,10 +15,10 @@ class UserLogoutJob {
     };
   }
 
-  async perform(token) {
+  async perform(token, lang) {
     try {
-      const rs = await UserLogoutService.execute(token);
-      return this.success(rs.email);
+      const rs = await UserLogoutService.execute(token, lang);
+      return this.success(rs.email, lang);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage))

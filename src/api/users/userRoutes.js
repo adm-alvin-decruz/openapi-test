@@ -248,7 +248,7 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
     req.headers.authorization.length
   );
   try {
-    const data = await userController.userLogout(token);
+    const data = await userController.userLogout(token, req.query.language);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);

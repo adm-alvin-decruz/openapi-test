@@ -125,6 +125,7 @@ class UserSignupService {
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
+
     }
     try {
       const mandaiId = this.generateMandaiId(req);

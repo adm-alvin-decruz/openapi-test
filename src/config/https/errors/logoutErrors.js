@@ -1,11 +1,12 @@
-/*TODO update multiple language later*/
+const { messageLang } = require("../../../utils/common");
+
 class LogoutErrors {
-  static ciamLogoutUserNotFound(email) {
+  static ciamLogoutUserNotFound(lang) {
     return {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-        message: "No record found.",
+        message: messageLang("email_no_record", lang),
       },
       status: "success",
       statusCode: 200,
