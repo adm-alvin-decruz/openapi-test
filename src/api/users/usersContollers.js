@@ -110,7 +110,7 @@ async function adminCreateNewUser(req) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    await UserSignupJob.perform(req);
+    return await UserSignupJob.perform(req);
   } catch(error) {
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
