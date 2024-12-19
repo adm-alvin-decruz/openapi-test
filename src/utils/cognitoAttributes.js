@@ -1,5 +1,5 @@
 function getOrCheck(attr, name, value = "") {
-  let userAttr =
+  const userAttr =
     attr.UserAttributes && attr.UserAttributes.length > 0
       ? attr.UserAttributes
       : [];

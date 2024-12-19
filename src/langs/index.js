@@ -1,0 +1,62 @@
+module.exports = {
+  en: {
+    signup_email:
+      "This email address is already being used for a Mandai Account.",
+    signup_firstName: "The first name is invalid.",
+    signup_lastName: "The last name is invalid.",
+    signup_dob:
+      "The date of birth is invalid. Must between 13 and 99 years old.",
+    signup_group: "The group is invalid.",
+    signup_newsletter: "Must agree and subscribe to the newsletter.",
+    signup_country: "Country is invalid.",
+    signup_phoneNumber: "Phone number is invalid.",
+    signup_password: "Password does not meet complexity requirements.",
+    signup_confirmPassword: "Passwords do not match.",
+    signup_success: "New user signed up successfully.",
+    signup_error: "New user signup error."
+  },
+  zh: {
+    signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
+    signup_firstName: "名字无效。",
+    signup_lastName: "姓氏无效。",
+    signup_dob: "出生日期无效。年龄必须在 13 至 99 岁之间。",
+    signup_group: "该群组无效。",
+    signup_newsletter: "必须同意并订阅新闻通讯。",
+    signup_country: "国家无效。",
+    signup_phoneNumber: "电话号码无效。",
+    signup_password: "密码不符合复杂性要求。",
+    signup_confirmPassword: "密码不匹配。",
+    signup_success: "新用户注册成功。",
+    signup_error: "新用户注册错误。"
+  },
+  kr: {
+    signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
+    signup_firstName: "이름이 유효하지 않습니다.",
+    signup_lastName: "성을 입력한 값이 유효하지 않습니다.",
+    signup_dob:
+      "생년월일이 유효하지 않습니다. 만 13세 이상 99세 이하이어야 합니다.",
+    signup_group: "그룹이 유효하지 않습니다.",
+    signup_newsletter: "뉴스레터에 동의하고 구독해야 합니다.",
+    signup_country: "국가가 유효하지 않습니다.",
+    signup_phoneNumber: "전화번호가 유효하지 않습니다.",
+    signup_password: "비밀번호가 일치하지 않습니다.",
+    signup_confirmPassword: "비밀번호가 일치하지 않습니다.",
+    signup_success: "기록을 찾을 수 없습니다.",
+    signup_error: "새 사용자 등록 오류입니다."
+  },
+  ja: {
+    signup_email:
+      "このメールアドレスはすでにMandaiアカウントで使用されています。",
+    signup_firstName: "名前が無効です。",
+    signup_lastName: "苗字が無効です。",
+    signup_dob: "生年月日が無効です。13歳以上99歳以下である必要があります。",
+    signup_group: "グループが無効です。",
+    signup_newsletter: "ニュースレターに同意して購読する必要があります。",
+    signup_country: "国が無効です。",
+    signup_phoneNumber: "電話番号が無効です。",
+    signup_password: "パスワードが複雑性の要件を満たしていません。",
+    signup_confirmPassword: "パスワードが一致しません。",
+    signup_success: "記録が見つかりませんでした。",
+    signup_error: "新規ユーザー登録エラーです。"
+  },
+};

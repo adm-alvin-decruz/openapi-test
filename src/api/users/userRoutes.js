@@ -16,6 +16,7 @@ const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
+const CommonErrors = require("../../config/https/errors/common");
 
 const pong = {'pong': 'pang'};
 
@@ -35,32 +36,46 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
 
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
 
+  //#region Signup FOW FOW+
+  if(['fow', 'fow+'].includes(req.body.group)) {
+    try {
+      const signupRs = await userController.adminCreateNewUser(req);
+      req.apiTimer.end('Route CIAM Signup User Success', startTimer);
+      return res.status(signupRs.statusCode).send(signupRs);
+    } catch (error) {
+      req.apiTimer.end('Route CIAM Signup User Error', startTimer);
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage)
+    }
+  }
+  //#endregion
+
+  //#region Signup Wildpass
   // validate request params is listed, NOTE: listedParams doesn't have email
   const listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
   if(commonService.isJsonNotEmpty(listedParams) === false){
     return res.status(400).json({ error: 'Bad Requests' });
   }
+  req.body.uuid = uuid;
+  let newUser = await userController.adminCreateUser(req);
 
-  if(valAppID === true){
-    req.body.uuid = uuid;
-    let newUser = await userController.adminCreateUser(req);
-
-    req.apiTimer.end('Route CIAM Signup User', startTimer);
-    if(newUser.error){
-      return res.status(400).json(newUser);
-    }
-
-    if('membership' in newUser && 'code' in newUser.membership){
-      return res.status(newUser.membership.code).json(newUser);
-    }
-    return res.status(200).json(newUser);
+  req.apiTimer.end('Route CIAM Signup User', startTimer);
+  if(newUser.error){
+    return res.status(400).json(newUser);
   }
-  else{
-    req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
-    return res.status(401).send({ error: 'Unauthorized' });
+
+  if('membership' in newUser && 'code' in newUser.membership){
+    return res.status(newUser.membership.code).json(newUser);
   }
+  return res.status(200).json(newUser);
+
+  //#endregion
 })
 
 /**

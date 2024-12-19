@@ -21,6 +21,9 @@ const dbService = require('./usersDBService');
 const appConfig = require('../../config/appConfig');
 const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
+const UserSignupJob = require("./userSignupJob");
+const UserSignUpValidation = require("./validations/UserSignupValidation");
+
 /**
  * Function listAll users
  *
@@ -102,6 +105,22 @@ async function adminCreateUser (req){
     let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
     // prepare error params response
     return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
+}
+
+/**
+ * User created and with password FOW/FOW+
+ */
+async function adminCreateNewUser(req) {
+  const message = UserSignUpValidation.execute(req.body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    await UserSignupJob.perform(req);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
 }
 
 /**
@@ -362,5 +381,6 @@ module.exports = {
   userLogout,
   userResetPassword,
   userForgotPassword,
+  adminCreateNewUser
 };
 
