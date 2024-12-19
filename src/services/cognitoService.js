@@ -67,7 +67,7 @@ class Cognito {
       MessageAction: "SUPPRESS", // disable send verification email temp password
       UserAttributes: [
         {"Name": "email_verified", "Value": "true"},
-        {"Name": "given_name"    , "Value": email},
+        {"Name": "given_name"    , "Value": firstName},
         {"Name": "family_name"   , "Value": lastName},
         {"Name": "preferred_username", "Value": email},
         {"Name": "name"          , "Value": `${firstName} ${lastName}`},
@@ -110,7 +110,7 @@ class Cognito {
       Permanent: true
     });
     try {
-      await client.send(setPasswordParams);
+      return await client.send(setPasswordParams);
     } catch (error) {
       loggerService.error(
           `cognitoService.cognitoAdminSetUserPassword Error: ${error}`
@@ -128,7 +128,7 @@ class Cognito {
       Username: email,
     });
     try {
-      await client.send(setDeleteUserParams);
+      return await client.send(setDeleteUserParams);
     } catch (error) {
       loggerService.error(
           `cognitoService.cognitoAdminDeleteUser Error: ${error}`
