@@ -43,76 +43,23 @@ async function listAll(){
  */
 async function adminGetUser(reqBody) {
   // validate request params
-  if (validationParams(reqBody) === "error") {
-    let paramsError = membershipsService.prepareResponse(
-      reqBody.email,
-      "",
-      "MWG_CIAM_PARAMS_ERR"
-    );
-    if (process.env.APP_LOG_SWITCH) {
+  if(validationParams(reqBody) === 'error'){
+    let paramsError = membershipsService.processResponse('', reqBody, 'MWG_CIAM_PARAMS_ERR');
+    if(process.env.APP_LOG_SWITCH){
       console.log(paramsError);
     }
     return paramsError;
   }
 
   try {
-    //1st: check membership group: Cognito
-    const userMembershipFromCognito =
-      await membershipsService.checkUserMembershipCognito(reqBody);
-
-    //step 2nd is optional: check AEM if userMembershipFromCognito not match & group requested checking is wildpass
-    if (
-      reqBody.group === GROUP.WILD_PASS &&
-      userMembershipFromCognito.statusCode === 200 &&
-      userMembershipFromCognito.membership.mwgCode ===
-        "MWG_CIAM_USERS_MEMBERSHIPS_NULL"
-    ) {
-      const userMembershipAEM = await membershipsService.checkUserMembershipAEM(
-        reqBody
-      );
-      return userMembershipAEM ? userMembershipAEM : userMembershipFromCognito;
-    }
-    return userMembershipFromCognito;
+    return await membershipsService.checkUserMembership(reqBody);
   } catch (error) {
-    return error;
+    if (error && error.isFromAEM) {
+      return error;
+    }
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
   }
-  // const command = new AdminGetUserCommand({
-  //   UserPoolId: process.env.USER_POOL_ID,
-  //   Username: reqBody.email,
-  // });
-  //
-  // let response = "";
-  // try {
-  //   response = await client.send(command);
-  //   response = await membershipsService.processResponse(
-  //     response,
-  //     reqBody,
-  //     "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS"
-  //   );
-  // } catch (error) {
-  //   if (process.env.APP_LOG_SWITCH === "true") {
-  //     console.error(error);
-  //   }
-  //   if (error.name === "UserNotFoundException") {
-  //     // check to AEM checkemail for group = wildpass
-  //     response = await checkEmailInAem(reqBody);
-  //   } else {
-  //     response = await membershipsService.processResponse(
-  //       "",
-  //       reqBody,
-  //       "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR"
-  //     );
-  //   }
-  // }
-  //
-  // if (!response["source"]) {
-  //   response["source"] = "ciam";
-  // }
-  //
-  // if (process.env.APP_LOG_SWITCH === "true") {
-  //   console.log(response);
-  // }
-  // return response;
 }
 
 /**

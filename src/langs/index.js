@@ -17,7 +17,8 @@ module.exports = {
     login_success: "Login success.",
     email_no_record: "No record found.",
     membership_email_invalid: "Requested email is invalid or empty.",
-    logout_success: "Logout success."
+    logout_success: "Logout success.",
+    membership_get_success: "Get membership success."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -35,7 +36,8 @@ module.exports = {
     login_success: "登录成功。",
     email_no_record: "未找到记录。",
     membership_email_invalid: "请求的电子邮件无效或为空。",
-    logout_success: "注销成功."
+    logout_success: "注销成功.",
+    membership_get_success: "获取会员资格成功."
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -54,7 +56,8 @@ module.exports = {
     login_success: "로그인 성공.",
     email_no_record: "기록을 찾을 수 없습니다.",
     membership_email_invalid: "요청된 이메일이 유효하지 않거나 비어 있습니다.",
-    logout_success: "로그아웃 성공."
+    logout_success: "로그아웃 성공.",
+    membership_get_success: "멤버십 획득 성공."
   },
   ja: {
     signup_email:
@@ -73,6 +76,7 @@ module.exports = {
     login_success: "ログイン成功。",
     email_no_record: "記録が見つかりません。",
     membership_email_invalid: "要求されたメールアドレスが無効または空です。",
-    logout_success: "ログアウト成功."
+    logout_success: "ログアウト成功.",
+    membership_get_success: "メンバーシップ取得成功."
   },
 };

@@ -13,6 +13,7 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const userDetailModel = require("../../db/models/userDetailsModel");
 const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/common");
+const { GROUP } = require("../../utils/constants");
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -41,7 +42,7 @@ class UserSignupService {
     const source = getSource(req.headers["mwg-app-id"]);
     const groupKey = getGroup(req.body.group);
 
-    const length = req.body.group === "fow+" ? 10 : 11;
+    const length = req.body.group === GROUP.FOW_PLUS ? 10 : 11;
     const hash = crypto
       .createHash("sha256")
       .update(
@@ -125,7 +126,6 @@ class UserSignupService {
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
-
     }
     try {
       const mandaiId = this.generateMandaiId(req);

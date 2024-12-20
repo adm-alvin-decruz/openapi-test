@@ -8,23 +8,11 @@ require('dotenv').config();
 const responseConfig = require('../../config/membershipConfig');
 const cognitoService = require('../../services/cognitoService');
 const AEMService = require("../../services/AEMService");
-const { LANGUAGE_CODE } = require("../../utils/constants");
+const { GROUP} = require("../../utils/constants");
+const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const { getOrCheck } = require("../../utils/cognitoAttributes");
+const { messageLang } = require("../../utils/common");
 
-function messageMultipleLanguage(code) {
-  switch (code) {
-    case LANGUAGE_CODE.JAPAN: {
-      return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_JP;
-    }
-    case LANGUAGE_CODE.KOREAN: {
-      return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_KR;
-    }
-    case LANGUAGE_CODE.CHINA: {
-      return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_ZH;
-    }
-    default:
-      return responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG_EN;
-  }
-}
 /**
  * Function process response
  *
@@ -34,12 +22,9 @@ function messageMultipleLanguage(code) {
  * @param {int} statusCode status code 200 | 400 | 501
  * @returns
  */
-async function processResponse(attr = "", reqBody, mwgCode) {
+async function processResponse(attr='', reqBody, mwgCode){
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  const message = messageMultipleLanguage(
-    !!reqBody.language ? reqBody.language : ""
-  );
-  let resConfigVar = JSON.parse(message);
+  let resConfigVar = JSON.parse(responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG);
   let resConfig = resConfigVar[mwgCode];
 
   // step2: process membership group
@@ -61,50 +46,20 @@ async function processResponse(attr = "", reqBody, mwgCode) {
 
   // step3: craft response JSON
   let resJson = {
-    membership: {
-      group: group,
-      code: resConfig.code,
-      mwgCode: resConfig.mwgCode,
-      message: resConfig.message,
-      email: reqBody.email,
+    "membership": {
+      "group": group,
+      "code": resConfig.code,
+      "mwgCode": resConfig.mwgCode,
+      "message": resConfig.message,
+      "email": reqBody.email,
     },
-    status: resConfig.status,
-    statusCode: resConfig.code,
-  };
+    "status": resConfig.status,
+    "statusCode": resConfig.code
+    }
 
   return resJson;
 }
 
-async function prepareResponse(reqBody, group, mwgCode) {
-  const message = messageMultipleLanguage(
-    !!reqBody.language ? reqBody.language : ""
-  );
-  const resConfigVar = JSON.parse(message);
-  const resConfig = resConfigVar[mwgCode];
-
-  return group
-    ? {
-        membership: {
-          group: JSON.parse(group),
-          code: resConfig.code,
-          mwgCode: resConfig.mwgCode,
-          message: resConfig.message,
-          email: reqBody.email,
-        },
-        status: resConfig.status,
-        statusCode: resConfig.code,
-      }
-    : {
-        membership: {
-          code: resConfig.code,
-          mwgCode: resConfig.mwgCode,
-          message: resConfig.message,
-          email: reqBody.email,
-        },
-        status: resConfig.status,
-        statusCode: resConfig.code,
-      };
-}
 /**
  * Function process group
  *
@@ -163,39 +118,39 @@ function isJSONObject(obj) {
 }
 
 //Check user membership group in Cognito [fow, fow+, wildpass]
-async function checkUserMembershipCognito(reqBody) {
-  //get user from Cognito
-  const userCognito = await cognitoService.cognitoAdminGetUser({
-    body: {
-      email: reqBody.email,
-    },
-  });
-
-  //if user not found -> return record not found
-  if (["failed", "not found"].includes(userCognito.status)) {
-    return prepareResponse(reqBody, "", "MWG_CIAM_USERS_MEMBERSHIPS_NULL");
+async function checkUserMembership(reqBody) {
+  //1st: check membership group: Cognito
+  try {
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    const membership = getOrCheck(userCognito, "custom:membership");
+    const isMatchedMemberGroup = !!membership && !!JSON.parse(membership).filter(mem => mem.name === reqBody.group).length > 0;
+    return {
+      membership: {
+        group: { [`${reqBody.group}`]: isMatchedMemberGroup },
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
+        message: messageLang("membership_get_success", reqBody.language),
+        email: reqBody.email,
+      },
+      status: "success",
+      statusCode: 200,
+    }
+  } catch (error) {
+    //step 2nd is optional: check AEM if userMembershipFromCognito not match & group requested checking is wildpass
+    const errorMessage = JSON.parse(error.message);
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException" && reqBody.group === GROUP.WILD_PASS) {
+      const userMembershipAEM = await checkUserMembershipAEM(
+          reqBody
+      );
+      return {
+        isFromAEM: true,
+        userMembershipAEM
+      }
+    }
+    throw new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)))
   }
-
-  //get user membership cognito group
-  const cognitoUserGroup = loopAttr(userCognito, "custom:membership", "");
-  if (!cognitoUserGroup.Value) {
-    return prepareResponse(
-      reqBody,
-      `{"${reqBody.group}": false}`,
-      "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS"
-    );
-  }
-
-  //if group exists at user cognito -> true | false
-  const isMatchedMemberGroup = JSON.stringify(cognitoUserGroup.Value).includes(
-    reqBody.group
-  );
-
-  return prepareResponse(
-    reqBody,
-    `{"${reqBody.group}": ${isMatchedMemberGroup}}`,
-    "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS"
-  );
 }
 
 //Check user membership group in AEM [wildpass]
@@ -237,7 +192,6 @@ async function checkUserMembershipAEM(reqBody) {
 module.exports = {
   processMembership,
   processResponse,
-  checkUserMembershipCognito,
-  prepareResponse,
+  checkUserMembership,
   checkUserMembershipAEM,
 };

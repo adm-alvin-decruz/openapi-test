@@ -61,7 +61,9 @@ describe("Membership Routes", () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
       jest
         .spyOn(membershipsController, "adminGetUser")
-        .mockRejectedValue(new Error());
+        .mockRejectedValue(new Error(JSON.stringify({
+          statusCode: 503
+        })));
       const response = await request(app)
         .post("/users/memberships")
         .send({
@@ -70,7 +72,7 @@ describe("Membership Routes", () => {
             group: "wildpass",
           },
         });
-      expect(response.body).toEqual({ message: "Internal server error" });
+      expect(response.body).toEqual({ statusCode: 503 });
     });
   });
 });

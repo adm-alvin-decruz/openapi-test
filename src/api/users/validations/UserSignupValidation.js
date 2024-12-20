@@ -1,5 +1,6 @@
 const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { validateDOB } = require("../../../services/validationService");
+const { GROUPS_SUPPORTS, GROUP } = require("../../../utils/constants");
 
 class UserSignupValidation {
   constructor() {
@@ -66,14 +67,13 @@ class UserSignupValidation {
   }
 
   static execute(data) {
-    //replace ['wildpass', 'fow', 'fow+'] - using constant after membership api merge
-    if (!data.group || !["wildpass", "fow", "fow+"].includes(data.group)) {
+    if (!data.group || !GROUPS_SUPPORTS.includes(data.group)) {
       return (this.error = SignupErrors.ciamWrongParams(
         "group",
         data.language
       ));
     }
-    if (data.group === "wildpass") {
+    if (data.group === GROUP.WILD_PASS) {
       return this.validateRequestWildPass(data);
     }
 

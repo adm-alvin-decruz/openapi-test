@@ -7,6 +7,7 @@ const upload = multer({ limits: {fileSize: 1024 * 1024 * 1} });
 const membershipsController = require('./membershipsControllers');
 const commonService = require('../../services/commonService')
 const validationService = require('../../services/validationService')
+const CommonErrors = require("../../config/https/errors/common");
 
 const pong = {'pong': 'pang'};
 
@@ -38,9 +39,14 @@ router.post("/users/memberships", async (req, res) => {
     const checkMemberResult = await membershipsController.adminGetUser(reqBody);
     return res.status(200).send(checkMemberResult);
   } catch (error) {
-    return res.status(500).send({
-      message: "Internal server error",
-    });
+    if (error.isFromAEM) {
+      return res.status(200).send(error);
+    }
+    const errorMessage = JSON.parse(error.message);
+    if (errorMessage.statusCode !== 500) {
+      return res.status(errorMessage.statusCode).send(errorMessage)
+    }
+    return res.status(500).send(CommonErrors.InternalServerError());
   }
 });
 
