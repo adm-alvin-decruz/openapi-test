@@ -189,7 +189,7 @@ class Cognito {
       Permanent: true,
     });
     try {
-      await client.send(setPasswordParams);
+      return await client.send(setPasswordParams);
     } catch (error) {
       loggerService.error(
         `cognitoService.cognitoAdminSetUserPassword Error: ${error}`
@@ -209,7 +209,7 @@ class Cognito {
       Username: email,
     });
     try {
-      await client.send(setDeleteUserParams);
+      return await client.send(setDeleteUserParams);
     } catch (error) {
       loggerService.error(
         `cognitoService.cognitoAdminDeleteUser Error: ${error}`
