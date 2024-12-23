@@ -2,10 +2,11 @@ const membershipService = require("../../../api/memberships/membershipsServices"
 const membershipsController = require("../../../api/memberships/membershipsControllers");
 
 jest.mock("../../../api/memberships/membershipsServices", () => ({
-  checkUserMembershipCognito: jest.fn(),
-  prepareResponse: jest.fn(),
+  checkUserMembership: jest.fn(),
+  processResponse: jest.fn(),
   checkUserMembershipAEM: jest.fn(),
 }));
+// jest.mock("../../../api/memberships/membershipsControllers")
 
 describe("MembershipController", () => {
   beforeEach(() => {
@@ -17,7 +18,7 @@ describe("MembershipController", () => {
   });
   describe("adminGetUser", () => {
     it("should throw error MWG_CIAM_PARAMS_ERR when request over parameters", async () => {
-      jest.spyOn(membershipService, "prepareResponse").mockReturnValue({
+      jest.spyOn(membershipService, "processResponse").mockReturnValue({
         membership: {
           code: 400,
           mwgCode: "MWG_CIAM_PARAMS_ERR",
@@ -41,10 +42,10 @@ describe("MembershipController", () => {
         status: "failed",
         statusCode: 400,
       });
-      expect(membershipService.prepareResponse).toBeCalledTimes(1);
+      expect(membershipService.processResponse).toBeCalledTimes(1);
     });
     it("should throw error MWG_CIAM_PARAMS_ERR when email not exists", async () => {
-      jest.spyOn(membershipService, "prepareResponse").mockReturnValue({
+      jest.spyOn(membershipService, "processResponse").mockReturnValue({
         membership: {
           code: 400,
           mwgCode: "MWG_CIAM_PARAMS_ERR",
@@ -67,10 +68,10 @@ describe("MembershipController", () => {
         status: "failed",
         statusCode: 400,
       });
-      expect(membershipService.prepareResponse).toBeCalledTimes(1);
+      expect(membershipService.processResponse).toBeCalledTimes(1);
     });
     it("should throw error MWG_CIAM_PARAMS_ERR when group not exists", async () => {
-      jest.spyOn(membershipService, "prepareResponse").mockReturnValue({
+      jest.spyOn(membershipService, "processResponse").mockReturnValue({
         membership: {
           code: 400,
           mwgCode: "MWG_CIAM_PARAMS_ERR",
@@ -93,10 +94,10 @@ describe("MembershipController", () => {
         status: "failed",
         statusCode: 400,
       });
-      expect(membershipService.prepareResponse).toBeCalledTimes(1);
+      expect(membershipService.processResponse).toBeCalledTimes(1);
     });
     it("should throw error MWG_CIAM_PARAMS_ERR when group not allow", async () => {
-      jest.spyOn(membershipService, "prepareResponse").mockReturnValue({
+      jest.spyOn(membershipService, "processResponse").mockReturnValue({
         membership: {
           code: 400,
           mwgCode: "MWG_CIAM_PARAMS_ERR",
@@ -119,39 +120,48 @@ describe("MembershipController", () => {
         status: "failed",
         statusCode: 400,
       });
-      expect(membershipService.prepareResponse).toBeCalledTimes(1);
+      expect(membershipService.processResponse).toBeCalledTimes(1);
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIPS_NULL when checkUserMembershipCognito not found record", async () => {
+    it("should return MWG_CIAM_USERS_MEMBERSHIPS_NULL when checkUserMembership not found record", async () => {
       jest
-        .spyOn(membershipService, "checkUserMembershipCognito")
-        .mockResolvedValue({
-          membership: {
-            code: 200,
-            mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-            message: "No record found.",
-            email: "test-email@gmail.com",
-          },
-          status: "failed",
-          statusCode: 200,
-        });
-      const rs = await membershipsController.adminGetUser({
-        email: "test-email@gmail.com",
-        group: "wildpass",
-      });
-      expect(rs).toEqual({
-        membership: {
-          code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-          message: "No record found.",
+        .spyOn(membershipService, "checkUserMembership")
+        .mockRejectedValue(
+          new Error(
+            JSON.stringify({
+              membership: {
+                code: 200,
+                mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+                message: "No record found.",
+                email: "test-email@gmail.com",
+              },
+              status: "failed",
+              statusCode: 200,
+            })
+          )
+        );
+      await expect(
+        membershipsController.adminGetUser({
           email: "test-email@gmail.com",
-        },
-        status: "failed",
-        statusCode: 200,
-      });
+          group: "wildpass",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test-email@gmail.com",
+            },
+            status: "failed",
+            statusCode: 200,
+          })
+        )
+      );
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when checkUserMembershipCognito can check group belong wildpass", async () => {
+    it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when checkUserMembership can check group belong wildpass", async () => {
       jest
-        .spyOn(membershipService, "checkUserMembershipCognito")
+        .spyOn(membershipService, "checkUserMembership")
         .mockResolvedValue({
           membership: {
             group: {
@@ -183,9 +193,9 @@ describe("MembershipController", () => {
         statusCode: 200,
       });
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when checkUserMembershipCognito can check group belong fow/fow+", async () => {
+    it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS when checkUserMembership can check group belong fow/fow+", async () => {
       jest
-        .spyOn(membershipService, "checkUserMembershipCognito")
+        .spyOn(membershipService, "checkUserMembership")
         .mockResolvedValue({
           membership: {
             group: {
@@ -217,56 +227,9 @@ describe("MembershipController", () => {
         statusCode: 200,
       });
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS calling checkAEM when checkUserMembershipCognito have no record and request checking group is wildpass", async () => {
+    it("should return MWG_CIAM_USERS_MEMBERSHIPS_NULL calling checkAEM when checkUserMembership have no record and request checking group is wildpass", async () => {
       jest
-        .spyOn(membershipService, "checkUserMembershipCognito")
-        .mockResolvedValue({
-          membership: {
-            code: 200,
-            mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-            message: "No record found.",
-            email: "test-email@gmail.com",
-          },
-          status: "failed",
-          statusCode: 200,
-        });
-
-      jest
-        .spyOn(membershipService, "checkUserMembershipAEM")
-        .mockResolvedValue({
-          membership: {
-            group: {
-              wildpass: true,
-            },
-            code: 200,
-            mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS",
-            message: "Get membership success.",
-            email: "test-email@gmail.com",
-          },
-          status: "success",
-          statusCode: 200,
-        });
-      const rs = await membershipsController.adminGetUser({
-        email: "test-email@gmail.com",
-        group: "wildpass",
-      });
-      expect(rs).toEqual({
-        membership: {
-          group: {
-            wildpass: true,
-          },
-          code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS",
-          message: "Get membership success.",
-          email: "test-email@gmail.com",
-        },
-        status: "success",
-        statusCode: 200,
-      });
-    });
-    it("should return MWG_CIAM_USERS_MEMBERSHIPS_NULL calling checkAEM when checkUserMembershipCognito have no record and request checking group is wildpass", async () => {
-      jest
-        .spyOn(membershipService, "checkUserMembershipCognito")
+        .spyOn(membershipService, "checkUserMembership")
         .mockResolvedValue({
           membership: {
             code: 200,
