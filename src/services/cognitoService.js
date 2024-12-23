@@ -143,14 +143,14 @@ class Cognito {
       DesiredDeliveryMediums: ["EMAIL"],
       MessageAction: "SUPPRESS", // disable send verification email temp password
       UserAttributes: [
-        { Name: "email_verified", Value: "true" },
-        { Name: "given_name", Value: email },
-        { Name: "family_name", Value: lastName },
-        { Name: "preferred_username", Value: email },
-        { Name: "name", Value: `${firstName} ${lastName}` },
-        { Name: "email", Value: email },
-        { Name: "birthdate", Value: birthdate },
-        { Name: "address", Value: address ? address : "" },
+        {Name: "email_verified", "Value": "true"},
+        {Name: "given_name"    , "Value": firstName},
+        {Name: "family_name"   , "Value": lastName},
+        {Name: "preferred_username", "Value": email},
+        {Name: "name"          , "Value": `${firstName} ${lastName}`},
+        {Name: "email"         , "Value": email},
+        {Name: "birthdate"     , "Value": birthdate},
+        {Name: "address"       , "Value": address ? address : ''},
         // custom fields
         { Name: "custom:membership", Value: JSON.stringify(groups) },
         { Name: "custom:mandai_id", Value: mandaiId },

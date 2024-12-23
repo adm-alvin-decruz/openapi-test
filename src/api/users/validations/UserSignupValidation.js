@@ -51,6 +51,17 @@ class UserSignupValidation {
       ));
     }
 
+    if (
+      req.newsletter &&
+      (!req.newsletter.subscribe ||
+        !GROUPS_SUPPORTS.includes(req.newsletter.name))
+    ) {
+      return (this.error = SignupErrors.ciamWrongParams(
+        "newsletter",
+        req.language
+      ));
+    }
+
     const regexPasswordValid = new RegExp(
       '^(?=.*\\d)(?=.*[!@#$%^&*(),.?":{}|<>])(?=.*[A-Z])(?=.*[a-z]).{8,}$',
       "g"
