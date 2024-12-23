@@ -11,12 +11,13 @@ const {
   isEmptyRequest,
   validateEmail,
   isEmptyAccessToken,
+  isEmptyAccessTokenWithFOW
 } = require("../../middleware/validationMiddleware");
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
-const CommonErrors = require("../../config/https/errors/common");
+const { GROUP } = require("../../utils/constants");
 
 const pong = {'pong': 'pang'};
 
@@ -42,7 +43,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   }
 
   //#region Signup FOW FOW+
-  if(['fow', 'fow+'].includes(req.body.group)) {
+  if([GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
     try {
       const signupRs = await userController.adminCreateNewUser(req);
       req.apiTimer.end('Route CIAM Signup User Success', startTimer);
@@ -83,14 +84,40 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  *
  * Handling most HTTP validation here
  */
-router.put('/users', isEmptyRequest, validateEmail, async (req, res) => {
+router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenWithFOW, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   req.body.uuid = uuid;
   const startTimer = process.hrtime();
 
   // validate req app-id
-  var valAppID = validationService.validateAppID(req.headers);
+  const valAppID = validationService.validateAppID(req.headers);
+  if(!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Update User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send({ error: 'Unauthorized' });
+  }
+
+  //#region Update Account FOW FOW+
+  if([GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
+    try {
+      const token = req.headers.authorization.substring(
+          7,
+          req.headers.authorization.length
+      );
+      const updateRs = await userController.adminUpdateNewUser(req, token);
+      req.apiTimer.end('Route CIAM Update User Success', startTimer);
+      return res.status(updateRs.statusCode).send(updateRs);
+    } catch (error) {
+      console.log('error', error)
+      req.apiTimer.end('Route CIAM Update User Error', startTimer);
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage)
+    }
+  }
+  //#endregion
 
   // clean the request data for possible white space
   req['body'] = commonService.cleanData(req.body);
@@ -221,6 +248,7 @@ router.post(
       const data = await userController.userLogin(req);
       return res.status(data.statusCode).json(data);
     } catch (error) {
+      console.log('error', error)
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
@@ -255,47 +283,5 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
     return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
-
-// router.post('/users/reset-password', async (req, res) => {
-//     // let memberResetPassword = await memberships.userResetPassword();
-//     return resjson({memberResetPassword});
-// })
-
-// router.post('/users/forgot-password', async (req, res) => {
-//     // let memberResetPassword = await memberships.userResetPassword();
-//     return resjson({memberResetPassword});
-// })
-
-// router.get('/users/:id', (req, res) => {
-//     const user = users.find(user => user.id === parseInt(req.params.id));
-//     if (!user) res.status(404).json({ message: 'User not found' });
-//     return resjson(user);
-// });
-
-// router.post('/users', async (req, res) => {
-//     console.log(req.body.toJSON());
-//     const user = {
-//         id: users.length + 1,
-//         name: req.body.name,
-//         company: req.body.company,
-//     };
-//     users.push(user);
-//     return resjson(user);
-// });
-
-// router.delete('/users/:id', async (req, res) => {
-//     const userIndex = users.findIndex(user => user.id === parseInt(req.params.id));
-//     if (userIndex === -1) res.status(404).json({ message: 'User not found' });
-//     users.splice(userIndex, 1);
-//     return resjson({ message: 'User deleted' });
-// });
-
-// router.put('/users/:id', async (req, res) => {
-//     let user = users.find(user => user.id === parseInt(req.params.id));
-//     if (!user) res.status(404).json({ message: 'User not found' });
-//     user.name = req.body.name;
-//     user.company = req.body.company;
-//     return resjson(user);
-// });
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const resHelper = require('../helpers/responseHelpers');
 const EmailDomainService = require('../services/emailDomainsService');
 const loggerService = require('../logs/logger');
+const { GROUP } = require("../utils/constants");
 
 /**
  * Validate empty request
@@ -59,9 +60,19 @@ async function isEmptyAccessToken(req, res, next) {
   next();
 }
 
+async function isEmptyAccessTokenWithFOW(req, res, next) {
+    if (!req.headers.authorization && req.body.group && [GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
+        return res.status(401).json({
+            message: "Unauthorized",
+        });
+    }
+    next();
+}
+
 module.exports = {
   isEmptyRequest,
   validateEmail,
   resStatusFormatter,
   isEmptyAccessToken,
+  isEmptyAccessTokenWithFOW
 };

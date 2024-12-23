@@ -37,6 +37,10 @@ const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 const switchService = require('../../services/switchService');
+const CommonErrors = require("../../config/https/errors/common");
+const {getOrCheck} = require("../../utils/cognitoAttributes");
+const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
+const { COGNITO_ATTRIBUTES } = require("../../utils/constants");
 
 /**
  * Function User signup service
@@ -267,6 +271,81 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
     req.apiTimer.end('adminUpdateUser error'); // log end time
     return responseErrorToClient;
+  }
+}
+
+/**
+ * Update user FOW/FOW+ CIAM info
+ * NOTE: new cardface will be confirm
+ */
+async function adminUpdateNewUser(body, token) {
+  try {
+    //get user from cognito
+    const userInfo = await cognitoService.cognitoAdminGetUserByAccessToken(token);
+    const email = getOrCheck(userInfo, 'email');
+    let userName = getOrCheck(userInfo, 'name');
+    const userFirstName = getOrCheck(userInfo, 'given_name');
+    const userLastName = getOrCheck(userInfo, 'family_name');
+
+    const cognitoParams = Object.keys(body).map((key) => {
+      //need to confirm with Kay about two properties here
+      if (key === 'uuid' || key === 'country') {
+        return;
+      }
+      if (key === 'group') {
+        return {
+          Name: "custom:membership",
+          Value: JSON.stringify([
+            {
+              name: body.group,
+              visualID: "",
+              expiry: ""
+            }
+          ])
+        }
+      }
+      if (key === 'newsletter') {
+        return {
+          Name: "custom:newsletter",
+          Value: JSON.stringify(body.newsletter)
+        }
+      }
+      return {
+        Name: COGNITO_ATTRIBUTES[key],
+        Value: body[key]
+      }
+    }).filter(ele => !!ele);
+    if (body.firstName) {
+      userName = userName.replace(userFirstName, body.firstName);
+    }
+    if (body.lastName) {
+      userName = userName.replace(userLastName, body.lastName);
+    }
+
+    await cognitoService.cognitoAdminUpdateNewUser([
+        ...cognitoParams,
+      {
+        Name: 'name',
+        Value: userName
+      }
+    ], email);
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
+        message: "User info updated successfully.",
+      },
+      status: "success",
+      statusCode: 200,
+    }
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists()))
+    }
+    throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
   }
 }
 
@@ -643,5 +722,6 @@ module.exports = {
   getUserCustomisable,
   processError,
   genSecretHash,
-  processErrors
+  processErrors,
+  adminUpdateNewUser
 };

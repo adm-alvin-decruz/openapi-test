@@ -144,7 +144,7 @@ class Cognito {
       MessageAction: "SUPPRESS", // disable send verification email temp password
       UserAttributes: [
         { Name: "email_verified", Value: "true" },
-        { Name: "given_name", Value: email },
+        { Name: "given_name", Value: firstName },
         { Name: "family_name", Value: lastName },
         { Name: "preferred_username", Value: email },
         { Name: "name", Value: `${firstName} ${lastName}` },
@@ -219,6 +219,25 @@ class Cognito {
           status: "failed",
           data: error,
         })
+      );
+    }
+  }
+
+  static async cognitoAdminUpdateNewUser(params, email) {
+    const userUpdateParams = new AdminUpdateUserAttributesCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+      UserAttributes: params,
+    });
+    try {
+      return await client.send(userUpdateParams);
+    } catch (error) {
+      loggerService.error(`cognitoService.cognitoAdminUpdateNewUser Error: ${error}`);
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
       );
     }
   }

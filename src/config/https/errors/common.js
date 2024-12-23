@@ -1,3 +1,5 @@
+const {messageLang} = require("../../../utils/common");
+
 class CommonErrors {
   static NotImplemented() {
     return {
@@ -20,6 +22,20 @@ class CommonErrors {
       status: "failed",
       statusCode: 500,
     };
+  }
+  static BadRequest(key, message, lang) {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: "MWG_CIAM_PARAMS_ERR",
+        message: "Wrong parameters",
+        error: {
+          [`${key}`]: messageLang(message, lang),
+        },
+      },
+      status: "failed",
+      statusCode: 400,
+    }
   }
 }
 

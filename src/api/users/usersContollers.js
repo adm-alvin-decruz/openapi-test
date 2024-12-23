@@ -3,11 +3,9 @@ require('dotenv').config()
 
 const {
   CognitoIdentityProviderClient,
-  AdminInitiateAuthCommand,
   AdminResetUserPasswordCommand,
   ForgotPasswordCommand,
   AdminSetUserPasswordCommand,
-  AdminUpdateUserAttributesCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
@@ -23,6 +21,7 @@ const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
+const UserUpdateValidation = require("./validations/UserUpdateValidation")
 
 /**
  * Function listAll users
@@ -192,6 +191,18 @@ async function adminUpdateUser (req, listedParams){
   }
 }
 
+async function adminUpdateNewUser(req, token) {
+  const message = UserUpdateValidation.execute(req.body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await usersService.adminUpdateNewUser(req.body, token);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
+}
 /**
  * Resend membership
  *
@@ -381,6 +392,7 @@ module.exports = {
   userLogout,
   userResetPassword,
   userForgotPassword,
-  adminCreateNewUser
+  adminCreateNewUser,
+  adminUpdateNewUser
 };
 

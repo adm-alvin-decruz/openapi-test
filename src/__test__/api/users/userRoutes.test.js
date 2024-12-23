@@ -11,7 +11,8 @@ jest.mock("../../../services/validationService", () => ({
 jest.mock("../../../api/users/usersContollers", () => ({
   userLogin: jest.fn(),
   userLogout: jest.fn(),
-  adminCreateNewUser: jest.fn()
+  adminCreateNewUser: jest.fn(),
+  adminUpdateNewUser: jest.fn()
 }));
 
 describe("User Routes", () => {
@@ -252,6 +253,67 @@ describe("User Routes", () => {
           mandaiId: "123",
           message: "New user signed up successfully.",
           mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("PUT:/users - Update Account API", () => {
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app).put("/users",{
+        headers: {
+          "mwg-app-id": "",
+        },
+      }).send({
+        email: "test@gmail.com"
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: "Unauthorized" });
+    });
+    it("should return 400 if group is wildpass, still empty access token", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      const response = await request(app).put("/users", {
+        headers: {
+          authorization: "",
+          "mwg-app-id": "",
+        },
+      }).send({ email: 'test@gmail.com', firstName: undefined});
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: "Bad Requests" });
+    });
+    it("should return 401 if group is FOW but empty access token", async () => {
+      const response = await request(app).put("/users", {
+        headers: {
+          authorization: "",
+        },
+      }).send({ email: 'test@gmail.com', group: 'fow'});
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return 200 and update successfully", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "adminUpdateNewUser").mockResolvedValue({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
+          message: "User info updated successfully.",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app).put("/users").set("Authorization", "Bearer" + Math.random()).send({ email: "test@gmail.com", group: "fow+" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
+          message: "User info updated successfully.",
         },
         status: "success",
         statusCode: 200,
