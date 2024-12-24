@@ -22,7 +22,7 @@ const COGNITO_ATTRIBUTES = {
   source: "custom:source",
   phoneNumber: "phone_number",
   dob: "birthdate",
-  gender: "gender"
+  gender: "gender",
 };
 
 module.exports = {

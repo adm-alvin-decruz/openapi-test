@@ -1,6 +1,8 @@
 const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { validateDOB } = require("../../../services/validationService");
 const { GROUPS_SUPPORTS, GROUP } = require("../../../utils/constants");
+const { passwordPattern } = require("../../../utils/common");
+const CommonErrors = require("../../../config/https/errors/common");
 
 class UserSignupValidation {
   constructor() {
@@ -51,16 +53,25 @@ class UserSignupValidation {
       ));
     }
 
-    const regexPasswordValid = new RegExp(
-      '^(?=.*\\d)(?=.*[!@#$%^&*(),.?":{}|<>])(?=.*[A-Z])(?=.*[a-z]).{8,}$',
-      "g"
-    );
-    if (!regexPasswordValid.test(req.password.toString())) {
-      return (this.error = SignupErrors.ciamPasswordErr(req.language));
+    if (
+      req.newsletter &&
+      (!req.newsletter.subscribe ||
+        !GROUPS_SUPPORTS.includes(req.newsletter.name))
+    ) {
+      return (this.error = CommonErrors.BadRequest(
+        "newsletter",
+        "newsletter_invalid",
+        req.language
+      ));
     }
 
-    if (req.password !== req.confirmPassword) {
-      return (this.error = SignupErrors.ciamPasswordNotMatch(req.language));
+    if (req.password) {
+      if (!passwordPattern(req.password)) {
+        return (this.error = CommonErrors.PasswordErr(req.language));
+      }
+      if (req.password !== req.confirmPassword) {
+        return (this.error = CommonErrors.PasswordNotMatch(req.language));
+      }
     }
 
     return (this.error = null);

@@ -7,7 +7,8 @@ const {
   GetUserCommand,
   AdminDeleteUserCommand,
   AdminCreateUserCommand,
-  AdminSetUserPasswordCommand
+  AdminSetUserPasswordCommand,
+  ChangePasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -233,6 +234,25 @@ class Cognito {
       return await client.send(userUpdateParams);
     } catch (error) {
       loggerService.error(`cognitoService.cognitoAdminUpdateNewUser Error: ${error}`);
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
+      );
+    }
+  }
+
+  static async cognitoUserChangePassword(accessToken, password, oldPassword) {
+    const userChangePassword = new ChangePasswordCommand({
+      AccessToken: accessToken,
+      ProposedPassword: password,
+      PreviousPassword: oldPassword
+    });
+    try {
+      return await client.send(userChangePassword);
+    } catch (error) {
+      loggerService.error(`cognitoService.cognitoUserChangePassword Error: ${error}`);
       throw new Error(
           JSON.stringify({
             status: "failed",

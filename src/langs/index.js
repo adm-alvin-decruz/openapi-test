@@ -20,16 +20,22 @@ module.exports = {
     logout_success: "Logout success.",
     membership_get_success: "Get membership success.",
     email_being_used:
-        "This email address is already being used for a Mandai Account.",
+      "This email address is already being used for a Mandai Account.",
     firstName_invalid: "The first name is invalid.",
     lastName_invalid: "The last name is invalid.",
     dob_invalid:
-        "The date of birth is invalid. Must between 13 and 99 years old.",
+      "The date of birth is invalid. Must between 13 and 99 years old.",
     group_invalid: "The group is invalid.",
     newsletter_invalid: "Must agree and subscribe to the newsletter.",
     country_invalid: "Country is invalid.",
     phoneNumber_invalid: "Phone number is invalid.",
-    email_not_being_used: "This email address does not have a Mandai Account."
+    email_not_being_used: "This email address does not have a Mandai Account.",
+    password_invalid: "Password does not meet complexity requirements.",
+    confirmPassword_invalid: "Passwords do not match.",
+    update_success: "User info updated successfully.",
+    update_user_error: "User info update error.",
+    old_password_invalid: "Old password do not match.",
+    unauthorized: "Unauthorized"
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -57,7 +63,13 @@ module.exports = {
     newsletter_invalid: "必须同意并订阅新闻通讯。",
     country_invalid: "国家无效。",
     phoneNumber_invalid: "电话号码无效。",
-    email_not_being_used: "此邮箱地址没有 Mandai 账户。"
+    email_not_being_used: "此邮箱地址没有 Mandai 账户。",
+    password_invalid: "密码不符合复杂性要求。",
+    confirmPassword_invalid: "密码不匹配。",
+    update_success: "用户信息已成功更新。",
+    update_user_error: "用户信息更新错误。",
+    old_password_invalid: "旧密码不匹配。",
+    unauthorized: "未授权"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -81,13 +93,19 @@ module.exports = {
     email_invalid: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
     firstName_invalid: "이름이 유효하지 않습니다.",
     lastName_invalid: "성을 입력한 값이 유효하지 않습니다.",
-    dob:
-        "생년월일이 유효하지 않습니다. 만 13세 이상 99세 이하이어야 합니다.",
+    dob: "생년월일이 유효하지 않습니다. 만 13세 이상 99세 이하이어야 합니다.",
     group_invalid: "그룹이 유효하지 않습니다.",
     newsletter_invalid: "뉴스레터에 동의하고 구독해야 합니다.",
     country_invalid: "국가가 유효하지 않습니다.",
     phoneNumber_invalid: "전화번호가 유효하지 않습니다.",
-    email_not_being_used: "이 이메일 주소는 Mandai 계정을 가지고 있지 않습니다."
+    email_not_being_used:
+      "이 이메일 주소는 Mandai 계정을 가지고 있지 않습니다.",
+    password_invalid: "비밀번호가 일치하지 않습니다.",
+    confirmPassword_invalid: "비밀번호가 일치하지 않습니다.",
+    update_success: "사용자 정보가 성공적으로 업데이트되었습니다.",
+    update_user_error: "사용자 정보 업데이트 오류.",
+    old_password_invalid: "기존 비밀번호가 일치하지 않습니다.",
+    unauthorized: "권한 없음"
   },
   ja: {
     signup_email:
@@ -109,7 +127,7 @@ module.exports = {
     logout_success: "ログアウト成功.",
     membership_get_success: "メンバーシップ取得成功.",
     email_invalid:
-        "このメールアドレスはすでにMandaiアカウントで使用されています。",
+      "このメールアドレスはすでにMandaiアカウントで使用されています。",
     firstName_invalid: "名前が無効です。",
     lastName_invalid: "苗字が無効です。",
     dob_invalid: "生年月日が無効です。13歳以上99歳以下である必要があります。",
@@ -117,6 +135,13 @@ module.exports = {
     newsletter_invalid: "ニュースレターに同意して購読する必要があります。",
     country_invalid: "国が無効です。",
     phoneNumber_invalid: "電話番号が無効です。",
-    email_not_being_used: "このメールアドレスはMandaiアカウントを持っていません。"
+    email_not_being_used:
+      "このメールアドレスはMandaiアカウントを持っていません。",
+    password_invalid: "パスワードが複雑性の要件を満たしていません。",
+    confirmPassword_invalid: "パスワードが一致しません。",
+    update_success: "ユーザー情報が正常に更新されました。",
+    update_user_error: "ユーザー情報の更新エラー。",
+    old_password_invalid: "古いパスワードが一致しません。",
+    unauthorized: "未承認"
   },
 };

@@ -1,4 +1,4 @@
-const {messageLang} = require("../../../utils/common");
+const { messageLang } = require("../../../utils/common");
 
 class CommonErrors {
   static NotImplemented() {
@@ -35,7 +35,51 @@ class CommonErrors {
       },
       status: "failed",
       statusCode: 400,
-    }
+    };
+  }
+  static PasswordErr(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_01",
+        message: messageLang("password_invalid", lang),
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
+  static PasswordNotMatch(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_02",
+        message: messageLang("confirmPassword_invalid", lang),
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
+  static PasswordRequireErr(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
+        message: messageLang("old_password_invalid", lang),
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
+  static UnauthorizedException(lang) {
+    return {
+      membership: {
+        code: 401,
+        mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        message: messageLang("unauthorized", lang),
+      },
+      status: "failed",
+      statusCode: 401,
+    };
   }
 }
 

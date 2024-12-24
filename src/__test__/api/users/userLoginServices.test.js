@@ -42,12 +42,12 @@ describe("UserLoginService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 501,
-              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
-              message: "Not implemented",
+              code: 401,
+              mwgCode: "MWG_CIAM_UNAUTHORIZED",
+              message: "Unauthorized",
             },
             status: "failed",
-            statusCode: 501,
+            statusCode: 401,
           })
         )
       );
@@ -248,12 +248,12 @@ describe("UserLoginService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 501,
-              mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
-              message: "Not implemented",
+              code: 401,
+              mwgCode: "MWG_CIAM_UNAUTHORIZED",
+              message: "Unauthorized",
             },
             status: "failed",
-            statusCode: 501,
+            statusCode: 401,
           })
         )
       );

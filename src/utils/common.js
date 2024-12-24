@@ -34,8 +34,17 @@ const getGroup = (group) => {
   return groupMappings[group] ?? "";
 };
 
+const passwordPattern = (password) => {
+  const regexPasswordValid = new RegExp(
+      '^(?=.*\\d)(?=.*[!@#$%^&*(),.?":{}|<>])(?=.*[A-Z])(?=.*[a-z]).{8,}$',
+      "g"
+  );
+  return regexPasswordValid.test(password.toString());
+}
+
 module.exports = {
   messageLang,
   getSource,
   getGroup,
+  passwordPattern
 };

@@ -17,7 +17,7 @@ class UserLoginService {
       return await cognitoService.cognitoUserLogin(req, hashSecret);
     } catch (error) {
       loggerService.error(`Error UserLoginService.login. Error: ${error}`);
-      throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
+      throw new Error(JSON.stringify(CommonErrors.UnauthorizedException(req.body.language)));
     }
   }
 

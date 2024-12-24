@@ -51,6 +51,40 @@ class UserMembership {
     await pool.execute(sql, params);
   }
 
+  static async updateByUserId(userId, data) {
+    const now = getCurrentUTCTimestamp();
+
+    // Filter out undefined values and create SET clauses
+    const updateFields = Object.entries(data)
+        .filter(([key, value]) => value !== undefined)
+        .map(([key, value]) => `${key} = ?`);
+
+    // Add updated_at to the SET clauses
+    updateFields.push('updated_at = ?');
+
+    // Construct the SQL query
+    const sql = `
+      UPDATE user_memberships
+      SET ${updateFields.join(', ')}
+      WHERE user_id = ?
+    `;
+
+    // Prepare the params array
+    const params = [
+      ...Object.values(data).filter(value => value !== undefined),
+      now,
+      userId
+    ];
+
+    // Execute the query
+    const result = await pool.execute(sql, params);
+
+    return {
+      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+      user_id: result.insertId
+    };
+  }
+
   static async delete(id) {
     const now = getCurrentUTCTimestamp();
     const sql = 'DELETE FROM user_memberships WHERE id = ?';

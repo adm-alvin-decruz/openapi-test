@@ -1,11 +1,11 @@
 const { messageLang } = require("../../../utils/common");
 
 class UpdateUserErrors {
-  static ciamSignUpErr(lang) {
+  static ciamUpdateUserErr(lang) {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USER_SIGNUP_ERR",
+        mwgCode: "MWG_CIAM_USER_UPDATE_ERR",
         message: messageLang('update_user_error', lang),
       },
       status: "success",

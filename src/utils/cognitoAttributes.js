@@ -9,7 +9,7 @@ function getOrCheck(attr, name, value = "") {
     if (value !== "" && findAttrMatched.Value === value) {
       return true;
     }
-    return findAttrMatched.Value;
+    return findAttrMatched && findAttrMatched.Value ? findAttrMatched.Value : '';
   }
   return false;
 }

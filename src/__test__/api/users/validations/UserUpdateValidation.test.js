@@ -162,6 +162,52 @@ describe("UserUpdateValidation", () => {
           statusCode: 400,
         });
       });
+      it("should throw an error when password is has value, but not fill confirmPassword", () => {
+        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
+          group: "fow+",
+          email: "test@email.com",
+          firstName: "test",
+          lastName: "test",
+          country: "SG",
+          phoneNumber: "312",
+          password: "1",
+          oldPassword: "1",
+          confirmPassword: "",
+          dob: "1/1/1996",
+        });
+        expect(failedMessage).toEqual({
+          membership: {
+            code: 200,
+            message: "Password does not meet complexity requirements.",
+            mwgCode: "MWG_CIAM_PASSWORD_ERR_01",
+          },
+          status: "success",
+          statusCode: 200,
+        });
+      });
+      it("should throw an error when password is has value, but not fill oldPassword", () => {
+        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
+          group: "fow+",
+          email: "test@email.com",
+          firstName: "test",
+          lastName: "test",
+          country: "SG",
+          phoneNumber: "312",
+          password: "1",
+          oldPassword: "",
+          confirmPassword: "1",
+          dob: "1/1/1996",
+        });
+        expect(failedMessage).toEqual({
+          membership: {
+            code: 200,
+            message: "Old password do not match.",
+            mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
+          },
+          status: "success",
+          statusCode: 200,
+        });
+      });
     });
     it("should throw an error when failed is called", () => {
       const failedMessage = UserUpdateValidation.execute({

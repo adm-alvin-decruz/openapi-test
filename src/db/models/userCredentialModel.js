@@ -72,6 +72,21 @@ class UserCredential {
     await pool.execute(sql, params);
   }
 
+  static async updatePassword(userId, password_hash) {
+    const now = getCurrentUTCTimestamp();
+    const sql = `
+      UPDATE user_credentials
+      SET password_hash = ?, updated_at = ?
+      WHERE user_id = ?
+    `;
+    const params = [
+      password_hash,
+      now,
+      userId,
+    ];
+    await pool.execute(sql, params);
+  }
+
   static async delete(id) {
     const sql = 'DELETE FROM user_credentials WHERE id = ?';
     await pool.execute(sql, [id]);
