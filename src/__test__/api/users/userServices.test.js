@@ -7,6 +7,9 @@ jest.mock("../../../services/cognitoService", () => ({
   cognitoAdminGetUserByAccessToken: jest.fn(),
   cognitoUserChangePassword: jest.fn(),
   cognitoAdminUpdateNewUser: jest.fn(),
+  cognitoAdminGetUserByEmail: jest.fn(),
+  cognitoForgotPassword: jest.fn(),
+  cognitoConfirmForgotPassword: jest.fn(),
 }));
 jest.mock("../../../db/models/userModel", () => ({
   findByEmail: jest.fn(),
@@ -215,6 +218,244 @@ describe("UserService", () => {
         ],
         "test@gmail.com"
       );
+    });
+  });
+  describe("requestResetPassword", () => {
+    it("should throw an error when user not found in Cognito", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockRejectedValue(
+          new Error(
+            JSON.stringify({
+              status: "failed",
+              data: {
+                name: "UserNotFoundException",
+              },
+            })
+          )
+        );
+      await expect(
+        userServices.requestResetPassword({
+          email: "test@gmail.com",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("should throw an error when reset password from cognito not proceed", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "email",
+              Value: "test@gmail.com",
+            },
+          ],
+        });
+      jest.spyOn(cognitoService, "cognitoForgotPassword").mockRejectedValue({
+        status: "failed",
+      });
+      await expect(
+        userServices.requestResetPassword({
+          email: "test@gmail.com",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("should return success when process reset password pass", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [{ Name: "email", Value: "test@gmail.com" }],
+        });
+      jest.spyOn(cognitoService, "cognitoForgotPassword").mockResolvedValue({
+        status: "passed",
+      });
+      jest
+        .spyOn(userServices, "genSecretHash")
+        .mockImplementationOnce(() => "123abcde");
+      const rs = await userServices.requestResetPassword({
+        email: "test@gmail.com",
+      });
+      expect(rs).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
+          message: "Password reset link sent to your email",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      expect(cognitoService.cognitoForgotPassword).toBeCalledTimes(1);
+    });
+  });
+  describe("userConfirmResetPassword", () => {
+    it("should throw an error when user not found in Cognito", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockRejectedValue(
+          new Error(
+            JSON.stringify({
+              status: "failed",
+              data: {
+                name: "UserNotFoundException",
+              },
+            })
+          )
+        );
+      await expect(
+        userServices.userConfirmResetPassword({
+          email: "test@gmail.com",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+              message: "No record found.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("should throw an error when reset password from cognito not proceed", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "email",
+              Value: "test@gmail.com",
+            },
+          ],
+        });
+      jest
+        .spyOn(cognitoService, "cognitoConfirmForgotPassword")
+        .mockRejectedValue({
+          status: "failed",
+        });
+      await expect(
+        userServices.userConfirmResetPassword({
+          email: "test@gmail.com",
+          newPassword: "1",
+          confirmPassword: "1",
+          passwordToken: "2",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("should throw an error when reset password has token is expired", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "email",
+              Value: "test@gmail.com",
+            },
+          ],
+        });
+      jest
+        .spyOn(cognitoService, "cognitoConfirmForgotPassword")
+        .mockRejectedValue(new Error(JSON.stringify({
+          status: "failed",
+          data: {
+            name: "ExpiredCodeException",
+          },
+        })));
+      await expect(
+        userServices.userConfirmResetPassword({
+          email: "test@gmail.com",
+          newPassword: "1",
+          confirmPassword: "1",
+          passwordToken: "2",
+        })
+      ).rejects.toThrow(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
+              message: "Token has already been used.",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+    });
+    it("should return success when process confirm reset password pass", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [{ Name: "email", Value: "test@gmail.com" }],
+        });
+      jest
+        .spyOn(cognitoService, "cognitoConfirmForgotPassword")
+        .mockResolvedValue({
+          status: "passed",
+        });
+      jest
+        .spyOn(userServices, "genSecretHash")
+        .mockImplementationOnce(() => "123abcde");
+      const rs = await userServices.requestResetPassword({
+        email: "test@gmail.com",
+        newPassword: "1",
+        confirmPassword: "1",
+        passwordToken: "2",
+      });
+      expect(rs).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
+          message: "Password reset link sent to your email",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      expect(cognitoService.cognitoForgotPassword).toBeCalledTimes(1);
     });
   });
 });

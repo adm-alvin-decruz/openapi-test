@@ -35,7 +35,13 @@ module.exports = {
     update_success: "User info updated successfully.",
     update_user_error: "User info update error.",
     old_password_invalid: "Old password do not match.",
-    unauthorized: "Unauthorized"
+    unauthorized: "Unauthorized",
+    request_reset_password_success: "Password reset link sent to your email",
+    confirm_reset_password_success: "Password successfully reset.",
+    token_reset_password_being_used: "Token has already been used.",
+    newPassword_required: "Password is required.",
+    newPassword_invalid: "Password does not meet complexity requirements.",
+    passwordToken_required: "Token is required.",
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -69,7 +75,13 @@ module.exports = {
     update_success: "用户信息已成功更新。",
     update_user_error: "用户信息更新错误。",
     old_password_invalid: "旧密码不匹配。",
-    unauthorized: "未授权"
+    unauthorized: "未授权",
+    request_reset_password_success: "密码重置链接已发送到您的邮箱。",
+    confirm_reset_password_success: "密码已成功重置。",
+    token_reset_password_being_used: "令牌已被使用。",
+    newPassword_required: "需要密码。",
+    newPassword_invalid: "密码不符合复杂性要求。",
+    passwordToken_required: "需要令牌。",
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -105,7 +117,13 @@ module.exports = {
     update_success: "사용자 정보가 성공적으로 업데이트되었습니다.",
     update_user_error: "사용자 정보 업데이트 오류.",
     old_password_invalid: "기존 비밀번호가 일치하지 않습니다.",
-    unauthorized: "권한 없음"
+    unauthorized: "권한 없음",
+    request_reset_password_success: "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
+    confirm_reset_password_success: "비밀번호가 성공적으로 재설정되었습니다.",
+    token_reset_password_being_used: "토큰이 이미 사용되었습니다.",
+    newPassword_required: "비밀번호가 필요합니다.",
+    newPassword_invalid: "비밀번호가 일치하지 않습니다.",
+    passwordToken_required: "토큰이 필요합니다.",
   },
   ja: {
     signup_email:
@@ -142,6 +160,12 @@ module.exports = {
     update_success: "ユーザー情報が正常に更新されました。",
     update_user_error: "ユーザー情報の更新エラー。",
     old_password_invalid: "古いパスワードが一致しません。",
-    unauthorized: "未承認"
+    unauthorized: "未承認",
+    request_reset_password_success: "パスワードリセットリンクをメールに送信しました。",
+    confirm_reset_password_success: "パスワードが正常にリセットされました。",
+    token_reset_password_being_used: "トークンは既に使用されています。",
+    newPassword_required: "パスワードが必要です。",
+    newPassword_invalid: "パスワードが複雑性の要件を満たしていません。",
+    passwordToken_required: "トークンが必要です。",
   },
 };

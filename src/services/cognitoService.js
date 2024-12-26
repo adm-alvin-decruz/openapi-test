@@ -9,6 +9,7 @@ const {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
+  ForgotPasswordCommand, ConfirmForgotPasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -26,7 +27,9 @@ class Cognito {
       UserAttributes: ciamComparedParams,
     };
     result["cognitoUpdateArr"] = JSON.stringify(updateUserArray);
-    const setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
+    const setUpdateParams = new AdminUpdateUserAttributesCommand(
+      updateUserArray
+    );
 
     try {
       result["cognitoUpdateResult"] = JSON.stringify(
@@ -233,12 +236,14 @@ class Cognito {
     try {
       return await client.send(userUpdateParams);
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoAdminUpdateNewUser Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoAdminUpdateNewUser Error: ${error}`
+      );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }
@@ -247,12 +252,61 @@ class Cognito {
     const userChangePassword = new ChangePasswordCommand({
       AccessToken: accessToken,
       ProposedPassword: password,
-      PreviousPassword: oldPassword
+      PreviousPassword: oldPassword,
     });
     try {
       return await client.send(userChangePassword);
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoUserChangePassword Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoUserChangePassword Error: ${error}`
+      );
+      throw new Error(
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
+      );
+    }
+  }
+
+  static async cognitoForgotPassword(email, hashSecret) {
+    const forgotPasswordParams = new ForgotPasswordCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      ClientId: process.env.USER_POOL_CLIENT_ID,
+      SecretHash: hashSecret,
+      Username: email,
+    });
+
+    try {
+      return await client.send(forgotPasswordParams);
+    } catch (error) {
+      loggerService.error(
+        `cognitoService.cognitoForgotPassword Error: ${error}`
+      );
+      throw new Error(
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
+      );
+    }
+  }
+
+  static async cognitoConfirmForgotPassword(email, hashSecret, code, password) {
+    const confirmResetPasswordParams = new ConfirmForgotPasswordCommand({
+      ClientId: process.env.USER_POOL_CLIENT_ID,
+      SecretHash: hashSecret,
+      ConfirmationCode: code,
+      Password: password,
+      Username: email,
+    });
+
+    try {
+      return await client.send(confirmResetPasswordParams);
+    } catch (error) {
+      loggerService.error(
+          `cognitoService.cognitoConfirmForgotPassword Error: ${error}`
+      );
       throw new Error(
           JSON.stringify({
             status: "failed",

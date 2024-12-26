@@ -13,8 +13,9 @@ const awsRegion = () => {
   return env;
 }
 const {
-  CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
-  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
+  CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: awsRegion });
 
@@ -38,17 +39,15 @@ const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 const switchService = require('../../services/switchService');
 const CommonErrors = require("../../config/https/errors/common");
-const {getOrCheck} = require("../../utils/cognitoAttributes");
+const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES } = require("../../utils/constants");
-const {messageLang} = require("../../utils/common");
+const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const pool = require("../../db/connections/mysqlConn");
-const {getCurrentUTCTimestamp} = require("../../utils/dateUtils");
-const userMembershipModel = require("../../db/models/userMembershipModel");
-const userNewsletterModel = require("../../db/models/userNewletterModel");
-const userDetailModel = require("../../db/models/userDetailsModel");
+const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const LoginErrors = require("../../config/https/errors/loginErrors");
 
 /**
  * Function User signup service
@@ -290,29 +289,23 @@ async function updateDB(body, userId) {
   try {
     await pool.transaction(async () => {
       if (body.firstName || body.lastName || body.dob) {
-        console.log('1')
         await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob);
       }
       if (body.newsletter && body.newsletter.subscribe) {
-        console.log('2')
         await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
       }
       if (body.group) {
-        console.log('3')
         await userDBService.userMembershipModelExecuteUpdate(userId, body.group)
       }
       if (body.phoneNumber) {
-        console.log('4')
         await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber)
       }
       if (body.password) {
-        console.log('5')
         const hashPassword = await passwordService.hashPassword(
             body.password.toString()
         );
         await userCredentialModel.updatePassword(userId, hashPassword)
       }
-      console.log('6')
     });
   } catch (error) {
     loggerService.error(`usersService.updateDB Error: ${error}`);
@@ -695,71 +688,82 @@ async function prepareGenPasskitInvoke(req){
  }
 }
 
-
-
-// ***************************************************************
-// ********
-// below codes for reference only, can remove once done dev
-// ********
-// ***************************************************************
-
 /**
- * Function process group
+ * User Request Reset Password
  *
- * @param {json} attr array of user's attribute from cognito
- * @param {json} reqBody request body
- * @returns json group object
+ * @param {email: string, language: en - optional} reqBody { email: string }
+ * @returns
  */
-function processGroup(attr, reqBody){
-  var reqGroupName = reqBody.group;
-  grpAttr = loopAttr(attr, 'custom:group', '');
-
-  // parse JSON
-  if(grpAttr != false){
-    grpJson = JSON.parse(grpAttr.Value);
-    var grpObj = loopAttr(grpJson, reqGroupName, 'expiry');
-    if(grpObj != false){
-      return {[grpObj.name]: true};
+async function requestResetPassword(reqBody) {
+  const hashSecret = genSecretHash(
+      reqBody.email,
+      process.env.USER_POOL_CLIENT_ID,
+      process.env.USER_POOL_CLIENT_SECRET
+  );
+  try {
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    const email = getOrCheck(userCognito, 'email');
+    await cognitoService.cognitoForgotPassword(email, hashSecret);
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
+        message: messageLang("request_reset_password_success", reqBody.language),
+        email: email
+      },
+      status: "success",
+      statusCode: 200,
     }
+  } catch (error) {
+    const errorMessage = error.message ? JSON.parse(error.message) : '';
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)))
+    }
+    throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailInvalid(reqBody.email, reqBody.language)));
   }
-
-  return {[reqGroupName]: false}
 }
-
-/**************************/
-/** Reference code ended **/
-/**************************/
 
 /**
- * Function loop attribute to find the desire name or value
+ * User Confirm Reset Password
  *
- * @param {json} attr array of user's attribute from cognito or
- * @param {string} name name of attribute to be found
- * @param {*} value value of attribute to be found
- * @returns json object
+ * @param {{passwordToken: string, newPassword: string, confirmPassword: string, email: string}} reqBody { email: string }
+ * @returns
  */
-function loopAttr(attr, name, value=''){
-  var attrObj = false;
-  attr.forEach(function(attribute) {
-    if(attribute.Name === name || attribute.name === name){
-      if(value != '' || attribute.Value === value){
-      // attr found, return
-      attrObj = attribute;
-      } else {
-        attrObj = attribute;
-      }
+async function userConfirmResetPassword(reqBody) {
+  const hashSecret = genSecretHash(
+      reqBody.email,
+      process.env.USER_POOL_CLIENT_ID,
+      process.env.USER_POOL_CLIENT_SECRET
+  );
+  try {
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    const userEmail = getOrCheck(userCognito, 'email');
+    await cognitoService.cognitoConfirmForgotPassword(userEmail, hashSecret, reqBody.passwordToken, reqBody.newPassword);
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
+        message: messageLang("confirm_reset_password_success", reqBody.language),
+        email: userEmail,
+        resetCompletedAt: new Date()
+      },
+      status: "success",
+      statusCode: 200,
     }
-  });
-  return attrObj;
-}
-
-function processAemGroup(reqBody, exist){
-  // AEM only has wildpass
-  return {["wildpass"]: exist}
-}
-
-function isJSONObject(obj) {
-  return Array.isArray(obj);
+  } catch (error) {
+    const errorMessage = error.message ? JSON.parse(error.message) : '';
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)))
+    }
+    if (errorData.name && errorData.name === "ExpiredCodeException") {
+      throw new Error(JSON.stringify(CommonErrors.PasswordExpireOrBeingUsed(reqBody.language)))
+    }
+    throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailInvalid(reqBody.email, reqBody.language)));
+  }
 }
 
 async function retryOperation(operation, maxRetries = 9, delay = 200) {
@@ -787,5 +791,7 @@ module.exports = {
   processError,
   genSecretHash,
   processErrors,
-  adminUpdateNewUser
+  adminUpdateNewUser,
+  requestResetPassword,
+  userConfirmResetPassword
 };

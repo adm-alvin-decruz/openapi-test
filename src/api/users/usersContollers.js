@@ -4,7 +4,6 @@ require('dotenv').config()
 const {
   CognitoIdentityProviderClient,
   AdminResetUserPasswordCommand,
-  ForgotPasswordCommand,
   AdminSetUserPasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
@@ -22,6 +21,8 @@ const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
 const UserUpdateValidation = require("./validations/UserUpdateValidation")
+const CommonErrors = require("../../config/https/errors/common");
+const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 
 /**
  * Function listAll users
@@ -344,55 +345,46 @@ async function userLogout(token, lang) {
     throw new Error(JSON.stringify(errorMessage));
   }
 }
-/**
- * TODO: Move to user service
- *
- */
-async function userResetPassword (){
-  var resetPasswordParams = new AdminResetUserPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
 
+async function userResetPassword(req) {
   try {
-    var response = await client.send(resetPasswordParams);
-    console.log(response);
+    return await usersService.requestResetPassword(req);
   } catch (error) {
-    console.log(error);
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
 
-/**
- * TODO: Move to user service
- *
- */
-async function userForgotPassword (){
-  var forgotPasswordParams = new ForgotPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
-
+async function userConfirmResetPassword(body) {
+  const message = UserConfirmResetPasswordValidation.execute(body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
   try {
-    var response = await client.send(forgotPasswordParams);
-    console.log(response);
+    return await usersService.userConfirmResetPassword(body);
   } catch (error) {
-    console.log(error);
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
 
 module.exports = {
-  listAll,
   adminCreateUser,
   adminUpdateUser,
   membershipResend,
   membershipDelete,
   getUser,
-  adminSetUserPassword,
   userLogin,
   userLogout,
-  userResetPassword,
-  userForgotPassword,
   adminCreateNewUser,
-  adminUpdateNewUser
+  adminUpdateNewUser,
+  userResetPassword,
+  userConfirmResetPassword
 };
 

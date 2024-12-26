@@ -81,6 +81,17 @@ class CommonErrors {
       statusCode: 401,
     };
   }
+  static PasswordExpireOrBeingUsed(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
+        message: messageLang("token_reset_password_being_used", lang),
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
 }
 
 module.exports = CommonErrors;
