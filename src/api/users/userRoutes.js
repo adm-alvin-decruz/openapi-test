@@ -111,7 +111,6 @@ router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenWithFOW, a
       req.apiTimer.end('Route CIAM Update User Success', startTimer);
       return res.status(updateRs.statusCode).send(updateRs);
     } catch (error) {
-      console.log('error', error)
       req.apiTimer.end('Route CIAM Update User Error', startTimer);
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage)
@@ -248,7 +247,6 @@ router.post(
       const data = await userController.userLogin(req);
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      console.log('error', error)
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }

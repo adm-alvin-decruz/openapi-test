@@ -1,8 +1,5 @@
 const { validateDOB } = require("../../../services/validationService");
-const {
-  GROUPS_SUPPORTS,
-  GROUP,
-} = require("../../../utils/constants");
+const { GROUPS_SUPPORTS, GROUP } = require("../../../utils/constants");
 const CommonErrors = require("../../../config/https/errors/common");
 const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { passwordPattern } = require("../../../utils/common");
@@ -27,6 +24,9 @@ class UserUpdateValidation {
       "lastName",
       "country",
       "phoneNumber",
+      "password",
+      "confirmPassword",
+      "oldPassword",
     ];
     const listKeys = Object.keys(req);
 

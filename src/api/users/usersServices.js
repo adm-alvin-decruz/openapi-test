@@ -290,29 +290,23 @@ async function updateDB(body, userId) {
   try {
     await pool.transaction(async () => {
       if (body.firstName || body.lastName || body.dob) {
-        console.log('1')
         await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob);
       }
       if (body.newsletter && body.newsletter.subscribe) {
-        console.log('2')
         await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
       }
       if (body.group) {
-        console.log('3')
         await userDBService.userMembershipModelExecuteUpdate(userId, body.group)
       }
       if (body.phoneNumber) {
-        console.log('4')
         await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber)
       }
       if (body.password) {
-        console.log('5')
         const hashPassword = await passwordService.hashPassword(
             body.password.toString()
         );
         await userCredentialModel.updatePassword(userId, hashPassword)
       }
-      console.log('6')
     });
   } catch (error) {
     loggerService.error(`usersService.updateDB Error: ${error}`);
@@ -328,6 +322,9 @@ async function adminUpdateNewUser(body, token) {
     //get user from cognito
     const userInfo = await cognitoService.cognitoAdminGetUserByAccessToken(token);
     const email = getOrCheck(userInfo, 'email');
+    if (email !== body.email) {
+      return UpdateUserErrors.ciamEmailNotExists(body.language);
+    }
     let userName = getOrCheck(userInfo, 'name');
     const userFirstName = getOrCheck(userInfo, 'given_name');
     const userLastName = getOrCheck(userInfo, 'family_name');
