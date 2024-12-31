@@ -1,0 +1,88 @@
+name: sql-restore
+run-name: ${{ github.event.inputs.sql-environment }} Sql Restore. Job ${{ github.job }} started by ${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      sql-environment:
+        type: environment
+        description: Select the environment
+      backup_file:
+        description: 'S3 URI of backup file'
+        required: true
+        type: string
+
+jobs:
+  sql-restore:
+    runs-on: commonservices-${{ github.event.inputs.sql-environment }}
+    environment: ${{ github.event.inputs.sql-environment }}
+    steps:
+      - name: checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.role_arn }}
+          role-external-id: ${{ secrets.external_id }}
+          role-skip-session-tagging: true
+
+      - name: Count Tables Before Restoration
+        id: before-restoration
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          BEFORE_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
+          echo "before_count=$BEFORE_TABLE_COUNT" >> $GITHUB_OUTPUT
+          echo "Tables before restoration: $BEFORE_TABLE_COUNT"
+
+      - name: Download backup from S3
+        run: |
+          aws s3 cp ${{github.event.inputs.backup_file}} ciam-restore-backup.sql.gz
+
+      - name: Decompress backup
+        run: |
+          gzip -d ciam-restore-backup.sql.gz
+
+      - name: Restore ciam DB from Backup
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD < ciam-restore-backup.sql
+
+      - name: Count Tables After Restoration
+        id: after-restoration
+        run: |
+          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
+          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          AFTER_TABLE_COUNT=$(mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'ciam';")
+          echo "after_count=$AFTER_TABLE_COUNT" >> $GITHUB_OUTPUT
+          echo "Tables after restoration: $AFTER_TABLE_COUNT"
+        
+        
+      - name: Verify Database Restoration
+        env:
+          BEFORE_COUNT: ${{steps.before-restoration.outputs.before_count}}
+          AFTER_COUNT: ${{steps.after-restoration.outputs.after_count}}
+        run: |
+          echo "Tables before restoration: $BEFORE_COUNT"
+          echo "Tables after restoration: $AFTER_COUNT"
+
+          if [ "$AFTER_COUNT" -eq 0 ]; then
+            echo "Error: No tables found in the restored database"
+            exit 1
+          elif [ "$BEFORE_COUNT" -ne "$AFTER_COUNT" ]; then
+            echo "Warning: Table count mismatch before and after restoration"
+            echo "This might indicate partial restoration or schema changes"
+            exit 1
+          else
+            echo "Database restoration successful. Please perform verification of data in the database to ensure full restoration"
+          fi
+
+            

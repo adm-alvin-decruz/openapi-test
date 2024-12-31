@@ -58,3 +58,4 @@ resource "aws_iam_policy" "lambda" {
   description = "policy for lambda"
   policy = data.aws_iam_policy_document.lambda.json
 }
+

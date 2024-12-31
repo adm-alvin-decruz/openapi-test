@@ -7,6 +7,10 @@ on:
       sql-environment:
         type: environment
         description: Select the environment
+      sql-query:
+        description: "SQL Query to Execute"
+        required: true
+        type: string
 
 jobs:
   sql-generate-report:
@@ -40,15 +44,19 @@ jobs:
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
           mkdir -p ./reports
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "SELECT * FROM user_memberships" | sed "s/\t/,/g" > ./reports/users-${{env.TIMESTAMP}}.csv
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "${{ github.event.inputs.sql-query }}" | sed "s/\t/,/g" > ./reports/query-results-${{env.TIMESTAMP}}.csv
 
-      - name: Generate Wildpass User Report
+      - name: Generate Report
         uses: actions/upload-artifact@v4
         with:
-          name: wildpass-user-report-${{env.TIMESTAMP}}
-          path: ./reports/users-*.csv
-          retention-days: 30
+          name: query-results-${{env.TIMESTAMP}}
+          path: ./reports/query-results-*.csv
+          retention-days: 60
 
       - name: Verify all reports generated
-        run: echo "All reports have been generated, please download reports in the artifacts"
+        run: |
+          if [ ! -s ./reports/query-results-${{ env.TIMESTAMP }}.csv ]; then
+            echo "Warning: The query returned no results"
+            exit 1
+          fi
 
