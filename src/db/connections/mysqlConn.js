@@ -17,19 +17,17 @@ module.exports = {
     const connection = await masterPool.getConnection();
     try {
       await connection.beginTransaction();
-      const rs = await work();
+      await Promise.all(work.map(unit => connection.query(unit)));
+      console.log('commit');
       await connection.commit();
       masterPool.releaseConnection(connection);
-      console.log('commit');
-      return rs;
     }
     catch (error) {
-      await connection.rollback();
       console.log('rollback');
+      await connection.rollback();
       masterPool.releaseConnection(connection);
       throw error;
     } finally {
-      console.log('release');
       masterPool.releaseConnection(connection);
     }
   }

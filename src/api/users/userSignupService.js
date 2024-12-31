@@ -2,17 +2,17 @@ const crypto = require("crypto");
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { getSource, getGroup } = require("../../utils/common");
-const loggerService = require("../../logs/logger");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
 const passwordService = require("./userPasswordService");
 const userModel = require("../../db/models/userModel");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const userMembershipModel = require("../../db/models/userMembershipModel");
-const userNewsletterModel = require("../../db/models/userNewletterModel");
-const userCredentialModel = require("../../db/models/userCredentialModel");
-const userDetailModel = require("../../db/models/userDetailsModel");
+const {
+  getCurrentUTCTimestamp,
+  convertDateToMySQLFormat,
+} = require("../../utils/dateUtils");
 const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/common");
+const commonService = require("../../services/commonService");
+const failedJobsModel = require("../../db/models/failedJobsModel");
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -52,13 +52,154 @@ class UserSignupService {
     return `M${groupKey}${source.sourceKey}${numbers.slice(0, length)}`;
   }
 
+  userModelExecution(userData) {
+    const sql = `
+      INSERT INTO users
+      (email, given_name, family_name, birthdate, mandai_id, source, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      userData.email,
+      userData.given_name,
+      userData.family_name,
+      convertDateToMySQLFormat(userData.birthdate),
+      userData.mandai_id,
+      userData.source,
+      userData.active,
+      userData.created_at,
+      getCurrentUTCTimestamp(),
+    ];
+    return commonService.replaceSqlPlaceholders(sql, params);
+  }
+
+  userMembershipModelExecution(membershipData) {
+    const sql = `
+      INSERT INTO user_memberships
+      (user_id, name, visual_id, expires_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      membershipData.user_id,
+      membershipData.name,
+      membershipData.visual_id,
+      membershipData.expires_at,
+      getCurrentUTCTimestamp(),
+      getCurrentUTCTimestamp(),
+    ];
+    return commonService.replaceSqlPlaceholders(sql, params);
+  }
+
+  userCredentialModelExecution(credentialData) {
+    const sql = `
+      INSERT INTO user_credentials
+      (user_id, username, password_hash, tokens, last_login, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      credentialData.user_id,
+      credentialData.username,
+      credentialData.password_hash,
+      credentialData.tokens,
+      credentialData.last_login,
+      getCurrentUTCTimestamp(),
+      getCurrentUTCTimestamp(),
+    ];
+    return commonService.replaceSqlPlaceholders(sql, params);
+  }
+
+  userNewsletterModelExecution(newsletterData) {
+    const sql = `
+      INSERT INTO user_newsletters
+      (user_id, name, type, subscribe, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      newsletterData.user_id,
+      newsletterData.name,
+      newsletterData.type,
+      newsletterData.subscribe,
+      getCurrentUTCTimestamp(),
+      getCurrentUTCTimestamp(),
+    ];
+    return commonService.replaceSqlPlaceholders(sql, params);
+  }
+
+  userDetailModelExecution(detailData) {
+    const sql = `
+      INSERT INTO user_details
+      (user_id, phone_number, zoneinfo, address, picture, vehicle_iu, vehicle_plate, extra, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      detailData.user_id,
+      detailData.phone_number,
+      detailData.zoneinfo,
+      detailData.address,
+      detailData.picture,
+      detailData.vehicle_iu,
+      detailData.vehicle_plate,
+      JSON.stringify(detailData.extra),
+      getCurrentUTCTimestamp(),
+      getCurrentUTCTimestamp(),
+    ];
+    return commonService.replaceSqlPlaceholders(sql, params);
+  }
+
+  importUserInformation(userDB, req, hashPassword) {
+    return [
+      this.userMembershipModelExecution({
+        user_id: userDB.user_id,
+        name: req.body.group,
+        visual_id: req.body.visualID ? req.body.visualID : "",
+        expires_at: null,
+      }),
+      req.body.newsletter.subscribe ? this.userNewsletterModelExecution({
+        user_id: userDB.user_id,
+        name: req.body.newsletter.name ? req.body.newsletter.name : "",
+        type: req.body.newsletter.type ? req.body.newsletter.type : "",
+        subscribe: req.body.newsletter.subscribe,
+      }) : undefined,
+      this.userCredentialModelExecution({
+        user_id: userDB.user_id,
+        username: req.body.email,
+        password_hash: hashPassword,
+        tokens: null,
+        last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
+      }),
+      this.userDetailModelExecution({
+        user_id: userDB.user_id,
+        phone_number: req.body.phone ? req.body.phone : null,
+        zoneinfo: req.body.zone ? req.body.zone : null,
+        address: req.body.address ? req.body.address : null,
+        picture: req.body.picture ? req.body.picture : null,
+        vehicle_iu: req.body.vehicleIU ? req.body.vehicleIU : null,
+        vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : null,
+        extra: req.body.extra ? req.body.extra : null,
+      }),
+    ].filter(work => !!work);
+  }
+
   async saveUserDB({ req, mandaiId, hashPassword }) {
     const source = getSource(req.headers["mwg-app-id"]);
 
+    let userDB = null;
     try {
-      await pool.transaction(async () => {
-        //insert user
-        const user = await userModel.create({
+      userDB = await userModel.create({
+        email: req.body.email,
+        given_name: req.body.firstName,
+        family_name: req.body.lastName,
+        birthdate: req.body.dob,
+        mandai_id: mandaiId,
+        source: source.sourceDB,
+        active: true,
+        created_at: getCurrentUTCTimestamp(),
+      });
+    } catch (error) {
+      await failedJobsModel.create({
+        uuid: crypto.randomUUID(),
+        name: "failedCreateNewUser",
+        action: "failed",
+        data: this.userModelExecution({
           email: req.body.email,
           given_name: req.body.firstName,
           family_name: req.body.lastName,
@@ -67,54 +208,27 @@ class UserSignupService {
           source: source.sourceDB,
           active: true,
           created_at: getCurrentUTCTimestamp(),
-        });
-
-        //insert userMembership
-        await userMembershipModel.create({
-          user_id: user.user_id,
-          name: req.body.group,
-          visual_id: req.body.visualID ? req.body.visualID : "",
-          expires_at: null, // todo: update expiry for fow fow+
-        });
-
-        //insert userNewsletter
-        if (req.body.newsletter.subscribe) {
-          await userNewsletterModel.create({
-            user_id: user.user_id,
-            name: req.body.newsletter.name ? req.body.newsletter.name : "",
-            type: req.body.newsletter.type ? req.body.newsletter.type : "",
-            subscribe: req.body.newsletter.subscribe,
-          });
-        }
-
-        //insert userCredential
-        await userCredentialModel.create({
-          user_id: user.user_id,
-          username: req.body.email, // cognito username is email
-          password_hash: hashPassword,
-          tokens: null,
-          last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
-        });
-
-        //insert userDetail
-        await userDetailModel.create({
-          user_id: user.user_id,
-          phone_number: req.body.phone ? req.body.phone : null,
-          zoneinfo: req.body.zone ? req.body.zone : null,
-          address: req.body.address ? req.body.address : null,
-          picture: req.body.picture ? req.body.picture : null,
-          vehicle_iu: req.body.vehicleIU ? req.body.vehicleIU : null,
-          vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : null,
-          extra: req.body.extra ? req.body.extra : null,
-        });
+        }),
+        source: 2,
+        triggered_at: null,
+        status: 0,
       });
-    } catch (error) {
-      loggerService.error(`userSignupService.saveUserDB Error: ${error}`);
-      throw new Error(
-        JSON.stringify({
-          dbProceed: "failed",
-        })
-      );
+    }
+
+    if (userDB && userDB.user_id) {
+      try {
+        await pool.transaction(this.importUserInformation(userDB, req, hashPassword));
+      } catch (error) {
+        await failedJobsModel.create({
+          uuid: crypto.randomUUID(),
+          name: "failedCreateNewUserInformation",
+          action: "failed",
+          data: this.importUserInformation(userDB, req, hashPassword).join('|'),
+          source: 2,
+          triggered_at: null,
+          status: 0,
+        });
+      }
     }
   }
 
@@ -128,9 +242,6 @@ class UserSignupService {
     }
     try {
       const mandaiId = this.generateMandaiId(req);
-      /*TODO
-       * Generate CardFace need to be confirm
-       */
       //hash password
       const hashPassword = await passwordService.hashPassword(
         req.body.password.toString()
@@ -166,8 +277,8 @@ class UserSignupService {
         req.body.email,
         req.body.password
       );
+      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group);
 
-      //update user into db - apply rollback mechanism
       await this.saveUserDB({
         req,
         mandaiId,
@@ -179,11 +290,7 @@ class UserSignupService {
       };
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
-      if (errorMessage.dbProceed) {
-        //need align with Kay about rollback user when saveDB failed
-        await cognitoService.cognitoAdminDeleteUser(req.body.email);
-      }
-      if (errorMessage.dbProceed || errorMessage.status === "failed") {
+      if (errorMessage.status === "failed") {
         throw new Error(
           JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language))
         );
