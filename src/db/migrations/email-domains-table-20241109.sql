@@ -2,8 +2,9 @@
 -- create new switch for Dev/Uat email domain check
 INSERT INTO `switches` (`name`, `switch`, `description`, `created_at`, `updated_at`)
 VALUES
-	('email_domain_check', '1', 'Dev & UAT ONLY enable email domain check', now(), now());
+	('email_domain_check', '0', 'Dev & UAT ONLY enable email domain check', now(), now());
 
+DROP TABLE IF EXISTS `email_domains`;
 
 -- create email domains table & records
 CREATE TABLE `email_domains` (
