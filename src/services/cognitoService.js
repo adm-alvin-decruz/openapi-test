@@ -9,7 +9,7 @@ const {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
-  ForgotPasswordCommand, ConfirmForgotPasswordCommand,
+  ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminResetUserPasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -288,6 +288,27 @@ class Cognito {
           status: "failed",
           data: error,
         })
+      );
+    }
+  }
+
+  static async cognitoAdminResetUserPassword(email) {
+    const forgotPasswordParams = new AdminResetUserPasswordCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+    });
+
+    try {
+      return await client.send(forgotPasswordParams);
+    } catch (error) {
+      loggerService.error(
+          `cognitoService.cognitoAdminResetUserPassword Error: ${error}`
+      );
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
       );
     }
   }

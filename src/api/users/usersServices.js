@@ -703,7 +703,10 @@ async function requestResetPassword(reqBody) {
   try {
     const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
     const email = getOrCheck(userCognito, 'email');
-    await cognitoService.cognitoForgotPassword(email, hashSecret);
+    console.log('userCognito', userCognito);
+    console.log('email', email)
+    const a = await cognitoService.cognitoForgotPassword(email, hashSecret);
+    console.log('a', a)
     return {
       membership: {
         code: 200,

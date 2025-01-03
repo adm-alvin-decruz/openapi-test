@@ -19,6 +19,7 @@ const appConfig = require('../../config/appConfig');
 const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");
+const UserResetPasswordJob = require("./userResetPasswordJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
 const UserUpdateValidation = require("./validations/UserUpdateValidation")
 const CommonErrors = require("../../config/https/errors/common");
@@ -348,7 +349,7 @@ async function userLogout(token, lang) {
 
 async function userResetPassword(req) {
   try {
-    return await usersService.requestResetPassword(req);
+    return await UserResetPasswordJob.perform(req);
   } catch (error) {
     const errorMessage = error && error.message ? JSON.parse(error.message) : '';
     if (!!errorMessage) {
