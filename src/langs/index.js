@@ -42,6 +42,9 @@ module.exports = {
     newPassword_required: "Password is required.",
     newPassword_invalid: "Password does not meet complexity requirements.",
     passwordToken_required: "Token is required.",
+    passwordToken_invalid: "Requested token is invalid or empty.",
+    token_valid: "Token is valid.",
+    passwordToken_expired: "Requested token has expired."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -82,6 +85,9 @@ module.exports = {
     newPassword_required: "需要密码。",
     newPassword_invalid: "密码不符合复杂性要求。",
     passwordToken_required: "需要令牌。",
+    passwordToken_invalid: "请求的令牌无效或为空。",
+    token_valid: "令牌有效。",
+    passwordToken_expired: "请求的令牌已过期。"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -124,6 +130,9 @@ module.exports = {
     newPassword_required: "비밀번호가 필요합니다.",
     newPassword_invalid: "비밀번호가 일치하지 않습니다.",
     passwordToken_required: "토큰이 필요합니다.",
+    passwordToken_invalid: "요청된 토큰이 유효하지 않거나 비어 있습니다.",
+    token_valid: "토큰이 유효합니다.",
+    passwordToken_expired: "요청한 토큰이 만료되었습니다."
   },
   ja: {
     signup_email:
@@ -167,5 +176,8 @@ module.exports = {
     newPassword_required: "パスワードが必要です。",
     newPassword_invalid: "パスワードが複雑性の要件を満たしていません。",
     passwordToken_required: "トークンが必要です。",
+    passwordToken_invalid: "要求されたトークンが無効か空です。",
+    token_valid: "トークンは有効です。",
+    passwordToken_expired: "リクエストされたトークンが期限切れです。"
   },
 };

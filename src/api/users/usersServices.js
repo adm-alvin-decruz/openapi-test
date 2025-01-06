@@ -46,8 +46,6 @@ const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const pool = require("../../db/connections/mysqlConn");
-const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const LoginErrors = require("../../config/https/errors/loginErrors");
 
 /**
  * Function User signup service
@@ -688,87 +686,6 @@ async function prepareGenPasskitInvoke(req){
  }
 }
 
-/**
- * User Request Reset Password
- *
- * @param {email: string, language: en - optional} reqBody { email: string }
- * @returns
- */
-async function requestResetPassword(reqBody) {
-  const hashSecret = genSecretHash(
-      reqBody.email,
-      process.env.USER_POOL_CLIENT_ID,
-      process.env.USER_POOL_CLIENT_SECRET
-  );
-  try {
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
-    const email = getOrCheck(userCognito, 'email');
-    console.log('userCognito', userCognito);
-    console.log('email', email)
-    const a = await cognitoService.cognitoForgotPassword(email, hashSecret);
-    console.log('a', a)
-    return {
-      membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
-        message: messageLang("request_reset_password_success", reqBody.language),
-        email: email
-      },
-      status: "success",
-      statusCode: 200,
-    }
-  } catch (error) {
-    const errorMessage = error.message ? JSON.parse(error.message) : '';
-    const errorData =
-        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)))
-    }
-    throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailInvalid(reqBody.email, reqBody.language)));
-  }
-}
-
-/**
- * User Confirm Reset Password
- *
- * @param {{passwordToken: string, newPassword: string, confirmPassword: string, email: string}} reqBody { email: string }
- * @returns
- */
-async function userConfirmResetPassword(reqBody) {
-  const hashSecret = genSecretHash(
-      reqBody.email,
-      process.env.USER_POOL_CLIENT_ID,
-      process.env.USER_POOL_CLIENT_SECRET
-  );
-  try {
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
-    const userEmail = getOrCheck(userCognito, 'email');
-    await cognitoService.cognitoConfirmForgotPassword(userEmail, hashSecret, reqBody.passwordToken, reqBody.newPassword);
-    return {
-      membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
-        message: messageLang("confirm_reset_password_success", reqBody.language),
-        email: userEmail,
-        resetCompletedAt: new Date()
-      },
-      status: "success",
-      statusCode: 200,
-    }
-  } catch (error) {
-    const errorMessage = error.message ? JSON.parse(error.message) : '';
-    const errorData =
-        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)))
-    }
-    if (errorData.name && errorData.name === "ExpiredCodeException") {
-      throw new Error(JSON.stringify(CommonErrors.PasswordExpireOrBeingUsed(reqBody.language)))
-    }
-    throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailInvalid(reqBody.email, reqBody.language)));
-  }
-}
-
 async function retryOperation(operation, maxRetries = 9, delay = 200) {
   let lastError = [];
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -794,7 +711,5 @@ module.exports = {
   processError,
   genSecretHash,
   processErrors,
-  adminUpdateNewUser,
-  requestResetPassword,
-  userConfirmResetPassword
+  adminUpdateNewUser
 };
