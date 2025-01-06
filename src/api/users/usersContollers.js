@@ -3,7 +3,6 @@ require('dotenv').config()
 
 const {
   CognitoIdentityProviderClient,
-  AdminResetUserPasswordCommand,
   AdminSetUserPasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
@@ -20,10 +19,13 @@ const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");
 const UserResetPasswordJob = require("./userResetPasswordJob");
+const UserValidateRestPasswordJob = require("./userValidateResetPasswordJob");
+const UserConfirmResetPasswordJob = require("./userConfirmResetPasswordJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
 const UserUpdateValidation = require("./validations/UserUpdateValidation")
 const CommonErrors = require("../../config/https/errors/common");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
+const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 
 /**
  * Function listAll users
@@ -359,13 +361,29 @@ async function userResetPassword(req) {
   }
 }
 
+async function userValidateResetPassword(passwordToken, lang) {
+  const message = UserValidateResetPasswordValidation.execute(passwordToken, lang);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await UserValidateRestPasswordJob.perform(passwordToken, lang);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
 async function userConfirmResetPassword(body) {
   const message = UserConfirmResetPasswordValidation.execute(body);
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    return await usersService.userConfirmResetPassword(body);
+    return await UserConfirmResetPasswordJob.perform(body);
   } catch (error) {
     const errorMessage = error && error.message ? JSON.parse(error.message) : '';
     if (!!errorMessage) {
@@ -386,6 +404,7 @@ module.exports = {
   adminCreateNewUser,
   adminUpdateNewUser,
   userResetPassword,
-  userConfirmResetPassword
+  userConfirmResetPassword,
+  userValidateResetPassword
 };
 

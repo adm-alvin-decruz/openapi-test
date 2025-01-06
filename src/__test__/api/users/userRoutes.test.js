@@ -15,6 +15,7 @@ jest.mock("../../../api/users/usersContollers", () => ({
   adminUpdateNewUser: jest.fn(),
   userResetPassword: jest.fn(),
   userConfirmResetPassword: jest.fn(),
+  userValidateResetPassword: jest.fn(),
 }));
 
 describe("User Routes", () => {
@@ -411,8 +412,7 @@ describe("User Routes", () => {
       });
       const response = await request(app)
         .post("/users/reset-password")
-        .set("Authorization", "Bearer" + Math.random())
-        .send({ email: "test@gmail.com", group: "fow+" });
+        .send({ email: "test@gmail.com" });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -427,17 +427,19 @@ describe("User Routes", () => {
       });
     });
   });
-  describe("POST:/users/confirm-reset-password - User Confirm Reset Password API", () => {
+  describe("PUT:/users/reset-password - User Confirm Reset Password API", () => {
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
       const response = await request(app)
-        .post("/users/confirm-reset-password", {
+        .put("/users/reset-password", {
           headers: {
             "mwg-app-id": "",
           },
         })
         .send({
-          email: "test@gmail.com",
+          passwordToken: "12345",
+          newPassword: "password123#",
+          confirmPassword: "password123#",
         });
 
       expect(response.status).toBe(401);
@@ -468,13 +470,15 @@ describe("User Routes", () => {
         )
       );
       const response = await request(app)
-        .post("/users/confirm-reset-password", {
+        .put("/users/reset-password", {
           headers: {
             "mwg-app-id": "",
           },
         })
         .send({
-          email: "test@gmail.com",
+          passwordToken: "12345",
+          newPassword: "password123#",
+          confirmPassword: "password123#",
         });
 
       expect(response.status).toBe(200);
@@ -495,24 +499,119 @@ describe("User Routes", () => {
         membership: {
           code: 200,
           mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
-          message: "Password reset link sent to your email",
-          email: "test@gmail.com",
+          message: "Password successfully reset.",
+          passwordToken: "12345",
+          resetCompletedAt: "2025-01-06T08:02:14.220Z",
         },
         status: "success",
         statusCode: 200,
       });
-      const response = await request(app)
-        .post("/users/confirm-reset-password")
-        .set("Authorization", "Bearer" + Math.random())
-        .send({ email: "test@gmail.com", group: "fow+" });
+      const response = await request(app).put("/users/reset-password").send({
+        passwordToken: "12345",
+        newPassword: "password123#",
+        confirmPassword: "password123#",
+      });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
         membership: {
           code: 200,
           mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
-          message: "Password reset link sent to your email",
+          message: "Password successfully reset.",
+          passwordToken: "12345",
+          resetCompletedAt: "2025-01-06T08:02:14.220Z",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("GET:/users/reset-password?passwordToken=123ad - User Validate Reset Password API", () => {
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app).get(
+        "/users/reset-password?passwordToken=123ad",
+        {
+          headers: {
+            "mwg-app-id": "",
+          },
+        }
+      );
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          message: "Unauthorized",
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
+    });
+    it("should return error when service not pass", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userValidateResetPassword").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+      const response = await request(app).get(
+        "/users/reset-password?passwordToken=123ad",
+        {
+          headers: {
+            "mwg-app-id": "",
+          },
+        }
+      );
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          message: "Requested email is invalid or empty.",
           email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should return 200 and update successfully", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest
+        .spyOn(userController, "userValidateResetPassword")
+        .mockResolvedValue({
+          membership: {
+            code: 200,
+            mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
+            message: "Token is valid.",
+            isValid: true,
+            passwordToken: "12345678",
+          },
+          status: "success",
+          statusCode: 200,
+        });
+      const response = await request(app).get(
+        "/users/reset-password?passwordToken=123ad"
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
+          message: "Token is valid.",
+          isValid: true,
+          passwordToken: "12345678",
         },
         status: "success",
         statusCode: 200,

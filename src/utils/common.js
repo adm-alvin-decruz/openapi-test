@@ -53,10 +53,22 @@ const generateSecretHash = (keyword) => {
     .digest("base64");
 };
 
+//create random token key
+const generateRandomToken = (size) => {
+  return crypto.randomBytes(size).toString("hex");
+};
+
+const generateSaltHash = (keyword, saltKey, hashAlgorithm = "sha256") => {
+  const data = Buffer.from(`${keyword}${saltKey}`.trim(), "utf8");
+  return crypto.createHash(hashAlgorithm).update(data).digest("base64");
+};
+
 module.exports = {
   messageLang,
   getSource,
   getGroup,
   passwordPattern,
-  generateSecretHash
+  generateSecretHash,
+  generateRandomToken,
+  generateSaltHash,
 };

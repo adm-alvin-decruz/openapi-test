@@ -1,23 +1,48 @@
 require("dotenv").config();
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
-const { generateSecretHash } = require("../../utils/common");
+const { generateRandomToken, generateSaltHash } = require("../../utils/common");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const LoginErrors = require("../../config/https/errors/loginErrors");
+const userCredentialModel = require("../../db/models/userCredentialModel");
+const {
+  getCurrentUTCTimestamp,
+  currentDateAddHours,
+} = require("../../utils/dateUtils");
+const { EXPIRE_TIME_HOURS } = require("../../utils/constants");
 
 class UserResetPasswordService {
   async execute(reqBody) {
-    const hashSecret = generateSecretHash(reqBody.email);
+    const resetToken = generateRandomToken(16);
+    console.log('reset token', resetToken)
+    const saltKey = generateSaltHash(resetToken);
+    const passwordHash = generateSaltHash(resetToken, saltKey);
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
         reqBody.email
       );
       const email = getOrCheck(userCognito, "email");
-      await cognitoService.cognitoAdminResetUserPassword(email);
+
+      //TODO: trigger lambda function send email with resetToken
+
+      const userInfo = await userCredentialModel.findByUserEmail(email);
+      //save db
+      await userCredentialModel.updateByUserEmail(email, {
+        password_hash: passwordHash,
+        salt: saltKey,
+        tokens: {
+          ...userInfo.tokens,
+          reset_token: {
+            date_submitted: getCurrentUTCTimestamp(),
+            expires_at: currentDateAddHours(EXPIRE_TIME_HOURS),
+            reset_at: null,
+          },
+        },
+      });
       return {
-        email
+        email,
       };
     } catch (error) {
+      //TODO: handle error saving to trail_table
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
@@ -33,7 +58,10 @@ class UserResetPasswordService {
       }
       throw new Error(
         JSON.stringify(
-          LoginErrors.ciamLoginEmailInvalid(reqBody.email, reqBody.language)
+          MembershipErrors.ciamMembershipEmailInvalid(
+            reqBody.email,
+            reqBody.language
+          )
         )
       );
     }

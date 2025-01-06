@@ -25,9 +25,12 @@ const COGNITO_ATTRIBUTES = {
   gender: "gender",
 };
 
+const EXPIRE_TIME_HOURS = 1; //hour unit
+
 module.exports = {
   GROUP,
   LANGUAGE_CODE,
   GROUPS_SUPPORTS,
   COGNITO_ATTRIBUTES,
+  EXPIRE_TIME_HOURS
 };

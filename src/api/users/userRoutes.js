@@ -310,9 +310,35 @@ router.post("/users/reset-password", isEmptyRequest, validateEmail, async (req, 
 });
 
 /**
- * User Confirm Reset Password API (Method POST)
+ * User Validate Reset Password API (Method GET)
  */
-router.post("/users/confirm-reset-password", isEmptyRequest, validateEmail, async (req, res) => {
+router.get("/users/reset-password", async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Validate Reset Password User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.query.language));
+  }
+
+  try {
+    const data = await userController.userValidateResetPassword(req.query.passwordToken, req.query.language);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Confirm Reset Password API (Method PUT)
+ */
+router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();

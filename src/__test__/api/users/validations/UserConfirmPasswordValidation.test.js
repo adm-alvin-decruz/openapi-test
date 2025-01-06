@@ -9,9 +9,29 @@ describe("UserConfirmResetPasswordValidation", () => {
     jest.restoreAllMocks();
   });
   describe("execute", () => {
-    it("should throw an error when password not strong", () => {
+    it("should throw an error when passwordToken is missing", () => {
       const failedMessage = UserConfirmResetPasswordValidation.execute({
         newPassword: "1",
+        confirmPassword: "123",
+      });
+      expect(failedMessage).toEqual({
+        membership: {
+          code: 400,
+          message: "Wrong parameters",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+          error: {
+            passwordToken: "Token is required.",
+          },
+        },
+        status: "failed",
+        statusCode: 400,
+      });
+    });
+    it("should throw an error when password not strong", () => {
+      const failedMessage = UserConfirmResetPasswordValidation.execute({
+        passwordToken: "123",
+        newPassword: "1",
+        confirmPassword: "123",
       });
       expect(failedMessage).toEqual({
         membership: {
@@ -25,6 +45,7 @@ describe("UserConfirmResetPasswordValidation", () => {
     });
     it("should throw an error when password & confirm not match", () => {
       const failedMessage = UserConfirmResetPasswordValidation.execute({
+        passwordToken: "123",
         newPassword: "Password123##",
         confirmPassword: "Password123###",
       });
@@ -41,9 +62,10 @@ describe("UserConfirmResetPasswordValidation", () => {
     });
     it("should throw an error when password & confirm not match - multiple language", () => {
       const failedMessage = UserConfirmResetPasswordValidation.execute({
+        passwordToken: "123",
         newPassword: "Password123##",
         confirmPassword: "Password123###",
-        language: 'kr'
+        language: "kr",
       });
       expect(failedMessage).toEqual({
         membership: {
