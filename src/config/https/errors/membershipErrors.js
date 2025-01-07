@@ -1,4 +1,3 @@
-/*TODO update multiple language later*/
 const { messageLang } = require("../../../utils/common");
 
 class MembershipErrors {
@@ -21,6 +20,17 @@ class MembershipErrors {
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
         message: messageLang("membership_email_invalid", lang),
         email: email,
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
+  static ciamMembershipGetPassesInvalid(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIPS_ERR",
+        message: messageLang("get_membership_failed", lang),
       },
       status: "success",
       statusCode: 200,

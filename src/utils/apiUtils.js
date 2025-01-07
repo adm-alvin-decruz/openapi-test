@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require("axios");
 
 class ApiUtils {
   static async makeRequest(url, method, headers, data) {
@@ -6,11 +6,11 @@ class ApiUtils {
       let axiosConfig = {
         method,
         url,
-        headers
+        headers,
       };
 
       // Handle GET requests separately
-      if (method.toLowerCase() === 'get') {
+      if (method.toLowerCase() === "get") {
         axiosConfig.params = data;
       } else {
         axiosConfig.data = data;
@@ -25,7 +25,10 @@ class ApiUtils {
   }
 
   static handleResponse(response) {
-    if (response.status >= 200 && response.status < 300) {
+    const status =
+      !!(response.status >= 200 && response.status < 300) ||
+      !!(response.statusCode >= 200 && response.statusCode < 300);
+    if (status) {
       return response.data;
     } else {
       return new Error(`API request failed: ${response.status}`);
@@ -33,7 +36,7 @@ class ApiUtils {
   }
 
   static handleError(error) {
-    console.error('API Error:', error.message);
+    console.error("API Error:", error.message);
     return error;
   }
 }

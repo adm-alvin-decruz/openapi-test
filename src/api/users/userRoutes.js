@@ -361,4 +361,30 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
   }
 });
 
+/**
+ * User Get Membership Passes API (Method POST)
+ */
+router.post("/users/my-membership", isEmptyRequest, isEmptyAccessToken, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Confirm Reset Password User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  try {
+    const data = await userController.userGetMembershipPasses(req.body);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
 module.exports = router;

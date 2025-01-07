@@ -16,6 +16,7 @@ jest.mock("../../../api/users/usersContollers", () => ({
   userResetPassword: jest.fn(),
   userConfirmResetPassword: jest.fn(),
   userValidateResetPassword: jest.fn(),
+  userGetMembershipPasses: jest.fn(),
 }));
 
 describe("User Routes", () => {
@@ -603,6 +604,118 @@ describe("User Routes", () => {
       const response = await request(app).get(
         "/users/reset-password?passwordToken=123ad"
       );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
+          message: "Token is valid.",
+          isValid: true,
+          passwordToken: "12345678",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("POST:/users/my-membership - User Validate Reset Password API", () => {
+    it("should return 400 if request body is empty", async () => {
+      const response = await request(app).post("/users/my-membership").send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        membership: {
+          code: 400,
+          message: "Request body is empty",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+        },
+        status: "failed",
+        statusCode: 400,
+      });
+    });
+    it("should return 401 if empty access token", async () => {
+      const response = await request(app)
+          .post("/users/my-membership", {
+            headers: {
+              authorization: "",
+            },
+          })
+          .send({ email: "test@gmail.com", visualId: "123" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app)
+          .post("/users/my-membership", {
+            headers: {
+              "mwg-app-id": "",
+              authorization: "123",
+            },
+          })
+          .send({ email: "example-email@gmail.com", visualId: "123456" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return error when service not pass", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userGetMembershipPasses").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+      const response = await request(app)
+        .post("/users/my-membership", {
+          headers: {
+            "mwg-app-id": "",
+            authorization: "123",
+          },
+        })
+        .send({
+          email: "test@gmail.com",
+          visualId: "123",
+        });
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          message: "Requested email is invalid or empty.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should return 200 and my membership result", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userGetMembershipPasses").mockResolvedValue({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
+          message: "Token is valid.",
+          isValid: true,
+          passwordToken: "12345678",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app).post("/users/my-membership").send({
+        email: "test@gmail.com",
+        visualId: "123",
+      });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({

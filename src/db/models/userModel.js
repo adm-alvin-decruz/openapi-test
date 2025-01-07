@@ -46,6 +46,19 @@ class User {
     }
   }
 
+  /** Find users based on visualId */
+  static async findByVisualIds(visualIds){
+    try{
+      const sql = `SELECT u.*, um.name, um.visual_id FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  WHERE um.visual_id IN (?) AND u.active = 1`;
+      return await pool.query(sql, [visualIds]);
+    }
+    catch (error){
+      return error;
+    }
+  }
+
   /** Find wild pass user full data */
   static async findWPFullData(email){
     try{
