@@ -320,7 +320,7 @@ router.get("/users/reset-password", async (req, res) => {
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
     req.apiTimer.end(
-        "Route CIAM Reset Password User Error 401 Unauthorized",
+        "Route CIAM Validate Reset Password User Error 401 Unauthorized",
         startTimer
     );
     return res.status(401).send(CommonErrors.UnauthorizedException(req.query.language));
