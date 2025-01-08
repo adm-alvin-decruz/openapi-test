@@ -106,8 +106,11 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
           # echo "running CDT-159-bug-user-migration-fix.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
+          # echo "running email-domains-table-20241109.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
           echo "running email-domains-table-20241109.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/purge_user-20250108.sql
+
 
       - name: Verify Deployment
         run:  echo "Run Query to verify db update/rollback  of database/table is successful"
