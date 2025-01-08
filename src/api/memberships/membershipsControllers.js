@@ -59,12 +59,7 @@ async function adminGetUser(reqBody){
     if(process.env.APP_LOG_SWITCH === 'true'){
       console.error(error);
     }
-    if(error.name === 'UserNotFoundException'){
-      // check to AEM checkemail for group = wildpass
-      response = await checkEmailInAem(reqBody);
-    }else{
-      response = await membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
-    }
+    response = await membershipsService.processResponse('', reqBody, 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR');
   }
 
   if(!response['source']){

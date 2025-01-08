@@ -58,16 +58,8 @@ async function adminCreateUser (req){
       var memberExist = await usersService.getUserMembership(req);
 
       // if signup check aem flag true, check user exist in AEM
-      let aemResponse, aemNoMembership;
+      let aemNoMembership;
       let responseSource = 'ciam';
-
-      if(appConfig.SIGNUP_CHECK_AEM === true && !req.body.migrations){
-        aemResponse = await aemService.aemCheckWildPassByEmail(req.body);
-        aemNoMembership = aemResponse.data.valid; // no membership in AEM 'true'/'false'
-        if (aemNoMembership === 'false') {
-          responseSource = 'aem';
-        }
-      }
 
       if(memberExist.status === 'success' || aemNoMembership === 'false'){
         // prepare response
