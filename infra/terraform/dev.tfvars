@@ -9,7 +9,7 @@ newrelic_handler = "newrelic-lambda-wrapper.handler"
 AEM_PATH_RESEND_WILDPASS = "/bin/wrs/wildpass/wildpassresendecard"
 AEM_PATH_WILDPASS_CHECK_EMAIL = "/bin/wrs/wildpass/checkemail"
 AEM_URL = "https://uat-www.mandai.com"
-AEM_WILDPASS_EMAILCHECK_ROUTE = "true"
+AEM_WILDPASS_EMAILCHECK_ROUTE = "false"
 APP_LOG_SWITCH = "true"
 
 #users
