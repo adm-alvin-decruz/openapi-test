@@ -372,7 +372,7 @@ router.post("/users/my-membership", isEmptyRequest, isEmptyAccessToken, validate
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
     req.apiTimer.end(
-        "Route CIAM Confirm Reset Password User Error 401 Unauthorized",
+        "Route CIAM Get Membership Passes Error 401 Unauthorized",
         startTimer
     );
     return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));

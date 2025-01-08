@@ -619,7 +619,7 @@ describe("User Routes", () => {
       });
     });
   });
-  describe("POST:/users/my-membership - User Validate Reset Password API", () => {
+  describe("POST:/users/my-membership - User Get Membership Passes API", () => {
     it("should return 400 if request body is empty", async () => {
       const response = await request(app).post("/users/my-membership").send({});
 
@@ -636,12 +636,12 @@ describe("User Routes", () => {
     });
     it("should return 401 if empty access token", async () => {
       const response = await request(app)
-          .post("/users/my-membership", {
-            headers: {
-              authorization: "",
-            },
-          })
-          .send({ email: "test@gmail.com", visualId: "123" });
+        .post("/users/my-membership", {
+          headers: {
+            authorization: "",
+          },
+        })
+        .send({ email: "test@gmail.com", visualId: "123" });
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ message: "Unauthorized" });
@@ -649,13 +649,13 @@ describe("User Routes", () => {
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
       const response = await request(app)
-          .post("/users/my-membership", {
-            headers: {
-              "mwg-app-id": "",
-              authorization: "123",
-            },
-          })
-          .send({ email: "example-email@gmail.com", visualId: "123456" });
+        .post("/users/my-membership", {
+          headers: {
+            "mwg-app-id": "",
+            authorization: "123",
+          },
+        })
+        .send({ email: "example-email@gmail.com", visualId: "123456" });
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ message: "Unauthorized" });
@@ -680,9 +680,9 @@ describe("User Routes", () => {
         .post("/users/my-membership", {
           headers: {
             "mwg-app-id": "",
-            authorization: "123",
           },
         })
+        .set("Authorization", "Bearer" + Math.random())
         .send({
           email: "test@gmail.com",
           visualId: "123",
@@ -704,27 +704,44 @@ describe("User Routes", () => {
       jest.spyOn(userController, "userGetMembershipPasses").mockResolvedValue({
         membership: {
           code: 200,
-          mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
-          message: "Token is valid.",
-          isValid: true,
-          passwordToken: "12345678",
+          mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS",
+          message: "Get my membership success.",
+          passes: [
+            {
+              visualId: "123",
+              urls: {
+                apple: "https://example.com/apple",
+                google: "https://example.com/google",
+              },
+            },
+          ],
         },
         status: "success",
         statusCode: 200,
       });
-      const response = await request(app).post("/users/my-membership").send({
-        email: "test@gmail.com",
-        visualId: "123",
-      });
+      const response = await request(app)
+        .post("/users/my-membership")
+        .set("Authorization", "Bearer" + Math.random())
+        .send({
+          email: "test@gmail.com",
+          visualId: "123",
+        });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
         membership: {
           code: 200,
-          mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
-          message: "Token is valid.",
-          isValid: true,
-          passwordToken: "12345678",
+          mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS",
+          message: "Get my membership success.",
+          passes: [
+            {
+              visualId: "123",
+              urls: {
+                apple: "https://example.com/apple",
+                google: "https://example.com/google",
+              },
+            },
+          ],
         },
         status: "success",
         statusCode: 200,

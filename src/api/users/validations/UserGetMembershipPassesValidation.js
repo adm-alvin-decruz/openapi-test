@@ -6,6 +6,7 @@ class UserGetMembershipPassesValidation {
   }
 
   static execute(data) {
+    console.log("data", data.visualId);
     if (!!data.visualId && data.visualId.trim() === "") {
       return (this.error = CommonErrors.BadRequest(
         "visualId",
@@ -22,6 +23,14 @@ class UserGetMembershipPassesValidation {
     }
 
     if (data.list && Array.isArray(data.list) && data.visualId) {
+      return (this.error = CommonErrors.BadRequest(
+        "visualId",
+        "visualId_invalid",
+        data.language
+      ));
+    }
+
+    if (!data.visualId && !data.list) {
       return (this.error = CommonErrors.BadRequest(
         "visualId",
         "visualId_invalid",
