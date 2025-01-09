@@ -19,12 +19,10 @@ const appConfig = {
   APP_ID_SUPPORT_PROD:'["support.Prod.internal.mandaiapi.ciam"]',
 
 
-  // App ID Passkit Generator DEV
-  APP_ID_PASSKIT_GENERATOR_DEV:'passkitGenerator.dev.internal.mandaiapi.ciam',
-  // App ID Passkit Generator UAT
-  APP_ID_PASSKIT_GENERATOR_UAT:'passkitGenerator.uat.internal.mandaiapi.ciam',
-  // App ID Passkit Generator Prod
-  APP_ID_PASSKIT_GENERATOR_PROD:'passkitGenerator.dev.internal.mandaiapi.ciam',
+  // Passkit app ID:
+  PASSKIT_APP_ID_DEV:"passkitGenerator.dev.internal.mandaiapi.ciam",
+  PASSKIT_APP_ID_UAT:"passkitGenerator.uat.internal.mandaiapi.ciam",
+  PASSKIT_APP_ID_PROD:"passkitGenerator.prod.internal.mandaiapi.ciam",
 
   // user signup generate passkit for send in the email
   SIGNUP_CHECK_AEM:true,

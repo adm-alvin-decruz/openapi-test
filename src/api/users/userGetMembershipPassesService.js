@@ -4,33 +4,19 @@ const failedJobsModel = require("../../db/models/failedJobsModel");
 const ApiUtils = require("../../utils/apiUtils");
 const appConfig = require("../../config/appConfig");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const passkitCommonService = require("../components/passkit/services/passkitCommonService");
 
 class UserGetMembershipPassesService {
+  constructor() {
+    this.apiEndpoint = process.env.PASSKIT_URL + process.env.PASSKIT_GET_PATH;
+  }
+
   getVisualIds(body) {
     if (body && body.visualId) {
       return [body.visualId];
     }
     //unique list visualId
     return body.list.filter((item, index) => body.list.indexOf(item) === index);
-  }
-
-  passkitGeneratorUrl() {
-    const env = process.env.APP_ENV;
-    let url = "";
-    switch (env) {
-      case "prod": {
-        url = `https://${process.env.PASSKIT_GENERATOR_URL}`;
-        break;
-      }
-      case "uat": {
-        url = `https://${env}-${process.env.PASSKIT_GENERATOR_URL}`;
-        break;
-      }
-      default: {
-        return (url = `https://${env}-${process.env.PASSKIT_GENERATOR_URL}`);
-      }
-    }
-    return url;
   }
 
   /**
@@ -42,22 +28,14 @@ class UserGetMembershipPassesService {
    */
   async retrievePasskit(mandaiId, group, visualId) {
     try {
-      const response = await ApiUtils.makeRequest(
-        this.passkitGeneratorUrl(),
-        "post",
-        {
-          "mwg-app-id":
-            appConfig[
-              `APP_ID_PASSKIT_GENERATOR_${process.env.APP_ENV.toUpperCase()}`
-            ],
-          //need storage x-api-key as secret key.
-          "x-api-key": "X6tEwBlZ178wZ2nKtc2P71fm2g5D1iud9QhF9DLr",
-        },
-        {
-          passType: group,
-          mandaiId: mandaiId,
-        }
-      );
+      const headers = await passkitCommonService.setPasskitReqHeader();
+      console.log('api endpoint', this.apiEndpoint);
+      console.log('headers', headers)
+      const response = await ApiUtils.makeRequest(this.apiEndpoint, 'post', headers, {
+        passType: group,
+        mandaiId: mandaiId,
+      });
+      console.log('response', response)
       const rsHandler = ApiUtils.handleResponse(response);
       return {
         visualId,
@@ -83,6 +61,7 @@ class UserGetMembershipPassesService {
   }
 
   async handleIntegration(userInfo) {
+    console.log('user info', userInfo)
     const response = await Promise.all(
       userInfo.map((info) =>
         this.retrievePasskit(info.mandaiId, info.membership, info.visualId)
@@ -126,7 +105,11 @@ class UserGetMembershipPassesService {
         triggered_at: null,
         status: 0,
       });
-      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipGetPassesInvalid(body.language)));
+      throw new Error(
+        JSON.stringify(
+          MembershipErrors.ciamMembershipGetPassesInvalid(body.language)
+        )
+      );
     }
   }
 }
