@@ -22,12 +22,13 @@ const UserResetPasswordJob = require("./userResetPasswordJob");
 const UserValidateRestPasswordJob = require("./userValidateResetPasswordJob");
 const UserConfirmResetPasswordJob = require("./userConfirmResetPasswordJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
-const UserUpdateValidation = require("./validations/UserUpdateValidation")
+const UserUpdateValidation = require("./validations/UserUpdateValidation");
 const CommonErrors = require("../../config/https/errors/common");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
 const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
+const userVerifyTokenService = require("./userVerifyTokenService");
 /**
  * Function listAll users
  *
@@ -410,6 +411,18 @@ async function userGetMembershipPasses(body) {
   }
 }
 
+async function userVerifyToken(accessToken, email, lang) {
+  try {
+    return await userVerifyTokenService.verifyToken(accessToken, email, lang);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : "";
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -423,6 +436,6 @@ module.exports = {
   userResetPassword,
   userConfirmResetPassword,
   userValidateResetPassword,
-  userGetMembershipPasses
+  userGetMembershipPasses,
+  userVerifyToken,
 };
-
