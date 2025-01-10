@@ -26,7 +26,6 @@ class UserConfirmResetPasswordService {
       );
       //save db
       await userCredentialModel.updateByUserEmail(rs.email, {
-        salt: null,
         tokens: {
           ...rs.tokens,
           reset_token: {

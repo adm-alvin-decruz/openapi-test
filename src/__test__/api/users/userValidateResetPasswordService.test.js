@@ -29,12 +29,12 @@ describe("UserResetValidatePasswordService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 401,
               mwgCode: "MWG_CIAM_VALIDATE_TOKEN_ERR",
               message: "Requested token is invalid or empty.",
             },
-            status: "success",
-            statusCode: 200,
+            status: "failed",
+            statusCode: 401,
           })
         )
       );
@@ -57,12 +57,12 @@ describe("UserResetValidatePasswordService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 401,
               mwgCode: "MWG_CIAM_VALIDATE_TOKEN_EXPIRED",
               message: "Requested token has expired.",
             },
-            status: "success",
-            statusCode: 200,
+            status: "failed",
+            statusCode: 401,
           })
         )
       );
@@ -80,12 +80,12 @@ describe("UserResetValidatePasswordService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 401,
               mwgCode: "MWG_CIAM_VALIDATE_TOKEN_ERR",
               message: "Requested token is invalid or empty.",
             },
-            status: "success",
-            statusCode: 200,
+            status: "failed",
+            statusCode: 401,
           })
         )
       );
@@ -106,12 +106,12 @@ describe("UserResetValidatePasswordService", () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 401,
               mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
               message: "Token has already been used.",
             },
-            status: "success",
-            statusCode: 200,
+            status: "failed",
+            statusCode: 401,
           })
         )
       );

@@ -17,6 +17,11 @@ class UserValidateResetPasswordService {
         JSON.stringify(ValidateTokenErrors.ciamValidateTokenErr(lang))
       );
     }
+    if (userInfo && !userInfo.tokens) {
+      throw new Error(
+        JSON.stringify(ValidateTokenErrors.ciamValidateTokenErr(lang))
+      );
+    }
     //can not token expires not existed - login scenario
     if (
       userInfo.tokens &&
@@ -44,7 +49,7 @@ class UserValidateResetPasswordService {
     return {
       token,
       email: userInfo.username,
-      tokens: userInfo.tokens
+      tokens: userInfo.tokens,
     };
   }
 }
