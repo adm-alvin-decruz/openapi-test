@@ -2,7 +2,6 @@ require("dotenv").config();
 const userModel = require("../../db/models/userModel");
 const failedJobsModel = require("../../db/models/failedJobsModel");
 const ApiUtils = require("../../utils/apiUtils");
-const appConfig = require("../../config/appConfig");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const passkitCommonService = require("../components/passkit/services/passkitCommonService");
 
@@ -11,6 +10,12 @@ class UserGetMembershipPassesService {
     this.apiEndpoint = process.env.PASSKIT_URL + process.env.PASSKIT_GET_PATH;
   }
 
+  /**
+    Notes:Not support get multiple passes
+    The validation required visualId
+    List property will not manipulate now
+    ** getVisualIds will always point to body.visualId
+  */
   getVisualIds(body) {
     if (body && body.visualId) {
       return [body.visualId];
@@ -29,13 +34,15 @@ class UserGetMembershipPassesService {
   async retrievePasskit(mandaiId, group, visualId) {
     try {
       const headers = await passkitCommonService.setPasskitReqHeader();
-      console.log('api endpoint', this.apiEndpoint);
-      console.log('headers', headers)
-      const response = await ApiUtils.makeRequest(this.apiEndpoint, 'post', headers, {
-        passType: group,
-        mandaiId: mandaiId,
-      });
-      console.log('response', response)
+      const response = await ApiUtils.makeRequest(
+        this.apiEndpoint,
+        "post",
+        headers,
+        {
+          passType: group,
+          mandaiId: mandaiId,
+        }
+      );
       const rsHandler = ApiUtils.handleResponse(response);
       return {
         visualId,
@@ -61,7 +68,6 @@ class UserGetMembershipPassesService {
   }
 
   async handleIntegration(userInfo) {
-    console.log('user info', userInfo)
     const response = await Promise.all(
       userInfo.map((info) =>
         this.retrievePasskit(info.mandaiId, info.membership, info.visualId)
@@ -99,7 +105,7 @@ class UserGetMembershipPassesService {
         action: "failed",
         data: {
           visualIds,
-          passkitIntegrationUrl: this.passkitGeneratorUrl(),
+          passkitIntegration: this.apiEndpoint,
         },
         source: 2,
         triggered_at: null,

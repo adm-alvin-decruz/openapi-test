@@ -26,62 +26,6 @@ describe("UserGetMembershipPassesValidation", () => {
         statusCode: 400,
       });
     });
-    it("should throw an error when list visualId is not array", () => {
-      const failedMessage = UserGetMembershipPassesValidation.execute({
-        email: "test@gmail.com",
-        list: {},
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 400,
-          message: "Wrong parameters",
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-          error: {
-            list_visualId: "List visual id is invalid",
-          },
-        },
-        status: "failed",
-        statusCode: 400,
-      });
-    });
-    it("should throw an error when list visualId & visualID is exists at same time", () => {
-      const failedMessage = UserGetMembershipPassesValidation.execute({
-        email: "test@gmail.com",
-        visualId: "123",
-        list: [],
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 400,
-          message: "Wrong parameters",
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-          error: {
-            "list_visualId": "List visual id is invalid",
-          }
-        },
-        status: "failed",
-        statusCode: 400,
-      });
-    });
-    it("should throw an error when list visualId & visualID is non-exists at same time", () => {
-      const failedMessage = UserGetMembershipPassesValidation.execute({
-        email: "test@gmail.com",
-        visualId: "",
-        list: [],
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 400,
-          message: "Wrong parameters",
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-          error: {
-            "list_visualId": "List visual id is invalid",
-          }
-        },
-        status: "failed",
-        statusCode: 400,
-      });
-    });
     it("should throw an error when visual exists but empty string - multiple language", () => {
       const failedMessage = UserGetMembershipPassesValidation.execute({
         visualId: "",

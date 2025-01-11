@@ -364,7 +364,7 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
 /**
  * User Get Membership Passes API (Method POST)
  */
-router.post("/users/my-membership", isEmptyRequest, isEmptyAccessToken, validateEmail, async (req, res) => {
+router.post("/users/membership-passes", isEmptyRequest, isEmptyAccessToken, validateEmail, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();

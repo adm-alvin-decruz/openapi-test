@@ -619,9 +619,9 @@ describe("User Routes", () => {
       });
     });
   });
-  describe("POST:/users/my-membership - User Get Membership Passes API", () => {
+  describe("POST:/users/membership-passes - User Get Membership Passes API", () => {
     it("should return 400 if request body is empty", async () => {
-      const response = await request(app).post("/users/my-membership").send({});
+      const response = await request(app).post("/users/membership-passes").send({});
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({
@@ -636,7 +636,7 @@ describe("User Routes", () => {
     });
     it("should return 401 if empty access token", async () => {
       const response = await request(app)
-        .post("/users/my-membership", {
+        .post("/users/membership-passes", {
           headers: {
             authorization: "",
           },
@@ -649,7 +649,7 @@ describe("User Routes", () => {
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
       const response = await request(app)
-        .post("/users/my-membership", {
+        .post("/users/membership-passes", {
           headers: {
             "mwg-app-id": "",
             authorization: "123",
@@ -677,7 +677,7 @@ describe("User Routes", () => {
         )
       );
       const response = await request(app)
-        .post("/users/my-membership", {
+        .post("/users/membership-passes", {
           headers: {
             "mwg-app-id": "",
           },
@@ -720,7 +720,7 @@ describe("User Routes", () => {
         statusCode: 200,
       });
       const response = await request(app)
-        .post("/users/my-membership")
+        .post("/users/membership-passes")
         .set("Authorization", "Bearer" + Math.random())
         .send({
           email: "test@gmail.com",
