@@ -6,6 +6,7 @@ const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const { messageLang } = require("../../utils/common");
+const loggerService = require("../../logs/logger");
 
 class UserConfirmResetPasswordService {
   async execute(body) {
@@ -47,6 +48,7 @@ class UserConfirmResetPasswordService {
       };
     } catch (error) {
       //TODO: handle error saving to trail_table
+      loggerService.error(`Error UserConfirmResetPasswordService.execute Error: ${error}`);
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";

@@ -9,6 +9,7 @@ const {
   currentDateAddHours,
 } = require("../../utils/dateUtils");
 const { EXPIRE_TIME_HOURS } = require("../../utils/constants");
+const loggerService = require("../../logs/logger");
 
 class UserResetPasswordService {
   async execute(reqBody) {
@@ -26,7 +27,7 @@ class UserResetPasswordService {
 
       const userInfo = await userCredentialModel.findByUserEmail(email);
       //save db
-      await userCredentialModel.updateByUserEmail(email, {
+      await userCredentialModel.updateByUserEmail(null, {
         password_hash: passwordHash,
         salt: saltKey,
         tokens: {
@@ -43,6 +44,7 @@ class UserResetPasswordService {
       };
     } catch (error) {
       //TODO: handle error saving to trail_table
+      loggerService.error(`Error userResetPasswordService.execute Error: ${error}`);
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";

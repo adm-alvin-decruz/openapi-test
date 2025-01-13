@@ -2,6 +2,7 @@ const pool = require('../connections/mysqlConn');
 const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
 const CommonErrors = require("../../config/https/errors/common");
+const loggerService = require("../../logs/logger");
 
 class UserCredential {
   static async create(credentialData) {
@@ -128,6 +129,7 @@ class UserCredential {
         user_id: result.insertId
       };
     } catch (error) {
+      loggerService.error(`Error userCredentialModel.updateByUserEmail Error: ${error}`);
       throw new Error(
           JSON.stringify(CommonErrors.InternalServerError())
       );
