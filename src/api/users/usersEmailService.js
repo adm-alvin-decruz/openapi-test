@@ -34,6 +34,19 @@ async function lambdaSendEmail(req){
     };
   }
 
+  // if reset password
+  if(req.body.emailAction === 'reset-password'){
+    functionName = process.env.LAMBDA_EMAIL_TRIGGER_SERVICE_FUNCTION;
+    emailTriggerData = {
+      email: req.body.email,
+      firstName: req.body.firstName,
+      group: req.body.group,
+      ID: req.body.ID,
+      resetPasswordLink: `${process.env.MWG_CIAM_RESET_PASSWORD_URL}?token=${req.body.resetToken}`,
+      caller: 'ciam'
+    };
+  }
+
   // lambda invoke
   let emailLambda = await lambdaService.lambdaInvokeFunction(emailTriggerData, functionName);
 
