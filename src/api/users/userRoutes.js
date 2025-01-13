@@ -44,13 +44,13 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   }
 
   //#region Signup FOW FOW+
-  if([GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
+  if([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
     try {
       const signupRs = await userController.adminCreateNewUser(req);
-      req.apiTimer.end('Route CIAM Signup User Success', startTimer);
+      req.apiTimer.end('Route CIAM Signup New User Success', startTimer);
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
-      req.apiTimer.end('Route CIAM Signup User Error', startTimer);
+      req.apiTimer.end('Route CIAM Signup New User Error', startTimer);
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage)
     }

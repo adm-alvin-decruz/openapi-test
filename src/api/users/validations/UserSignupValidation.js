@@ -16,8 +16,7 @@ class UserSignupValidation {
     return (this.error = null);
   }
 
-  //enhance get list error
-  static validateRequestFowFowPlus(req) {
+  static validateRequestMembershipPasses(req) {
     //validate missing required params
     const requireParams = [
       "email",
@@ -88,7 +87,7 @@ class UserSignupValidation {
       return this.validateRequestWildPass(data);
     }
 
-    return this.validateRequestFowFowPlus(data);
+    return this.validateRequestMembershipPasses(data);
   }
 }
 
