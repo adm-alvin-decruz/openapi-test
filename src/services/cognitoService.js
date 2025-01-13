@@ -8,7 +8,9 @@ const {
   AdminDeleteUserCommand,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
-  ChangePasswordCommand, AdminListGroupsForUserCommand,
+  ChangePasswordCommand,
+  AdminListGroupsForUserCommand,
+  AdminAddUserToGroupCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -274,6 +276,25 @@ class Cognito {
       return await client.send(userChangePassword);
     } catch (error) {
       loggerService.error(`cognitoService.cognitoUserChangePassword Error: ${error}`);
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
+      );
+    }
+  }
+
+  static async cognitoAdminAddUserToGroup(email, group) {
+    const adminAddUserToGroup = new AdminAddUserToGroupCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+      GroupName: group.toUpperCase()
+    });
+    try {
+      return await client.send(adminAddUserToGroup);
+    } catch (error) {
+      loggerService.error(`cognitoService.cognitoAdminAddUserToGroup Error: ${error}`);
       throw new Error(
           JSON.stringify({
             status: "failed",

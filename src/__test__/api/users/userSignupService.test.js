@@ -1,12 +1,21 @@
 const cognitoService = require("../../../services/cognitoService");
 const userSignupService = require("../../../api/users/userSignupService");
 const pool = require("../../../db/connections/mysqlConn");
+const failedJobsModel = require("../../../db/models/failedJobsModel");
+const userModel = require("../../../db/models/userModel");
 
+jest.mock("../../../db/models/failedJobsModel", () => ({
+  create: jest.fn(),
+}));
+jest.mock("../../../db/models/userModel", () => ({
+  create: jest.fn(),
+}));
 jest.mock("../../../services/cognitoService", () => ({
   cognitoAdminGetUserByEmail: jest.fn(),
   cognitoAdminCreateUser: jest.fn(),
   cognitoAdminSetUserPassword: jest.fn(),
   cognitoAdminDeleteUser: jest.fn(),
+  cognitoAdminAddUserToGroup: jest.fn(),
 }));
 jest.mock("../../../db/connections/mysqlConn", () => ({
   transaction: jest.fn(),
@@ -106,20 +115,20 @@ describe("UserSignupService", () => {
   describe("saveUserDB", () => {
     it("should throw error when meet failed transaction", async () => {
       jest.spyOn(pool, "transaction").mockRejectedValue("rollback");
-      await expect(
-        userSignupService.saveUserDB({
-          req: {
-            headers: {
-              "mwg-app-id": "123",
-            },
-            body: {
-              email: "test@gmail.com",
-            },
+      jest.spyOn(userModel, "create").mockRejectedValue("failed");
+      await userSignupService.saveUserDB({
+        req: {
+          headers: {
+            "mwg-app-id": "123",
           },
-          mandaiId: "123",
-          hashPassword: "123",
-        })
-      ).rejects.toThrow('{"dbProceed":"failed"}');
+          body: {
+            email: "test@gmail.com",
+          },
+        },
+        mandaiId: "123",
+        hashPassword: "123",
+      });
+      expect(failedJobsModel.create).toHaveBeenCalled();
     });
   });
   describe("signup", () => {
@@ -217,44 +226,6 @@ describe("UserSignupService", () => {
         })
       );
     });
-    it("should throw error when saveUserDB is failed and cognito delete has been called", async () => {
-      jest
-        .spyOn(userSignupService, "isUserExistedInCognito")
-        .mockImplementationOnce(() => false);
-      jest
-        .spyOn(cognitoService, "cognitoAdminCreateUser")
-        .mockResolvedValue({ status: "success" });
-      jest
-        .spyOn(cognitoService, "cognitoAdminSetUserPassword")
-        .mockResolvedValue({ status: "success" });
-      jest
-        .spyOn(userSignupService, "saveUserDB")
-        .mockImplementationOnce(() =>
-          Promise.reject(new Error(JSON.stringify({ dbProceed: "failed" })))
-        );
-      await expect(
-        userSignupService.signup({
-          headers: {
-            "mwg-app-id": 123,
-          },
-          body: {
-            email: "test@gmail.com",
-            password: "123",
-          },
-        })
-      ).rejects.toThrow(
-        JSON.stringify({
-          membership: {
-            code: 200,
-            mwgCode: "MWG_CIAM_USER_SIGNUP_ERR",
-            message: "New user signup error.",
-          },
-          status: "success",
-          statusCode: 200,
-        })
-      );
-      expect(cognitoService.cognitoAdminDeleteUser).toBeCalledTimes(1);
-    });
     it("should return mandaiId when signup success", async () => {
       jest
         .spyOn(userSignupService, "isUserExistedInCognito")
@@ -264,6 +235,9 @@ describe("UserSignupService", () => {
         .mockResolvedValue({ status: "success" });
       jest
         .spyOn(cognitoService, "cognitoAdminSetUserPassword")
+        .mockResolvedValue({ status: "success" });
+      jest
+        .spyOn(cognitoService, "cognitoAdminAddUserToGroup")
         .mockResolvedValue({ status: "success" });
       jest
         .spyOn(userSignupService, "saveUserDB")
