@@ -2,6 +2,7 @@ const GROUP = {
   WILD_PASS: "wildpass",
   FOW: "fow",
   FOW_PLUS: "fow+",
+  MEMBERSHIP_PASSES: "membership-passes"
 };
 
 const LANGUAGE_CODE = {
@@ -11,7 +12,7 @@ const LANGUAGE_CODE = {
   CHINA: "zh",
 };
 
-const GROUPS_SUPPORTS = [GROUP.WILD_PASS, GROUP.FOW, GROUP.FOW_PLUS];
+const GROUPS_SUPPORTS = [GROUP.WILD_PASS, GROUP.MEMBERSHIP_PASSES];
 
 const COGNITO_ATTRIBUTES = {
   firstName: "given_name",

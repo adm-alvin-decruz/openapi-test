@@ -19,7 +19,7 @@ const appConfig = {
   APP_ID_SUPPORT_PROD:'["support.Prod.internal.mandaiapi.ciam"]',
 
   // user signup generate passkit for send in the email
-  SIGNUP_CHECK_AEM:true,
+  SIGNUP_CHECK_AEM:false,
 
   LOG_APP_PREFIX:'[CIAM-MAIN]'
 
