@@ -1,22 +1,35 @@
 const cognitoService = require("../../../services/cognitoService");
 const membershipService = require("../../../api/memberships/membershipsServices");
+const userModel = require("../../../db/models/userModel");
+const userMembershipModel = require("../../../db/models/userMembershipModel");
 
 jest.mock("../../../services/cognitoService", () => ({
+  cognitoAdminListGroupsForUser: jest.fn(),
   cognitoAdminGetUserByEmail: jest.fn(),
+}));
+jest.mock("../../../db/models/userModel", () => ({
+  findByEmail: jest.fn(),
+}));
+jest.mock("../../../db/models/userMembershipModel", () => ({
+  findByUserIdAndGroup: jest.fn(),
 }));
 
 describe("MembershipService", () => {
   describe("checkUserMembership", () => {
-    it("should throw error MWG_CIAM_USERS_MEMBERSHIP_NULL when cognito not found user", async () => {
+    it("should throw error MWG_CIAM_USERS_MEMBERSHIP_NULL and when Cognito and DB not found user", async () => {
       jest
-        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .spyOn(cognitoService, "cognitoAdminListGroupsForUser")
         .mockRejectedValue(
           new Error(
             JSON.stringify({
               status: "failed",
+              data: {
+                name: "UserNotFoundException",
+              },
             })
           )
         );
+      jest.spyOn(userModel, "findByEmail").mockResolvedValue(undefined);
       await expect(
         membershipService.checkUserMembership({
           email: "test-email@gmail.com",
@@ -35,14 +48,26 @@ describe("MembershipService", () => {
         })
       );
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS when cognito not get value membership", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-          },
-        ],
-      });
+    it("should return group based on user without mid when cognito can found user", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminListGroupsForUser")
+        .mockResolvedValue({
+          Groups: [
+            {
+              GroupName: "wildpass",
+            },
+          ],
+        });
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "custom:mandai_id",
+              Value: "123",
+            },
+          ],
+        });
       const rs = await membershipService.checkUserMembership({
         email: "test-email@gmail.com",
         group: "wildpass",
@@ -50,7 +75,7 @@ describe("MembershipService", () => {
       expect(rs).toEqual({
         membership: {
           group: {
-            wildpass: false,
+            wildpass: true,
           },
           code: 200,
           message: "Get membership success.",
@@ -61,85 +86,87 @@ describe("MembershipService", () => {
         statusCode: 200,
       });
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS when cognito have user member group but not belong any group", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"wildpass1","visualID":"","expiry":""},{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
-          },
-        ],
-      });
+    it("should return group based on user with mid is true when cognito can found user", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminListGroupsForUser")
+        .mockResolvedValue({
+          Groups: [
+            {
+              GroupName: "wildpass",
+            },
+          ],
+        });
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByEmail")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "custom:mandai_id",
+              Value: "123",
+            },
+          ],
+        });
       const rs = await membershipService.checkUserMembership({
         email: "test-email@gmail.com",
         group: "wildpass",
+        mid: true,
       });
       expect(rs).toEqual({
         membership: {
           group: {
-            wildpass: false,
+            wildpass: true,
           },
           code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
           message: "Get membership success.",
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
           email: "test-email@gmail.com",
+          mandaiId: "123",
         },
         status: "success",
         statusCode: 200,
       });
     });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS when cognito have user member group fow/fow+", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
+    it("should return group based on user with mid is true when user only available at DB", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminListGroupsForUser")
+        .mockRejectedValue(
+          new Error(
+            JSON.stringify({
+              status: "failed",
+              data: {
+                name: "UserNotFoundException",
+              },
+            })
+          )
+        );
+      jest.spyOn(userModel, "findByEmail").mockResolvedValue({
+        mandai_id: "123",
+        id: "81",
+      });
+      jest
+        .spyOn(userMembershipModel, "findByUserIdAndGroup")
+        .mockResolvedValue([
           {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"wildpass1","visualID":"","expiry":""},{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
+            id: "80",
+            userId: "81",
+            name: "wildpass",
           },
-        ],
-      });
-      const rs = await membershipService.checkUserMembership({
-        email: "test-email@gmail.com",
-        group: "fow",
-      });
-      expect(rs).toEqual({
-        membership: {
-          group: {
-            fow: true,
-          },
-          code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
-          message: "Get membership success.",
-          email: "test-email@gmail.com",
-        },
-        status: "success",
-        statusCode: 200,
-      });
-    });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS when cognito have user member group fow/fow+ but group request is wildpass", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
-          },
-        ],
-      });
+        ]);
       const rs = await membershipService.checkUserMembership({
         email: "test-email@gmail.com",
         group: "wildpass",
+        mid: true,
       });
       expect(rs).toEqual({
         membership: {
           group: {
-            wildpass: false,
+            wildpass: true,
           },
           code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
           message: "Get membership success.",
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
           email: "test-email@gmail.com",
+          mandaiId: "123",
         },
         status: "success",
         statusCode: 200,
@@ -147,87 +174,48 @@ describe("MembershipService", () => {
     });
   });
   describe("message multiple language", () => {
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS default language (EN)", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
-          },
-        ],
+    it("should return group based on user with mid is true when user only available at DB - language is kr", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminListGroupsForUser")
+        .mockRejectedValue(
+          new Error(
+            JSON.stringify({
+              status: "failed",
+              data: {
+                name: "UserNotFoundException",
+              },
+            })
+          )
+        );
+      jest.spyOn(userModel, "findByEmail").mockResolvedValue({
+        mandai_id: "123",
+        id: "81",
       });
+      jest
+        .spyOn(userMembershipModel, "findByUserIdAndGroup")
+        .mockResolvedValue([
+          {
+            id: "80",
+            userId: "81",
+            name: "wildpass",
+          },
+        ]);
       const rs = await membershipService.checkUserMembership({
         email: "test-email@gmail.com",
         group: "wildpass",
+        mid: true,
+        language: 'kr'
       });
       expect(rs).toEqual({
         membership: {
           group: {
-            wildpass: false,
+            wildpass: true,
           },
           code: 200,
+          message: "멤버십 획득 성공.",
           mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
-          message: "Get membership success.",
           email: "test-email@gmail.com",
-        },
-        status: "success",
-        statusCode: 200,
-      });
-    });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS based on country JP", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
-          },
-        ],
-      });
-      const rs = await membershipService.checkUserMembership({
-        email: "test-email@gmail.com",
-        group: "wildpass",
-        language: "ja",
-      });
-      expect(rs).toEqual({
-        membership: {
-          group: {
-            wildpass: false,
-          },
-          code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
-          message: "メンバーシップ取得成功.",
-          email: "test-email@gmail.com",
-        },
-        status: "success",
-        statusCode: 200,
-      });
-    });
-    it("should return MWG_CIAM_USERS_MEMBERSHIP_SUCCESS default language (EN) when request language not setup", async () => {
-      jest.spyOn(cognitoService, "cognitoAdminGetUserByEmail").mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: "custom:membership",
-            Value:
-              '[{"name":"fow","visualID":"","expiry":"08/12/2025"},{"name":"fow+","visualID":"","expiry":"23/12/2025"}]',
-          },
-        ],
-      });
-      const rs = await membershipService.checkUserMembership({
-        email: "test-email@gmail.com",
-        group: "wildpass",
-        language: "ab",
-      });
-      expect(rs).toEqual({
-        membership: {
-          group: {
-            wildpass: false,
-          },
-          code: 200,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIP_SUCCESS",
-          message: "Get membership success.",
-          email: "test-email@gmail.com",
+          mandaiId: "123",
         },
         status: "success",
         statusCode: 200,

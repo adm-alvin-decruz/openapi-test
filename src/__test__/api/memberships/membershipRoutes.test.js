@@ -27,7 +27,15 @@ describe("Membership Routes", () => {
         .send({ email: "example-email@gmail.com", group: "wildpass" });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return 200 user membership when success", async () => {
       const mockMembership = {
