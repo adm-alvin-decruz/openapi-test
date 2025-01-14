@@ -9,9 +9,9 @@ describe("UserSignupValidation", () => {
     jest.restoreAllMocks();
   });
   describe("execute", () => {
-    describe("validateRequestFowFowPlus", () => {
+    describe("validateRequestMembershipPasses", () => {
       it("should throw an error when firstName is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
         });
@@ -29,7 +29,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when lastName is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -48,7 +48,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when lastName is missing - multiple language", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -67,49 +67,8 @@ describe("UserSignupValidation", () => {
           statusCode: 400,
         });
       });
-      it("should throw an error when country is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
-          group: "fow+",
-          email: "test@email.com",
-          firstName: "test",
-          lastName: "test",
-        });
-        expect(failedMessage).toEqual({
-          membership: {
-            code: 400,
-            message: "Wrong parameters",
-            error: {
-              country: "Country is invalid.",
-            },
-            mwgCode: "MWG_CIAM_PARAMS_ERR",
-          },
-          status: "failed",
-          statusCode: 400,
-        });
-      });
-      it("should throw an error when phoneNumber is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
-          group: "fow+",
-          email: "test@email.com",
-          firstName: "test",
-          lastName: "test",
-          country: "SG",
-        });
-        expect(failedMessage).toEqual({
-          membership: {
-            code: 400,
-            message: "Wrong parameters",
-            error: {
-              phoneNumber: "Phone number is invalid.",
-            },
-            mwgCode: "MWG_CIAM_PARAMS_ERR",
-          },
-          status: "failed",
-          statusCode: 400,
-        });
-      });
       it("should throw an error when password is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -131,7 +90,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when confirmPassword is missing", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -154,7 +113,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when country more than 2 character", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -178,7 +137,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when dob not valid", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -203,7 +162,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when password not strong", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -225,7 +184,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when password & confirm not match", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -248,7 +207,7 @@ describe("UserSignupValidation", () => {
         });
       });
       it("should throw an error when password & confirm not match - multiple language", () => {
-        const failedMessage = UserSignupValidation.validateRequestFowFowPlus({
+        const failedMessage = UserSignupValidation.validateRequestMembershipPasses({
           group: "fow+",
           email: "test@email.com",
           firstName: "test",
@@ -270,37 +229,6 @@ describe("UserSignupValidation", () => {
           statusCode: 200,
         });
       });
-    });
-    it("should throw an error when failed is called", () => {
-      const failedMessage = UserSignupValidation.execute({
-        group: "",
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 400,
-          message: "Wrong parameters",
-          error: {
-            group: "The group is invalid.",
-          },
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-        },
-        status: "failed",
-        statusCode: 400,
-      });
-    });
-    it("should call validate FOW/FOW+ when group is fow/fow+", () => {
-      UserSignupValidation.validateRequestFowFowPlus = jest.fn();
-      UserSignupValidation.execute({
-        group: "fow+",
-      });
-      expect(UserSignupValidation.validateRequestFowFowPlus).toHaveBeenCalled();
-    });
-    it("should call validate wildpass when group is wildpass", () => {
-      UserSignupValidation.validateRequestWildPass = jest.fn();
-      UserSignupValidation.execute({
-        group: "wildpass",
-      });
-      expect(UserSignupValidation.validateRequestWildPass).toHaveBeenCalled();
     });
   });
 });

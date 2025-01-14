@@ -176,7 +176,7 @@ class Cognito {
         { Name: "birthdate", Value: birthdate },
         { Name: "address", Value: address ? address : "" },
         // custom fields
-        { Name: "custom:membership", Value: JSON.stringify(groups) },
+        { Name: "custom:membership", Value: groups ? JSON.stringify(groups) : "null" },
         { Name: "custom:mandai_id", Value: mandaiId },
         { Name: "custom:newsletter", Value: JSON.stringify(newsletter) },
         { Name: "custom:terms_conditions", Value: "null" },
@@ -289,7 +289,7 @@ class Cognito {
     const adminAddUserToGroup = new AdminAddUserToGroupCommand({
       UserPoolId: process.env.USER_POOL_ID,
       Username: email,
-      GroupName: group.toUpperCase()
+      GroupName: group
     });
     try {
       return await client.send(adminAddUserToGroup);

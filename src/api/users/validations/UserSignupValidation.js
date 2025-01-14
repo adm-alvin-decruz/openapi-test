@@ -1,6 +1,5 @@
 const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { validateDOB } = require("../../../services/validationService");
-const { GROUPS_SUPPORTS, GROUP } = require("../../../utils/constants");
 const { passwordPattern } = require("../../../utils/common");
 const CommonErrors = require("../../../config/https/errors/common");
 
@@ -9,21 +8,12 @@ class UserSignupValidation {
     this.error = null;
   }
 
-  /*TODO
-   *  moving validation wildpass after agreement!
-   * */
-  static validateRequestWildPass(req) {
-    return (this.error = null);
-  }
-
   static validateRequestMembershipPasses(req) {
     //validate missing required params
     const requireParams = [
       "email",
       "firstName",
       "lastName",
-      "country",
-      "phoneNumber",
       "password",
       "confirmPassword",
     ];
@@ -32,8 +22,31 @@ class UserSignupValidation {
       (key) => !listKeys.includes(key)
     );
     if (paramsMissing.length) {
-      return (this.error = SignupErrors.ciamWrongParams(
+      return (this.error = CommonErrors.BadRequest(
         paramsMissing[0],
+        `${paramsMissing[0]}_invalid`,
+        req.language
+      ));
+    }
+
+    const paramsShouldNotEmpty = [
+      "email",
+      "firstName",
+      "lastName",
+      "country",
+      "phoneNumber",
+      "password",
+      "confirmPassword",
+    ];
+    //if parameters have some empty string
+    const paramsInvalid = paramsShouldNotEmpty
+      .filter((key) => listKeys.includes(key))
+      .filter((ele) => req[`${ele}`].trim() === "");
+
+    if (paramsInvalid.length) {
+      return (this.error = CommonErrors.BadRequest(
+        paramsInvalid[0],
+        `${paramsInvalid[0]}_invalid`,
         req.language
       ));
     }
@@ -41,25 +54,18 @@ class UserSignupValidation {
     if (req.dob || req.dob === "") {
       const dob = validateDOB(req.dob);
       if (!dob) {
-        return (this.error = SignupErrors.ciamWrongParams("dob", req.language));
+        return (this.error = CommonErrors.BadRequest(
+          "dob",
+          "dob_invalid",
+          req.language
+        ));
       }
     }
 
     if (req.country.length !== 2) {
-      return (this.error = SignupErrors.ciamWrongParams(
-        "country",
-        req.language
-      ));
-    }
-
-    if (
-      req.newsletter &&
-      (!req.newsletter.subscribe ||
-        !GROUPS_SUPPORTS.includes(req.newsletter.name))
-    ) {
       return (this.error = CommonErrors.BadRequest(
-        "newsletter",
-        "newsletter_invalid",
+        "country",
+        "country_invalid",
         req.language
       ));
     }
@@ -77,16 +83,6 @@ class UserSignupValidation {
   }
 
   static execute(data) {
-    if (!data.group || !GROUPS_SUPPORTS.includes(data.group)) {
-      return (this.error = SignupErrors.ciamWrongParams(
-        "group",
-        data.language
-      ));
-    }
-    if (data.group === GROUP.WILD_PASS) {
-      return this.validateRequestWildPass(data);
-    }
-
     return this.validateRequestMembershipPasses(data);
   }
 }

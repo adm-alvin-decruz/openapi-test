@@ -14,6 +14,7 @@ const CommonErrors = require("../../config/https/errors/common");
 const commonService = require("../../services/commonService");
 const failedJobsModel = require("../../db/models/failedJobsModel");
 const { GROUP } = require("../../utils/constants");
+const loggerService = require("../../logs/logger");
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -30,7 +31,7 @@ class UserSignupService {
       if (errorData.name && errorData.name === "UserNotFoundException") {
         return false;
       }
-
+      loggerService.error(`userSignupService.isUserExistedInCognito Error: ${error}`);
       if (errorMessage.status === "failed") {
         throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
       }
@@ -42,7 +43,6 @@ class UserSignupService {
     const source = getSource(req.headers["mwg-app-id"]);
     const groupKey = getGroup(req.body.group);
 
-    const length = req.body.group === GROUP.FOW_PLUS ? 10 : 11;
     const hash = crypto
       .createHash("sha256")
       .update(
@@ -50,7 +50,7 @@ class UserSignupService {
       )
       .digest("hex");
     const numbers = hash.replace(/\D/g, "");
-    return `M${groupKey}${source.sourceKey}${numbers.slice(0, length)}`;
+    return `M${groupKey}${source.sourceKey}${numbers.slice(0, 11)}`;
   }
 
   userModelExecution(userData) {
@@ -154,12 +154,14 @@ class UserSignupService {
         visual_id: req.body.visualID ? req.body.visualID : "",
         expires_at: null,
       }),
-      req.body.newsletter.subscribe ? this.userNewsletterModelExecution({
-        user_id: userDB.user_id,
-        name: req.body.newsletter.name ? req.body.newsletter.name : "",
-        type: req.body.newsletter.type ? req.body.newsletter.type : "",
-        subscribe: req.body.newsletter.subscribe,
-      }) : undefined,
+      req.body.newsletter.subscribe
+        ? this.userNewsletterModelExecution({
+            user_id: userDB.user_id,
+            name: req.body.newsletter.name ? req.body.newsletter.name : "",
+            type: req.body.newsletter.type ? req.body.newsletter.type : "",
+            subscribe: req.body.newsletter.subscribe,
+          })
+        : undefined,
       this.userCredentialModelExecution({
         user_id: userDB.user_id,
         username: req.body.email,
@@ -177,7 +179,7 @@ class UserSignupService {
         vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : null,
         extra: req.body.extra ? req.body.extra : null,
       }),
-    ].filter(work => !!work);
+    ].filter((work) => !!work);
   }
 
   async saveUserDB({ req, mandaiId, hashPassword }) {
@@ -218,13 +220,15 @@ class UserSignupService {
 
     if (userDB && userDB.user_id) {
       try {
-        await pool.transaction(this.importUserInformation(userDB, req, hashPassword));
+        await pool.transaction(
+          this.importUserInformation(userDB, req, hashPassword)
+        );
       } catch (error) {
         await failedJobsModel.create({
           uuid: crypto.randomUUID(),
           name: "failedCreateNewUserInformation",
           action: "failed",
-          data: this.importUserInformation(userDB, req, hashPassword).join('|'),
+          data: this.importUserInformation(userDB, req, hashPassword).join("|"),
           source: 2,
           triggered_at: null,
           status: 0,
@@ -254,22 +258,16 @@ class UserSignupService {
         lastName: req.body.lastName,
         birthdate: req.body.dob,
         address: req.body.address,
-        groups: [
-          {
-            name: req.body.group,
-            visualID: "",
-            expiry: "",
-          },
-        ],
+        /*
+        TODO: enhance add FO series later
+         */
+        groups: null,
         mandaiId: mandaiId,
-        newsletter:
-          req.body.newsletter && req.body.newsletter.subscribe
-            ? {
-                name: req.body.newsletter.name ? req.body.newsletter.name : "",
-                type: req.body.newsletter.type ? req.body.newsletter.type : "",
-                subscribe: req.body.newsletter.subscribe,
-              }
-            : null,
+        newsletter: {
+          name: "membership",
+          type: "1",
+          subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
+        },
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
           : "",
@@ -278,7 +276,10 @@ class UserSignupService {
         req.body.email,
         req.body.password
       );
-      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group);
+      await cognitoService.cognitoAdminAddUserToGroup(
+        req.body.email,
+        req.body.group
+      );
 
       await this.saveUserDB({
         req,
@@ -290,13 +291,14 @@ class UserSignupService {
         mandaiId,
       };
     } catch (error) {
+      loggerService.error(`userSignupService.signup Error: ${error}`);
       const errorMessage = JSON.parse(error.message);
       if (errorMessage.status === "failed") {
         throw new Error(
           JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language))
         );
       }
-      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+      throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }
   }
 }
