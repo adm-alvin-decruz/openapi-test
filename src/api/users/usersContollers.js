@@ -12,7 +12,6 @@ const validationService = require('../../services/validationService');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
-const aemService = require('../../services/AEMService');
 const dbService = require('./usersDBService');
 const appConfig = require('../../config/appConfig');
 const UserLoginJob = require("./userLoginJob");
@@ -69,16 +68,8 @@ async function adminCreateUser (req){
       var memberExist = await usersService.getUserMembership(req);
 
       // if signup check aem flag true, check user exist in AEM
-      let aemResponse, aemNoMembership;
+      let aemNoMembership;
       let responseSource = 'ciam';
-
-      if(appConfig.SIGNUP_CHECK_AEM === true && !req.body.migrations){
-        aemResponse = await aemService.aemCheckWildPassByEmail(req.body);
-        aemNoMembership = aemResponse.data.valid; // no membership in AEM 'true'/'false'
-        if (aemNoMembership === 'false') {
-          responseSource = 'aem';
-        }
-      }
 
       if(memberExist.status === 'success' || aemNoMembership === 'false'){
         // prepare response
@@ -232,21 +223,7 @@ async function membershipResend(req){
       response['source'] = 'ciam';
       return response;
     }
-    else if(memberInfo.status === 'not found'){
-      // need to check to AEM and resend from there
-      let aemResponse = await aemService.aemResendWildpass(req.body);
 
-      if (aemResponse.data && typeof aemResponse.data === 'object'){
-        if(aemResponse.data.statusCode === '200' || aemResponse.data.statusCode === 200) {
-          // prepare response resend success
-          let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, aemResponse);
-          // prepare error params response
-          response = responseHelper.craftUsersApiResponse('usersControllers.membershipResend', aemResponse, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
-          response['source'] = 'aem';
-          return response;
-        }
-      }
-    }
     // Prepare response membership not found
     let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, memberInfo);
     // prepare error params response

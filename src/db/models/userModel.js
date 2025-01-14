@@ -39,7 +39,12 @@ class User {
     try{
       const sql = 'SELECT * FROM users WHERE email = ?';
       const rows = await pool.query(sql, [email]);
-      return rows[0];
+
+      if (rows[0]) {
+        return rows[0];
+      } else {
+        return [];
+      }
     }
     catch (error){
       return error;

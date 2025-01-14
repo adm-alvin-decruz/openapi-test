@@ -11,9 +11,9 @@ const appConfig = require('../config/appConfig');
  * @param {JSON} req payload prepare to call external/AWS
  * @param {JSON} res payload response to caller
  */
-function log(logObj){
+function log(logObj, action=null){
   if(process.env.APP_LOG_SWITCH === 'true'){
-    console.log(logObj);
+    console.log(`${appConfig.LOG_APP_PREFIX} ` + action, logObj);
   }
 }
 
@@ -50,13 +50,13 @@ function build(moduleName, action, req, mwgCode, endpointReqObj, responseFromEnd
  * @param {mix} logObj json or string message
  * @param {*} req request object
  */
-function error (logObj, req={}) {
+function error (logObj, req={}, action=null) {
   if(process.env.APP_LOG_SWITCH === 'true'){
     let apiPath = (req.apiPath != undefined) ? 'path:'+req.apiPath : undefined;
     if (req.apiPath === undefined) {
       apiPath = '';
     }
-    console.error(appConfig.LOG_APP_PREFIX + ' '+ apiPath +' ' + logObj);
+    console.error(appConfig.LOG_APP_PREFIX + ' ' + action + ' '+ apiPath +' ', logObj);
   }
 }
 
