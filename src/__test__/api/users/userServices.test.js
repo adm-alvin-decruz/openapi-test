@@ -7,6 +7,7 @@ jest.mock("../../../services/cognitoService", () => ({
   cognitoAdminGetUserByAccessToken: jest.fn(),
   cognitoUserChangePassword: jest.fn(),
   cognitoAdminUpdateNewUser: jest.fn(),
+  cognitoAdminGetUserByEmail: jest.fn(),
 }));
 jest.mock("../../../db/models/userModel", () => ({
   findByEmail: jest.fn(),

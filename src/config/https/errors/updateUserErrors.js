@@ -6,7 +6,7 @@ class UpdateUserErrors {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USER_UPDATE_ERR",
-        message: messageLang('update_user_error', lang),
+        message: messageLang("update_user_error", lang),
       },
       status: "success",
       statusCode: 200,
@@ -17,7 +17,7 @@ class UpdateUserErrors {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USER_UPDATE_ERR",
-        message: messageLang('email_not_being_used', lang),
+        message: messageLang("email_not_being_used", lang),
       },
       status: "success",
       statusCode: 200,

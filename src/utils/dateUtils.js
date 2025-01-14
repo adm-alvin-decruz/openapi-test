@@ -12,8 +12,28 @@ function formatDateToMySQLDateTime(date) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+function currentDateAddHours(unit) {
+  const date = new Date();
+  date.setHours(date.getHours() + unit);
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function convertDateFormat(dateString, additionalHours = 0) {
+  // Parse the input date string
+  const date = new Date(dateString.replace(' ', 'T')); // Convert space to T for proper parsing
+
+  // Add additional hours if needed
+  if (additionalHours !== 0) {
+      date.setHours(date.getHours() + additionalHours);
+  }
+
+  return date.toISOString();
+}
+
 module.exports = {
   getCurrentUTCTimestamp,
   convertDateToMySQLFormat,
-  formatDateToMySQLDateTime
+  formatDateToMySQLDateTime,
+  currentDateAddHours,
+  convertDateFormat
 };

@@ -18,6 +18,7 @@ const processTimer = require('../../utils/processTimer');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
 const { GROUP } = require("../../utils/constants");
+const CommonErrors = require("../../config/https/errors/common");
 
 const pong = {'pong': 'pang'};
 
@@ -111,7 +112,6 @@ router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenWithFOW, a
       req.apiTimer.end('Route CIAM Update User Success', startTimer);
       return res.status(updateRs.statusCode).send(updateRs);
     } catch (error) {
-      console.log('error', error)
       req.apiTimer.end('Route CIAM Update User Error', startTimer);
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage)
@@ -248,7 +248,6 @@ router.post(
       const data = await userController.userLogin(req);
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      console.log('error', error)
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
@@ -277,6 +276,84 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
   );
   try {
     const data = await userController.userLogout(token, req.query.language);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Request Reset Password API (Method POST)
+ */
+router.post("/users/reset-password", isEmptyRequest, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Reset Password User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  try {
+    const data = await userController.userResetPassword(req);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Validate Reset Password API (Method GET)
+ */
+router.get("/users/reset-password", async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Validate Reset Password User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.query.language));
+  }
+
+  try {
+    const data = await userController.userValidateResetPassword(req.query.passwordToken, req.query.language);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Confirm Reset Password API (Method PUT)
+ */
+router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Confirm Reset Password User Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  try {
+    const data = await userController.userConfirmResetPassword(req.body);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);

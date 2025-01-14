@@ -4,7 +4,6 @@ const {
   GROUP,
 } = require("../../../utils/constants");
 const CommonErrors = require("../../../config/https/errors/common");
-const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { passwordPattern } = require("../../../utils/common");
 
 class UserUpdateValidation {

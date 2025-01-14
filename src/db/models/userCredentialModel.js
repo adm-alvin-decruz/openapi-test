@@ -1,6 +1,8 @@
 const pool = require('../connections/mysqlConn');
 const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
+const CommonErrors = require("../../config/https/errors/common");
+const loggerService = require("../../logs/logger");
 
 class UserCredential {
   static async create(credentialData) {
@@ -35,6 +37,12 @@ class UserCredential {
   static async findByUserEmail(email) {
     const sql = "SELECT * FROM user_credentials WHERE username = ?";
     const [rows] = await pool.query(sql, [email]);
+    return rows;
+  }
+
+  static async findByPasswordHash(password) {
+    const sql = "SELECT * FROM user_credentials WHERE password_hash = ?";
+    const [rows] = await pool.query(sql, [password]);
     return rows;
   }
 
@@ -85,6 +93,47 @@ class UserCredential {
       userId,
     ];
     await pool.execute(sql, params);
+  }
+
+  static async updateByUserEmail(username, data) {
+    const now = getCurrentUTCTimestamp();
+
+    // Filter out undefined values and create SET clauses
+    const updateFields = Object.entries(data)
+        .filter(([key, value]) => value !== undefined)
+        .map(([key, value]) => `${key} = ?`);
+
+    // Add updated_at to the SET clauses
+    updateFields.push('updated_at = ?');
+
+    // Construct the SQL query
+    const sql = `
+      UPDATE user_credentials
+      SET ${updateFields.join(', ')}
+      WHERE username = ?
+    `;
+
+    // Prepare the params array
+    const params = [
+      ...Object.values(data).filter(value => value !== undefined),
+      now,
+      username
+    ];
+
+    // Execute the query
+    try {
+      const result = await pool.execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.insertId
+      };
+    } catch (error) {
+      loggerService.error(`Error userCredentialModel.updateByUserEmail Error: ${error}`);
+      throw new Error(
+          JSON.stringify(CommonErrors.InternalServerError())
+      );
+    }
   }
 
   static async delete(id) {
