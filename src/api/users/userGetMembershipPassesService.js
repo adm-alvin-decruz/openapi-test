@@ -7,7 +7,7 @@ const passkitCommonService = require("../components/passkit/services/passkitComm
 
 class UserGetMembershipPassesService {
   constructor() {
-    this.apiEndpoint = process.env.PASSKIT_URL + process.env.PASSKIT_GET_PATH;
+    this.apiEndpoint = process.env.PASSKIT_URL + process.env.PASSKIT_GET_SIGNED_URL_PATH;
   }
 
   /**
