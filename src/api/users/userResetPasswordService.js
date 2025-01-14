@@ -105,7 +105,7 @@ class UserResetPasswordService {
       req.body.group = "membership-passes";
       req.body.emailAction = "reset-password";
 
-      const response = await emailService.emailServiceAPIs(req);
+      const response = await emailService.emailServiceAPI(req);
       loggerService.log(response, `PrepareResetPasswordEmail success:`);
 
       return true;
