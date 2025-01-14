@@ -17,7 +17,6 @@ class UserResetPasswordService {
   async execute(req) {
     let reqBody = req.body;
     const resetToken = generateRandomToken(16);
-    req.body.resetToken = resetToken;
     console.log('reset token', resetToken)
     const saltKey = generateSaltHash(resetToken);
     const passwordHash = generateSaltHash(resetToken, saltKey);
@@ -27,7 +26,9 @@ class UserResetPasswordService {
       );
       const email = getOrCheck(userCognito, "email");
 
-      //TODO: trigger lambda function send email with resetToken
+      // trigger lambda function send email with resetToken
+      req.body.expiredAt = currentDateAddHours(EXPIRE_TIME_HOURS);
+      req.body.resetToken = resetToken;
       try {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
@@ -104,11 +105,12 @@ class UserResetPasswordService {
       req.body.group = "membership-passes";
       req.body.emailAction = "reset-password";
 
-      await emailService.lambdaSendEmail(req);
+      const response = await emailService.emailServiceAPIs(req);
+      loggerService.log(response, `PrepareResetPasswordEmail success:`);
 
       return true;
     } catch (error) {
-      loggerService.error(`PrepareResetPasswordEmail failed: ${error.message}`);
+      loggerService.error(new Error(error.message), {}, `PrepareResetPasswordEmail failed:`);
 
       if (error.message === 'User not found in database') {
         throw new Error('User not found in database');
