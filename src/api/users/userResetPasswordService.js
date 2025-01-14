@@ -27,7 +27,7 @@ class UserResetPasswordService {
 
       const userInfo = await userCredentialModel.findByUserEmail(email);
       //save db
-      await userCredentialModel.updateByUserEmail(null, {
+      await userCredentialModel.updateByUserEmail(email, {
         password_hash: passwordHash,
         salt: saltKey,
         tokens: {
