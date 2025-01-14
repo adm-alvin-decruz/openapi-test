@@ -7,6 +7,7 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const {
   getCurrentUTCTimestamp,
   currentDateAddHours,
+  convertDateFormat
 } = require("../../utils/dateUtils");
 const { EXPIRE_TIME_HOURS } = require("../../utils/constants");
 const loggerService = require("../../logs/logger");
@@ -27,7 +28,7 @@ class UserResetPasswordService {
       const email = getOrCheck(userCognito, "email");
 
       // trigger lambda function send email with resetToken
-      req.body.expiredAt = currentDateAddHours(EXPIRE_TIME_HOURS);
+      req.body.expiredAt = convertDateFormat(currentDateAddHours(EXPIRE_TIME_HOURS));
       req.body.resetToken = resetToken;
       try {
         await this.prepareResetPasswordEmail(req);
