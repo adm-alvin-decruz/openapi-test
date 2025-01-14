@@ -20,12 +20,13 @@ class ApiUtils {
       return this.handleResponse(response);
     } catch (error) {
       let reqData = { method, url, headers, data, error };
+      console.error(new Error(`API request failed: ${error}`));
       throw new Error(`API request failed: ${JSON.stringify(reqData)}`);
     }
   }
 
   static handleResponse(response) {
-    if (response.status >= 200 && response.status < 300) {
+    if ((response.status >= 200 && response.status < 300) || response.statusCode === 200 ) {
       return response.data;
     } else {
       return new Error(`API request failed: ${response.status}`);

@@ -13,8 +13,9 @@ const awsRegion = () => {
   return env;
 }
 const {
-  CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand, AdminUpdateUserAttributesCommand, AdminDeleteUserCommand,
-  AdminConfirmSignUp, AdminInitiateAuthCommand, AdminResetUserPasswordCommand, ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminDisableUserCommand
+  CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminDisableUserCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: awsRegion });
 
@@ -37,6 +38,14 @@ const userUpdateHelper = require('./usersUpdateHelpers');
 const userDeleteHelper = require('./usersDeleteHelpers');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 const switchService = require('../../services/switchService');
+const CommonErrors = require("../../config/https/errors/common");
+const { getOrCheck } = require("../../utils/cognitoAttributes");
+const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
+const { COGNITO_ATTRIBUTES } = require("../../utils/constants");
+const { messageLang } = require("../../utils/common");
+const userModel = require("../../db/models/userModel");
+const userCredentialModel = require("../../db/models/userCredentialModel");
+const pool = require("../../db/connections/mysqlConn");
 
 /**
  * Function User signup service
@@ -267,6 +276,131 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
 
     req.apiTimer.end('adminUpdateUser error'); // log end time
     return responseErrorToClient;
+  }
+}
+
+async function updateDB(body, userId) {
+  if (!userId) {
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.language)))
+  }
+  //update DB
+  try {
+    await pool.transaction(async () => {
+      if (body.firstName || body.lastName || body.dob) {
+        await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob);
+      }
+      if (body.newsletter && body.newsletter.subscribe) {
+        await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
+      }
+      if (body.group) {
+        await userDBService.userMembershipModelExecuteUpdate(userId, body.group)
+      }
+      if (body.phoneNumber) {
+        await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber)
+      }
+      if (body.password) {
+        const hashPassword = await passwordService.hashPassword(
+            body.password.toString()
+        );
+        await userCredentialModel.updatePassword(userId, hashPassword)
+      }
+    });
+  } catch (error) {
+    loggerService.error(`usersService.updateDB Error: ${error}`);
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+/**
+ * Update user FOW/FOW+ CIAM info
+ * NOTE: new cardface will be confirm
+ */
+async function adminUpdateNewUser(body, token) {
+  try {
+    //get user from cognito
+    const userInfo = await cognitoService.cognitoAdminGetUserByAccessToken(token);
+    const email = getOrCheck(userInfo, 'email');
+    let userName = getOrCheck(userInfo, 'name');
+    const userFirstName = getOrCheck(userInfo, 'given_name');
+    const userLastName = getOrCheck(userInfo, 'family_name');
+
+    //update DB
+    //get user from db
+    const userDB = await userModel.findByEmail(email);
+    await updateDB(body, userDB && userDB.id ? userDB.id : undefined);
+
+
+    //cognito update user password by accessToken
+    //attempts limit: Lockout behavior for failed attempts
+    if (body.password) {
+      await cognitoService.cognitoUserChangePassword(token, body.password, body.oldPassword);
+    }
+
+    const cognitoParams = Object.keys(body).map((key) => {
+      //need to confirm with Kay about these properties here
+      if (['uuid', 'country', 'password', 'confirmPassword', 'oldPassword'].includes(key)) {
+        return;
+      }
+      if (key === 'group') {
+        return {
+          Name: COGNITO_ATTRIBUTES[key],
+          Value: JSON.stringify([
+            {
+              name: body.group,
+              visualID: "",
+              expiry: ""
+            }
+          ])
+        }
+      }
+      if (key === 'newsletter') {
+        return {
+          Name: COGNITO_ATTRIBUTES[key],
+          Value: JSON.stringify(body.newsletter)
+        }
+      }
+      return {
+        Name: COGNITO_ATTRIBUTES[key],
+        Value: body[key]
+      }
+    }).filter(ele => !!ele);
+
+    //replace for user name
+    if (body.firstName && userFirstName) {
+      userName = userName.replace(userFirstName.toString(), body.firstName);
+    }
+    if (body.lastName && userLastName) {
+      userName = userName.replace(userLastName.toString(), body.lastName);
+    }
+
+    //cognito update user
+    await cognitoService.cognitoAdminUpdateNewUser([
+        ...cognitoParams,
+      {
+        Name: 'name',
+        Value: userName
+      }
+    ], email);
+
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
+        message: messageLang('update_success', body.language),
+      },
+      status: "success",
+      statusCode: 200,
+    }
+  } catch (error) {
+    const errorMessage = error.message ? JSON.parse(error.message) : '';
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.language)))
+    }
+    if (errorData.name && errorData.name === "NotAuthorizedException") {
+      throw new Error(JSON.stringify(CommonErrors.UnauthorizedException(body.language)))
+    }
+    throw new Error(JSON.stringify(errorMessage));
   }
 }
 
@@ -552,73 +686,6 @@ async function prepareGenPasskitInvoke(req){
  }
 }
 
-
-
-// ***************************************************************
-// ********
-// below codes for reference only, can remove once done dev
-// ********
-// ***************************************************************
-
-/**
- * Function process group
- *
- * @param {json} attr array of user's attribute from cognito
- * @param {json} reqBody request body
- * @returns json group object
- */
-function processGroup(attr, reqBody){
-  var reqGroupName = reqBody.group;
-  grpAttr = loopAttr(attr, 'custom:group', '');
-
-  // parse JSON
-  if(grpAttr != false){
-    grpJson = JSON.parse(grpAttr.Value);
-    var grpObj = loopAttr(grpJson, reqGroupName, 'expiry');
-    if(grpObj != false){
-      return {[grpObj.name]: true};
-    }
-  }
-
-  return {[reqGroupName]: false}
-}
-
-/**************************/
-/** Reference code ended **/
-/**************************/
-
-/**
- * Function loop attribute to find the desire name or value
- *
- * @param {json} attr array of user's attribute from cognito or
- * @param {string} name name of attribute to be found
- * @param {*} value value of attribute to be found
- * @returns json object
- */
-function loopAttr(attr, name, value=''){
-  var attrObj = false;
-  attr.forEach(function(attribute) {
-    if(attribute.Name === name || attribute.name === name){
-      if(value != '' || attribute.Value === value){
-      // attr found, return
-      attrObj = attribute;
-      } else {
-        attrObj = attribute;
-      }
-    }
-  });
-  return attrObj;
-}
-
-function processAemGroup(reqBody, exist){
-  // AEM only has wildpass
-  return {["wildpass"]: exist}
-}
-
-function isJSONObject(obj) {
-  return Array.isArray(obj);
-}
-
 async function retryOperation(operation, maxRetries = 9, delay = 200) {
   let lastError = [];
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -643,5 +710,6 @@ module.exports = {
   getUserCustomisable,
   processError,
   genSecretHash,
-  processErrors
+  processErrors,
+  adminUpdateNewUser
 };

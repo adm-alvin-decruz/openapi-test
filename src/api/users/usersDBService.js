@@ -83,12 +83,53 @@ async function updateUserMigration(req, param1, param2) {
   }
 
   return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
+}
 
+async function userModelExecuteUpdate(userId, firstName, lastName, dob) {
+  const updateFields = {
+    given_name: firstName,
+    family_name: lastName,
+    birthdate: dob ? convertDateToMySQLFormat(dob) : undefined
+  }
+
+  return await userModel.update(userId, updateFields);
+}
+
+async function userNewsletterModelExecuteUpdate(userId, newsletter) {
+  const updateFields = {
+    name: newsletter.name ? newsletter.name : undefined,
+    type: newsletter.type ? newsletter.type : undefined,
+    subscribe: newsletter.subscribe ? newsletter.subscribe : undefined
+  }
+
+  return await userNewsletterModel.updateByUserId(userId, updateFields);
+}
+
+async function userMembershipModelExecuteUpdate(userId, group) {
+  //enhance update visual_id, expire_at later
+  const updateFields = {
+    name: group ? group : undefined,
+  }
+
+  return await userMembershipModel.updateByUserId(userId, updateFields);
+}
+
+async function userDetailsModelExecuteUpdate(userId, phoneNumber) {
+  //enhance other params
+  const updateFields = {
+    phone_number: phoneNumber ? phoneNumber : undefined,
+  }
+
+  return await userDetailModel.updateByUserId(userId, updateFields);
 }
 
 module.exports = {
   getDBUserByEmail,
   queryWPUserByEmail,
   prepareDBUpdateData,
-  updateUserMigration
+  updateUserMigration,
+  userModelExecuteUpdate,
+  userNewsletterModelExecuteUpdate,
+  userMembershipModelExecuteUpdate,
+  userDetailsModelExecuteUpdate
 }

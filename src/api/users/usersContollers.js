@@ -2,8 +2,8 @@
 require('dotenv').config()
 
 const {
-  CognitoIdentityProviderClient, AdminInitiateAuthCommand, AdminResetUserPasswordCommand,
-  ForgotPasswordCommand, AdminSetUserPasswordCommand, AdminUpdateUserAttributesCommand
+  CognitoIdentityProviderClient,
+  AdminSetUserPasswordCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
@@ -12,9 +12,19 @@ const validationService = require('../../services/validationService');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
-const aemService = require('../../services/AEMService');
 const dbService = require('./usersDBService');
 const appConfig = require('../../config/appConfig');
+const UserLoginJob = require("./userLoginJob");
+const UserLogoutJob = require("./userLogoutJob");
+const UserSignupJob = require("./userSignupJob");
+const UserResetPasswordJob = require("./userResetPasswordJob");
+const UserValidateRestPasswordJob = require("./userValidateResetPasswordJob");
+const UserConfirmResetPasswordJob = require("./userConfirmResetPasswordJob");
+const UserSignUpValidation = require("./validations/UserSignupValidation");
+const UserUpdateValidation = require("./validations/UserUpdateValidation")
+const CommonErrors = require("../../config/https/errors/common");
+const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
+const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 
 /**
  * Function listAll users
@@ -58,16 +68,8 @@ async function adminCreateUser (req){
       var memberExist = await usersService.getUserMembership(req);
 
       // if signup check aem flag true, check user exist in AEM
-      let aemResponse, aemNoMembership;
+      let aemNoMembership;
       let responseSource = 'ciam';
-
-      if(appConfig.SIGNUP_CHECK_AEM === true && !req.body.migrations){
-        aemResponse = await aemService.aemCheckWildPassByEmail(req.body);
-        aemNoMembership = aemResponse.data.valid; // no membership in AEM 'true'/'false'
-        if (aemNoMembership === 'false') {
-          responseSource = 'aem';
-        }
-      }
 
       if(memberExist.status === 'success' || aemNoMembership === 'false'){
         // prepare response
@@ -97,6 +99,22 @@ async function adminCreateUser (req){
     let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
     // prepare error params response
     return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
+}
+
+/**
+ * User created and with password FOW/FOW+
+ */
+async function adminCreateNewUser(req) {
+  const message = UserSignUpValidation.execute(req.body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await UserSignupJob.perform(req);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
 }
 
 /**
@@ -168,6 +186,18 @@ async function adminUpdateUser (req, listedParams){
   }
 }
 
+async function adminUpdateNewUser(req, token) {
+  const message = UserUpdateValidation.execute(req.body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await usersService.adminUpdateNewUser(req.body, token);
+  } catch(error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
+}
 /**
  * Resend membership
  *
@@ -193,21 +223,7 @@ async function membershipResend(req){
       response['source'] = 'ciam';
       return response;
     }
-    else if(memberInfo.status === 'not found'){
-      // need to check to AEM and resend from there
-      let aemResponse = await aemService.aemResendWildpass(req.body);
 
-      if (aemResponse.data && typeof aemResponse.data === 'object'){
-        if(aemResponse.data.statusCode === '200' || aemResponse.data.statusCode === 200) {
-          // prepare response resend success
-          let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', {}, aemResponse);
-          // prepare error params response
-          response = responseHelper.craftUsersApiResponse('usersControllers.membershipResend', aemResponse, 'MWG_CIAM_RESEND_MEMBERSHIP_SUCCESS', 'RESEND_MEMBERSHIP', logObj);
-          response['source'] = 'aem';
-          return response;
-        }
-      }
-    }
     // Prepare response membership not found
     let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, memberInfo);
     // prepare error params response
@@ -292,76 +308,80 @@ async function adminSetUserPassword (){
  *
  * @returns
  */
-async function userLogin (){
-  // hash secret
-  let hashSecret = usersService.genSecretHash("kwanoun.liong@mandai.com", process.env.USER_POOL_CLIENT_ID, process.env.USER_POOL_CLIENT_SECRET);
+async function userLogin(req) {
+  try {
+    return await UserLoginJob.perform(req);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
+}
 
-  var userSigninParams = new AdminInitiateAuthCommand({
-    AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
-    UserPoolId: process.env.USER_POOL_ID,
-    ClientId: process.env.USER_POOL_CLIENT_ID,
-    AuthParameters: {
-      SECRET_HASH: hashSecret,
-      USERNAME: "kwanoun.liong@mandai.com",
-      PASSWORD: "Password123##"
+async function userLogout(token, lang) {
+  try {
+    return await UserLogoutJob.perform(token, lang);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    throw new Error(JSON.stringify(errorMessage));
+  }
+}
+
+async function userResetPassword(req) {
+  try {
+    return await UserResetPasswordJob.perform(req);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
     }
-  });
-
-  try {
-    var response = await client.send(userSigninParams);
-  } catch (error) {
-    console.log(error);
-    response = error;
-  }
-  return response;
-}
-
-/**
- * TODO: Move to user service
- *
- */
-async function userResetPassword (){
-  var resetPasswordParams = new AdminResetUserPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
-
-  try {
-    var response = await client.send(resetPasswordParams);
-    console.log(response);
-  } catch (error) {
-    console.log(error);
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
 
-/**
- * TODO: Move to user service
- *
- */
-async function userForgotPassword (){
-  var forgotPasswordParams = new ForgotPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "kwanoun.liong@mandai.com"
-  });
-
+async function userValidateResetPassword(passwordToken, lang) {
+  const message = UserValidateResetPasswordValidation.execute(passwordToken, lang);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
   try {
-    var response = await client.send(forgotPasswordParams);
-    console.log(response);
+    return await UserValidateRestPasswordJob.perform(passwordToken, lang);
   } catch (error) {
-    console.log(error);
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
+async function userConfirmResetPassword(body) {
+  const message = UserConfirmResetPasswordValidation.execute(body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await UserConfirmResetPasswordJob.perform(body);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
 
 module.exports = {
-  listAll,
   adminCreateUser,
   adminUpdateUser,
   membershipResend,
   membershipDelete,
   getUser,
-  adminSetUserPassword,
   userLogin,
+  userLogout,
+  adminCreateNewUser,
+  adminUpdateNewUser,
   userResetPassword,
-  userForgotPassword
+  userConfirmResetPassword,
+  userValidateResetPassword
 };
 
