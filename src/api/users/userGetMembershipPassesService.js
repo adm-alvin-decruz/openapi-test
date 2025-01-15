@@ -79,12 +79,12 @@ class UserGetMembershipPassesService {
     };
   }
 
-  async handleRetrieveFullVisualIds(body) {
+  async retrieveAllPassesURL(body) {
     const userInfo = await userModel.findFullMandaiId(body.email);
     return await this.handleIntegration(userInfo);
   }
 
-  async handleRetrieveBasedOnVisualIds(visualIds, body) {
+  async retrieveSinglePassURL(visualIds, body) {
     const userInfo = await userModel.findByEmailVisualIds(
       visualIds,
       body.email
@@ -97,9 +97,9 @@ class UserGetMembershipPassesService {
     const visualIds = this.getVisualIds(body);
     try {
       if (visualIds.includes("all")) {
-        return await this.handleRetrieveFullVisualIds(body);
+        return await this.retrieveAllPassesURL(body);
       }
-      return await this.handleRetrieveBasedOnVisualIds(visualIds, body);
+      return await this.retrieveSinglePassURL(visualIds, body);
     } catch (error) {
       await failedJobsModel.create({
         uuid: crypto.randomUUID(),
