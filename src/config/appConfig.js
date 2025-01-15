@@ -19,10 +19,24 @@ const appConfig = {
   APP_ID_SUPPORT_PROD:'["support.Prod.internal.mandaiapi.ciam"]',
 
   // user signup generate passkit for send in the email
-  SIGNUP_CHECK_AEM:true,
+  SIGNUP_CHECK_AEM:false,
 
-  LOG_APP_PREFIX:'[CIAM-MAIN]'
+  LOG_APP_PREFIX:'[CIAM-MAIN]',
 
+  //passes support by membership-passes - passes be adjust based on BU request
+  //currently support FO(s) series
+  MEMBERSHIP_PASSES: ['fow', 'fow+', 'fom', 'fora'],
+
+  // password reset / forgot password
+  RESET_PASSWORD_EMAIL_FROM: 'no-reply@mandai.com',
+  RESET_PASSWORD_EMAIL_TEMPLATE_ID: 'd-05b9da80b0804b749ce68d39724f11d9',
+  RESET_PASSWORD_EMAIL_TEXT: 'Please click on the following link to reset your password.',
+  RESET_PASSWORD_EMAIL_HTML: '<p>Please click on the following link to reset your password.</p>',
+
+  // email service app ID:
+  EMAIL_SERVICE_APP_ID_DEV:"emailTrigger.dev.internal.mandaiapi.ciam",
+  EMAIL_SERVICE_APP_ID_UAT:"emailTrigger.uat.internal.mandaiapi.ciam",
+  EMAIL_SERVICE_APP_ID_PROD:"emailTrigger.prod.internal.mandaiapi.ciam"
 };
 
 module.exports = appConfig;

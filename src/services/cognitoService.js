@@ -8,7 +8,7 @@ const {
   AdminDeleteUserCommand,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
-  ChangePasswordCommand,
+  ChangePasswordCommand, AdminListGroupsForUserCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -122,6 +122,27 @@ class Cognito {
           status: "failed",
           data: error,
         })
+      );
+    }
+  }
+
+  static async cognitoAdminListGroupsForUser(email) {
+    const groupsBelongUserCommand = new AdminListGroupsForUserCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+    });
+
+    try {
+      return await client.send(groupsBelongUserCommand);
+    } catch (error) {
+      loggerService.error(
+          `cognitoService.cognitoAdminListGroupsForUser Error: ${error}`
+      );
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
       );
     }
   }
