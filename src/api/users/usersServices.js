@@ -325,6 +325,9 @@ async function adminUpdateNewUser(body, token) {
     //get user from cognito
     const userInfo = await cognitoService.cognitoAdminGetUserByAccessToken(token);
     const email = getOrCheck(userInfo, 'email');
+    if (email !== body.email) {
+      return UpdateUserErrors.ciamEmailNotExists(body.language);
+    }
     let userName = getOrCheck(userInfo, 'name');
     const userFirstName = getOrCheck(userInfo, 'given_name');
     const userLastName = getOrCheck(userInfo, 'family_name');
