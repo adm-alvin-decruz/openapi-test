@@ -42,6 +42,7 @@ class UserGetMembershipPassesService {
         {
           passType: membership,
           mandaiId: mandaiId,
+          visualId: visualId
         }
       );
       const rsHandler = ApiUtils.handleResponse(response);
