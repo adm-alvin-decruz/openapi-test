@@ -21,7 +21,11 @@ const appConfig = {
   // user signup generate passkit for send in the email
   SIGNUP_CHECK_AEM:false,
 
-  LOG_APP_PREFIX:'[CIAM-MAIN]'
+  LOG_APP_PREFIX:'[CIAM-MAIN]',
+
+  //passes support by membership-passes - passes be adjust based on BU request
+  //currently support FO(s) series
+  MEMBERSHIP_PASSES: ['fow', 'fow+', 'fom', 'fora']
 
 };
 
