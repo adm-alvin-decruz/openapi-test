@@ -4,10 +4,11 @@ const failedJobsModel = require("../../db/models/failedJobsModel");
 const ApiUtils = require("../../utils/apiUtils");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const passkitCommonService = require("../components/passkit/services/passkitCommonService");
+const appConfig = require("../../config/appConfig");
 
 class UserGetMembershipPassesService {
   constructor() {
-    this.apiEndpoint = process.env.PASSKIT_URL + process.env.PASSKIT_GET_SIGNED_URL_PATH;
+    this.apiEndpoint = `${appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
   }
 
   /**
@@ -27,11 +28,11 @@ class UserGetMembershipPassesService {
   /**
    * handle retrieve passkit
    * @param mandaiId
-   * @param group
+   * @param membership
    * @param visualId
    * @return {Promise<{urls: {apple: (*|string), google: (*|string)}, visualId}|{urls: {apple: string, google: string}, visualId}|undefined>}
    */
-  async retrievePasskit(mandaiId, group, visualId) {
+  async retrievePasskit(mandaiId, membership, visualId) {
     try {
       const headers = await passkitCommonService.setPasskitReqHeader();
       const response = await ApiUtils.makeRequest(
@@ -39,7 +40,7 @@ class UserGetMembershipPassesService {
         "post",
         headers,
         {
-          passType: group,
+          passType: membership,
           mandaiId: mandaiId,
         }
       );
@@ -88,6 +89,7 @@ class UserGetMembershipPassesService {
       visualIds,
       body.email
     );
+
     return await this.handleIntegration(userInfo);
   }
 
