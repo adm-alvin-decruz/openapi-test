@@ -25,9 +25,9 @@ const appConfig = {
   PASSKIT_APP_ID_PROD:"passkitGenerator.prod.internal.mandaiapi.ciam",
 
   // Passkit URL
-  PASSKIT_URL_DEV:'https://qkvj4jup4v7hb3rl43lxoe5wjq0hzuyi.lambda-url.ap-southeast-1.on.aws',
-  PASSKIT_URL_UAT:'https://qkvj4jup4v7hb3rl43lxoe5wjq0hzuyi.lambda-url.ap-southeast-1.on.aws',
-  PASSKIT_URL_PROD:'https://qkvj4jup4v7hb3rl43lxoe5wjq0hzuyi.lambda-url.ap-southeast-1.on.aws',
+  PASSKIT_URL_DEV:'https://dev-services.mandaiapi.com',
+  PASSKIT_URL_UAT:'https://uat-services.mandaiapi.com',
+  PASSKIT_URL_PROD:'https://prod-services.mandaiapi.com',
   PASSKIT_GET_SIGNED_URL_PATH:'/v1/passkit/all/get',
 
   // user signup generate passkit for send in the email
