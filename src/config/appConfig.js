@@ -23,6 +23,10 @@ const appConfig = {
 
   LOG_APP_PREFIX:'[CIAM-MAIN]',
 
+  //passes support by membership-passes - passes be adjust based on BU request
+  //currently support FO(s) series
+  MEMBERSHIP_PASSES: ['fow', 'fow+', 'fom', 'fora'],
+
   // password reset / forgot password
   RESET_PASSWORD_EMAIL_FROM: 'no-reply@mandai.com',
   RESET_PASSWORD_EMAIL_TEMPLATE_ID: 'd-05b9da80b0804b749ce68d39724f11d9',
