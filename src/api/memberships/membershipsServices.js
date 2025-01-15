@@ -11,9 +11,9 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { messageLang } = require("../../utils/common");
 const { GROUP } = require("../../utils/constants");
 const userModel = require("../../db/models/userModel");
-const userMembershipModel = require("../../db/models/userMembershipModel");
 const CommonErrors = require("../../config/https/errors/common");
 const loggerService = require("../../logs/logger");
+const appConfig = require("../../config/appConfig");
 
 function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
   return mid === true
@@ -46,10 +46,53 @@ function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
       };
 }
 
+function passesByGroup(group) {
+  let passes = "";
+  switch (group) {
+    case GROUP.WILD_PASS: {
+      passes = [`${GROUP.WILD_PASS}`];
+      break;
+    }
+    case GROUP.MEMBERSHIP_PASSES: {
+      passes = appConfig.MEMBERSHIP_PASSES;
+      break;
+    }
+    default: {
+      return;
+    }
+  }
+  return passes;
+}
+
+function checkMatchedGroup(data) {
+  if (data.length) {
+    return data.filter((passes) => passes.isBelong === 1).length > 0;
+  }
+  return false;
+}
+
 //Check user membership group in Cognito [membership-passes, wildpass]
 async function checkUserMembership(reqBody) {
-  //1st: check membership group: Cognito
+  //1st priority check membership group: DB
   try {
+    const passes = passesByGroup(reqBody.group);
+    const userPasses = await userModel.findPassesByUserEmail(
+      passes,
+      reqBody.email
+    );
+
+    if (userPasses && userPasses.length > 0) {
+      return success({
+        mid: reqBody.mid,
+        group: reqBody.group,
+        email: reqBody.email,
+        mandaiId: userPasses[0].mandaiId ? userPasses[0].mandaiId : null,
+        lang: reqBody.language,
+        isMatchedGroup: checkMatchedGroup(userPasses),
+      });
+    }
+
+    //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
     const groupsCognitoInfo =
       await cognitoService.cognitoAdminListGroupsForUser(reqBody.email);
     const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
@@ -71,56 +114,17 @@ async function checkUserMembership(reqBody) {
         groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
     });
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    const errorData =
-      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    //step 2nd is not exists at Cognito: query in db
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      const userInfo = await userModel.findByEmail(reqBody.email);
-      if (!userInfo || !userInfo.id) {
-        throw new Error(
-          JSON.stringify(
-            MembershipErrors.ciamMembershipUserNotFound(
-              reqBody.email,
-              reqBody.language
-            )
-          )
-        );
-      }
-      const userMembership =
-        reqBody.group === GROUP.WILD_PASS
-          ? await userMembershipModel.findByUserIdAndGroup(
-              userInfo.id,
-              "wildpass"
-            )
-          : await userMembershipModel.findByUserIdAndExcludeGroup(
-              userInfo.id,
-              "wildpass"
-            );
-      if (userMembership && userMembership.length > 0) {
-        return success({
-          mid: reqBody.mid,
-          group: reqBody.group,
-          email: reqBody.email,
-          mandaiId:
-            !!userInfo && userInfo.mandai_id ? userInfo.mandai_id : null,
-          lang: reqBody.language,
-          isMatchedGroup: true,
-        });
-      }
-      return success({
-        mid: reqBody.mid,
-        group: reqBody.group,
-        email: reqBody.email,
-        mandaiId: !!userInfo && userInfo.mandai_id ? userInfo.mandai_id : null,
-        lang: reqBody.language,
-        isMatchedGroup: false,
-      });
-    }
     loggerService.error(
       `membershipsService.checkUserMembership Error: ${error}`
     );
-    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+    throw new Error(
+      JSON.stringify(
+        MembershipErrors.ciamMembershipUserNotFound(
+          reqBody.email,
+          reqBody.language
+        )
+      )
+    );
   }
 }
 
