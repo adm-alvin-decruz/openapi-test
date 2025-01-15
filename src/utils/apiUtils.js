@@ -25,7 +25,10 @@ class ApiUtils {
   }
 
   static handleResponse(response) {
-    if (response.status >= 200 && response.status < 300) {
+    const status =
+      !!(response.status >= 200 && response.status < 300) ||
+      !!(response.statusCode >= 200 && response.statusCode < 300);
+    if (status) {
       return response.data;
     } else {
       return new Error(`API request failed: ${response.status}`);
