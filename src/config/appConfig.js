@@ -5,11 +5,11 @@
  */
 const appConfig = {
   // App ID DEV
-  APP_ID_DEV:'["aemDev.com.mandaiapi.ciam","gltDev.com.mandaiapi.ciam","tktDev.com.mandaiapi.ciam","passkit.Dev.internal.mandaiapi.ciam","rePassMicroSite.Dev.internal.mandaiapi.ciam"]',
+  APP_ID_DEV:'["aemDev.com.mandaiapi.ciam","gltDev.com.mandaiapi.ciam","tktDev.com.mandaiapi.ciam","passkit.Dev.internal.mandaiapi.ciam","rePassMicroSite.Dev.internal.mandaiapi.ciam","nopComm.Dev.service.mandaiapi.ciam"]',
   // App ID UAT
-  APP_ID_UAT:'["aemUat.com.mandaiapi.ciam","gltUat.com.mandaiapi.ciam","tktUat.com.mandaiapi.ciam","passkit.Uat.internal.mandaiapi.ciam","rePassMicroSite.Uat.internal.mandaiapi.ciam"]',
+  APP_ID_UAT:'["aemUat.com.mandaiapi.ciam","gltUat.com.mandaiapi.ciam","tktUat.com.mandaiapi.ciam","passkit.Uat.internal.mandaiapi.ciam","rePassMicroSite.Uat.internal.mandaiapi.ciam","nopComm.Uat.service.mandaiapi.ciam"]',
   // App ID Prod
-  APP_ID_PROD:'["aemProd.com.mandaiapi.ciam","gltProd.com.mandaiapi.ciam","tktProd.com.mandaiapi.ciam","passkit.Prod.internal.mandaiapi.ciam","rePassMicroSite.Prod.internal.mandaiapi.ciam"]',
+  APP_ID_PROD:'["aemProd.com.mandaiapi.ciam","gltProd.com.mandaiapi.ciam","tktProd.com.mandaiapi.ciam","passkit.Prod.internal.mandaiapi.ciam","rePassMicroSite.Prod.internal.mandaiapi.ciam","nopComm.Prod.service.mandaiapi.ciam"]',
 
   // App ID Support DEV
   APP_ID_SUPPORT_DEV:'["support.Dev.internal.mandaiapi.ciam"]',
@@ -19,7 +19,7 @@ const appConfig = {
   APP_ID_SUPPORT_PROD:'["support.Prod.internal.mandaiapi.ciam"]',
 
 
-  // Passkit app ID:
+  // Passkit app ID, CIAM call -> passkit generator
   PASSKIT_APP_ID_DEV:"passkitGenerator.dev.internal.mandaiapi.ciam",
   PASSKIT_APP_ID_UAT:"passkitGenerator.uat.internal.mandaiapi.ciam",
   PASSKIT_APP_ID_PROD:"passkitGenerator.prod.internal.mandaiapi.ciam",
@@ -47,7 +47,7 @@ const appConfig = {
   EMAIL_SERVICE_API_URL_PROD: 'https://services.mandaiapi.com',
   EMAIL_SERVICE_API_EMAIL_PATH: '/v1/ciam/email',
 
-  // email service app ID:
+  // email service app ID, CIAM call -> email service
   EMAIL_SERVICE_APP_ID_DEV:"emailTrigger.dev.internal.mandaiapi.ciam",
   EMAIL_SERVICE_APP_ID_UAT:"emailTrigger.uat.internal.mandaiapi.ciam",
   EMAIL_SERVICE_APP_ID_PROD:"emailTrigger.prod.internal.mandaiapi.ciam"
