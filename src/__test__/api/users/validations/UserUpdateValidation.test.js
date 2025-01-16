@@ -200,12 +200,12 @@ describe("UserUpdateValidation", () => {
         });
         expect(failedMessage).toEqual({
           membership: {
-            code: 200,
+            code: 401,
             message: "Old password do not match.",
             mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
           },
-          status: "success",
-          statusCode: 200,
+          status: "failed",
+          statusCode: 401,
         });
       });
     });

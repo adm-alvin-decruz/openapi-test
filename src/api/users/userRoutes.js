@@ -301,7 +301,7 @@ router.post("/users/reset-password", isEmptyRequest, validateEmail, async (req, 
   }
 
   try {
-    const data = await userController.userResetPassword(req.body);
+    const data = await userController.userResetPassword(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);

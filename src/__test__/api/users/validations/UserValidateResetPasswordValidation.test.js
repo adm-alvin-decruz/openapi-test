@@ -29,12 +29,12 @@ describe("UserValidateResetPasswordValidation", () => {
         UserValidateResetPasswordValidation.execute("123456");
       expect(failedMessage).toEqual({
         membership: {
-          code: 200,
+          code: 401,
           message: "Requested token is invalid or empty.",
           mwgCode: "MWG_CIAM_VALIDATE_TOKEN_ERR",
         },
-        status: "success",
-        statusCode: 200,
+        status: "failed",
+        statusCode: 401,
       });
     });
     it("should throw an error when token is not enough length - multiple language", () => {
@@ -44,12 +44,12 @@ describe("UserValidateResetPasswordValidation", () => {
       );
       expect(failedMessage).toEqual({
         membership: {
-          code: 200,
+          code: 401,
           message: "요청된 토큰이 유효하지 않거나 비어 있습니다.",
           mwgCode: "MWG_CIAM_VALIDATE_TOKEN_ERR",
         },
-        status: "success",
-        statusCode: 200,
+        status: "failed",
+        statusCode: 401,
       });
     });
   });

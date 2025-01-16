@@ -62,12 +62,12 @@ class CommonErrors {
   static PasswordRequireErr(lang) {
     return {
       membership: {
-        code: 200,
+        code: 401,
         mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
         message: messageLang("old_password_invalid", lang),
       },
-      status: "success",
-      statusCode: 200,
+      status: "failed",
+      statusCode: 401,
     };
   }
   static UnauthorizedException(lang) {
@@ -84,12 +84,12 @@ class CommonErrors {
   static PasswordExpireOrBeingUsed(lang) {
     return {
       membership: {
-        code: 200,
+        code: 401,
         mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
         message: messageLang("token_reset_password_being_used", lang),
       },
-      status: "success",
-      statusCode: 200,
+      status: "failed",
+      statusCode: 401,
     };
   }
 }
