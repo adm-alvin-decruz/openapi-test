@@ -1,5 +1,4 @@
 const { validateDOB } = require("../../../services/validationService");
-const { GROUPS_SUPPORTS, GROUP } = require("../../../utils/constants");
 const CommonErrors = require("../../../config/https/errors/common");
 const { passwordPattern } = require("../../../utils/common");
 
@@ -8,24 +7,19 @@ class UserUpdateValidation {
     this.error = null;
   }
 
-  /*TODO
-   *  moving validation wildpass after agreement!
-   * */
-  static validateRequestWildPass(req) {
-    return (this.error = null);
-  }
-
   //enhance get list error
-  static validateRequestFowFowPlus(req) {
+  static validateRequestParams(req) {
     //validate missing required params
     const paramsShouldNotEmpty = [
+      "newEmail",
       "firstName",
       "lastName",
       "country",
       "phoneNumber",
-      "password",
+      "newPassword",
       "confirmPassword",
       "oldPassword",
+      "address",
     ];
     const listKeys = Object.keys(req);
 
@@ -52,19 +46,17 @@ class UserUpdateValidation {
         ));
       }
     }
-
-    if (req.country.length !== 2) {
+    if (req.country && req.country.length !== 2) {
       return (this.error = CommonErrors.BadRequest(
         "country",
         "country_invalid",
         req.language
       ));
     }
-
     if (
       req.newsletter &&
-      (!req.newsletter.subscribe ||
-        !GROUPS_SUPPORTS.includes(req.newsletter.name))
+      req.newsletter.name &&
+      !["wildpass", "membership"].includes(req.newsletter.name)
     ) {
       return (this.error = CommonErrors.BadRequest(
         "newsletter",
@@ -72,35 +64,22 @@ class UserUpdateValidation {
         req.language
       ));
     }
-
-    if (req.password) {
+    if (req.newPassword) {
       if (!req.oldPassword) {
-        return (this.error = CommonErrors.PasswordRequireErr(req.language));
+        return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
       }
-      if (!passwordPattern(req.password)) {
+      if (!passwordPattern(req.newPassword)) {
         return (this.error = CommonErrors.PasswordErr(req.language));
       }
-      if (req.password !== req.confirmPassword) {
+      if (req.newPassword !== req.confirmPassword) {
         return (this.error = CommonErrors.PasswordNotMatch(req.language));
       }
     }
-
     return (this.error = null);
   }
 
   static execute(data) {
-    if (!data.group || !GROUPS_SUPPORTS.includes(data.group)) {
-      return (this.error = CommonErrors.BadRequest(
-        "group",
-        "group_invalid",
-        data.language
-      ));
-    }
-    if (data.group === GROUP.WILD_PASS) {
-      return this.validateRequestWildPass(data);
-    }
-
-    return this.validateRequestFowFowPlus(data);
+    return this.validateRequestParams(data);
   }
 }
 

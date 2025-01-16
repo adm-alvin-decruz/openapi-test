@@ -17,13 +17,16 @@ const GROUPS_SUPPORTS = [GROUP.WILD_PASS, GROUP.MEMBERSHIP_PASSES];
 const COGNITO_ATTRIBUTES = {
   firstName: "given_name",
   lastName: "family_name",
-  email: "preferred_username",
+  email: "email",
+  newEmail: "preferred_username",
   group: "custom:membership",
   newsletter: "custom:newsletter",
   source: "custom:source",
   phoneNumber: "phone_number",
   dob: "birthdate",
   gender: "gender",
+  country: "zoneinfo",
+  address: "address"
 };
 
 const EXPIRE_TIME_HOURS = 1; //hour unit
