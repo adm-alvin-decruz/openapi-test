@@ -44,7 +44,11 @@ module.exports = {
     passwordToken_required: "Token is required.",
     passwordToken_invalid: "Requested token is invalid or empty.",
     token_valid: "Token is valid.",
-    passwordToken_expired: "Requested token has expired."
+    passwordToken_expired: "Requested token has expired.",
+    visualId_invalid: "Visual id is invalid",
+    list_visualId_invalid: "List visual id is invalid",
+    get_membership_success: "Get my membership success.",
+    get_membership_failed: "Get my membership failed."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -87,7 +91,11 @@ module.exports = {
     passwordToken_required: "需要令牌。",
     passwordToken_invalid: "请求的令牌无效或为空。",
     token_valid: "令牌有效。",
-    passwordToken_expired: "请求的令牌已过期。"
+    passwordToken_expired: "请求的令牌已过期。",
+    visualId_invalid: "可视 ID 无效",
+    list_visualId_invalid: "列表可视 ID 无效",
+    get_membership_success: "获取我的会员资格成功",
+    get_membership_failed: "获取我的会员资格失败"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -132,7 +140,11 @@ module.exports = {
     passwordToken_required: "토큰이 필요합니다.",
     passwordToken_invalid: "요청된 토큰이 유효하지 않거나 비어 있습니다.",
     token_valid: "토큰이 유효합니다.",
-    passwordToken_expired: "요청한 토큰이 만료되었습니다."
+    passwordToken_expired: "요청한 토큰이 만료되었습니다.",
+    visualId_invalid: "시각 ID가 유효하지 않습니다",
+    list_visualId_invalid: "목록 시각 ID가 유효하지 않습니다",
+    get_membership_success: "내 멤버십을 성공적으로 가져왔습니다",
+    get_membership_failed: "내 멤버십 가져오기에 실패했습니다"
   },
   ja: {
     signup_email:
@@ -178,6 +190,10 @@ module.exports = {
     passwordToken_required: "トークンが必要です。",
     passwordToken_invalid: "要求されたトークンが無効か空です。",
     token_valid: "トークンは有効です。",
-    passwordToken_expired: "リクエストされたトークンが期限切れです。"
+    passwordToken_expired: "リクエストされたトークンが期限切れです。",
+    visualId_invalid: "ビジュアルIDが無効です",
+    list_visualId_invalid: "リストビジュアルIDが無効です",
+    get_membership_success: "私のメンバーシップを取得しました",
+    get_membership_failed: "私のメンバーシップの取得に失敗しました"
   },
 };
