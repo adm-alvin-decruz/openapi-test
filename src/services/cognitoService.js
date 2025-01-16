@@ -123,6 +123,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
+          rawError: error.toString()
         })
       );
     }
