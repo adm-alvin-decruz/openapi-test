@@ -13,7 +13,6 @@ const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/common");
 const commonService = require("../../services/commonService");
 const failedJobsModel = require("../../db/models/failedJobsModel");
-const { GROUP } = require("../../utils/constants");
 const loggerService = require("../../logs/logger");
 
 class UserSignupService {
@@ -148,13 +147,7 @@ class UserSignupService {
 
   importUserInformation(userDB, req, hashPassword) {
     return [
-      this.userMembershipModelExecution({
-        user_id: userDB.user_id,
-        name: req.body.group,
-        visual_id: req.body.visualID ? req.body.visualID : "",
-        expires_at: null,
-      }),
-      req.body.newsletter.subscribe
+      req.body.newsletter && req.body.newsletter.name
         ? this.userNewsletterModelExecution({
             user_id: userDB.user_id,
             name: req.body.newsletter.name ? req.body.newsletter.name : "",
@@ -171,8 +164,8 @@ class UserSignupService {
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
-        phone_number: req.body.phone ? req.body.phone : null,
-        zoneinfo: req.body.zone ? req.body.zone : null,
+        phone_number: req.body.phoneNumber ? req.body.phoneNumber : null,
+        zoneinfo: req.body.country ? req.body.country : null,
         address: req.body.address ? req.body.address : null,
         picture: req.body.picture ? req.body.picture : null,
         vehicle_iu: req.body.vehicleIU ? req.body.vehicleIU : null,
@@ -258,6 +251,8 @@ class UserSignupService {
         lastName: req.body.lastName,
         birthdate: req.body.dob,
         address: req.body.address,
+        phoneNumber: req.body.phoneNumber,
+        country: req.body.country,
         /*
         TODO: enhance add FO series later
          */
