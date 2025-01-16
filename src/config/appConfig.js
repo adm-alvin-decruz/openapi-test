@@ -32,6 +32,14 @@ const appConfig = {
   RESET_PASSWORD_EMAIL_TEMPLATE_ID: 'd-05b9da80b0804b749ce68d39724f11d9',
   RESET_PASSWORD_EMAIL_TEXT: 'Please click on the following link to reset your password.',
   RESET_PASSWORD_EMAIL_HTML: '<p>Please click on the following link to reset your password.</p>',
+  // reset password URLs & path
+  RESET_PASSWORD_EMAIL_LINK_DEV: 'https://uat-www.mandai.com',
+  RESET_PASSWORD_EMAIL_LINK_UAT: 'https://uat-www.mandai.com',
+  RESET_PASSWORD_EMAIL_LINK_PROD: 'https://www.mandai.com',
+  EMAIL_SERVICE_API_URL_DEV: 'https://dev-services.mandaiapi.com',
+  EMAIL_SERVICE_API_URL_UAT: 'https://uat-services.mandaiapi.com',
+  EMAIL_SERVICE_API_URL_PROD: 'https://services.mandaiapi.com',
+  EMAIL_SERVICE_API_EMAIL_PATH: '/v1/ciam/email',
 
   // email service app ID:
   EMAIL_SERVICE_APP_ID_DEV:"emailTrigger.dev.internal.mandaiapi.ciam",
