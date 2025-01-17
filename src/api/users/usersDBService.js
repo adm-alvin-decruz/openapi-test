@@ -85,11 +85,12 @@ async function updateUserMigration(req, param1, param2) {
   return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
 }
 
-async function userModelExecuteUpdate(userId, firstName, lastName, dob) {
+async function userModelExecuteUpdate(userId, firstName, lastName, dob, email) {
   const updateFields = {
     given_name: firstName,
     family_name: lastName,
-    birthdate: dob ? convertDateToMySQLFormat(dob) : undefined
+    birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
+    email: email
   }
 
   return await userModel.update(userId, updateFields);
@@ -114,10 +115,12 @@ async function userMembershipModelExecuteUpdate(userId, group) {
   return await userMembershipModel.updateByUserId(userId, updateFields);
 }
 
-async function userDetailsModelExecuteUpdate(userId, phoneNumber) {
+async function userDetailsModelExecuteUpdate(userId, phoneNumber, address, country) {
   //enhance other params
   const updateFields = {
     phone_number: phoneNumber ? phoneNumber : undefined,
+    address: address,
+    zoneinfo: country
   }
 
   return await userDetailModel.updateByUserId(userId, updateFields);
