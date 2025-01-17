@@ -1,7 +1,6 @@
 require("dotenv").config();
 const userModel = require("../../db/models/userModel");
 const failedJobsModel = require("../../db/models/failedJobsModel");
-const ApiUtils = require("../../utils/apiUtils");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const passkitCommonService = require("../components/passkit/services/passkitCommonService");
 const appConfig = require("../../config/appConfig");
@@ -25,54 +24,9 @@ class UserGetMembershipPassesService {
     return body.list.filter((item, index) => body.list.indexOf(item) === index);
   }
 
-  /**
-   * handle retrieve passkit
-   * @param mandaiId
-   * @param membership
-   * @param visualId
-   * @return {Promise<{urls: {apple: (*|string), google: (*|string)}, visualId}|{urls: {apple: string, google: string}, visualId}|undefined>}
-   */
-  async retrievePasskit(mandaiId, membership, visualId) {
-    try {
-      const headers = await passkitCommonService.setPasskitReqHeader();
-      const response = await ApiUtils.makeRequest(
-        this.apiEndpoint,
-        "post",
-        headers,
-        {
-          passType: membership,
-          mandaiId: mandaiId,
-          visualId: visualId
-        }
-      );
-      const rsHandler = ApiUtils.handleResponse(response);
-      return {
-        visualId,
-        urls: {
-          apple: rsHandler.applePassUrl ? rsHandler.applePassUrl : "",
-          google: rsHandler.googlePassUrl ? rsHandler.googlePassUrl : "",
-        },
-      };
-    } catch (error) {
-      //handle 404: case not yet add apple and google passkit
-      if (error.message.includes('"status":404')) {
-        return {
-          visualId,
-          urls: {
-            apple: "",
-            google: "",
-          },
-        };
-      }
-      //handle other status: 403 Forbidden, 400 Bad Request, 500 Internal Server Error will not attach passes by visualId
-      return undefined;
-    }
-  }
-
   async handleIntegration(userInfo) {
     const response = await Promise.all(
-      userInfo.map((info) =>
-        this.retrievePasskit(info.mandaiId, info.membership, info.visualId)
+      userInfo.map((info) => passkitCommonService.retrievePasskit(info.mandaiId, info.membership, info.visualId)
       )
     );
     return {
