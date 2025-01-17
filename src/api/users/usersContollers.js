@@ -1,5 +1,5 @@
 // use dotenv
-require('dotenv').config()
+require("dotenv").config();
 
 const {
   CognitoIdentityProviderClient,
@@ -7,31 +7,38 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
-const usersService = require('./usersServices');
-const validationService = require('../../services/validationService');
-const commonService = require('../../services/commonService');
-const loggerService = require('../../logs/logger');
-const responseHelper = require('../../helpers/responseHelpers');
-const dbService = require('./usersDBService');
-const appConfig = require('../../config/appConfig');
+const usersService = require("./usersServices");
+const validationService = require("../../services/validationService");
+const commonService = require("../../services/commonService");
+const loggerService = require("../../logs/logger");
+const responseHelper = require("../../helpers/responseHelpers");
+const processTimer = require("../../utils/processTimer");
+const dbService = require("./usersDBService");
+const appConfig = require("../../config/appConfig");
 const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");
 const UserResetPasswordJob = require("./userResetPasswordJob");
 const UserValidateRestPasswordJob = require("./userValidateResetPasswordJob");
 const UserConfirmResetPasswordJob = require("./userConfirmResetPasswordJob");
+const {
+  userCreateMembershipPassJob,
+  userUpdateMembershipPassJob,
+} = require("./userMembershipPassJob");
 const UserSignUpValidation = require("./validations/UserSignupValidation");
-const UserUpdateValidation = require("./validations/UserUpdateValidation")
+const UserUpdateValidation = require("./validations/UserUpdateValidation");
+const UserMembershipPassValidation = require("./validations/UserMembershipPassValidation");
 const CommonErrors = require("../../config/https/errors/common");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
+const userMembershipPassService = require("./userMembershipPassService");
 
 /**
  * Function listAll users
  *
  * @returns array all users in userspool
  */
-async function listAll(){
+async function listAll() {
   const command = new ListUsersCommand({
     UserPoolId: process.env.USER_POOL_ID,
   });
@@ -39,7 +46,7 @@ async function listAll(){
   try {
     var response = await client.send(command);
   } catch (error) {
-    if(process.env.APP_LOG_SWITCH){
+    if (process.env.APP_LOG_SWITCH) {
       console.log(error);
     }
   }
@@ -52,15 +59,18 @@ async function listAll(){
  * User flow step 1 signup
  * User created and with  password
  */
-async function adminCreateUser (req){
+async function adminCreateUser(req) {
   // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req["body"] = commonService.cleanData(req.body);
 
   // API validation
-  let validatedParams = validationService.validateParams(req.body, 'SIGNUP_VALIDATE_PARAMS');
+  let validatedParams = validationService.validateParams(
+    req.body,
+    "SIGNUP_VALIDATE_PARAMS"
+  );
 
   // return errorParams;
-  if(validatedParams.status === 'success'){
+  if (validatedParams.status === "success") {
     // continue
     try {
       let response;
@@ -69,20 +79,36 @@ async function adminCreateUser (req){
 
       // if signup check aem flag true, check user exist in AEM
       let aemNoMembership;
-      let responseSource = 'ciam';
+      let responseSource = "ciam";
 
-      if(memberExist.status === 'success' || aemNoMembership === 'false'){
+      if (memberExist.status === "success" || aemNoMembership === "false") {
         // prepare response
-        let errorConfig = usersService.processError(req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'email');
+        let errorConfig = usersService.processError(
+          req.body,
+          "MWG_CIAM_USER_SIGNUP_ERR",
+          "email"
+        );
 
         // prepare logs
-        let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_USER_SIGNUP_ERR', {}, errorConfig);
+        let logObj = loggerService.build(
+          "user",
+          "usersControllers.adminCreateUser",
+          req,
+          "MWG_CIAM_USER_SIGNUP_ERR",
+          {},
+          errorConfig
+        );
         // prepare error params response
-        response = responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_USER_SIGNUP_ERR', 'USERS_SIGNUP', logObj);
-        response['source'] = responseSource;
+        response = responseHelper.craftUsersApiResponse(
+          "usersControllers.adminCreateUser",
+          errorConfig,
+          "MWG_CIAM_USER_SIGNUP_ERR",
+          "USERS_SIGNUP",
+          logObj
+        );
+        response["source"] = responseSource;
         return response;
-
-      }else{
+      } else {
         response = await usersService.userSignup(req);
       }
 
@@ -93,12 +119,29 @@ async function adminCreateUser (req){
     }
   }
 
-    // prepare error params response
-    errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
-    // prepare logs
-    let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
-    // prepare error params response
-    return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
+  // prepare error params response
+  errorConfig = usersService.processErrors(
+    validatedParams,
+    req.body,
+    "MWG_CIAM_USER_SIGNUP_ERR"
+  );
+  // prepare logs
+  let logObj = loggerService.build(
+    "user",
+    "usersControllers.adminCreateUser",
+    req,
+    "MWG_CIAM_PARAMS_ERR",
+    {},
+    errorConfig
+  );
+  // prepare error params response
+  return responseHelper.craftUsersApiResponse(
+    "usersControllers.adminCreateUser",
+    errorConfig,
+    "MWG_CIAM_PARAMS_ERR",
+    "USERS_SIGNUP",
+    logObj
+  );
 }
 
 /**
@@ -111,7 +154,7 @@ async function adminCreateNewUser(req) {
   }
   try {
     return await UserSignupJob.perform(req);
-  } catch(error) {
+  } catch (error) {
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -122,66 +165,119 @@ async function adminCreateNewUser(req) {
  *
  * @returns
  */
-async function adminUpdateUser (req, listedParams){
-  req['apiTimer'] = req.processTimer.apiRequestTimer();
-  req.apiTimer.log('usersController.adminUpdateUser start'); // log process time
+async function adminUpdateUser(req, listedParams) {
+  req["apiTimer"] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log("usersController.adminUpdateUser start"); // log process time
 
   // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req["body"] = commonService.cleanData(req.body);
 
   try {
     // check if user exist
     var memberInfo = await usersService.getUserMembership(req);
 
     // user exist, can update info
-    if(memberInfo.status === 'success'){
+    if (memberInfo.status === "success") {
       // API validation
-     let validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
+      let validatedParams = validationService.validateParams(
+        req.body,
+        "UPDATE_WP_VALIDATE_PARAMS"
+      );
 
       // return errorParams;
-      if(validatedParams.status === 'success'){
+      if (validatedParams.status === "success") {
         let response;
         // compare input data vs membership info
-        let ciamComparedParams = commonService.compareAndFilterJSON(listedParams, memberInfo.data.cognitoUser.UserAttributes);
-        if(commonService.isJsonNotEmpty(ciamComparedParams) === true){
-          let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
+        let ciamComparedParams = commonService.compareAndFilterJSON(
+          listedParams,
+          memberInfo.data.cognitoUser.UserAttributes
+        );
+        if (commonService.isJsonNotEmpty(ciamComparedParams) === true) {
+          let prepareDBUpdateData =
+            dbService.prepareDBUpdateData(ciamComparedParams);
 
-          response = await usersService.adminUpdateUser(req, ciamComparedParams, memberInfo.data, prepareDBUpdateData);
+          response = await usersService.adminUpdateUser(
+            req,
+            ciamComparedParams,
+            memberInfo.data,
+            prepareDBUpdateData
+          );
 
-          req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+          req.apiTimer.end("usersController.adminUpdateUser"); // log end time
           return response;
         }
-      }else{
+      } else {
         // prepare error params response
-        errorConfig = commonService.processUserUpdateErrors(validatedParams, req.body, 'MWG_CIAM_USER_SIGNUP_ERR');
+        errorConfig = commonService.processUserUpdateErrors(
+          validatedParams,
+          req.body,
+          "MWG_CIAM_USER_SIGNUP_ERR"
+        );
         // prepare logs
-        let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+        let logObj = loggerService.build(
+          "user",
+          "usersControllers.adminCreateUser",
+          req,
+          "MWG_CIAM_PARAMS_ERR",
+          {},
+          errorConfig
+        );
         // prepare error params response
-        req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-        return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_UPDATE', logObj);
+        req.apiTimer.end("usersController.adminUpdateUser"); // log end time
+        return responseHelper.craftUsersApiResponse(
+          "usersControllers.adminCreateUser",
+          errorConfig,
+          "MWG_CIAM_PARAMS_ERR",
+          "USERS_UPDATE",
+          logObj
+        );
       }
-
-    }else{
+    } else {
       // prepare response data
       let errorConfig = {
-            "email": "This email address does not have a Mandai Account."
-        }
+        email: "This email address does not have a Mandai Account.",
+      };
       // prepare logs
-      let logObj = loggerService.build('user', 'usersControllers.adminCreateUser', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+      let logObj = loggerService.build(
+        "user",
+        "usersControllers.adminCreateUser",
+        req,
+        "MWG_CIAM_PARAMS_ERR",
+        {},
+        errorConfig
+      );
       // prepare error params response
-      req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-      return responseHelper.craftUsersApiResponse('usersControllers.adminCreateUser', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'USERS_SIGNUP', logObj);
+      req.apiTimer.end("usersController.adminUpdateUser"); // log end time
+      return responseHelper.craftUsersApiResponse(
+        "usersControllers.adminCreateUser",
+        errorConfig,
+        "MWG_CIAM_PARAMS_ERR",
+        "USERS_SIGNUP",
+        logObj
+      );
     }
 
     // prepare logs
-    let logObj = loggerService.build('user', 'usersControllers.adminUpdateUser', req, 'MWG_CIAM_USER_UPDATE_SUCCESS', {"success":"no data to update"}, memberInfo);
+    let logObj = loggerService.build(
+      "user",
+      "usersControllers.adminUpdateUser",
+      req,
+      "MWG_CIAM_USER_UPDATE_SUCCESS",
+      { success: "no data to update" },
+      memberInfo
+    );
 
     // prepare error params response
-    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-    return responseHelper.craftUsersApiResponse('usersControllers.adminUpdateUser', req.body, 'MWG_CIAM_USER_UPDATE_SUCCESS', 'USERS_UPDATE', logObj);
-
+    req.apiTimer.end("usersController.adminUpdateUser"); // log end time
+    return responseHelper.craftUsersApiResponse(
+      "usersControllers.adminUpdateUser",
+      req.body,
+      "MWG_CIAM_USER_UPDATE_SUCCESS",
+      "USERS_UPDATE",
+      logObj
+    );
   } catch (error) {
-    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+    req.apiTimer.end("usersController.adminUpdateUser"); // log end time
     throw error;
   }
 }
@@ -193,7 +289,7 @@ async function adminUpdateNewUser(req, token) {
   }
   try {
     return await usersService.adminUpdateNewUser(req.body, token);
-  } catch(error) {
+  } catch (error) {
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -204,38 +300,74 @@ async function adminUpdateNewUser(req, token) {
  * @param {json} req
  * @returns
  */
-async function membershipResend(req){
+async function membershipResend(req) {
   // API validation
-  let validatedParams = validationService.validateParams(req.body, 'RESEND_VALIDATE_PARAMS');
+  let validatedParams = validationService.validateParams(
+    req.body,
+    "RESEND_VALIDATE_PARAMS"
+  );
 
   // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req["body"] = commonService.cleanData(req.body);
 
   // if params no error, status success
-  if(validatedParams.status === 'success'){
+  if (validatedParams.status === "success") {
     let response;
     // check if user exist
     const memberInfo = await usersService.getUserMembership(req);
 
-    if(memberInfo.status === 'success'){
+    if (memberInfo.status === "success") {
       // user exist, resend membership
-      response = await usersService.resendUserMembership(req, memberInfo.data.cognitoUser.UserAttributes);
-      response['source'] = 'ciam';
+      response = await usersService.resendUserMembership(
+        req,
+        memberInfo.data.cognitoUser.UserAttributes
+      );
+      response["source"] = "ciam";
       return response;
     }
 
     // Prepare response membership not found
-    let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, memberInfo);
+    let logObj = loggerService.build(
+      "user",
+      "usersControllers.membershipResend",
+      req,
+      "MWG_CIAM_USERS_MEMBERSHIP_NULL",
+      {},
+      memberInfo
+    );
     // prepare error params response
-    return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', memberInfo, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
+    return responseHelper.craftUsersApiResponse(
+      "usersControllers.membershipResend",
+      memberInfo,
+      "MWG_CIAM_USERS_MEMBERSHIP_NULL",
+      "RESEND_MEMBERSHIP",
+      logObj
+    );
   }
 
   // prepare error params response
-  errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_PARAMS_ERR');
+  errorConfig = usersService.processErrors(
+    validatedParams,
+    req.body,
+    "MWG_CIAM_PARAMS_ERR"
+  );
   // prepare logs
-  let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_PARAMS_ERR', {}, errorConfig);
+  let logObj = loggerService.build(
+    "user",
+    "usersControllers.membershipResend",
+    req,
+    "MWG_CIAM_PARAMS_ERR",
+    {},
+    errorConfig
+  );
   // prepare error params response
-  return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', errorConfig, 'MWG_CIAM_PARAMS_ERR', 'RESEND_MEMBERSHIP', logObj);
+  return responseHelper.craftUsersApiResponse(
+    "usersControllers.membershipResend",
+    errorConfig,
+    "MWG_CIAM_PARAMS_ERR",
+    "RESEND_MEMBERSHIP",
+    logObj
+  );
 }
 
 /**
@@ -244,39 +376,54 @@ async function membershipResend(req){
  * @param {json} req
  * @returns
  */
-async function membershipDelete(req){
+async function membershipDelete(req) {
   // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req["body"] = commonService.cleanData(req.body);
 
   // check if user exist
   var memberInfo = await usersService.getUserMembership(req);
 
-  if(memberInfo.status === 'success'){
+  if (memberInfo.status === "success") {
     // user exist, can update info
     var response = await usersService.deleteMembership(req, memberInfo.data);
     return response;
   }
-  let logObj = loggerService.build('user', 'usersControllers.membershipResend', req, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', {}, {});
+  let logObj = loggerService.build(
+    "user",
+    "usersControllers.membershipResend",
+    req,
+    "MWG_CIAM_USERS_MEMBERSHIP_NULL",
+    {},
+    {}
+  );
   // prepare error params response
-  return responseHelper.craftUsersApiResponse('usersControllers.membershipResend', {}, 'MWG_CIAM_USERS_MEMBERSHIP_NULL', 'RESEND_MEMBERSHIP', logObj);
+  return responseHelper.craftUsersApiResponse(
+    "usersControllers.membershipResend",
+    {},
+    "MWG_CIAM_USERS_MEMBERSHIP_NULL",
+    "RESEND_MEMBERSHIP",
+    logObj
+  );
 }
 
 /**
  * Function get membership
  */
-async function getUser(req){
+async function getUser(req) {
   // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req["body"] = commonService.cleanData(req.body);
 
   // API validation
-  let validatedParams = validationService.validateParams(req.body, 'GET_USER_VALIDATE_PARAMS');
+  let validatedParams = validationService.validateParams(
+    req.body,
+    "GET_USER_VALIDATE_PARAMS"
+  );
 
   // return errorParams;
-  if(validatedParams.status === 'success'){
+  if (validatedParams.status === "success") {
     // get user's membership
     return usersService.getUserCustomisable(req);
-  }
-  else{
+  } else {
     return validatedParams;
   }
 }
@@ -288,12 +435,12 @@ async function getUser(req){
  * User created and in "force change password" status
  * Send Admin set user password
  */
-async function adminSetUserPassword (){
+async function adminSetUserPassword() {
   var setPasswordParams = new AdminSetUserPasswordCommand({
     UserPoolId: process.env.USER_POOL_ID,
     Username: "vinki",
     Password: "Password123##",
-    Permanent: true
+    Permanent: true,
   });
 
   try {
@@ -330,7 +477,8 @@ async function userResetPassword(req) {
   try {
     return await UserResetPasswordJob.perform(req);
   } catch (error) {
-    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    const errorMessage =
+      error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
@@ -339,14 +487,18 @@ async function userResetPassword(req) {
 }
 
 async function userValidateResetPassword(passwordToken, lang) {
-  const message = UserValidateResetPasswordValidation.execute(passwordToken, lang);
+  const message = UserValidateResetPasswordValidation.execute(
+    passwordToken,
+    lang
+  );
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }
   try {
     return await UserValidateRestPasswordJob.perform(passwordToken, lang);
   } catch (error) {
-    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    const errorMessage =
+      error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
@@ -362,11 +514,76 @@ async function userConfirmResetPassword(body) {
   try {
     return await UserConfirmResetPasswordJob.perform(body);
   } catch (error) {
-    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    const errorMessage =
+      error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
+async function userCreateMembershipPass(req, res) {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+      "Route CIAM Create Membership Pass Error 401 Unauthorized",
+      startTimer
+    );
+    return res
+      .status(401)
+      .send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  const message =
+    UserMembershipPassValidation.validateCreateUserMembershipPass(req);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+
+  try {
+    const data = await userCreateMembershipPassJob.perform(req);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+}
+
+async function userUpdateMembershipPass(req, res) {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+      "Route CIAM Update Membership Pass Error 401 Unauthorized",
+      startTimer
+    );
+    return res
+      .status(401)
+      .send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  const message =
+    UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+
+  try {
+    const data = await userUpdateMembershipPassJob.perform(req);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
   }
 }
 
@@ -382,6 +599,7 @@ module.exports = {
   adminUpdateNewUser,
   userResetPassword,
   userConfirmResetPassword,
-  userValidateResetPassword
+  userValidateResetPassword,
+  userCreateMembershipPass,
+  userUpdateMembershipPass,
 };
-
