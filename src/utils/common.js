@@ -29,8 +29,7 @@ const getSource = (appId) => {
 const getGroup = (group) => {
   const groupMappings = {
     wildpass: "WP",
-    fow: "FW",
-    "fow+": "FWP",
+    'membership-passes': "MP"
   };
 
   return groupMappings[group] ?? "";

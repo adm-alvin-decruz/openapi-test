@@ -14,7 +14,6 @@ jest.mock("../../../services/cognitoService", () => ({
   cognitoAdminGetUserByEmail: jest.fn(),
   cognitoAdminCreateUser: jest.fn(),
   cognitoAdminSetUserPassword: jest.fn(),
-  cognitoAdminDeleteUser: jest.fn(),
   cognitoAdminAddUserToGroup: jest.fn(),
 }));
 jest.mock("../../../db/connections/mysqlConn", () => ({
@@ -95,10 +94,10 @@ describe("UserSignupService", () => {
           "mwg-app-id": "123",
         },
         body: {
-          group: "fow",
+          group: "membership-passes",
         },
       });
-      expect(mandaiId).toContain("MFWGA");
+      expect(mandaiId).toContain("MMPGA");
     });
     it("should generate mandaiID for fow+", async () => {
       const mandaiId = userSignupService.generateMandaiId({
@@ -106,10 +105,10 @@ describe("UserSignupService", () => {
           "mwg-app-id": "123",
         },
         body: {
-          group: "fow+",
+          group: "wildpass",
         },
       });
-      expect(mandaiId).toContain("MFWPGA");
+      expect(mandaiId).toContain("MWPGA");
     });
   });
   describe("saveUserDB", () => {
@@ -174,6 +173,7 @@ describe("UserSignupService", () => {
           body: {
             email: "test@gmail.com",
             password: "123",
+            group: "membership-passes",
           },
         })
       ).rejects.toThrow(
@@ -212,6 +212,7 @@ describe("UserSignupService", () => {
           body: {
             email: "test@gmail.com",
             password: "123",
+            group: "membership-passes",
           },
         })
       ).rejects.toThrow(
@@ -252,6 +253,7 @@ describe("UserSignupService", () => {
         body: {
           email: "test@gmail.com",
           password: "123",
+          group: "membership-passes",
         },
       });
       expect(rs).toEqual({ mandaiId: "123" });

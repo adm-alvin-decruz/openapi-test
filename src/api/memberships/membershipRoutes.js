@@ -37,9 +37,6 @@ router.post("/users/memberships", async (req, res) => {
     req.apiTimer.end('Route CIAM Check Membership ended', startTimer);
     return res.status(200).send(checkMemberResult);
   } catch (error) {
-    if (error.isFromAEM) {
-      return res.status(200).send(error);
-    }
     const errorMessage = JSON.parse(error.message);
     if (errorMessage.statusCode !== 500) {
       return res.status(errorMessage.statusCode).send(errorMessage)

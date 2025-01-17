@@ -41,7 +41,7 @@ const switchService = require('../../services/switchService');
 const CommonErrors = require("../../config/https/errors/common");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
-const { COGNITO_ATTRIBUTES } = require("../../utils/constants");
+const { COGNITO_ATTRIBUTES, GROUP} = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
@@ -121,6 +121,12 @@ async function cognitoCreateUser(req){
       const cognitoRes =  await client.send(newUserParams);
       if (cognitoRes.$metadata.httpStatusCode !== 200) {
         return 'Lambda user creation failed';
+      }
+      if (cognitoRes.$metadata.httpStatusCode === 200) {
+         await cognitoService.cognitoAdminAddUserToGroup(
+            req.body.email,
+            GROUP.WILD_PASS
+        );
       }
       req.apiTimer.end('Cognito Create User ended');
       return cognitoRes;

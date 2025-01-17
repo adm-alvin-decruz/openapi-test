@@ -2,16 +2,6 @@ module.exports = {
   en: {
     signup_email:
       "This email address is already being used for a Mandai Account.",
-    signup_firstName: "The first name is invalid.",
-    signup_lastName: "The last name is invalid.",
-    signup_dob:
-      "The date of birth is invalid. Must between 13 and 99 years old.",
-    signup_group: "The group is invalid.",
-    signup_newsletter: "Must agree and subscribe to the newsletter.",
-    signup_country: "Country is invalid.",
-    signup_phoneNumber: "Phone number is invalid.",
-    signup_password: "Password does not meet complexity requirements.",
-    signup_confirmPassword: "Passwords do not match.",
     signup_success: "New user signed up successfully.",
     signup_error: "New user signup error.",
     login_success: "Login success.",
@@ -44,19 +34,14 @@ module.exports = {
     passwordToken_required: "Token is required.",
     passwordToken_invalid: "Requested token is invalid or empty.",
     token_valid: "Token is valid.",
-    passwordToken_expired: "Requested token has expired."
+    passwordToken_expired: "Requested token has expired.",
+    visualId_invalid: "Visual id is invalid",
+    list_visualId_invalid: "List visual id is invalid",
+    get_membership_success: "Get my membership success.",
+    get_membership_failed: "Get my membership failed."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
-    signup_firstName: "名字无效。",
-    signup_lastName: "姓氏无效。",
-    signup_dob: "出生日期无效。年龄必须在 13 至 99 岁之间。",
-    signup_group: "该群组无效。",
-    signup_newsletter: "必须同意并订阅新闻通讯。",
-    signup_country: "国家无效。",
-    signup_phoneNumber: "电话号码无效。",
-    signup_password: "密码不符合复杂性要求。",
-    signup_confirmPassword: "密码不匹配。",
     signup_success: "新用户注册成功。",
     signup_error: "新用户注册错误。",
     login_success: "登录成功。",
@@ -87,20 +72,14 @@ module.exports = {
     passwordToken_required: "需要令牌。",
     passwordToken_invalid: "请求的令牌无效或为空。",
     token_valid: "令牌有效。",
-    passwordToken_expired: "请求的令牌已过期。"
+    passwordToken_expired: "请求的令牌已过期。",
+    visualId_invalid: "可视 ID 无效",
+    list_visualId_invalid: "列表可视 ID 无效",
+    get_membership_success: "获取我的会员资格成功",
+    get_membership_failed: "获取我的会员资格失败"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
-    signup_firstName: "이름이 유효하지 않습니다.",
-    signup_lastName: "성을 입력한 값이 유효하지 않습니다.",
-    signup_dob:
-      "생년월일이 유효하지 않습니다. 만 13세 이상 99세 이하이어야 합니다.",
-    signup_group: "그룹이 유효하지 않습니다.",
-    signup_newsletter: "뉴스레터에 동의하고 구독해야 합니다.",
-    signup_country: "국가가 유효하지 않습니다.",
-    signup_phoneNumber: "전화번호가 유효하지 않습니다.",
-    signup_password: "비밀번호가 일치하지 않습니다.",
-    signup_confirmPassword: "비밀번호가 일치하지 않습니다.",
     signup_success: "기록을 찾을 수 없습니다.",
     signup_error: "새 사용자 등록 오류입니다.",
     login_success: "로그인 성공.",
@@ -132,20 +111,15 @@ module.exports = {
     passwordToken_required: "토큰이 필요합니다.",
     passwordToken_invalid: "요청된 토큰이 유효하지 않거나 비어 있습니다.",
     token_valid: "토큰이 유효합니다.",
-    passwordToken_expired: "요청한 토큰이 만료되었습니다."
+    passwordToken_expired: "요청한 토큰이 만료되었습니다.",
+    visualId_invalid: "시각 ID가 유효하지 않습니다",
+    list_visualId_invalid: "목록 시각 ID가 유효하지 않습니다",
+    get_membership_success: "내 멤버십을 성공적으로 가져왔습니다",
+    get_membership_failed: "내 멤버십 가져오기에 실패했습니다"
   },
   ja: {
     signup_email:
       "このメールアドレスはすでにMandaiアカウントで使用されています。",
-    signup_firstName: "名前が無効です。",
-    signup_lastName: "苗字が無効です。",
-    signup_dob: "生年月日が無効です。13歳以上99歳以下である必要があります。",
-    signup_group: "グループが無効です。",
-    signup_newsletter: "ニュースレターに同意して購読する必要があります。",
-    signup_country: "国が無効です。",
-    signup_phoneNumber: "電話番号が無効です。",
-    signup_password: "パスワードが複雑性の要件を満たしていません。",
-    signup_confirmPassword: "パスワードが一致しません。",
     signup_success: "記録が見つかりませんでした。",
     signup_error: "新規ユーザー登録エラーです。",
     login_success: "ログイン成功。",
@@ -178,6 +152,10 @@ module.exports = {
     passwordToken_required: "トークンが必要です。",
     passwordToken_invalid: "要求されたトークンが無効か空です。",
     token_valid: "トークンは有効です。",
-    passwordToken_expired: "リクエストされたトークンが期限切れです。"
+    passwordToken_expired: "リクエストされたトークンが期限切れです。",
+    visualId_invalid: "ビジュアルIDが無効です",
+    list_visualId_invalid: "リストビジュアルIDが無効です",
+    get_membership_success: "私のメンバーシップを取得しました",
+    get_membership_failed: "私のメンバーシップの取得に失敗しました"
   },
 };

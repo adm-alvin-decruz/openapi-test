@@ -16,6 +16,8 @@ jest.mock("../../../api/users/usersContollers", () => ({
   userResetPassword: jest.fn(),
   userConfirmResetPassword: jest.fn(),
   userValidateResetPassword: jest.fn(),
+  userGetMembershipPasses: jest.fn(),
+  userVerifyToken: jest.fn(),
 }));
 
 describe("User Routes", () => {
@@ -235,7 +237,45 @@ describe("User Routes", () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ error: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          message: "Unauthorized",
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
+    });
+    it("should return 400 with signup wrong group", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "adminCreateNewUser").mockResolvedValue({
+        membership: {
+          code: 200,
+          mandaiId: "123",
+          message: "New user signed up successfully.",
+          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app)
+          .post("/users")
+          .send({ email: "test@gmail.com", group: "fow+" });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        membership: {
+          code: 400,
+          message: "Wrong parameters",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+          error: {
+            group: "The group is invalid."
+          }
+        },
+        status: "failed",
+        statusCode: 400,
+      });
     });
     it("should return 200 and signup successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
@@ -251,7 +291,7 @@ describe("User Routes", () => {
       });
       const response = await request(app)
         .post("/users")
-        .send({ email: "test@gmail.com", group: "fow+" });
+        .send({ email: "test@gmail.com", group: "membership-passes" });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -612,6 +652,232 @@ describe("User Routes", () => {
           message: "Token is valid.",
           isValid: true,
           passwordToken: "12345678",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("POST:/users/my-membership - User Get Membership Passes API", () => {
+    it("should return 400 if request body is empty", async () => {
+      const response = await request(app).post("/users/my-membership").send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        membership: {
+          code: 400,
+          message: "Request body is empty",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+        },
+        status: "failed",
+        statusCode: 400,
+      });
+    });
+    it("should return 401 if empty access token", async () => {
+      const response = await request(app)
+        .post("/users/my-membership", {
+          headers: {
+            authorization: "",
+          },
+        })
+        .send({ email: "test@gmail.com", visualId: "123" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app)
+        .post("/users/my-membership", {
+          headers: {
+            "mwg-app-id": "",
+            authorization: "123",
+          },
+        })
+        .send({ email: "example-email@gmail.com", visualId: "123456" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return error when service not pass", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userGetMembershipPasses").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+      const response = await request(app)
+        .post("/users/my-membership", {
+          headers: {
+            "mwg-app-id": "",
+          },
+        })
+        .set("Authorization", "Bearer" + Math.random())
+        .send({
+          email: "test@gmail.com",
+          visualId: "123",
+        });
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          message: "Requested email is invalid or empty.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should return 200 and my membership result", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userGetMembershipPasses").mockResolvedValue({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS",
+          message: "Get my membership success.",
+          passes: [
+            {
+              visualId: "123",
+              urls: {
+                apple: "https://example.com/apple",
+                google: "https://example.com/google",
+              },
+            },
+          ],
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app)
+        .post("/users/my-membership")
+        .set("Authorization", "Bearer" + Math.random())
+        .send({
+          email: "test@gmail.com",
+          visualId: "123",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS",
+          message: "Get my membership success.",
+          passes: [
+            {
+              visualId: "123",
+              urls: {
+                apple: "https://example.com/apple",
+                google: "https://example.com/google",
+              },
+            },
+          ],
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+  });
+  describe("POST:/token/verify - User Verify Token API", () => {
+    it("should return 401 if empty access token", async () => {
+      const response = await request(app)
+        .post("/token/verify", {
+          headers: {
+            authorization: "",
+          },
+        })
+        .send({ email: "test@gmail.com" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return 401 if app ID is invalid", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
+      const response = await request(app)
+        .post("/token/verify", {
+          headers: {
+            "mwg-app-id": "",
+            authorization: "123",
+          },
+        })
+        .send({ email: "example-email@gmail.com" });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ message: "Unauthorized" });
+    });
+    it("should return error when userVerifyToken not pass", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userVerifyToken").mockRejectedValue(
+        new Error(
+          JSON.stringify({
+            membership: {
+              code: 200,
+              mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+              message: "Requested email is invalid or empty.",
+              email: "test@gmail.com",
+            },
+            status: "success",
+            statusCode: 200,
+          })
+        )
+      );
+      const response = await request(app)
+        .post("/token/verify", {
+          headers: {
+            "mwg-app-id": "",
+          },
+        })
+        .set("Authorization", "Bearer" + Math.random())
+        .send({
+          email: "test@gmail.com",
+        });
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          message: "Requested email is invalid or empty.",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should return 200 and userVerifyToken success", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "userVerifyToken").mockResolvedValue({
+        token: {
+          code: 200,
+          valid: true,
+          expired_at: "2025-01-09 11:03:26",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app)
+        .post("/token/verify")
+        .set("Authorization", "Bearer" + Math.random())
+        .send({
+          email: "test@gmail.com",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        token: {
+          code: 200,
+          valid: true,
+          expired_at: "2025-01-09 11:03:26",
+          email: "test@gmail.com",
         },
         status: "success",
         statusCode: 200,

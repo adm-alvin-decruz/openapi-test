@@ -39,7 +39,42 @@ class User {
     try{
       const sql = 'SELECT * FROM users WHERE email = ?';
       const rows = await pool.query(sql, [email]);
-      return rows[0];
+
+      if (rows[0]) {
+        return rows[0];
+      } else {
+        return [];
+      }
+    }
+    catch (error){
+      return error;
+    }
+  }
+
+  /** Find users based on visualId and email*/
+  static async findByEmailVisualIds(visualIds, email){
+    try {
+      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
+                  FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ?`;
+
+      return await pool.query(sql, [visualIds, email]);
+    }
+    catch (error){
+      return error;
+    }
+  }
+
+  /** Find users mandai_id for*/
+  static async findFullMandaiId(email){
+    try {
+      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
+                  FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  WHERE u.active = 1 AND u.email = ?`;
+
+      return await pool.query(sql, [email]);
     }
     catch (error){
       return error;
@@ -62,6 +97,29 @@ class User {
     }
     catch (error){
       console.error(new Error(`Error queryWPUserByEmail: ${error}`));
+    }
+  }
+
+  /** Find passes belong user */
+  static async findPassesByUserEmail(passes, email){
+    try{
+      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
+                    CASE
+                        WHEN um.name in (?) THEN true
+                        ELSE false
+                    END AS isBelong
+                  FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  WHERE u.email = ? AND u.active = 1`;
+
+      return await pool.query(sql, [passes, email]);
+    }
+    catch (error){
+      console.error(new Error(`Error findPassesByUserEmail: ${error}`));
+      throw new Error(JSON.stringify({
+        dbProceed: 'failed',
+        error: JSON.stringify(error)
+      }))
     }
   }
 

@@ -18,7 +18,7 @@ class UserResetPasswordJob {
   async perform(req) {
     try {
       const rs = await UserResetPasswordService.execute(req);
-      return this.success(rs.email, req.language);
+      return this.success(rs.email, req.body.language);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));
