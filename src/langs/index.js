@@ -44,7 +44,19 @@ module.exports = {
     passwordToken_required: "Token is required.",
     passwordToken_invalid: "Requested token is invalid or empty.",
     token_valid: "Token is valid.",
-    passwordToken_expired: "Requested token has expired."
+    passwordToken_expired: "Requested token has expired.",
+    membership_pass_create_error: "Failed to create membership pass.",
+    membership_pass_update_error: "Failed to update membership pass.",
+    membership_pass_email: "The email is empty or invalid.",
+    membership_pass_mandaiId: "The Mandai ID is empty or invalid.",
+    membership_pass_group: "The group is empty or invalid.",
+    membership_pass_passType: "The pass type is empty or invalid.",
+    membership_pass_visualId: "The Visual ID is empty or invalid.",
+    membership_pass_categoryType: "The Category Type is empty or invalid.",
+    membership_pass_adultQty: "The Adult Qty is empty or invalid.",
+    membership_pass_childQty: "The Child Qty is empty or invalid.",
+    membership_pass_member_dob: "The Member DOB is invalid.",
+    membership_pass_parking: "The parking is invalid.",
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -87,7 +99,7 @@ module.exports = {
     passwordToken_required: "需要令牌。",
     passwordToken_invalid: "请求的令牌无效或为空。",
     token_valid: "令牌有效。",
-    passwordToken_expired: "请求的令牌已过期。"
+    passwordToken_expired: "请求的令牌已过期。",
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -124,7 +136,8 @@ module.exports = {
     update_user_error: "사용자 정보 업데이트 오류.",
     old_password_invalid: "기존 비밀번호가 일치하지 않습니다.",
     unauthorized: "권한 없음",
-    request_reset_password_success: "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
+    request_reset_password_success:
+      "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
     confirm_reset_password_success: "비밀번호가 성공적으로 재설정되었습니다.",
     token_reset_password_being_used: "토큰이 이미 사용되었습니다.",
     newPassword_required: "비밀번호가 필요합니다.",
@@ -132,7 +145,7 @@ module.exports = {
     passwordToken_required: "토큰이 필요합니다.",
     passwordToken_invalid: "요청된 토큰이 유효하지 않거나 비어 있습니다.",
     token_valid: "토큰이 유효합니다.",
-    passwordToken_expired: "요청한 토큰이 만료되었습니다."
+    passwordToken_expired: "요청한 토큰이 만료되었습니다.",
   },
   ja: {
     signup_email:
@@ -170,7 +183,8 @@ module.exports = {
     update_user_error: "ユーザー情報の更新エラー。",
     old_password_invalid: "古いパスワードが一致しません。",
     unauthorized: "未承認",
-    request_reset_password_success: "パスワードリセットリンクをメールに送信しました。",
+    request_reset_password_success:
+      "パスワードリセットリンクをメールに送信しました。",
     confirm_reset_password_success: "パスワードが正常にリセットされました。",
     token_reset_password_being_used: "トークンは既に使用されています。",
     newPassword_required: "パスワードが必要です。",
@@ -178,6 +192,6 @@ module.exports = {
     passwordToken_required: "トークンが必要です。",
     passwordToken_invalid: "要求されたトークンが無効か空です。",
     token_valid: "トークンは有効です。",
-    passwordToken_expired: "リクエストされたトークンが期限切れです。"
+    passwordToken_expired: "リクエストされたトークンが期限切れです。",
   },
 };
