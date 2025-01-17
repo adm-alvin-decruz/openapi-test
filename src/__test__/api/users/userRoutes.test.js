@@ -237,7 +237,45 @@ describe("User Routes", () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ error: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          message: "Unauthorized",
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
+    });
+    it("should return 400 with signup wrong group", async () => {
+      jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userController, "adminCreateNewUser").mockResolvedValue({
+        membership: {
+          code: 200,
+          mandaiId: "123",
+          message: "New user signed up successfully.",
+          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+      const response = await request(app)
+          .post("/users")
+          .send({ email: "test@gmail.com", group: "fow+" });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        membership: {
+          code: 400,
+          message: "Wrong parameters",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+          error: {
+            group: "The group is invalid."
+          }
+        },
+        status: "failed",
+        statusCode: 400,
+      });
     });
     it("should return 200 and signup successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
@@ -253,7 +291,7 @@ describe("User Routes", () => {
       });
       const response = await request(app)
         .post("/users")
-        .send({ email: "test@gmail.com", group: "fow+" });
+        .send({ email: "test@gmail.com", group: "membership-passes" });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({

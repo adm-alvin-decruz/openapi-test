@@ -17,7 +17,7 @@ const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
-const { GROUP } = require("../../utils/constants");
+const { GROUP, GROUPS_SUPPORTS} = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/common");
 
 const pong = {'pong': 'pang'};
@@ -40,17 +40,24 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
     req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
-    return res.status(401).send({ error: 'Unauthorized' });
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  //#region Signup FOW FOW+
-  if([GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
+  if (!req.body.group || !GROUPS_SUPPORTS.includes(req.body.group)) {
+    return res.status(400).json(CommonErrors.BadRequest(
+        "group",
+        "group_invalid",
+        req.body.language));
+  }
+
+  //#region Signup Membership Passes
+  if([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
     try {
       const signupRs = await userController.adminCreateNewUser(req);
-      req.apiTimer.end('Route CIAM Signup User Success', startTimer);
+      req.apiTimer.end('Route CIAM Signup New User Success', startTimer);
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
-      req.apiTimer.end('Route CIAM Signup User Error', startTimer);
+      req.apiTimer.end('Route CIAM Signup New User Error', startTimer);
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage)
     }
