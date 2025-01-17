@@ -123,6 +123,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
+          rawError: error.toString()
         })
       );
     }
@@ -159,6 +160,8 @@ class Cognito {
     mandaiId,
     newsletter,
     source,
+    phoneNumber,
+    country
   }) {
     const newUserArray = {
       UserPoolId: process.env.USER_POOL_ID,
@@ -175,6 +178,8 @@ class Cognito {
         { Name: "email", Value: email },
         { Name: "birthdate", Value: birthdate },
         { Name: "address", Value: address ? address : "" },
+        { Name: "phone_number", Value: phoneNumber ? phoneNumber : "" },
+        { Name: "zoneinfo", Value: country ? country : "" },
         // custom fields
         { Name: "custom:membership", Value: groups ? JSON.stringify(groups) : "null" },
         { Name: "custom:mandai_id", Value: mandaiId },
