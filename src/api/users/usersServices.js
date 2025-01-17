@@ -228,10 +228,7 @@ async function getUserMembership(req){
   return response;
 }
 
-/**
- * Update user CIAM info
- * NOTE: new cardface will generate by passkit email trigger
- */
+//#region Update user CIAM info - Phase2 FO series
 async function adminUpdateUser (req, ciamComparedParams, membershipData, prepareDBUpdateData){
   // get switches from DB
   req['dbSwitch'] = await switchService.getAllSwitches();
@@ -285,107 +282,161 @@ async function adminUpdateUser (req, ciamComparedParams, membershipData, prepare
   }
 }
 
-async function updateDB(body, userId) {
+async function updateDB(body, userId, isNewEmailExisted) {
   if (!userId) {
-    throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.language)))
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.email, body.language)))
   }
-  //update DB
+  //enhance it should apply rollback when some executions got failed
+  //or saving to failed_job
   try {
-    await pool.transaction(async () => {
-      if (body.firstName || body.lastName || body.dob) {
-        await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob);
-      }
-      if (body.newsletter && body.newsletter.subscribe) {
-        await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
-      }
-      if (body.group) {
-        await userDBService.userMembershipModelExecuteUpdate(userId, body.group)
-      }
-      if (body.phoneNumber) {
-        await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber)
-      }
-      if (body.password) {
-        const hashPassword = await passwordService.hashPassword(
-            body.password.toString()
-        );
-        await userCredentialModel.updatePassword(userId, hashPassword)
-      }
-    });
+    if (body.firstName || body.lastName || body.dob || body.newEmail) {
+      const emailUpdate = !isNewEmailExisted && body.newEmail ? body.newEmail : undefined;
+      await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob, emailUpdate);
+    }
+    if (body.newsletter && body.newsletter.name) {
+      await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
+    }
+    if (body.phoneNumber || body.address || body.country) {
+      await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber, body.address, body.country)
+    }
   } catch (error) {
     loggerService.error(`usersService.updateDB Error: ${error}`);
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
-/**
- * Update user FOW/FOW+ CIAM info
- * NOTE: new cardface will be confirm
- */
-async function adminUpdateNewUser(body, token) {
+
+async function checkNewEmailExisted(email) {
   try {
-    //get user from cognito
-    const userInfo = await cognitoService.cognitoAdminGetUserByAccessToken(token);
-    const email = getOrCheck(userInfo, 'email');
-    let userName = getOrCheck(userInfo, 'name');
-    const userFirstName = getOrCheck(userInfo, 'given_name');
-    const userLastName = getOrCheck(userInfo, 'family_name');
-
-    //update DB
-    //get user from db
     const userDB = await userModel.findByEmail(email);
-    await updateDB(body, userDB && userDB.id ? userDB.id : undefined);
-
-
-    //cognito update user password by accessToken
-    //attempts limit: Lockout behavior for failed attempts
-    if (body.password) {
-      await cognitoService.cognitoUserChangePassword(token, body.password, body.oldPassword);
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
+    const emailCognito = getOrCheck(userCognito, 'email');
+    return !!userDB.email || !!emailCognito;
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    const errorData =
+        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      return false;
     }
+  }
+}
 
-    const cognitoParams = Object.keys(body).map((key) => {
-      //need to confirm with Kay about these properties here
-      if (['uuid', 'country', 'password', 'confirmPassword', 'oldPassword'].includes(key)) {
-        return;
+async function updatePassword(body, token, isNewEmailExisted) {
+  //ignore update password if newPassword not requested
+  if (!body.newPassword) {
+    return;
+  }
+
+  try {
+    const hashPassword = await passwordService.hashPassword(body.newPassword.toString());
+    const userCredentialInfo = await userCredentialModel.findByUserEmail(body.email);
+    if (token) {
+      //token is available it means Cognito will verify old password as well
+      await cognitoService.cognitoUserChangePassword(token, body.newPassword, body.oldPassword);
+
+      //update password hash and new email if possible - prepare for login session
+      await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
+        password_hash: hashPassword,
+        username: !isNewEmailExisted && body.newEmail ? body.newEmail : body.email
+      });
+    } else {
+      //token is not available -> Using argon2 to compare password
+      const isMatched = await passwordService.comparePassword(body.oldPassword, userCredentialInfo.password_hash);
+      if (isMatched) {
+        await cognitoService.cognitoAdminSetUserPassword(body.email, body.newPassword);
+
+        //update password hash and new email if possible - prepare for login session
+        await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
+          password_hash: hashPassword,
+          username: !isNewEmailExisted && body.newEmail ? body.newEmail : body.email
+        });
+      } else {
+        await Promise.reject(JSON.stringify(CommonErrors.OldPasswordNotMatchErr(body.language)));
       }
-      if (key === 'group') {
-        return {
-          Name: COGNITO_ATTRIBUTES[key],
-          Value: JSON.stringify([
-            {
-              name: body.group,
-              visualID: "",
-              expiry: ""
-            }
-          ])
-        }
-      }
-      if (key === 'newsletter') {
-        return {
-          Name: COGNITO_ATTRIBUTES[key],
-          Value: JSON.stringify(body.newsletter)
-        }
-      }
+    }
+  } catch (error) {
+    loggerService.error(`Error usersService.updatePassword. Error: ${error} - ${body.email}`);
+    throw new Error(JSON.stringify(CommonErrors.OldPasswordNotMatchErr(body.language)))
+  }
+}
+
+async function updateUserCognito(body, userCognito) {
+  /*
+    prepare replace user's name at Cognito
+     handle replace username at cognito by firstName + lastName
+   */
+  let userName = getOrCheck(userCognito, 'name');
+  const userFirstName = getOrCheck(userCognito, 'given_name');
+  const userLastName = getOrCheck(userCognito, 'family_name');
+  if (body.firstName && userFirstName) {
+    userName = userName.replace(userFirstName.toString(), body.firstName);
+  }
+  if (body.lastName && userLastName) {
+    userName = userName.replace(userLastName.toString(), body.lastName);
+  }
+
+  //prepare params attributes for Cognito
+  //filter attributes that support from our Cognito schemas only
+  const cognitoParams = Object.keys(body).map((key) => {
+    //ignore params which not being used for update data
+    if (['uuid', 'newPassword', 'confirmPassword', 'oldPassword', 'group'].includes(key)) {
+      return;
+    }
+    if (key === 'newsletter') {
       return {
         Name: COGNITO_ATTRIBUTES[key],
-        Value: body[key]
+        Value: JSON.stringify(body.newsletter)
       }
-    }).filter(ele => !!ele);
-
-    //replace for user name
-    if (body.firstName && userFirstName) {
-      userName = userName.replace(userFirstName.toString(), body.firstName);
     }
-    if (body.lastName && userLastName) {
-      userName = userName.replace(userLastName.toString(), body.lastName);
+    if (key === 'email' && !!body.newEmail) {
+      return {
+        Name: COGNITO_ATTRIBUTES['email'],
+        Value: body.newEmail
+      }
     }
 
-    //cognito update user
-    await cognitoService.cognitoAdminUpdateNewUser([
-        ...cognitoParams,
-      {
-        Name: 'name',
-        Value: userName
+    return {
+      Name: COGNITO_ATTRIBUTES[key],
+      Value: body[key]
+    }
+  }).filter(ele => !!ele && !!ele.Name);
+
+  //cognito update user
+  await cognitoService.cognitoAdminUpdateNewUser([
+    ...cognitoParams,
+    {
+      Name: 'name',
+      Value: userName
+    }
+  ], body.email);
+}
+
+async function adminUpdateNewUser(body, token) {
+  try {
+    //get user from db
+    const userDB = await userModel.findByEmail(body.email);
+    //get user from cognito
+    const userCognito = token
+        ? await cognitoService.cognitoAdminGetUserByAccessToken(token)
+        : await cognitoService.cognitoAdminGetUserByEmail(body.email);
+    const email = getOrCheck(userCognito, 'email');
+
+    if (email !== body.email || userDB.email !== body.email) {
+      return CommonErrors.UnauthorizedException(body.language);
+    }
+    let isNewEmailExisted = false;
+    if (body.newEmail) {
+      isNewEmailExisted = await checkNewEmailExisted(body.newEmail);
+      if (isNewEmailExisted) {
+        return UpdateUserErrors.ciamNewEmailBeingUsedErr(body.newEmail, body.language);
       }
-    ], email);
+    }
+    //1st updatePassword -> if failed the process update user will stop
+    await updatePassword(body, token, isNewEmailExisted);
+    //2nd update DB
+    await updateDB(body, userDB && userDB.id ? userDB.id : undefined, isNewEmailExisted);
+    //3rd update Cognito
+    await updateUserCognito(body, userCognito)
 
     return {
       membership: {
@@ -397,11 +448,12 @@ async function adminUpdateNewUser(body, token) {
       statusCode: 200,
     }
   } catch (error) {
+    loggerService.error(`usersServices.adminUpdateNewUser Error: ${error} - ${body.email}`);
     const errorMessage = error.message ? JSON.parse(error.message) : '';
     const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
     if (errorData.name && errorData.name === "UserNotFoundException") {
-      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.language)))
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.email, body.language)))
     }
     if (errorData.name && errorData.name === "NotAuthorizedException") {
       throw new Error(JSON.stringify(CommonErrors.UnauthorizedException(body.language)))
@@ -409,6 +461,7 @@ async function adminUpdateNewUser(body, token) {
     throw new Error(JSON.stringify(errorMessage));
   }
 }
+//#endregion
 
 /**
  * Generate login secret hash

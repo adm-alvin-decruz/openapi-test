@@ -34,16 +34,6 @@ class UserMembership {
     return await pool.query(sql, [userId]);
   }
 
-  static async findByUserIdAndGroup(userId, group) {
-    const sql = 'SELECT * FROM user_memberships WHERE user_id = ? and name = ?';
-    return await pool.query(sql, [userId, group]);
-  }
-
-  static async findByUserIdAndExcludeGroup(userId, group) {
-    const sql = 'SELECT * FROM user_memberships WHERE user_id = ? and name != ?';
-    return await pool.query(sql, [userId, group]);
-  }
-
   static async update(id, membershipData) {
     const now = getCurrentUTCTimestamp();
     const sql = `

@@ -11,7 +11,7 @@ const {
   isEmptyRequest,
   validateEmail,
   isEmptyAccessToken,
-  isEmptyAccessTokenWithFOW
+  isEmptyAccessTokenBaseAppId
 } = require("../../middleware/validationMiddleware");
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
@@ -92,7 +92,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  *
  * Handling most HTTP validation here
  */
-router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenWithFOW, async (req, res) => {
+router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenBaseAppId, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   req.body.uuid = uuid;
@@ -105,21 +105,29 @@ router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenWithFOW, a
         "Route CIAM Update User Error 401 Unauthorized",
         startTimer
     );
-    return res.status(401).send({ error: 'Unauthorized' });
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  //#region Update Account FOW FOW+
-  if([GROUP.FOW, GROUP.FOW_PLUS].includes(req.body.group)) {
+  if (!req.body.group || !GROUPS_SUPPORTS.includes(req.body.group)) {
+    return res.status(400).json(CommonErrors.BadRequest(
+        "group",
+        "group_invalid",
+        req.body.language));
+  }
+
+  const isRequestFromAEM = !!req.headers['mwg-app-id'].includes('aem');
+  //#region Update Account New logic (FO series)
+  if([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
     try {
-      const token = req.headers.authorization.substring(
+      const token = isRequestFromAEM ? req.headers.authorization.substring(
           7,
           req.headers.authorization.length
-      );
+      ) : '';
       const updateRs = await userController.adminUpdateNewUser(req, token);
-      req.apiTimer.end('Route CIAM Update User Success', startTimer);
+      req.apiTimer.end('Route CIAM Update New User Success', startTimer);
       return res.status(updateRs.statusCode).send(updateRs);
     } catch (error) {
-      req.apiTimer.end('Route CIAM Update User Error', startTimer);
+      req.apiTimer.end('Route CIAM Update New User Error', startTimer);
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage)
     }
@@ -308,7 +316,7 @@ router.post("/users/reset-password", isEmptyRequest, validateEmail, async (req, 
   }
 
   try {
-    const data = await userController.userResetPassword(req.body);
+    const data = await userController.userResetPassword(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
@@ -387,6 +395,35 @@ router.post("/users/membership-passes", isEmptyRequest, isEmptyAccessToken, vali
 
   try {
     const data = await userController.userGetMembershipPasses(req.body);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Verify Access Token API (Method POST)
+ */
+router.post("/token/verify", isEmptyAccessToken, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  //validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end(
+        "Route CIAM Verify Token Error 401 Unauthorized",
+        startTimer
+    );
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
+  }
+  const accessToken = req.headers.authorization.substring(
+      7,
+      req.headers.authorization.length
+  );
+  try {
+    const data = await userController.userVerifyToken(accessToken, req.body.email, req.body.language);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
