@@ -2,17 +2,14 @@ const pool = require("../connections/mysqlConn");
 const {
   getCurrentUTCTimestamp,
   convertDateToMySQLFormat,
+  formatDateToMySQLDateTime,
 } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
 
 class UserMembership {
   static async create(membershipData) {
     const now = getCurrentUTCTimestamp();
-    if (membershipData.expires_at !== null) {
-      membershipData["expires_at"] = convertDateToMySQLFormat(
-        membershipData.expires_at
-      );
-    }
+
     const sql = `
       INSERT INTO user_memberships
       (user_id, name, visual_id, expires_at, created_at, updated_at)

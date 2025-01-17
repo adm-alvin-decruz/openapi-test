@@ -1,5 +1,5 @@
 const MembershipPassErrors = require("../../../config/https/errors/membershipPassErrors");
-const { validateDOB } = require("../../../services/validationService");
+const { validateDOBiso } = require("../../../services/validationService");
 
 class UserMembershipPassValidation {
   constructor() {
@@ -30,7 +30,7 @@ class UserMembershipPassValidation {
     }
 
     if (req.body.member?.dob) {
-      const dob = validateDOB(req.member.dob);
+      const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
           "member_dob",
@@ -62,7 +62,16 @@ class UserMembershipPassValidation {
   }
 
   static validateUpdateUserMembershipPass(req) {
-    const requiredParams = ["visualId"];
+    const requiredParams = [
+      "email",
+      "mandaiId",
+      "passType",
+      "visualId",
+      "categoryType",
+      "member",
+      "validUntil",
+      "coMembers",
+    ];
 
     const requestParams = Object.keys(req.body);
     const missingParams = requiredParams.filter(
@@ -76,13 +85,27 @@ class UserMembershipPassValidation {
     }
 
     if (req.body.member?.dob) {
-      const dob = validateDOB(req.member.dob);
+      const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
           "member_dob",
           req.body.language
         ));
       }
+    }
+
+    if (!req.body.member.firstName) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "member_first_name",
+        req.body.language
+      ));
+    }
+
+    if (!req.body.member.lastName) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "member_last_name",
+        req.body.language
+      ));
     }
 
     if (

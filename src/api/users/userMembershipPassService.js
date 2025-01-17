@@ -29,10 +29,7 @@ class UserMembershipPassService {
       await this.updateMembershipInCognito(req);
 
       // upload member photo to S3
-      await uploadThumbnailToS3(req);
-
-      // send message to SQS to generate passkit
-      await this.sendSQSMessage(req, "createMembershipPass");
+      if (req.body.membershipPhoto?.bytes) await uploadThumbnailToS3(req);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
       if (errorMessage.status === "failed") {
@@ -56,7 +53,7 @@ class UserMembershipPassService {
       await this.updateMembershipInCognito(req);
 
       // update member photo in S3
-      if (req.body.membershipPhoto) await uploadThumbnailToS3(req);
+      if (req.body.membershipPhoto?.bytes) await uploadThumbnailToS3(req);
 
       // send message to SQS to re-generate passkit
       await this.sendSQSMessage(req, "updateMembershipPass");
@@ -81,7 +78,7 @@ class UserMembershipPassService {
 
         const userMembership = await userMembershipModel.create({
           user_id: user.id,
-          name: req.body.member.firstName + " " + req.body.member.lastName,
+          name: req.body.passType,
           visual_id: req.body.visualId,
           expires_at: req.body.validUntil || null,
         });
@@ -97,15 +94,18 @@ class UserMembershipPassService {
           parking: "yes" ? 1 : "no" ? 0 : null,
           iu: req.body.iu || null,
           car_plate: req.body.carPlate || null,
-          membership_photo: req.body.membershipPhoto.bytes || null,
-          member_first_name: req.body.member.firstName || null,
-          member_last_name: req.body.member.lastName || null,
-          member_email: req.body.email || null,
-          member_dob: req.body.member.dob || null,
-          member_country: req.body.member.country || null,
-          member_identification_no: req.body.member.identificationNo || null,
-          member_phone_number: req.body.member.phoneNumber || null,
-          co_member: JSON.stringify(req.body.coMembers),
+          membership_photo: req.body.membershipPhoto?.bytes || null,
+          member_first_name: req.body.member?.firstName || null,
+          member_last_name: req.body.member?.lastName || null,
+          member_email: req.body.member?.email || null,
+          member_dob: req.body.member?.dob || null,
+          member_country: req.body.member?.country || null,
+          member_identification_no: req.body.member?.identificationNo || null,
+          member_phone_number: req.body.member?.phoneNumber || null,
+          co_member:
+            req.body.coMembers.length > 0
+              ? JSON.stringify(req.body.coMembers)
+              : null,
           valid_from: req.body.validFrom || null,
           valid_until: req.body.validUntil || null,
         });
@@ -127,18 +127,15 @@ class UserMembershipPassService {
   async updateUserMembershipPassToDB(req) {
     try {
       await pool.transaction(async () => {
-        const userMembership = await userMembershipModel.findByVisualId(
+        const rows = await userMembershipModel.findByVisualId(
           req.body.visualId
         );
+        const userMembership = rows[0];
 
         let expiryDate = req.body.validUntil || undefined;
-        if (expiryDate)
-          expiryDate = convertDateToMySQLFormat(req.body.validUntil);
 
         await userMembershipModel.updateByUserId(userMembership.user_id, {
-          name: req.body.member
-            ? req.body.member.firstName + " " + req.body.member.lastName
-            : undefined,
+          name: req.body.passType,
           expires_at: expiryDate,
         });
 
@@ -150,7 +147,11 @@ class UserMembershipPassService {
             plu: req.body.plu || undefined,
             adult_qty: req.body.adultQty || undefined,
             child_qty: req.body.childQty || undefined,
-            parking: req.body.parking || undefined,
+            parking: req.body.parking
+              ? req.body.parking === "yes"
+                ? 1
+                : 0
+              : undefined,
             iu: req.body.iu || undefined,
             car_plate: req.body.carPlate || undefined,
             membership_photo: req.body.membershipPhoto?.bytes || undefined,
@@ -162,11 +163,12 @@ class UserMembershipPassService {
             member_identification_no:
               req.body.member?.identificationNo || undefined,
             member_phone_number: req.body.member?.phoneNumber || undefined,
-            co_member: req.body.coMembers
-              ? JSON.stringify(req.body.coMembers)
-              : undefined,
+            co_member:
+              req.body.coMembers.length > 0
+                ? JSON.stringify(req.body.coMembers)
+                : undefined,
             valid_from: req.body.validFrom || undefined,
-            valid_until: req.body.validUntil || undefined,
+            valid_until: expiryDate,
           }
         );
       });
@@ -197,7 +199,6 @@ class UserMembershipPassService {
     const existingMemberships = JSON.parse(
       getCognitoAttribute(cognitoUser.UserAttributes, "custom:membership")
     );
-    console.log("Existing memberships: ", existingMemberships);
     const newMembership = {
       name: req.body.passType,
       visualID: req.body.visualId,
@@ -206,12 +207,26 @@ class UserMembershipPassService {
 
     // reformat "custom:membership" to JSON array
     let updatedMemberships;
-    if (Array.isArray(existingMemberships)) {
-      updatedMemberships = [...existingMemberships, newMembership];
-    } else if (typeof existingMemberships === "object") {
-      updatedMemberships = [existingMemberships, newMembership];
-    } else {
+    if (existingMemberships === null) {
       updatedMemberships = [newMembership];
+    } else if (Array.isArray(existingMemberships)) {
+      // Check if any existing membership needs to be updated based on visualId
+      const membershipToUpdateIdx = existingMemberships.findIndex(
+        (membership) => membership.visualID === newMembership.visualID
+      );
+      if (membershipToUpdateIdx) {
+        existingMemberships[membershipToUpdateIdx] = newMembership;
+        updatedMemberships = [...existingMemberships];
+      } else {
+        updatedMemberships = [...existingMemberships, newMembership];
+      }
+    } else if (typeof existingMemberships === "object") {
+      // Check if existing membership needs to be updated based on visualId
+      if (existingMemberships.visualID === newMembership.visualID) {
+        updatedMemberships = [newMembership];
+      } else {
+        updatedMemberships = [existingMemberships, newMembership];
+      }
     }
 
     try {
@@ -247,7 +262,20 @@ class UserMembershipPassService {
       req["apiTimer"] = req.processTimer.apiRequestTimer();
       req.apiTimer.log("UserMembershipPassService.sendSQSMessage starts");
 
-      let data = { action: action, body: req.body };
+      const sqsBody = {
+        passType: req.body.passType,
+        name: req.body.member.firstName + " " + req.body.member.lastName,
+        mandaiId: req.body.mandaiId,
+        visualId: req.body.visualId,
+        dateOfBirth: req.body.member.dob,
+        expiryDate: req.body.validUntil,
+        membershipType: req.body.categoryType,
+        familyMembers: req.body.coMembers.map(
+          (member) => member.firstName + " " + member.lastName
+        ),
+      };
+
+      let data = { action: action, body: sqsBody };
 
       const queueUrl = process.env.SQS_QUEUE_URL;
       const command = new SendMessageCommand({
@@ -256,7 +284,6 @@ class UserMembershipPassService {
       });
 
       let result = await sqsClient.send(command);
-
       req.apiTimer.end("UserMembershipPassService.sendSQSMessage"); // log end time
       return result;
     } catch (error) {

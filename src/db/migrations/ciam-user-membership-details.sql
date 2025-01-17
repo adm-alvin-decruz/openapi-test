@@ -10,7 +10,7 @@ CREATE TABLE user_membership_details (
     parking TINYINT(1) NULL DEFAULT NULL,
     iu VARCHAR(24) NULL DEFAULT NULL,
     car_plate VARCHAR(24) NULL DEFAULT NULL,
-    membership_photo VARCHAR(512) NULL DEFAULT NULL,
+    membership_photo LONGTEXT NULL DEFAULT NULL,
     member_first_name VARCHAR(256) NULL DEFAULT NULL,
     member_last_name VARCHAR(256) NULL DEFAULT NULL,
     member_email VARCHAR(256) NULL DEFAULT NULL,
