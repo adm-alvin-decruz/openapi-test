@@ -31,6 +31,7 @@ describe("User Routes", () => {
         end: jest.fn(),
       }),
     };
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -180,19 +181,34 @@ describe("User Routes", () => {
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({
-        message: "Unauthorized",
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
       });
     });
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
       const response = await request(app).delete("/users/sessions", {
         headers: {
-          authorization: "Bearer abcde",
+          authorization: "123abcde",
+          "mwg-app-id": ""
         },
       });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return 200 and logout successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
@@ -320,33 +336,60 @@ describe("User Routes", () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ error: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          message: "Unauthorized",
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
-    it("should return 400 if group is wildpass, still empty access token", async () => {
+    it("should return 401 if request from AEM but empty access token", async () => {
+      const response = await request(app)
+        .put("/users", {
+          headers: {
+            authorization: "",
+            'mwg-app-id': "aem"
+          },
+        })
+        .send({ email: "test@gmail.com", group: "membership-passes" });
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          message: "Unauthorized",
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
+    });
+    it("should return 400 if group is empty", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
       const response = await request(app)
-        .put("/users", {
-          headers: {
-            authorization: "",
-            "mwg-app-id": "",
-          },
-        })
-        .send({ email: "test@gmail.com", firstName: undefined });
+          .put("/users", {
+            headers: {
+              authorization: "",
+              "mwg-app-id": "nopCommerce",
+            },
+          })
+          .send({ email: "test@gmail.com", group: '' });
 
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ error: "Bad Requests" });
-    });
-    it("should return 401 if group is FOW but empty access token", async () => {
-      const response = await request(app)
-        .put("/users", {
-          headers: {
-            authorization: "",
-          },
-        })
-        .send({ email: "test@gmail.com", group: "fow" });
-
-      expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 400,
+          message: "Wrong parameters",
+          mwgCode: "MWG_CIAM_PARAMS_ERR",
+          error: {
+            group: "The group is invalid."
+          }
+        },
+        status: "failed",
+        statusCode: 400,
+      });
     });
     it("should return 200 and update successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
@@ -360,9 +403,13 @@ describe("User Routes", () => {
         statusCode: 200,
       });
       const response = await request(app)
-        .put("/users")
-        .set("Authorization", "Bearer" + Math.random())
-        .send({ email: "test@gmail.com", group: "fow+" });
+        .put("/users", {
+          headers: {
+            authorization: "123aas",
+            "mwg-app-id": "abcd"
+          },
+        })
+        .send({ email: "test@gmail.com", group: "membership-passes" });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -683,7 +730,15 @@ describe("User Routes", () => {
         .send({ email: "test@gmail.com", visualId: "123" });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
@@ -697,7 +752,15 @@ describe("User Routes", () => {
         .send({ email: "example-email@gmail.com", visualId: "123456" });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return error when service not pass", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
@@ -798,7 +861,15 @@ describe("User Routes", () => {
         .send({ email: "test@gmail.com" });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
@@ -812,7 +883,15 @@ describe("User Routes", () => {
         .send({ email: "example-email@gmail.com" });
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ message: "Unauthorized" });
+      expect(response.body).toEqual({
+        membership: {
+          code: 401,
+          mwgCode: "MWG_CIAM_UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+        status: "failed",
+        statusCode: 401,
+      });
     });
     it("should return error when userVerifyToken not pass", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);

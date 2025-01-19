@@ -59,7 +59,7 @@ async function isEmptyAccessToken(req, res, next) {
 }
 
 async function isEmptyAccessTokenBaseAppId(req, res, next) {
-  const mwgAppID = req.headers['mwg-app-id'];
+  const mwgAppID = req.headers && req.headers['mwg-app-id'] ? req.headers['mwg-app-id'] : '';
   if (mwgAppID.includes('aem') && !req.headers.authorization) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }

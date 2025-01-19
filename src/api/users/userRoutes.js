@@ -114,16 +114,11 @@ router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenBaseAppId,
         "group_invalid",
         req.body.language));
   }
-
-  const isRequestFromAEM = !!req.headers['mwg-app-id'].includes('aem');
   //#region Update Account New logic (FO series)
   if([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
     try {
-      const token = isRequestFromAEM ? req.headers.authorization.substring(
-          7,
-          req.headers.authorization.length
-      ) : '';
-      const updateRs = await userController.adminUpdateNewUser(req, token);
+      const accessToken = req.headers && req.headers.authorization ? req.headers.authorization.toString() : '';
+      const updateRs = await userController.adminUpdateNewUser(req, accessToken);
       req.apiTimer.end('Route CIAM Update New User Success', startTimer);
       return res.status(updateRs.statusCode).send(updateRs);
     } catch (error) {
@@ -285,12 +280,9 @@ router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
     );
     return res.status(401).send({ message: "Unauthorized" });
   }
-  const token = req.headers.authorization.substring(
-    7,
-    req.headers.authorization.length
-  );
+  const accessToken = req.headers.authorization.toString();
   try {
-    const data = await userController.userLogout(token, req.query.language);
+    const data = await userController.userLogout(accessToken, req.query.language);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
@@ -418,10 +410,7 @@ router.post("/token/verify", isEmptyAccessToken, validateEmail, async (req, res)
     );
     return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
-  const accessToken = req.headers.authorization.substring(
-      7,
-      req.headers.authorization.length
-  );
+  const accessToken = req.headers.authorization.toString();
   try {
     const data = await userController.userVerifyToken(accessToken, req.body.email, req.body.language);
     return res.status(data.statusCode).json(data);
