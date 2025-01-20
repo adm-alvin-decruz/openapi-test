@@ -31,6 +31,9 @@ const UserMembershipPassValidation = require("./validations/UserMembershipPassVa
 const CommonErrors = require("../../config/https/errors/common");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
+const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
+const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
+const userVerifyTokenService = require("./userVerifyTokenService");
 const userMembershipPassService = require("./userMembershipPassService");
 
 /**

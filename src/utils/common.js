@@ -29,8 +29,7 @@ const getSource = (appId) => {
 const getGroup = (group) => {
   const groupMappings = {
     wildpass: "WP",
-    fow: "FW",
-    "fow+": "FWP",
+    'membership-passes': "MP"
   };
 
   return groupMappings[group] ?? "";
@@ -38,7 +37,7 @@ const getGroup = (group) => {
 
 const passwordPattern = (password) => {
   const regexPasswordValid = new RegExp(
-    '^(?=.*\\d)(?=.*[!@#$%^&*(),.?":{}|<>])(?=.*[A-Z])(?=.*[a-z]).{8,}$',
+    '^(?=.*[a-z])(?=.*[A-Z]).{8,}$',
     "g"
   );
   return regexPasswordValid.test(password.toString());

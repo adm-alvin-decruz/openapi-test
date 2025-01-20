@@ -4,6 +4,7 @@ const processTimer = require('../../utils/processTimer');
 const switchService = require('../../services/switchService');
 const appConfig = require('../../config/appConfig');
 const ApiUtils = require('../../utils/apiUtils');
+const logger = require('../../logs/logger');
 
 async function lambdaSendEmail(req){
   req['apiTimer'] = req.processTimer.apiRequestTimer();
@@ -67,7 +68,10 @@ async function mapEmailType(emailType){
 async function emailServiceAPI(req) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersEmailService.emailTriggerApi start'); // log process time
-  const apiEndpoint = process.env.EMAIL_SERVICE_API_URL+process.env.EMAIL_SERVICE_API_EMAIL_PATH;
+
+  let appEnv = process.env.APP_ENV;
+  let emailServiceAPIUrl = "EMAIL_SERVICE_API_URL_"+appEnv.toUpperCase();
+  const apiEndpoint = appConfig[emailServiceAPIUrl]+appConfig["EMAIL_SERVICE_API_EMAIL_PATH"];
 
   try {
     const headers = await createEmailServiceHeader();
@@ -84,6 +88,8 @@ async function emailServiceAPI(req) {
 }
 
 async function createApiRequestBody(req) {
+  let appEnv = process.env.APP_ENV;
+  let ciamResetPasswordEmailLink = "RESET_PASSWORD_EMAIL_LINK_"+appEnv.toUpperCase();
   // body data
   const body = {
     emailFrom: appConfig.RESET_PASSWORD_EMAIL_FROM,
@@ -91,7 +97,7 @@ async function createApiRequestBody(req) {
     emailTemplateId: appConfig.RESET_PASSWORD_EMAIL_TEMPLATE_ID,
     customData: {
       firstName: req.body.firstName,
-      membershipPasswordRecoveryLink: `${process.env.MWG_CIAM_RESET_PASSWORD_URL}?token=${req.body.resetToken}`,
+      membershipPasswordRecoveryLink: `${appConfig[ciamResetPasswordEmailLink]}?token=${req.body.resetToken}`,
       membershipPasswordRecoveryLinkExpiryDate: {
         timeStamp: req.body.expiredAt,
         dateFormat: "dddd, D MMM YYYY",
@@ -102,6 +108,8 @@ async function createApiRequestBody(req) {
       caller: 'ciam'
     }
   };
+
+  logger.log(body, 'userEmailService.createApiRequestBody');
   return body;
 }
 

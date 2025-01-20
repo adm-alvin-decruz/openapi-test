@@ -10,6 +10,7 @@ const {
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
   AdminListGroupsForUserCommand,
+  AdminAddUserToGroupCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -104,12 +105,7 @@ class Cognito {
       throw new Error(
         JSON.stringify({
           status: "failed",
-          statusCode: 404,
-          data: {
-            code: 404,
-            mwgCode: "MWG_CIAM_COGNITO_USER_EMAIL_ERR",
-            message: messageLang("cognito_user_not_exist", req.body.language),
-          },
+          data: error,
         })
       );
     }
@@ -130,6 +126,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
+          rawError: error.toString()
         })
       );
     }
@@ -166,6 +163,8 @@ class Cognito {
     mandaiId,
     newsletter,
     source,
+    phoneNumber,
+    country
   }) {
     const newUserArray = {
       UserPoolId: process.env.USER_POOL_ID,
@@ -182,8 +181,10 @@ class Cognito {
         { Name: "email", Value: email },
         { Name: "birthdate", Value: birthdate },
         { Name: "address", Value: address ? address : "" },
+        { Name: "phone_number", Value: phoneNumber ? phoneNumber : "" },
+        { Name: "zoneinfo", Value: country ? country : "" },
         // custom fields
-        { Name: "custom:membership", Value: JSON.stringify(groups) },
+        { Name: "custom:membership", Value: groups ? JSON.stringify(groups) : "null" },
         { Name: "custom:mandai_id", Value: mandaiId },
         { Name: "custom:newsletter", Value: JSON.stringify(newsletter) },
         { Name: "custom:terms_conditions", Value: "null" },
@@ -292,6 +293,25 @@ class Cognito {
           status: "failed",
           data: error,
         })
+      );
+    }
+  }
+
+  static async cognitoAdminAddUserToGroup(email, group) {
+    const adminAddUserToGroup = new AdminAddUserToGroupCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+      GroupName: group
+    });
+    try {
+      return await client.send(adminAddUserToGroup);
+    } catch (error) {
+      loggerService.error(`cognitoService.cognitoAdminAddUserToGroup Error: ${error}`);
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
       );
     }
   }
