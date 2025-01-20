@@ -41,12 +41,24 @@ class UserMembershipDetails {
       now,
     ];
 
-    const result = await pool.execute(sql, params);
+    try {
+      const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_membership_details_id: result.insertId,
-    };
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_membership_details_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_MEMBERSHIP_DETAILS_CREATE_ERR",
+            message: messageLang("db_membership_details_create_error"),
+          },
+        })
+      );
+    }
   }
 
   static async updateByMembershipId(membershipId, updatedDetailsData) {
@@ -66,7 +78,7 @@ class UserMembershipDetails {
       SET ${updateFields.join(", ")}
       WHERE user_membership_id = ?
     `;
-    
+
     // Prepare the params array
     const params = [
       ...Object.values(updatedDetailsData).filter(
@@ -76,12 +88,24 @@ class UserMembershipDetails {
       membershipId,
     ];
 
-    const result = await pool.execute(sql, params);
+    try {
+      const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_membership_details_id: result.insertId,
-    };
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_membership_details_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_MEMBERSHIP_DETAILS_UPDATE_ERR",
+            message: messageLang("db_membership_details_update_error"),
+          },
+        })
+      );
+    }
   }
 }
 

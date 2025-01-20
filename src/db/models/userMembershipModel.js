@@ -5,6 +5,7 @@ const {
   formatDateToMySQLDateTime,
 } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
+const { messageLang } = require("../../utils/common");
 
 class UserMembership {
   static async create(membershipData) {
@@ -23,12 +24,27 @@ class UserMembership {
       now,
       now,
     ];
-    const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      membership_id: result.insertId,
-    };
+    try {
+      const result = await pool.execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        membership_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_USER_MEMBERSHIP_CREATE_ERR",
+            message: messageLang("db_user_membership_create_error"),
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
+    }
   }
 
   static async findByUserId(userId) {
@@ -94,13 +110,27 @@ class UserMembership {
       userId,
     ];
 
-    // Execute the query
-    const result = await pool.execute(sql, params);
+    try {
+      // Execute the query
+      const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.insertId,
-    };
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_USER_MEMBERSHIP_UPDATE_ERR",
+            message: messageLang("db_user_membership_update_error"),
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
+    }
   }
 
   static async delete(id) {

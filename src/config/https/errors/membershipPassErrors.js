@@ -39,6 +39,42 @@ class MembershipPassErrors {
       statusCode: 400,
     };
   }
+
+  static membershipPassCognitoError(lang = "en") {
+    return {
+      membership: {
+        code: 500,
+        mwgCode: "MWG_CIAM_MEMBERSHIP_PASS_COGNITO_ERR",
+        message: messageLang("membership_pass_cognito_error", lang),
+      },
+      status: "failed",
+      statusCode: 500,
+    };
+  }
+
+  static membershipPassS3Error(lang = "en") {
+    return {
+      membership: {
+        code: 500,
+        mwgCode: "MWG_CIAM_MEMBERSHIP_PASS_S3_ERR",
+        message: messageLang("membership_pass_s3_error", lang),
+      },
+      status: "failed",
+      statusCode: 500,
+    };
+  }
+
+  static membershipPassSQSError(lang = "en") {
+    return {
+      membership: {
+        code: 500,
+        mwgCode: "MWG_CIAM_MEMBERSHIP_PASS_SQS_ERR",
+        message: messageLang("membership_pass_sqs_error", lang),
+      },
+      status: "failed",
+      statusCode: 500,
+    };
+  }
 }
 
 module.exports = MembershipPassErrors;

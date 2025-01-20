@@ -543,7 +543,7 @@ async function userCreateMembershipPass(req, res) {
   const message =
     UserMembershipPassValidation.validateCreateUserMembershipPass(req);
   if (!!message) {
-    throw new Error(JSON.stringify(message));
+    return res.status(400).json(message);
   }
 
   try {
@@ -551,7 +551,7 @@ async function userCreateMembershipPass(req, res) {
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    return res.status(errorMessage.statusCode).json(errorMessage);
   }
 }
 
@@ -583,7 +583,7 @@ async function userUpdateMembershipPass(req, res) {
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    return res.status(errorMessage.statusCode).json(errorMessage);
   }
 }
 

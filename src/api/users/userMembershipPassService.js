@@ -17,6 +17,7 @@ const awsRegion = () => {
   return env;
 };
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+const { messageLang } = require("../../utils/common");
 const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserMembershipPassService {
@@ -114,7 +115,7 @@ class UserMembershipPassService {
       console.log("Successfully saved user membership pass details to DB");
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.saveUserMembershipPassToDB Error: ${error}`
+        `userMembershipPassService.saveUserMembershipPassToDB Error: ${error.message}`
       );
       throw new Error(
         JSON.stringify({
@@ -131,6 +132,22 @@ class UserMembershipPassService {
           req.body.visualId
         );
         const userMembership = rows[0];
+        if (!userMembership) {
+          throw new Error(
+            JSON.stringify({
+              data: {
+                code: 404,
+                mwgCode: "MWG_CIAM_USER_MEMBERSHIP_FIND_BY_VISUALID_ERR",
+                message: messageLang(
+                  "db_user_membership_not_exist",
+                  req.body.language
+                ),
+              },
+              status: "failed",
+              statusCode: 404,
+            })
+          );
+        }
 
         let expiryDate = req.body.validUntil || undefined;
 
@@ -253,7 +270,11 @@ class UserMembershipPassService {
       loggerService.error(
         `userMembershipPassService.updateMembershipInCognito Error: ${error}`
       );
-      throw error;
+      throw new Error(
+        JSON.stringify(
+          MembershipPassErrors.membershipPassCognitoError(req.body.language)
+        )
+      );
     }
   }
 
@@ -290,7 +311,11 @@ class UserMembershipPassService {
       loggerService.error(
         `userMembershipPassService.sendSQSMessage Error: ${error}`
       );
-      throw error;
+      throw new Error(
+        JSON.stringify(
+          MembershipPassErrors.membershipPassSQSError(req.body.language)
+        )
+      );
     }
   }
 }

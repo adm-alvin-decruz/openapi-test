@@ -53,9 +53,51 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (!["yes", "no"].includes(req.body.parking)) {
+    if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         "parking",
+        req.body.language
+      ));
+    }
+
+    if (!req.body.parking || (req.body.parking && req.body.parking === "no")) {
+      if (req.body.iu !== null) {
+        return (this.error = MembershipPassErrors.membershipPassParamsError(
+          "iu",
+          req.body.language
+        ));
+      } else if (req.body.carPlate !== null) {
+        return (this.error = MembershipPassErrors.membershipPassParamsError(
+          "carPlate",
+          req.body.language
+        ));
+      }
+    }
+
+    if (
+      req.body.member &&
+      (typeof req.body.member !== "object" || Array.isArray(req.body.member))
+    ) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "member",
+        req.body.language
+      ));
+    }
+
+    if (req.body.coMembers && !Array.isArray(req.body.coMembers)) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "coMembers",
+        req.body.language
+      ));
+    }
+
+    if (
+      req.body.membershipPhoto &&
+      (typeof req.body.membershipPhoto !== "object" ||
+        Array.isArray(req.body.membershipPhoto))
+    ) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "membershipPhoto",
         req.body.language
       ));
     }
@@ -129,6 +171,48 @@ class UserMembershipPassValidation {
     if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         "parking",
+        req.body.language
+      ));
+    }
+
+    if (!req.body.parking || (req.body.parking && req.body.parking === "no")) {
+      if (req.body.iu !== null) {
+        return (this.error = MembershipPassErrors.membershipPassParamsError(
+          "iu",
+          req.body.language
+        ));
+      } else if (req.body.carPlate !== null) {
+        return (this.error = MembershipPassErrors.membershipPassParamsError(
+          "carPlate",
+          req.body.language
+        ));
+      }
+    }
+
+    if (
+      req.body.member &&
+      (typeof req.body.member !== "object" || Array.isArray(req.body.member))
+    ) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "member",
+        req.body.language
+      ));
+    }
+
+    if (req.body.coMembers && !Array.isArray(req.body.coMembers)) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "coMembers",
+        req.body.language
+      ));
+    }
+
+    if (
+      req.body.membershipPhoto &&
+      (typeof req.body.membershipPhoto !== "object" ||
+        Array.isArray(req.body.membershipPhoto))
+    ) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "membershipPhoto",
         req.body.language
       ));
     }

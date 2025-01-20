@@ -1,6 +1,8 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 
+const MembershipPassErrors = require("../config/https/errors/membershipPassErrors");
+
 const uploadThumbnailToS3 = async (req) => {
   try {
     const s3Client = new S3Client({});
@@ -18,8 +20,14 @@ const uploadThumbnailToS3 = async (req) => {
 
     console.log("Thumbnail uploaded to S3 successfully");
   } catch (error) {
-    console.error(error.message);
-    return error;
+    loggerService.error(
+      `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`
+    );
+    throw new Error(
+      JSON.stringify(
+        MembershipPassErrors.membershipPassS3Error(req.body.language)
+      )
+    );
   }
 };
 

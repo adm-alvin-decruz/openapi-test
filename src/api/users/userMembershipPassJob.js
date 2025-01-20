@@ -1,5 +1,5 @@
 const UserMembershipPassService = require("./userMembershipPassService");
-// const { messageLang } = require("../../utils/common");
+const { messageLang } = require("../../utils/common");
 
 class UserCreateMembershipPassJob {
   success(lang = "en") {
@@ -7,7 +7,7 @@ class UserCreateMembershipPassJob {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_CREATE_MEMBERSHIP_PASS_SUCCESS",
-        message: "Successfully created membership pass",
+        message: messageLang("membership_pass_create_success", lang),
       },
       status: "success",
       statusCode: 200,
@@ -31,7 +31,7 @@ class UserUpdateMembershipPassJob {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_UPDATE_MEMBERSHIP_PASS_SUCCESS",
-        message: "Successfully updated membership pass",
+        message: messageLang("membership_pass_update_success", lang),
       },
       status: "success",
       statusCode: 200,
