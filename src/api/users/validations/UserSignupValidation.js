@@ -1,4 +1,3 @@
-const SignupErrors = require("../../../config/https/errors/signupErrors");
 const { validateDOB } = require("../../../services/validationService");
 const { passwordPattern } = require("../../../utils/common");
 const CommonErrors = require("../../../config/https/errors/common");
@@ -62,7 +61,7 @@ class UserSignupValidation {
       }
     }
 
-    if (req.country.length !== 2) {
+    if (req.country && req.country.length !== 2) {
       return (this.error = CommonErrors.BadRequest(
         "country",
         "country_invalid",
