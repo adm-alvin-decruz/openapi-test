@@ -293,6 +293,11 @@ async function updateDB(body, userId, isNewEmailExisted) {
       const emailUpdate = !isNewEmailExisted && body.newEmail ? body.newEmail : undefined;
       await userDBService.userModelExecuteUpdate(userId, body.firstName, body.lastName, body.dob, emailUpdate);
     }
+    if (body.newEmail && !body.newPassword) {
+      await userCredentialModel.updateByUserId(userId, {
+        username: body.newEmail
+      });
+    }
     if (body.newsletter && body.newsletter.name) {
       await userDBService.userNewsletterModelExecuteUpdate(userId, body.newsletter)
     }
