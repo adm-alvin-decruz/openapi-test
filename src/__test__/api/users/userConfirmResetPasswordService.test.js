@@ -2,7 +2,6 @@ const UserConfirmResetPasswordService = require("../../../api/users/userConfirmR
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const cognitoService = require("../../../services/cognitoService");
 const UserValidateResetPasswordService = require("../../../api/users/userValidateResetPasswordService");
-const DateUtils = require("../../../utils/dateUtils");
 
 jest.mock("../../../db/models/userCredentialModel", () => ({
   findByPasswordHash: jest.fn(),

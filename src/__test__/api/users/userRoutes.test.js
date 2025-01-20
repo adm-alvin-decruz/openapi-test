@@ -4,9 +4,21 @@ const router = require("../../../api/users/userRoutes");
 const validationService = require("../../../services/validationService");
 const userController = require("../../../api/users/usersContollers");
 const emailDomainService = require("../../../services/emailDomainsService");
+const userCredentialModel = require("../../../db/models/userCredentialModel");
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
 // Mocks
+jest.mock("aws-jwt-verify", () => {
+  return {
+    CognitoJwtVerifier: {
+      create: jest.fn(),
+    },
+  };
+});
 jest.mock("../../../services/validationService", () => ({
   validateAppID: jest.fn(),
+}));
+jest.mock("../../../db/models/userCredentialModel", () => ({
+  findByUserEmail: jest.fn(),
 }));
 jest.mock("../../../api/users/usersContollers", () => ({
   userLogin: jest.fn(),
@@ -22,6 +34,9 @@ jest.mock("../../../api/users/usersContollers", () => ({
 
 describe("User Routes", () => {
   let app;
+  const mockVerifier = {
+    verify: jest.fn(),
+  };
   beforeEach(() => {
     app = express();
     app.use(express.json());
@@ -31,6 +46,7 @@ describe("User Routes", () => {
         end: jest.fn(),
       }),
     };
+    CognitoJwtVerifier.create.mockReturnValue(mockVerifier);
     jest.clearAllMocks();
   });
 
@@ -176,6 +192,7 @@ describe("User Routes", () => {
       const response = await request(app).delete("/users/sessions", {
         headers: {
           authorization: "",
+          "mwg-app-id": "aem",
         },
       });
 
@@ -195,7 +212,7 @@ describe("User Routes", () => {
       const response = await request(app).delete("/users/sessions", {
         headers: {
           authorization: "123abcde",
-          "mwg-app-id": ""
+          "mwg-app-id": "aem",
         },
       });
 
@@ -212,6 +229,11 @@ describe("User Routes", () => {
     });
     it("should return 200 and logout successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userCredentialModel, 'findByUserEmail').mockResolvedValue({
+        tokens: {
+          idToken: "123"
+        }
+      })
       jest.spyOn(userController, "userLogout").mockResolvedValue({
         membership: {
           code: 200,
@@ -222,9 +244,15 @@ describe("User Routes", () => {
         status: "success",
         statusCode: 200,
       });
+      mockVerifier.verify.mockResolvedValue({
+        email: "test@gmail.com",
+        exp: 1736420606,
+      });
       const response = await request(app)
-        .delete("/users/sessions")
-        .set("Authorization", "Bearer" + Math.random());
+        .delete("/users/sessions").set("Authorization", "123bvasde")
+        .send({
+          email: "test@gmail.com",
+        });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -276,8 +304,8 @@ describe("User Routes", () => {
         statusCode: 200,
       });
       const response = await request(app)
-          .post("/users")
-          .send({ email: "test@gmail.com", group: "fow+" });
+        .post("/users")
+        .send({ email: "test@gmail.com", group: "fow+" });
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({
@@ -286,8 +314,8 @@ describe("User Routes", () => {
           message: "Wrong parameters",
           mwgCode: "MWG_CIAM_PARAMS_ERR",
           error: {
-            group: "The group is invalid."
-          }
+            group: "The group is invalid.",
+          },
         },
         status: "failed",
         statusCode: 400,
@@ -351,7 +379,7 @@ describe("User Routes", () => {
         .put("/users", {
           headers: {
             authorization: "",
-            'mwg-app-id': "aem"
+            "mwg-app-id": "aem",
           },
         })
         .send({ email: "test@gmail.com", group: "membership-passes" });
@@ -369,13 +397,13 @@ describe("User Routes", () => {
     it("should return 400 if group is empty", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
       const response = await request(app)
-          .put("/users", {
-            headers: {
-              authorization: "",
-              "mwg-app-id": "nopCommerce",
-            },
-          })
-          .send({ email: "test@gmail.com", group: '' });
+        .put("/users", {
+          headers: {
+            authorization: "",
+            "mwg-app-id": "nopCommerce",
+          },
+        })
+        .send({ email: "test@gmail.com", group: "" });
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({
@@ -384,8 +412,8 @@ describe("User Routes", () => {
           message: "Wrong parameters",
           mwgCode: "MWG_CIAM_PARAMS_ERR",
           error: {
-            group: "The group is invalid."
-          }
+            group: "The group is invalid.",
+          },
         },
         status: "failed",
         statusCode: 400,
@@ -406,7 +434,7 @@ describe("User Routes", () => {
         .put("/users", {
           headers: {
             authorization: "123aas",
-            "mwg-app-id": "abcd"
+            "mwg-app-id": "abcd",
           },
         })
         .send({ email: "test@gmail.com", group: "membership-passes" });
@@ -707,7 +735,9 @@ describe("User Routes", () => {
   });
   describe("POST:/users/membership-passes - User Get Membership Passes API", () => {
     it("should return 400 if request body is empty", async () => {
-      const response = await request(app).post("/users/membership-passes").send({});
+      const response = await request(app)
+        .post("/users/membership-passes")
+        .send({});
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({
@@ -725,6 +755,7 @@ describe("User Routes", () => {
         .post("/users/membership-passes", {
           headers: {
             authorization: "",
+            "mwg-app-id": "aem",
           },
         })
         .send({ email: "test@gmail.com", visualId: "123" });
@@ -856,6 +887,7 @@ describe("User Routes", () => {
         .post("/token/verify", {
           headers: {
             authorization: "",
+            "mwg-app-id": "aem",
           },
         })
         .send({ email: "test@gmail.com" });

@@ -9,10 +9,10 @@ describe("UserUpdateValidation", () => {
     jest.restoreAllMocks();
   });
   describe("execute", () => {
-    describe("validateRequestFowFowPlus", () => {
+    describe("validateRequestParams", () => {
       it("should throw an error when firstName is empty", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "",
         });
@@ -30,8 +30,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when lastName is empty", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "",
@@ -50,8 +50,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when lastName is empty - multiple language", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "",
@@ -71,8 +71,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when country is empty", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
@@ -92,8 +92,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when phoneNumber is empty", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
@@ -114,8 +114,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when country more than 2 character", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
@@ -138,8 +138,8 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when dob not valid", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
@@ -163,82 +163,57 @@ describe("UserUpdateValidation", () => {
         });
       });
       it("should throw an error when password is has value, but not fill confirmPassword", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
           country: "SG",
           phoneNumber: "312",
-          password: "1",
+          newPassword: "1",
           oldPassword: "1",
           confirmPassword: "",
           dob: "1/1/1996",
         });
         expect(failedMessage).toEqual({
           membership: {
-            code: 200,
-            message: "Password does not meet complexity requirements.",
-            mwgCode: "MWG_CIAM_PASSWORD_ERR_01",
+            code: 400,
+            message: "Wrong parameters",
+            mwgCode: "MWG_CIAM_PARAMS_ERR",
+            error: {
+              confirmPassword: "Passwords do not match."
+            }
           },
-          status: "success",
-          statusCode: 200,
+          status: "failed",
+          statusCode: 400,
         });
       });
       it("should throw an error when password is has value, but not fill oldPassword", () => {
-        const failedMessage = UserUpdateValidation.validateRequestFowFowPlus({
-          group: "fow+",
+        const failedMessage = UserUpdateValidation.validateRequestParams({
+          group: "membership-passes",
           email: "test@email.com",
           firstName: "test",
           lastName: "test",
           country: "SG",
           phoneNumber: "312",
-          password: "1",
+          newPassword: "1",
           oldPassword: "",
           confirmPassword: "1",
           dob: "1/1/1996",
         });
         expect(failedMessage).toEqual({
           membership: {
-            code: 401,
-            message: "Old password do not match.",
-            mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
+            code: 400,
+            message: "Wrong parameters",
+            mwgCode: "MWG_CIAM_PARAMS_ERR",
+            error: {
+              oldPassword: "Old password do not match."
+            }
           },
           status: "failed",
-          statusCode: 401,
+          statusCode: 400,
         });
       });
-    });
-    it("should throw an error when failed is called", () => {
-      const failedMessage = UserUpdateValidation.execute({
-        group: "",
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 400,
-          message: "Wrong parameters",
-          error: {
-            group: "The group is invalid.",
-          },
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-        },
-        status: "failed",
-        statusCode: 400,
-      });
-    });
-    it("should call validate FOW/FOW+ when group is fow/fow+", () => {
-      UserUpdateValidation.validateRequestFowFowPlus = jest.fn();
-      UserUpdateValidation.execute({
-        group: "fow+",
-      });
-      expect(UserUpdateValidation.validateRequestFowFowPlus).toHaveBeenCalled();
-    });
-    it("should call validate wildpass when group is wildpass", () => {
-      UserUpdateValidation.validateRequestWildPass = jest.fn();
-      UserUpdateValidation.execute({
-        group: "wildpass",
-      });
-      expect(UserUpdateValidation.validateRequestWildPass).toHaveBeenCalled();
     });
   });
 });
