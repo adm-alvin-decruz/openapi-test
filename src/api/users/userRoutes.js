@@ -10,8 +10,8 @@ const validationService = require('../../services/validationService');
 const {
   isEmptyRequest,
   validateEmail,
-  isEmptyAccessToken,
-  isEmptyAccessTokenBaseAppId
+  AccessTokenAuthGuard,
+  AccessTokenAuthGuardByAppId
 } = require("../../middleware/validationMiddleware");
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
@@ -92,7 +92,7 @@ router.post('/users', isEmptyRequest, validateEmail, async (req, res) => {
  *
  * Handling most HTTP validation here
  */
-router.put('/users', isEmptyRequest, validateEmail, isEmptyAccessTokenBaseAppId, async (req, res) => {
+router.put('/users', isEmptyRequest, validateEmail, AccessTokenAuthGuardByAppId, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   req.body.uuid = uuid;
@@ -267,7 +267,7 @@ router.post(
 /**
  * User Logout API (Method DELETE)
  */
-router.delete("/users/sessions", isEmptyAccessToken, async (req, res) => {
+router.delete("/users/sessions", AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -371,7 +371,7 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
 /**
  * User Get Membership Passes API (Method POST)
  */
-router.post("/users/membership-passes", isEmptyRequest, isEmptyAccessToken, validateEmail, async (req, res) => {
+router.post("/users/membership-passes", isEmptyRequest, validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -397,7 +397,7 @@ router.post("/users/membership-passes", isEmptyRequest, isEmptyAccessToken, vali
 /**
  * User Verify Access Token API (Method POST)
  */
-router.post("/token/verify", isEmptyAccessToken, validateEmail, async (req, res) => {
+router.post("/token/verify", validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();

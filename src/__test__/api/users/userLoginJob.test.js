@@ -22,6 +22,7 @@ describe("UserLoginJob", () => {
           accessToken: "test",
           mandaiId: 1,
           email: "test@gmail.com",
+          callbackURL: "https://uat-www.mandai.com/bin/wrs/ciam/auth/callback",
         },
         status: "success",
         statusCode: 200,
@@ -67,7 +68,7 @@ describe("UserLoginJob", () => {
       );
     });
 
-    it("should call failed when service login execute pass", async () => {
+    it("should return success when service login execute pass", async () => {
       jest.spyOn(UserLoginService, "execute").mockResolvedValue({
         accessToken: "test-access",
         mandaiId: "example-id",
@@ -88,6 +89,7 @@ describe("UserLoginJob", () => {
           accessToken: "test-access",
           mandaiId: 'example-id',
           email: "test@gmail.com",
+          callbackURL: "https://uat-www.mandai.com/bin/wrs/ciam/auth/callback",
         },
         status: "success",
         statusCode: 200,

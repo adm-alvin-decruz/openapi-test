@@ -152,7 +152,7 @@ class UserSignupService {
             user_id: userDB.user_id,
             name: req.body.newsletter.name ? req.body.newsletter.name : "",
             type: req.body.newsletter.type ? req.body.newsletter.type : "",
-            subscribe: req.body.newsletter.subscribe,
+            subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
           })
         : undefined,
       this.userCredentialModelExecution({
@@ -258,11 +258,11 @@ class UserSignupService {
          */
         groups: null,
         mandaiId: mandaiId,
-        newsletter: {
+        newsletter: req.body && req.body.newsletter && req.body.newsletter.name ? {
           name: "membership",
           type: "1",
           subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
-        },
+        } : null,
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
           : "",

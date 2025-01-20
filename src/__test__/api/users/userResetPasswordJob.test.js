@@ -57,7 +57,11 @@ describe("UserResetPasswordJob", () => {
         .spyOn(UserResetPasswordService, "execute")
         .mockResolvedValue({ email: "test@gmail.com" });
 
-      const response = await userResetPasswordJob.perform("123");
+      const response = await userResetPasswordJob.perform({
+        body: {
+          email: "test@gmail.com"
+        }
+      });
 
       expect(response).toEqual({
         membership: {
