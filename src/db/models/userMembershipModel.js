@@ -1,13 +1,16 @@
-const pool = require('../connections/mysqlConn');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
-const commonService = require('../../services/commonService');
+const pool = require("../connections/mysqlConn");
+const {
+  getCurrentUTCTimestamp,
+  convertDateToMySQLFormat,
+  formatDateToMySQLDateTime,
+} = require("../../utils/dateUtils");
+const commonService = require("../../services/commonService");
+const { messageLang } = require("../../utils/common");
 
 class UserMembership {
   static async create(membershipData) {
     const now = getCurrentUTCTimestamp();
-    if(membershipData.expires_at !== null){
-      membershipData['expires_at'] = convertDateToMySQLFormat(membershipData.expires_at);
-    }
+
     const sql = `
       INSERT INTO user_memberships
       (user_id, name, visual_id, expires_at, created_at, updated_at)
@@ -19,19 +22,50 @@ class UserMembership {
       membershipData.visual_id,
       membershipData.expires_at,
       now,
-      now
+      now,
     ];
-    const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      membership_id: result.insertId
-    };
+    try {
+      const result = await pool.execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        membership_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_USER_MEMBERSHIP_CREATE_ERR",
+            message: messageLang("db_user_membership_create_error"),
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
+    }
   }
 
   static async findByUserId(userId) {
-    const sql = 'SELECT * FROM user_memberships WHERE user_id = ?';
+    const sql = "SELECT * FROM user_memberships WHERE user_id = ?";
     return await pool.query(sql, [userId]);
+  }
+
+  static async findByUserIdAndGroup(userId, group) {
+    const sql = "SELECT * FROM user_memberships WHERE user_id = ? and name = ?";
+    return await pool.query(sql, [userId, group]);
+  }
+
+  static async findByUserIdAndExcludeGroup(userId, group) {
+    const sql =
+      "SELECT * FROM user_memberships WHERE user_id = ? and name != ?";
+    return await pool.query(sql, [userId, group]);
+  }
+
+  static async findByVisualId(visualId) {
+    const sql = "SELECT * FROM user_memberships WHERE visual_id = ?";
+    return await pool.query(sql, [visualId]);
   }
 
   static async update(id, membershipData) {
@@ -46,7 +80,7 @@ class UserMembership {
       membershipData.visual_id,
       membershipData.expires_at,
       now,
-      id
+      id,
     ];
     await pool.execute(sql, params);
   }
@@ -56,51 +90,64 @@ class UserMembership {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push('updated_at = ?');
+    updateFields.push("updated_at = ?");
 
     // Construct the SQL query
     const sql = `
       UPDATE user_memberships
-      SET ${updateFields.join(', ')}
+      SET ${updateFields.join(", ")}
       WHERE user_id = ?
     `;
 
     // Prepare the params array
     const params = [
-      ...Object.values(data).filter(value => value !== undefined),
+      ...Object.values(data).filter((value) => value !== undefined),
       now,
-      userId
+      userId,
     ];
 
-    // Execute the query
-    const result = await pool.execute(sql, params);
+    try {
+      // Execute the query
+      const result = await pool.execute(sql, params);
 
-    return {
-      sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.insertId
-    };
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.insertId,
+      };
+    } catch (error) {
+      throw new Error(
+        JSON.stringify({
+          data: {
+            code: 500,
+            mwgCode: "MWG_CIAM_USER_MEMBERSHIP_UPDATE_ERR",
+            message: messageLang("db_user_membership_update_error"),
+          },
+          status: "failed",
+          statusCode: 500,
+        })
+      );
+    }
   }
 
   static async delete(id) {
     const now = getCurrentUTCTimestamp();
-    const sql = 'DELETE FROM user_memberships WHERE id = ?';
+    const sql = "DELETE FROM user_memberships WHERE id = ?";
     await pool.execute(sql, [id]);
   }
 
   static async deletebyUserID(user_id) {
-    try{
-      const sql = 'DELETE FROM user_memberships WHERE user_id = ?';
+    try {
+      const sql = "DELETE FROM user_memberships WHERE user_id = ?";
       var result = await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
         sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
       });
-    }
-    catch (error){
+    } catch (error) {
       throw error;
     }
   }
