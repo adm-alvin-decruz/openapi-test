@@ -1,7 +1,5 @@
 const lambdaService = require('../../services/lambdaService');
 require('dotenv').config();
-const processTimer = require('../../utils/processTimer');
-const switchService = require('../../services/switchService');
 const appConfig = require('../../config/appConfig');
 const ApiUtils = require('../../utils/apiUtils');
 const logger = require('../../logs/logger');

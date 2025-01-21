@@ -80,12 +80,23 @@ async function AccessTokenAuthGuard(req, res, next) {
     tokenUse: "id",
     clientId: process.env.USER_POOL_CLIENT_ID,
   });
+  const verifierAccessToken = CognitoJwtVerifier.create({
+    userPoolId: process.env.USER_POOL_ID,
+    tokenUse: "access",
+    clientId: process.env.USER_POOL_CLIENT_ID,
+  });
   try {
     const payload = await verifier.verify(userCredentials.tokens.idToken);
+    const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (payload.email !== req.body.email) {
       return res
         .status(401)
         .json(CommonErrors.UnauthorizedException(req.body.language));
+    }
+    if (!payloadAccessToken || !payloadAccessToken.username) {
+      return res
+          .status(401)
+          .json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
     loggerService.error(

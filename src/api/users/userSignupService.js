@@ -30,7 +30,9 @@ class UserSignupService {
       if (errorData.name && errorData.name === "UserNotFoundException") {
         return false;
       }
-      loggerService.error(`userSignupService.isUserExistedInCognito Error: ${error}`);
+      loggerService.error(
+        `userSignupService.isUserExistedInCognito Error: ${error}`
+      );
       if (errorMessage.status === "failed") {
         throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
       }
@@ -258,11 +260,15 @@ class UserSignupService {
          */
         groups: null,
         mandaiId: mandaiId,
-        newsletter: req.body && req.body.newsletter && req.body.newsletter.name ? {
-          name: "membership",
-          type: "1",
-          subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
-        } : null,
+        newsletter:
+          req.body && req.body.newsletter && req.body.newsletter.name
+            ? {
+                name: "membership",
+                type: "1",
+                subscribe:
+                  req.body.newsletter && !!req.body.newsletter.subscribe,
+              }
+            : null,
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
           : "",

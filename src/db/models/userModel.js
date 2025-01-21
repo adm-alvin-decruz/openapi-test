@@ -5,6 +5,7 @@ const {
 } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const loggerService = require("../../logs/logger");
 
 class User {
   static async create(userData) {
@@ -52,6 +53,7 @@ class User {
         );
       }
     } catch (error) {
+      loggerService.error(`Error UserModel.findById. Error: ${error}`);
       throw error;
     }
   }
@@ -66,6 +68,9 @@ class User {
 
       return await pool.query(sql, [visualIds, email]);
     } catch (error) {
+      loggerService.error(
+        `Error UserModel.findByEmailVisualIds. Error: ${error}`
+      );
       return error;
     }
   }
@@ -116,7 +121,9 @@ class User {
 
       return await pool.query(sql, [passes, email]);
     } catch (error) {
-      console.error(new Error(`Error findPassesByUserEmail: ${error}`));
+      loggerService.error(
+        `Error UserModel.findPassesByUserEmail. Error: ${error}`
+      );
       throw new Error(
         JSON.stringify({
           dbProceed: "failed",

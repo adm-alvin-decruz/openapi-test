@@ -60,20 +60,6 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (!req.body.parking || (req.body.parking && req.body.parking === "no")) {
-      if (req.body.iu !== null) {
-        return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "iu",
-          req.body.language
-        ));
-      } else if (req.body.carPlate !== null) {
-        return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "carPlate",
-          req.body.language
-        ));
-      }
-    }
-
     if (
       req.body.member &&
       (typeof req.body.member !== "object" || Array.isArray(req.body.member))
@@ -107,6 +93,7 @@ class UserMembershipPassValidation {
     const requiredParams = [
       "email",
       "mandaiId",
+      "group",
       "passType",
       "visualId",
       "categoryType",

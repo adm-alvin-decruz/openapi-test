@@ -20,8 +20,8 @@ class UserSignupJob {
         statusCode: 200,
       };
     } catch (error) {
-      const errorMessage = JSON.parse(error.message)
-      throw new Error(JSON.stringify(errorMessage))
+      const errorMessage = JSON.parse(error.message);
+      throw new Error(JSON.stringify(errorMessage));
     }
   }
 }

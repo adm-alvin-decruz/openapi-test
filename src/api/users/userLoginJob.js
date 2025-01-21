@@ -4,7 +4,9 @@ const appConfig = require("../../config/appConfig");
 
 class UserLoginJob {
   constructor() {
-    this.callbackUrl = `${appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.AEM_CALLBACK_PATH}`;
+    this.callbackUrl = `${
+      appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]
+    }${appConfig.AEM_CALLBACK_PATH}`;
   }
 
   success(result, lang) {
@@ -16,7 +18,7 @@ class UserLoginJob {
         accessToken: result.accessToken,
         mandaiId: result.mandaiId,
         email: result.email,
-        callbackURL: this.callbackUrl
+        callbackURL: this.callbackUrl,
       },
       status: "success",
       statusCode: 200,

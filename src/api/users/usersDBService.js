@@ -1,13 +1,11 @@
 // db
-const pool = require('../../db/connections/mysqlConn');
-const userModel = require('../../db/models/userModel');
-const userMembershipModel = require('../../db/models/userMembershipModel');
-const userNewsletterModel = require('../../db/models/userNewletterModel');
-const userCredentialModel = require('../../db/models/userCredentialModel');
-const userDetailModel = require('../../db/models/userDetailsModel');
-const userMigrationsModel = require('../../db/models/userMigrationsModel');
-const userConfig = require('../../config/usersConfig');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const userModel = require("../../db/models/userModel");
+const userMembershipModel = require("../../db/models/userMembershipModel");
+const userNewsletterModel = require("../../db/models/userNewletterModel");
+const userDetailModel = require("../../db/models/userDetailsModel");
+const userMigrationsModel = require("../../db/models/userMigrationsModel");
+const userConfig = require("../../config/usersConfig");
+const { convertDateToMySQLFormat } = require("../../utils/dateUtils");
 
 /**
  * Get User By Email
@@ -15,14 +13,14 @@ const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../util
  * @param {json} reqBody
  * @returns
  */
-async function getDBUserByEmail(reqBody){
+async function getDBUserByEmail(reqBody) {
   return userModel.findByEmail(reqBody.email);
 }
 
 async function queryWPUserByEmail(reqBody) {
   let result = await userModel.findWPFullData(reqBody.email);
 
-  if(JSON.stringify(result.data) == '[]'){
+  if (JSON.stringify(result.data) == "[]") {
     throw new Error(`DB result is empty: ${result.sql_statement}`);
   }
   return result.data;
@@ -33,29 +31,29 @@ function prepareDBUpdateData(ciamAttrInput) {
   const USER_NEWS_CFG_MAP = JSON.parse(userConfig.DB_USER_NEWSLETTER_MAPPING);
   let result = {
     updateUsersModel: {},
-    updateUserNewsletterModel: {}
+    updateUserNewsletterModel: {},
   };
 
   // process updateAttrInput and USER_CFG_MAP
-  ciamAttrInput.forEach(function(item) {
+  ciamAttrInput.forEach(function (item) {
     if (USER_CFG_MAP.hasOwnProperty(item.Name)) {
       result.updateUsersModel[item.Name] = item.Value;
     }
-    if (item.Name === 'birthdate'){
+    if (item.Name === "birthdate") {
       result.updateUsersModel[item.Name] = convertDateToMySQLFormat(item.Value);
     }
 
     // handle custom:newsletter separately
-    if (item.Name === 'custom:newsletter') {
+    if (item.Name === "custom:newsletter") {
       try {
         let newsletterData = JSON.parse(item.Value);
-        Object.keys(USER_NEWS_CFG_MAP).forEach(function(key) {
+        Object.keys(USER_NEWS_CFG_MAP).forEach(function (key) {
           if (newsletterData.hasOwnProperty(key)) {
             result.updateUserNewsletterModel[key] = newsletterData[key];
           }
         });
       } catch (e) {
-        console.error('Error parsing custom:newsletter:', e);
+        console.error("Error parsing custom:newsletter:", e);
       }
     }
   });
@@ -75,10 +73,10 @@ async function updateUserMigration(req, param1, param2) {
   let reqBody = req.body;
   reqBody.signup = false;
   reqBody.signup_sqs = false;
-  if(param1 === 'signup'){
+  if (param1 === "signup") {
     reqBody.signup = true;
   }
-  if(param2 === 'signupSQS'){
+  if (param2 === "signupSQS") {
     reqBody.signup_sqs = true;
   }
 
@@ -90,8 +88,8 @@ async function userModelExecuteUpdate(userId, firstName, lastName, dob, email) {
     given_name: firstName,
     family_name: lastName,
     birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
-    email: email
-  }
+    email: email,
+  };
 
   return await userModel.update(userId, updateFields);
 }
@@ -100,8 +98,8 @@ async function userNewsletterModelExecuteUpdate(userId, newsletter) {
   const updateFields = {
     name: newsletter.name ? newsletter.name : undefined,
     type: newsletter.type ? newsletter.type : undefined,
-    subscribe: newsletter.subscribe ? newsletter.subscribe : undefined
-  }
+    subscribe: newsletter.subscribe ? newsletter.subscribe : undefined,
+  };
 
   return await userNewsletterModel.updateByUserId(userId, updateFields);
 }
@@ -110,18 +108,23 @@ async function userMembershipModelExecuteUpdate(userId, group) {
   //enhance update visual_id, expire_at later
   const updateFields = {
     name: group ? group : undefined,
-  }
+  };
 
   return await userMembershipModel.updateByUserId(userId, updateFields);
 }
 
-async function userDetailsModelExecuteUpdate(userId, phoneNumber, address, country) {
+async function userDetailsModelExecuteUpdate(
+  userId,
+  phoneNumber,
+  address,
+  country
+) {
   //enhance other params
   const updateFields = {
     phone_number: phoneNumber ? phoneNumber : undefined,
     address: address,
-    zoneinfo: country
-  }
+    zoneinfo: country,
+  };
 
   return await userDetailModel.updateByUserId(userId, updateFields);
 }
@@ -133,6 +136,5 @@ module.exports = {
   updateUserMigration,
   userModelExecuteUpdate,
   userNewsletterModelExecuteUpdate,
-  userMembershipModelExecuteUpdate,
-  userDetailsModelExecuteUpdate
-}
+  userDetailsModelExecuteUpdate,
+};
