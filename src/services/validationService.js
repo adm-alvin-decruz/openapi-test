@@ -1,5 +1,5 @@
-const userConfig = require('../config/usersConfig');
-const appConfig = require('../config/appConfig');
+const userConfig = require("../config/usersConfig");
+const appConfig = require("../config/appConfig");
 
 /**
  * Validate App ID
@@ -8,12 +8,12 @@ const appConfig = require('../config/appConfig');
  * @param module
  * @returns
  */
-function validateAppID(reqHeader, module=''){
-  var mwgAppID = reqHeader['mwg-app-id'];
+function validateAppID(reqHeader, module = "") {
+  var mwgAppID = reqHeader["mwg-app-id"];
   const appEnv = process.env.APP_ENV;
-  let appconfigKey = "APP_ID_"+appEnv.toUpperCase();
-  if(module === 'support'){
-    appconfigKey = "APP_ID_SUPPORT_"+appEnv.toUpperCase();
+  let appconfigKey = "APP_ID_" + appEnv.toUpperCase();
+  if (module === "support") {
+    appconfigKey = "APP_ID_SUPPORT_" + appEnv.toUpperCase();
   }
   const envAppIDArr = JSON.parse(appConfig[appconfigKey]);
 
@@ -30,41 +30,41 @@ function validateAppID(reqHeader, module=''){
  * @param {*} env
  * @param {*} reqBody
  */
-function validateParams(reqBody, configName){
+function validateParams(reqBody, configName) {
   const validationVar = JSON.parse(userConfig[configName]);
 
-  let errorObj = {'status': "success"};
+  let errorObj = { status: "success" };
   // check for invalid and dob
-  Object.keys(validationVar).forEach(function(key) {
-    if(reqBody[key] === undefined){
-			(errorObj['invalid']??= []).push(key);
+  Object.keys(validationVar).forEach(function (key) {
+    if (reqBody[key] === undefined) {
+      (errorObj["invalid"] ??= []).push(key);
     }
-    if(key === 'dob' && reqBody[key] != undefined){
+    if (key === "dob" && reqBody[key] != undefined) {
       // validate date of birth
       let dobVal = validateDOB(reqBody[key]);
-      if(!dobVal){
-        errorObj['dob']= ['range_error'];
+      if (!dobVal) {
+        errorObj["dob"] = ["range_error"];
       }
     }
-    if(key === 'newsletter' && reqBody[key] != undefined){
+    if (key === "newsletter" && reqBody[key] != undefined) {
       // check if subscribe
       let newsletter = reqBody[key];
-      if(newsletter.subscribe !== true){
-        errorObj['newsletter']= ['subscribe_error'];
+      if (newsletter.subscribe !== true) {
+        errorObj["newsletter"] = ["subscribe_error"];
       }
     }
-	})
+  });
 
-  if(errorObj.invalid || errorObj.dob || errorObj.newsletter){
-    errorObj['status'] = 'failed';
+  if (errorObj.invalid || errorObj.dob || errorObj.newsletter) {
+    errorObj["status"] = "failed";
   }
 
   return errorObj;
 }
 
-function validateDOB(birthdate){
+function validateDOB(birthdate) {
   // Parse the birthdate string
-  const [day, month, year] = birthdate.split('/').map(Number);
+  const [day, month, year] = birthdate.split("/").map(Number);
 
   // Create a Date object for the birthdate
   // Note: months in JavaScript Date are 0-indexed, so we subtract 1 from the month
@@ -78,7 +78,35 @@ function validateDOB(birthdate){
 
   // Adjust age if birthday hasn't occurred this year
   const monthDiff = currentDate.getMonth() - birthdateObj.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < birthdateObj.getDate())) {
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && currentDate.getDate() < birthdateObj.getDate())
+  ) {
+    age--;
+  }
+
+  // Check if age is within the range [13, 99]
+  return age >= 13 && age <= 99;
+}
+
+function validateDOBiso(dateString) {
+  // Parse the date string
+  const date = new Date(dateString.replace(" ", "T")); // Replace space with 'T' for compatibility
+
+  // Extract day, month, and year
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // Months are 0-indexed, so add 1
+  const day = date.getDate();
+
+  // Get the current date
+  const currentDate = new Date();
+
+  // Calculate age
+  let age = currentDate.getFullYear() - year;
+
+  // Adjust age if birthday hasn't occurred this year
+  const monthDiff = currentDate.getMonth() - month;
+  if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < day)) {
     age--;
   }
 
@@ -89,5 +117,6 @@ function validateDOB(birthdate){
 module.exports = {
   validateAppID,
   validateParams,
-  validateDOB
-}
+  validateDOB,
+  validateDOBiso,
+};

@@ -14,6 +14,7 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
+const { messageLang } = require("../utils/common");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -28,7 +29,9 @@ class Cognito {
       UserAttributes: ciamComparedParams,
     };
     result["cognitoUpdateArr"] = JSON.stringify(updateUserArray);
-    const setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
+    const setUpdateParams = new AdminUpdateUserAttributesCommand(
+      updateUserArray
+    );
 
     try {
       result["cognitoUpdateResult"] = JSON.stringify(
@@ -139,13 +142,13 @@ class Cognito {
       return await client.send(groupsBelongUserCommand);
     } catch (error) {
       loggerService.error(
-          `cognitoService.cognitoAdminListGroupsForUser Error: ${error}`
+        `cognitoService.cognitoAdminListGroupsForUser Error: ${error}`
       );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }
@@ -261,12 +264,14 @@ class Cognito {
     try {
       return await client.send(userUpdateParams);
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoAdminUpdateNewUser Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoAdminUpdateNewUser Error: ${error}`
+      );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }
@@ -275,17 +280,19 @@ class Cognito {
     const userChangePassword = new ChangePasswordCommand({
       AccessToken: accessToken,
       ProposedPassword: password,
-      PreviousPassword: oldPassword
+      PreviousPassword: oldPassword,
     });
     try {
       return await client.send(userChangePassword);
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoUserChangePassword Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoUserChangePassword Error: ${error}`
+      );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }
