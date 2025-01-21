@@ -4,7 +4,7 @@ const {
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const { messageLang } = require("../../utils/common");
+const MembershipErrors = require("../../config/https/errors/membershipErrors");
 
 class User {
   static async create(userData) {
@@ -47,17 +47,8 @@ class User {
       if (rows[0]) {
         return rows[0];
       } else {
-        throw new Error(
-          JSON.stringify({
-            data: {
-              code: 404,
-              mwgCode: "MWG_CIAM_USER_FIND_BY_EMAIL_ERR",
-              message: messageLang("db_email_not_exist", req.body.language),
-              cause: error,
-            },
-            status: "failed",
-            statusCode: 404,
-          })
+        await Promise.reject(
+          JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email))
         );
       }
     } catch (error) {
@@ -66,22 +57,21 @@ class User {
   }
 
   /** Find users based on visualId and email*/
-  static async findByEmailVisualIds(visualIds, email){
+  static async findByEmailVisualIds(visualIds, email) {
     try {
-      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
+      const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ?`;
 
       return await pool.query(sql, [visualIds, email]);
-    }
-    catch (error){
+    } catch (error) {
       return error;
     }
   }
 
   /** Find users mandai_id for*/
-  static async findFullMandaiId(email){
+  static async findFullMandaiId(email) {
     try {
       const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
@@ -89,8 +79,7 @@ class User {
                   WHERE u.active = 1 AND u.email = ?`;
 
       return await pool.query(sql, [email]);
-    }
-    catch (error){
+    } catch (error) {
       return error;
     }
   }
@@ -114,8 +103,8 @@ class User {
   }
 
   /** Find passes belong user */
-  static async findPassesByUserEmail(passes, email){
-    try{
+  static async findPassesByUserEmail(passes, email) {
+    try {
       const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
                     CASE
                         WHEN um.name in (?) THEN true
@@ -126,13 +115,14 @@ class User {
                   WHERE u.email = ? AND u.active = 1`;
 
       return await pool.query(sql, [passes, email]);
-    }
-    catch (error){
+    } catch (error) {
       console.error(new Error(`Error findPassesByUserEmail: ${error}`));
-      throw new Error(JSON.stringify({
-        dbProceed: 'failed',
-        error: JSON.stringify(error)
-      }))
+      throw new Error(
+        JSON.stringify({
+          dbProceed: "failed",
+          error: JSON.stringify(error),
+        })
+      );
     }
   }
 
@@ -290,36 +280,6 @@ class User {
       );
       console.log(logError);
       return { error: logError };
-    }
-  }
-
-  /** Find users based on visualId and email*/
-  static async findByEmailVisualIds(visualIds, email){
-    try {
-      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
-                  FROM users u
-                  INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ?`;
-
-      return await pool.query(sql, [visualIds, email]);
-    }
-    catch (error){
-      return error;
-    }
-  }
-
-  /** Find users mandai_id for*/
-  static async findFullMandaiId(email){
-    try {
-      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
-                  FROM users u
-                  INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE u.active = 1 AND u.email = ?`;
-
-      return await pool.query(sql, [email]);
-    }
-    catch (error){
-      return error;
     }
   }
 }

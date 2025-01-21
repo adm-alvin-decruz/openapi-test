@@ -29,7 +29,7 @@ class MembershipPassErrors {
     return {
       membership: {
         code: 400,
-        mwgCode: "MWG_CIAM_MEMBERSHIP_PASS_PARAMS_ERR",
+        mwgCode: "MWG_CIAM_PARAMS_ERR",
         message: "Wrong parameters",
         error: {
           [`${key}`]: messageLang(`membership_pass_${key}`, lang),

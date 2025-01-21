@@ -18,10 +18,9 @@ app.use("/v1/ciam/galaxy", galaxyRoutes); // dev & uat env allowed only.
 // support route
 app.use("/v1/ciam", supportRoutes); // controlled by app ID
 
-// const handler = serverless(app);
+const handler = serverless(app);
 
-// module.exports.handler = (event, context, callback) => {
-//     const response = handler(event, context, callback);
-//     return response;
-// };
-app.listen(3000, () => console.log("listening"));
+module.exports.handler = (event, context, callback) => {
+  const response = handler(event, context, callback);
+  return response;
+};

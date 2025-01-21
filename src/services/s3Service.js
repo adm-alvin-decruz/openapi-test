@@ -2,6 +2,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 
 const MembershipPassErrors = require("../config/https/errors/membershipPassErrors");
+const loggerService = require("../logs/logger");
 
 const uploadThumbnailToS3 = async (req) => {
   try {

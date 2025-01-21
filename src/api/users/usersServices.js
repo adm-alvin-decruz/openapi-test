@@ -317,7 +317,7 @@ async function checkNewEmailExisted(email) {
     const emailCognito = getOrCheck(userCognito, 'email');
     return !!userDB.email || !!emailCognito;
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
+    const errorMessage = error.message ? JSON.parse(error.message) : '';
     const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
     if (errorData.name && errorData.name === "UserNotFoundException") {
