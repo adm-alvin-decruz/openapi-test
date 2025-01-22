@@ -110,10 +110,10 @@ jobs:
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
           # echo "running purge_user-20250108.sql script"
           # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/purge_user-20250108.sql
-          echo "running salt-column-20250103.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/salt-column-20250103.sql
-          # echo "running ciam-user-membership-details-20250121.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-membership-details-20250121.sql
+          # echo "running salt-column-20250103.sql script"
+          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/salt-column-20250103.sql
+          echo "running ciam-user-membership-details-20250121.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-membership-details-20250121.sql
 
       - name: Verify Deployment
         run: echo "Run Query to verify db update/rollback  of database/table is successful"
