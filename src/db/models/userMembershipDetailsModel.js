@@ -1,9 +1,8 @@
 const pool = require("../connections/mysqlConn");
-const {
-  getCurrentUTCTimestamp,
-  formatDateToMySQLDateTime,
-} = require("../../utils/dateUtils");
+const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
+const CommonErrors = require("../../config/https/errors/common");
+const loggerService = require("../../logs/logger");
 
 class UserMembershipDetails {
   static async create(membershipDetailsData) {
@@ -49,14 +48,9 @@ class UserMembershipDetails {
         user_membership_details_id: result.insertId,
       };
     } catch (error) {
+      loggerService.error(`Error UserMembershipDetailsModel.create. Error: ${error}`);
       throw new Error(
-        JSON.stringify({
-          data: {
-            code: 500,
-            mwgCode: "MWG_CIAM_MEMBERSHIP_DETAILS_CREATE_ERR",
-            message: messageLang("db_membership_details_create_error"),
-          },
-        })
+        JSON.stringify(CommonErrors.InternalServerError())
       );
     }
   }
@@ -96,14 +90,11 @@ class UserMembershipDetails {
         user_membership_details_id: result.insertId,
       };
     } catch (error) {
+      loggerService.error(
+        `Error UserMembershipDetailsModel.updateByMembershipId. Error: ${error}`
+      );
       throw new Error(
-        JSON.stringify({
-          data: {
-            code: 500,
-            mwgCode: "MWG_CIAM_MEMBERSHIP_DETAILS_UPDATE_ERR",
-            message: messageLang("db_membership_details_update_error"),
-          },
-        })
+        JSON.stringify(CommonErrors.InternalServerError())
       );
     }
   }

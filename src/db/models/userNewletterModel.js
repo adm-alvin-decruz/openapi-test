@@ -44,23 +44,6 @@ class UserNewsletter {
     }
   }
 
-  // static async update(id, newsletterData) {
-  //   const now = getCurrentUTCTimestamp();
-  //   const sql = `
-  //     UPDATE user_newsletters
-  //     SET name = ?, type = ?, subscribe = ?, updated_at = ?
-  //     WHERE id = ?
-  //   `;
-  //   const params = [
-  //     newsletterData.name,
-  //     newsletterData.type,
-  //     newsletterData.subscribe,
-  //     now,
-  //     id
-  //   ];
-  //   await pool.execute(sql, params);
-  // }
-
   static async update(id, userData) {
     const now = getCurrentUTCTimestamp();
 

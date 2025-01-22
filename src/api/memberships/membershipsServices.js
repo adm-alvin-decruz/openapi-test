@@ -11,7 +11,6 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { messageLang } = require("../../utils/common");
 const { GROUP } = require("../../utils/constants");
 const userModel = require("../../db/models/userModel");
-const CommonErrors = require("../../config/https/errors/common");
 const loggerService = require("../../logs/logger");
 const appConfig = require("../../config/appConfig");
 

@@ -34,7 +34,6 @@ const UserValidateResetPasswordValidation = require("./validations/UserValidateR
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
 const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
-const userMembershipPassService = require("./userMembershipPassService");
 
 /**
  * Function listAll users
@@ -526,6 +525,34 @@ async function userConfirmResetPassword(body) {
   }
 }
 
+async function userGetMembershipPasses(body) {
+  const message = UserGetMembershipPassesValidation.execute(body);
+  if (!!message) {
+    throw new Error(JSON.stringify(message));
+  }
+  try {
+    return await UserGetMembershipPassesJob.perform(body);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
+async function userVerifyToken(accessToken, email, lang) {
+  try {
+    return await userVerifyTokenService.verifyToken(accessToken, email, lang);
+  } catch (error) {
+    const errorMessage = error && error.message ? JSON.parse(error.message) : "";
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
 async function userCreateMembershipPass(req, res) {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
@@ -603,6 +630,8 @@ module.exports = {
   userResetPassword,
   userConfirmResetPassword,
   userValidateResetPassword,
+  userGetMembershipPasses,
+  userVerifyToken,
   userCreateMembershipPass,
   userUpdateMembershipPass,
 };

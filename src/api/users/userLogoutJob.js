@@ -1,5 +1,5 @@
 const UserLogoutService = require("./userLogoutServices");
-const {messageLang} = require("../../utils/common");
+const { messageLang } = require("../../utils/common");
 
 class UserLogoutJob {
   success(email, lang) {
@@ -21,7 +21,7 @@ class UserLogoutJob {
       return this.success(rs.email, lang);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
-      throw new Error(JSON.stringify(errorMessage))
+      throw new Error(JSON.stringify(errorMessage));
     }
   }
 }

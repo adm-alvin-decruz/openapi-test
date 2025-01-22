@@ -45,7 +45,6 @@ const { COGNITO_ATTRIBUTES, GROUP} = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
-const pool = require("../../db/connections/mysqlConn");
 
 /**
  * Function User signup service

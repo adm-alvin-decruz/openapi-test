@@ -1,5 +1,4 @@
 const pool = require('../connections/mysqlConn');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
 
 class UserMigrationsModel {
