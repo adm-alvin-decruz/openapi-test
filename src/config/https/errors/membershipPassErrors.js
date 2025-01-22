@@ -17,7 +17,7 @@ class MembershipPassErrors {
     return {
       membership: {
         code: 500,
-        mwgCode: "MWG_CIAM_CREATE_MEMBERSHIP_PASS_ERR",
+        mwgCode: "MWG_CIAM_UPDATE_MEMBERSHIP_PASS_ERR",
         message: messageLang("membership_pass_update_error", lang),
       },
       status: "failed",
