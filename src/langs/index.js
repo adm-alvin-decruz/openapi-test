@@ -36,7 +36,8 @@ module.exports = {
     token_valid: "Token is valid.",
     passwordToken_expired: "Requested token has expired.",
     newEmail_invalid: "New email is invalid.",
-    newEmail_being_used: "New email address is already being used for a Mandai Account.",
+    newEmail_being_used:
+      "New email address is already being used for a Mandai Account.",
     address_invalid: "Address is invalid.",
     visualId_invalid: "Visual id is invalid",
     list_visualId_invalid: "List visual id is invalid",
@@ -71,6 +72,11 @@ module.exports = {
     membership_pass_iu: "The IU number is invalid.",
     membership_pass_carPlate: "The car plate number is invalid.",
     membership_pass_member: "The member data is empty or invalid.",
+    membership_pass_member_first_name:
+      "The Member First Name is empty or invalid.",
+    membership_pass_member_last_name:
+      "The Member Last Name is empty or invalid.",
+    membership_pass_validUntil: "The pass expiry is empty or invalid.",
     membership_pass_coMembers: "The co-members data is empty or invalid.",
     membership_pass_membershipPhoto: "The photo data is empty or invalid.",
   },
@@ -141,6 +147,9 @@ module.exports = {
     membership_pass_iu: "IU 编号无效。",
     membership_pass_carPlate: "车牌号无效。",
     membership_pass_member: "会员数据为空或无效。",
+    membership_pass_member_first_name: "会员的名字为空或无效。",
+    membership_pass_member_last_name: "会员的姓氏为空或无效。",
+    membership_pass_validUntil: "会员通行证的到期日期为空或无效。",
     membership_pass_coMembers: "共同会员数据为空或无效。",
     membership_pass_membershipPhoto: "照片数据为空或无效。",
   },
@@ -217,6 +226,12 @@ module.exports = {
     membership_pass_iu: "IU 번호가 유효하지 않습니다.",
     membership_pass_carPlate: "차량 번호판이 유효하지 않습니다.",
     membership_pass_member: "회원 데이터가 비어 있거나 유효하지 않습니다.",
+    membership_pass_member_first_name:
+      "회원의 이름이 비어 있거나 유효하지 않습니다.",
+    membership_pass_member_last_name:
+      "회원의 성이 비어 있거나 유효하지 않습니다.",
+    membership_pass_validUntil:
+      "회원권의 만료일이 비어 있거나 유효하지 않습니다.",
     membership_pass_coMembers:
       "공동 회원 데이터가 비어 있거나 유효하지 않습니다.",
     membership_pass_membershipPhoto:
@@ -260,7 +275,8 @@ module.exports = {
     token_valid: "トークンは有効です。",
     passwordToken_expired: "リクエストされたトークンが期限切れです。",
     newEmail_invalid: "新しいメールアドレスが無効です。",
-    newEmail_being_used: "新しいメールアドレスは既にMandaiアカウントで使用されています。",
+    newEmail_being_used:
+      "新しいメールアドレスは既にMandaiアカウントで使用されています。",
     address_invalid: "住所が無効です。",
     visualId_invalid: "ビジュアルIDが無効です",
     list_visualId_invalid: "リストビジュアルIDが無効です",
@@ -296,6 +312,9 @@ module.exports = {
     membership_pass_iu: "IU 番号が無効です。",
     membership_pass_carPlate: "車両ナンバーが無効です。",
     membership_pass_member: "会員データが空または無効です。",
+    membership_pass_member_first_name: "会員の名前が空であるか無効です。",
+    membership_pass_member_last_name: "会員の苗字が空であるか無効です。",
+    membership_pass_validUntil: "会員パスの有効期限が空であるか無効です。",
     membership_pass_coMembers: "共同会員データが空または無効です。",
     membership_pass_membershipPhoto: "写真データが空または無効です。",
   },
