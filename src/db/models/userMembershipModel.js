@@ -1,7 +1,6 @@
 const pool = require("../connections/mysqlConn");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const { messageLang } = require("../../utils/common");
 const CommonErrors = require("../../config/https/errors/common");
 const loggerService = require("../../logs/logger");
 
@@ -31,7 +30,10 @@ class UserMembership {
         membership_id: result.insertId,
       };
     } catch (error) {
-      loggerService.error(`Error UserMembershipModel.create. Error: ${error}`);
+      loggerService.error(
+        `Error UserMembershipModel.create. Error: ${error}`,
+        membershipData
+      );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
@@ -108,6 +110,7 @@ class UserMembership {
         user_id: result.insertId,
       };
     } catch (error) {
+      loggerService.error(`UserMembershipModel.updateByUserId Error: ${error}`);
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }

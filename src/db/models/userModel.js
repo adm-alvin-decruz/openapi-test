@@ -53,7 +53,9 @@ class User {
         );
       }
     } catch (error) {
-      loggerService.error(`Error UserModel.findById. Error: ${error}`);
+      loggerService.error(
+        `Error UserModel.findById. Error: ${error} - userEmail: ${email}`
+      );
       throw error;
     }
   }
@@ -69,7 +71,8 @@ class User {
       return await pool.query(sql, [visualIds, email]);
     } catch (error) {
       loggerService.error(
-        `Error UserModel.findByEmailVisualIds. Error: ${error}`
+        `Error UserModel.findByEmailVisualIds. Error: ${error} - userEmail: ${email}`,
+        visualIds
       );
       return error;
     }
@@ -122,7 +125,8 @@ class User {
       return await pool.query(sql, [passes, email]);
     } catch (error) {
       loggerService.error(
-        `Error UserModel.findPassesByUserEmail. Error: ${error}`
+        `Error UserModel.findPassesByUserEmail. Error: ${error} - userEmail: ${email}`,
+        passes
       );
       throw new Error(
         JSON.stringify({

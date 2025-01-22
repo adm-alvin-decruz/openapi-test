@@ -1,6 +1,6 @@
-const pool = require('../connections/mysqlConn');
-const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
-const commonService = require('../../services/commonService');
+const pool = require("../connections/mysqlConn");
+const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
+const commonService = require("../../services/commonService");
 const CommonErrors = require("../../config/https/errors/common");
 const loggerService = require("../../logs/logger");
 
@@ -19,17 +19,17 @@ class UserCredential {
       credentialData.tokens,
       credentialData.last_login,
       now,
-      now
+      now,
     ];
     const result = await pool.execute(sql, params);
     return {
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      newsletter_id: result.insertId
+      newsletter_id: result.insertId,
     };
   }
 
   static async findByUserId(userId) {
-    const sql = 'SELECT * FROM user_credentials WHERE user_id = ?';
+    const sql = "SELECT * FROM user_credentials WHERE user_id = ?";
     const [rows] = await pool.query(sql, [userId]);
     return rows[0];
   }
@@ -72,7 +72,9 @@ class UserCredential {
       WHERE user_id = ?
     `;
     const params = [
-      credentialData && credentialData.accessToken ? JSON.stringify(credentialData) : null,
+      credentialData && credentialData.accessToken
+        ? JSON.stringify(credentialData)
+        : null,
       now,
       now,
       id,
@@ -87,11 +89,7 @@ class UserCredential {
       SET password_hash = ?, updated_at = ?
       WHERE user_id = ?
     `;
-    const params = [
-      password_hash,
-      now,
-      userId,
-    ];
+    const params = [password_hash, now, userId];
     await pool.execute(sql, params);
   }
 
@@ -100,24 +98,24 @@ class UserCredential {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push('updated_at = ?');
+    updateFields.push("updated_at = ?");
 
     // Construct the SQL query
     const sql = `
       UPDATE user_credentials
-      SET ${updateFields.join(', ')}
+      SET ${updateFields.join(", ")}
       WHERE username = ?
     `;
 
     // Prepare the params array
     const params = [
-      ...Object.values(data).filter(value => value !== undefined),
+      ...Object.values(data).filter((value) => value !== undefined),
       now,
-      username
+      username,
     ];
 
     // Execute the query
@@ -126,13 +124,14 @@ class UserCredential {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        user_id: result.insertId
+        user_id: result.insertId,
       };
     } catch (error) {
-      loggerService.error(`Error userCredentialModel.updateByUserEmail Error: ${error}`);
-      throw new Error(
-          JSON.stringify(CommonErrors.InternalServerError())
+      loggerService.error(
+        `Error userCredentialModel.updateByUserEmail Error: ${error} - userEmail: ${username}`,
+        data
       );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
@@ -141,24 +140,24 @@ class UserCredential {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push('updated_at = ?');
+    updateFields.push("updated_at = ?");
 
     // Construct the SQL query
     const sql = `
       UPDATE user_credentials
-      SET ${updateFields.join(', ')}
+      SET ${updateFields.join(", ")}
       WHERE user_id = ?
     `;
 
     // Prepare the params array
     const params = [
-      ...Object.values(data).filter(value => value !== undefined),
+      ...Object.values(data).filter((value) => value !== undefined),
       now,
-      userId
+      userId,
     ];
 
     // Execute the query
@@ -167,31 +166,31 @@ class UserCredential {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        user_id: result.insertId
+        user_id: result.insertId,
       };
     } catch (error) {
-      loggerService.error(`Error userCredentialModel.updateByUserId Error: ${error}`);
-      throw new Error(
-          JSON.stringify(CommonErrors.InternalServerError())
+      loggerService.error(
+        `Error userCredentialModel.updateByUserId Error: ${error} - userId: ${userId}`,
+        data
       );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
   static async delete(id) {
-    const sql = 'DELETE FROM user_credentials WHERE id = ?';
+    const sql = "DELETE FROM user_credentials WHERE id = ?";
     await pool.execute(sql, [id]);
   }
 
   static async deletebyUserID(user_id) {
-    try{
-      const sql = 'DELETE FROM user_credentials WHERE user_id = ?';
+    try {
+      const sql = "DELETE FROM user_credentials WHERE user_id = ?";
       var result = await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
         sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
       });
-    }
-    catch (error){
+    } catch (error) {
       throw error;
     }
   }
