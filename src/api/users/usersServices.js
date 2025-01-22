@@ -41,7 +41,7 @@ const switchService = require('../../services/switchService');
 const CommonErrors = require("../../config/https/errors/common");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
-const { COGNITO_ATTRIBUTES, GROUP} = require("../../utils/constants");
+const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
@@ -304,7 +304,7 @@ async function updateDB(body, userId, isNewEmailExisted) {
       await userDBService.userDetailsModelExecuteUpdate(userId, body.phoneNumber, body.address, body.country)
     }
   } catch (error) {
-    loggerService.error(`usersService.updateDB Error: ${error}`);
+    loggerService.error(`usersService.updateDB Error: ${error} - userId: ${userId}`, body);
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
   }
 }
@@ -359,7 +359,7 @@ async function updatePassword(body, token, isNewEmailExisted) {
       }
     }
   } catch (error) {
-    loggerService.error(`Error usersService.updatePassword. Error: ${error} - ${body.email}`);
+    loggerService.error(`Error usersService.updatePassword. Error: ${error} - ${body.email}`, body);
     throw new Error(JSON.stringify(CommonErrors.OldPasswordNotMatchErr(body.language)))
   }
 }
@@ -452,7 +452,7 @@ async function adminUpdateNewUser(body, token) {
       statusCode: 200,
     }
   } catch (error) {
-    loggerService.error(`usersServices.adminUpdateNewUser Error: ${error} - ${body.email}`);
+    loggerService.error(`usersServices.adminUpdateNewUser Error: ${error} - ${body.email}`, body);
     const errorMessage = error.message ? JSON.parse(error.message) : '';
     const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";

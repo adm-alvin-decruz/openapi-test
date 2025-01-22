@@ -48,10 +48,11 @@ class UserMembershipDetails {
         user_membership_details_id: result.insertId,
       };
     } catch (error) {
-      loggerService.error(`Error UserMembershipDetailsModel.create. Error: ${error}`);
-      throw new Error(
-        JSON.stringify(CommonErrors.InternalServerError())
+      loggerService.error(
+        `Error UserMembershipDetailsModel.create. Error: ${error}`,
+        membershipDetailsData
       );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
@@ -91,11 +92,10 @@ class UserMembershipDetails {
       };
     } catch (error) {
       loggerService.error(
-        `Error UserMembershipDetailsModel.updateByMembershipId. Error: ${error}`
+        `Error UserMembershipDetailsModel.updateByMembershipId. Error: ${error} - membershipId: ${membershipId}`,
+        updatedDetailsData
       );
-      throw new Error(
-        JSON.stringify(CommonErrors.InternalServerError())
-      );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 }

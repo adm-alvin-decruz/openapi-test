@@ -10,7 +10,7 @@ const {
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
   AdminListGroupsForUserCommand,
-  AdminAddUserToGroupCommand
+  AdminAddUserToGroupCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -63,7 +63,9 @@ class Cognito {
         idToken: loginSession.AuthenticationResult.IdToken,
       };
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoUserLogin Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoUserLogin Error: ${error} userEmail: ${req.body.email}`
+      );
       throw new Error(
         JSON.stringify({
           status: "failed",
@@ -100,7 +102,7 @@ class Cognito {
       return await client.send(getUserCommand);
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminGetUserByEmail Error: ${error}`
+        `cognitoService.cognitoAdminGetUserByEmail Error: ${error} userEmail: ${email}`
       );
       throw new Error(
         JSON.stringify({
@@ -126,7 +128,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
-          rawError: error.toString()
+          rawError: error.toString(),
         })
       );
     }
@@ -142,7 +144,7 @@ class Cognito {
       return await client.send(groupsBelongUserCommand);
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminListGroupsForUser Error: ${error}`
+        `cognitoService.cognitoAdminListGroupsForUser Error: ${error} userEmail: ${email}`
       );
       throw new Error(
         JSON.stringify({
@@ -164,7 +166,7 @@ class Cognito {
     newsletter,
     source,
     phoneNumber,
-    country
+    country,
   }) {
     const newUserArray = {
       UserPoolId: process.env.USER_POOL_ID,
@@ -184,7 +186,10 @@ class Cognito {
         { Name: "phone_number", Value: phoneNumber ? phoneNumber : "" },
         { Name: "zoneinfo", Value: country ? country : "" },
         // custom fields
-        { Name: "custom:membership", Value: groups ? JSON.stringify(groups) : "null" },
+        {
+          Name: "custom:membership",
+          Value: groups ? JSON.stringify(groups) : "null",
+        },
         { Name: "custom:mandai_id", Value: mandaiId },
         { Name: "custom:newsletter", Value: JSON.stringify(newsletter) },
         { Name: "custom:terms_conditions", Value: "null" },
@@ -202,7 +207,7 @@ class Cognito {
       return await client.send(newUserParams);
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminCreateUser Error: ${error}`
+        `cognitoService.cognitoAdminCreateUser Error: ${error} userEmail: ${email}`
       );
       throw new Error(
         JSON.stringify({
@@ -224,7 +229,7 @@ class Cognito {
       return await client.send(setPasswordParams);
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminSetUserPassword Error: ${error}`
+        `cognitoService.cognitoAdminSetUserPassword Error: ${error} userEmail: ${email}`
       );
       throw new Error(
         JSON.stringify({
@@ -265,7 +270,8 @@ class Cognito {
       return await client.send(userUpdateParams);
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminUpdateNewUser Error: ${error}`
+        `cognitoService.cognitoAdminUpdateNewUser Error: ${error} userEmai: ${email}`,
+        params
       );
       throw new Error(
         JSON.stringify({
@@ -301,17 +307,23 @@ class Cognito {
     const adminAddUserToGroup = new AdminAddUserToGroupCommand({
       UserPoolId: process.env.USER_POOL_ID,
       Username: email,
-      GroupName: group
+      GroupName: group,
     });
     try {
       return await client.send(adminAddUserToGroup);
     } catch (error) {
-      loggerService.error(`cognitoService.cognitoAdminAddUserToGroup Error: ${error}`);
+      loggerService.error(
+        `cognitoService.cognitoAdminAddUserToGroup Error: ${error}`,
+        {
+          email,
+          group,
+        }
+      );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }

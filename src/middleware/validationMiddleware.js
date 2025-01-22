@@ -87,7 +87,9 @@ async function AccessTokenAuthGuard(req, res, next) {
   });
   try {
     const payload = await verifier.verify(userCredentials.tokens.idToken);
-    const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
+    const payloadAccessToken = await verifierAccessToken.verify(
+      req.headers.authorization
+    );
     if (payload.email !== req.body.email) {
       return res
         .status(401)
@@ -95,12 +97,12 @@ async function AccessTokenAuthGuard(req, res, next) {
     }
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res
-          .status(401)
-          .json(CommonErrors.UnauthorizedException(req.body.language));
+        .status(401)
+        .json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
     loggerService.error(
-      "ValidationMiddleware.AccessTokenAuthGuard Error:",
+      `ValidationMiddleware.AccessTokenAuthGuard Error - payload: ${req}:`,
       error
     );
     return res
@@ -115,7 +117,7 @@ async function AccessTokenAuthGuardByAppId(req, res, next) {
   const mwgAppID =
     req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   if (mwgAppID.includes("aem")) {
-    return await AccessTokenAuthGuard(req, res, next)
+    return await AccessTokenAuthGuard(req, res, next);
   }
   next();
 }

@@ -31,7 +31,7 @@ class UserSignupService {
         return false;
       }
       loggerService.error(
-        `userSignupService.isUserExistedInCognito Error: ${error}`
+        `userSignupService.isUserExistedInCognito Error: ${error} - userEmail: ${email}`
       );
       if (errorMessage.status === "failed") {
         throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
@@ -292,7 +292,10 @@ class UserSignupService {
         mandaiId,
       };
     } catch (error) {
-      loggerService.error(`userSignupService.signup Error: ${error}`);
+      loggerService.error(
+        `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
+        req
+      );
       const errorMessage = JSON.parse(error.message);
       if (errorMessage.status === "failed") {
         throw new Error(

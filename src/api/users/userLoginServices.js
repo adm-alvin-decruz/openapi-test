@@ -16,7 +16,7 @@ class UserLoginService {
     try {
       return await cognitoService.cognitoUserLogin(req, hashSecret);
     } catch (error) {
-      loggerService.error(`Error UserLoginService.login. Error: ${error}`);
+      loggerService.error(`Error UserLoginService.login. Error: ${error}`, req);
       throw new Error(
         JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
       );
@@ -35,7 +35,10 @@ class UserLoginService {
         userId: userDB.user_id ? userDB.user_id : "",
       };
     } catch (error) {
-      loggerService.error(`Error UserLoginService.getUser. Error: ${error}`);
+      loggerService.error(
+        `Error UserLoginService.getUser. Error: ${error}`,
+        req
+      );
       throw new Error(
         JSON.stringify(
           LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
@@ -48,7 +51,10 @@ class UserLoginService {
     try {
       await userCredentialModel.updateTokens(id, tokens);
     } catch (error) {
-      loggerService.error(`Error UserLoginService.updateUser. Error: ${error}`);
+      loggerService.error(
+        `Error UserLoginService.updateUser. Error: ${error} - userId: ${id}`,
+        tokens
+      );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
