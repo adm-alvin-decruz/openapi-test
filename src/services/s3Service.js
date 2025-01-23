@@ -1,18 +1,23 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 
-const MembershipPassErrors = require("../config/https/errors/membershipPassErrors");
 const loggerService = require("../logs/logger");
 
 const uploadThumbnailToS3 = async (req) => {
   try {
-    const s3Client = new S3Client({});
+    //TODO: update env for s3
+    const s3Client = new S3Client({
+      region: process.env.AWS_REGION_NAME,
+      credentials: {
+        accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,
+      },
+    });
     const buffer = Buffer.from(req.body.membershipPhoto.bytes, "base64");
 
     await s3Client.send(
       new PutObjectCommand({
-        // Bucket: `mwg-passkit-${process.env.APP_ENV}`,
-        Bucket: `mwg-passkit-sandbox`,
+        Bucket: process.env.AWS_S3_BUCKET,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
@@ -25,9 +30,10 @@ const uploadThumbnailToS3 = async (req) => {
       `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`
     );
     throw new Error(
-      JSON.stringify(
-        MembershipPassErrors.membershipPassS3Error(req.body.language)
-      )
+      JSON.stringify({
+        status: "failed",
+        isFrom: "s3",
+      })
     );
   }
 };

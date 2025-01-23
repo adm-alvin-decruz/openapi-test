@@ -4,7 +4,6 @@ const {
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const loggerService = require("../../logs/logger");
 
 class User {
@@ -45,16 +44,24 @@ class User {
       const sql = "SELECT * FROM users WHERE email = ?";
       const rows = await pool.query(sql, [email]);
 
-      if (rows[0]) {
-        return rows[0];
-      } else {
-        await Promise.reject(
-          JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email))
-        );
-      }
+      return rows[0];
     } catch (error) {
       loggerService.error(
         `Error UserModel.findById. Error: ${error} - userEmail: ${email}`
+      );
+      throw error;
+    }
+  }
+
+  static async findByEmailMandaiId(email, mandaiId) {
+    try {
+      const sql = "SELECT * FROM users WHERE email = ? AND mandai_id = ?";
+      const rows = await pool.query(sql, [email, mandaiId]);
+
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+          `Error UserModel.findById. Error: ${error} - userEmail: ${email} - userMandaId: ${mandaiId}`
       );
       throw error;
     }
@@ -73,6 +80,24 @@ class User {
       loggerService.error(
         `Error UserModel.findByEmailVisualIds. Error: ${error} - userEmail: ${email}`,
         visualIds
+      );
+      return error;
+    }
+  }
+
+  /** Find users based on visualId and email and mandaiId*/
+  static async findByEmailMandaiIdVisualIds(visualIds, email, mandaiId) {
+    try {
+      const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
+                  FROM users u
+                  INNER JOIN user_memberships um ON um.user_id = u.id
+                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND u.mandai_id = ?`;
+
+      return await pool.query(sql, [visualIds, email, mandaiId]);
+    } catch (error) {
+      loggerService.error(
+          `Error UserModel.findByEmailVisualIds. Error: ${error} - userEmail: ${email}`,
+          visualIds
       );
       return error;
     }

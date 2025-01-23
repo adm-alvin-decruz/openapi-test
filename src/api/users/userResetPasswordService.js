@@ -36,7 +36,7 @@ class UserResetPasswordService {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
         loggerService.error(
-          `Error preparing reset password email: ${emailError.message}`
+          `Error preparing reset password email: ${emailError}`
         );
         throw new Error(
           JSON.stringify(
