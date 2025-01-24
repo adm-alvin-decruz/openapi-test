@@ -3,7 +3,7 @@ CREATE TABLE user_membership_details (
     user_id INT(11) NOT NULL,
     user_membership_id INT(11) NOT NULL,
     category_type VARCHAR(256) NOT NULL,
-    item_name VARCHAR(256) NOT NULL,
+    item_name VARCHAR(256) NULL DEFAULT NULL,
     plu VARCHAR(256) NULL DEFAULT NULL,
     adult_qty TINYINT(1) NULL DEFAULT NULL,
     child_qty TINYINT(2) NULL DEFAULT NULL,
