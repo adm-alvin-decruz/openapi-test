@@ -23,7 +23,10 @@ const sqsClient = new SQSClient({ region: awsRegion });
 class UserMembershipPassService {
   async create(req) {
     try {
-      const user = await userModel.findByEmailMandaiId(req.body.email, req.body.mandaiId);
+      const user = await userModel.findByEmailMandaiId(
+        req.body.email,
+        req.body.mandaiId
+      );
       if (!user || !user.id) {
         await Promise.reject(
           JSON.stringify(
@@ -34,6 +37,25 @@ class UserMembershipPassService {
           )
         );
       }
+
+      const rows = await userModel.findByEmailMandaiIdVisualIds(
+        [req.body.visualId],
+        req.body.email,
+        req.body.mandaiId
+      );
+
+      const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
+      if (userMembership && userMembership.visualId === req.body.visualId) {
+        await Promise.reject(
+          JSON.stringify(
+            MembershipPassErrors.membershipPassExistedError(
+              req.body.email,
+              req.body.language
+            )
+          )
+        );
+      }
+
       // store pass data in db
       await this.saveUserMembershipPassToDB(user.id, req);
 

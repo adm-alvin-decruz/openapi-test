@@ -75,6 +75,19 @@ class MembershipPassErrors {
       statusCode: 500,
     };
   }
+
+  static membershipPassExistedError(email, lang = "en") {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: "MWG_CIAM_MEMBERSHIP_PASS_EXIST_ERR",
+        message: messageLang("membership_pass_existed_error", lang),
+        email: email
+      },
+      status: "failed",
+      statusCode: 400,
+    };
+  }
 }
 
 module.exports = MembershipPassErrors;

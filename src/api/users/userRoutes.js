@@ -11,7 +11,7 @@ const {
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuard,
-  AccessTokenAuthGuardByAppId,
+  AccessTokenAuthGuardByAppIdGroupFOSeries,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -102,7 +102,7 @@ router.put(
   "/users",
   isEmptyRequest,
   validateEmail,
-  AccessTokenAuthGuardByAppId,
+  AccessTokenAuthGuardByAppIdGroupFOSeries,
   async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations

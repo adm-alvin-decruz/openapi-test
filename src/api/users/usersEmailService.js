@@ -95,7 +95,7 @@ async function createApiRequestBody(req) {
     emailTemplateId: appConfig.RESET_PASSWORD_EMAIL_TEMPLATE_ID,
     customData: {
       firstName: req.body.firstName,
-      membershipPasswordRecoveryLink: `${appConfig[ciamResetPasswordEmailLink]}?token=${req.body.resetToken}`,
+      membershipPasswordRecoveryLink: `${appConfig[ciamResetPasswordEmailLink]}?passwordToken=${req.body.resetToken}`,
       membershipPasswordRecoveryLinkExpiryDate: {
         timeStamp: req.body.expiredAt,
         dateFormat: "dddd, D MMM YYYY",
