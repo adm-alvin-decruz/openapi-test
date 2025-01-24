@@ -80,6 +80,7 @@ module.exports = {
     membership_pass_coMembers: "The co-members data is empty or invalid.",
     membership_pass_membershipPhoto: "The photo data is empty or invalid.",
     request_body_is_empty: "Request body is empty",
+    membership_pass_existed_error: "Membership pass exist"
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -154,6 +155,7 @@ module.exports = {
     membership_pass_coMembers: "共同会员数据为空或无效。",
     membership_pass_membershipPhoto: "照片数据为空或无效。",
     request_body_is_empty: "请求体为空",
+    membership_pass_existed_error: "会员通行证已存在"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -239,6 +241,7 @@ module.exports = {
     membership_pass_membershipPhoto:
       "사진 데이터가 비어 있거나 유효하지 않습니다.",
     request_body_is_empty: "요청 본문이 비어 있습니다",
+    membership_pass_existed_error: "멤버십 패스가 존재합니다"
   },
   ja: {
     signup_email:
@@ -321,5 +324,6 @@ module.exports = {
     membership_pass_coMembers: "共同会員データが空または無効です。",
     membership_pass_membershipPhoto: "写真データが空または無効です。",
     request_body_is_empty: "リクエストボディが空です",
+    membership_pass_existed_error: "メンバーシップパスが存在します"
   },
 };
