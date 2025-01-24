@@ -5,19 +5,12 @@ const loggerService = require("../logs/logger");
 
 const uploadThumbnailToS3 = async (req) => {
   try {
-    //TODO: update env for s3
-    const s3Client = new S3Client({
-      region: process.env.AWS_REGION_NAME,
-      credentials: {
-        accessKeyId: process.env.AWS_S3_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,
-      },
-    });
+    const s3Client = new S3Client({});
     const buffer = Buffer.from(req.body.membershipPhoto.bytes, "base64");
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
