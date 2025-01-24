@@ -62,6 +62,10 @@ const generateSaltHash = (keyword, saltKey, hashAlgorithm = "sha256") => {
   return crypto.createHash(hashAlgorithm).update(data).digest("base64");
 };
 
+const formatPhoneNumber = (phoneNumber) => {
+  return phoneNumber.trim().split(" ").join("")
+};
+
 module.exports = {
   messageLang,
   getSource,
@@ -70,4 +74,5 @@ module.exports = {
   generateSecretHash,
   generateRandomToken,
   generateSaltHash,
+  formatPhoneNumber
 };

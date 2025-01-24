@@ -297,6 +297,21 @@ class UserSignupService {
         req
       );
       const errorMessage = JSON.parse(error.message);
+      if (
+        errorMessage &&
+        errorMessage.rawError &&
+        errorMessage.rawError.includes("Invalid phone number format.")
+      ) {
+        throw new Error(
+          JSON.stringify(
+            CommonErrors.BadRequest(
+              "phoneNumber",
+              "phoneNumber_invalid",
+              req.body.language
+            )
+          )
+        );
+      }
       if (errorMessage.status === "failed") {
         throw new Error(
           JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language))

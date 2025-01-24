@@ -14,7 +14,7 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
-const { messageLang } = require("../utils/common");
+const { messageLang, formatPhoneNumber} = require("../utils/common");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -183,7 +183,7 @@ class Cognito {
         { Name: "email", Value: email },
         { Name: "birthdate", Value: birthdate },
         { Name: "address", Value: address ? address : "" },
-        { Name: "phone_number", Value: phoneNumber ? phoneNumber : "" },
+        { Name: "phone_number", Value: phoneNumber ? formatPhoneNumber(phoneNumber) : "" },
         { Name: "zoneinfo", Value: country ? country : "" },
         // custom fields
         {
@@ -213,6 +213,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
+          rawError: error.toString()
         })
       );
     }
@@ -277,6 +278,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
+          rawError: error.toString()
         })
       );
     }

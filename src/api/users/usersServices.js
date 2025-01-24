@@ -42,7 +42,7 @@ const CommonErrors = require("../../config/https/errors/common");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
-const { messageLang } = require("../../utils/common");
+const { messageLang, formatPhoneNumber } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 
@@ -418,6 +418,12 @@ async function updateUserCognito(body, userCognito) {
         Value: JSON.stringify(body.data.newsletter)
       }
     }
+    if (key === 'phoneNumber') {
+      return {
+        Name: COGNITO_ATTRIBUTES[key],
+        Value: formatPhoneNumber(body.data.phoneNumber)
+      }
+    }
 
     return {
       Name: COGNITO_ATTRIBUTES[key],
@@ -485,6 +491,12 @@ async function adminUpdateNewUser(body, token) {
     }
     if (errorData.name && errorData.name === "NotAuthorizedException") {
       throw new Error(JSON.stringify(CommonErrors.UnauthorizedException(body.language)))
+    }
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(body.email, body.language)))
+    }
+    if (errorMessage && errorMessage.rawError && errorMessage.rawError.includes('Invalid phone number format.')) {
+      throw new Error(JSON.stringify(CommonErrors.BadRequest("phoneNumber", "phoneNumber_invalid", body.language)))
     }
     throw new Error(JSON.stringify(errorMessage));
   }
