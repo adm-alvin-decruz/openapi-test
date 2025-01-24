@@ -605,7 +605,7 @@ async function userUpdateMembershipPass(req, res) {
   const message =
     UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
   if (!!message) {
-    throw new Error(JSON.stringify(message));
+    return res.status(400).json(message);
   }
 
   try {

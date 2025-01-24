@@ -9,11 +9,12 @@ const { uploadThumbnailToS3 } = require("../../services/s3Service");
 const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
 
 const awsRegion = () => {
-  const env = process.env.PRODUCTION;
+  const env = process.env.AWS_REGION_NAME;
   if (!env) return "ap-southeast-1";
   if (env === "false") return "ap-southeast-1";
   return env;
 };
+
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
@@ -22,8 +23,17 @@ const sqsClient = new SQSClient({ region: awsRegion });
 class UserMembershipPassService {
   async create(req) {
     try {
-      const user = await userModel.findByEmail(req.body.email);
-
+      const user = await userModel.findByEmailMandaiId(req.body.email, req.body.mandaiId);
+      if (!user || !user.id) {
+        await Promise.reject(
+          JSON.stringify(
+            MembershipErrors.ciamMembershipUserNotFound(
+              req.body.email,
+              req.body.language
+            )
+          )
+        );
+      }
       // store pass data in db
       await this.saveUserMembershipPassToDB(user.id, req);
 
@@ -31,7 +41,18 @@ class UserMembershipPassService {
       await this.updateMembershipInCognito(req);
 
       // upload member photo to S3
-      if (req.body.membershipPhoto?.bytes) await uploadThumbnailToS3(req);
+      if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
+        await uploadThumbnailToS3(req);
+      }
+
+      if (
+        req.body.member &&
+        req.body.member.firstName &&
+        req.body.member.lastName &&
+        req.body.member.dob
+      ) {
+        await this.sendSQSMessage(req, "createMembershipPass");
+      }
     } catch (error) {
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
@@ -54,13 +75,28 @@ class UserMembershipPassService {
       await this.updateMembershipInCognito(req);
 
       // update member photo in S3
-      if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes)
+      if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         await uploadThumbnailToS3(req);
+      }
 
       // send message to SQS to re-generate passkit
-      await this.sendSQSMessage(req, "updateMembershipPass");
+      if (
+        req.body.member &&
+        req.body.member.firstName &&
+        req.body.member.lastName &&
+        req.body.member.dob
+      ) {
+        await this.sendSQSMessage(req, "updateMembershipPass");
+      }
     } catch (error) {
       const errorMessage = error.message ? JSON.parse(error.message) : "";
+      if (errorMessage.status === "failed") {
+        throw new Error(
+          JSON.stringify(
+            MembershipPassErrors.createMembershipPassError(req.body.language)
+          )
+        );
+      }
       throw new Error(JSON.stringify(errorMessage));
     }
   }
@@ -240,11 +276,49 @@ class UserMembershipPassService {
     }
   }
 
+  formatMembershipData(req, existingMemberships) {
+    const newMembership = {
+      name: req.body.passType,
+      visualID: req.body.visualId,
+      expiry: req.body.validUntil || null,
+    };
+
+    if (existingMemberships === null) {
+      return [newMembership];
+    }
+
+    //handle new format membership in Cognito
+    if (Array.isArray(existingMemberships)) {
+      let updatedMemberships;
+      // Check if any existing membership needs to be updated based on visualId
+      const membershipToUpdateIdx = existingMemberships.findIndex(
+        (membership) => membership.visualID === newMembership.visualID
+      );
+
+      if (membershipToUpdateIdx >= 0) {
+        existingMemberships[membershipToUpdateIdx] = newMembership;
+        updatedMemberships = [...existingMemberships];
+      } else {
+        updatedMemberships = [...existingMemberships, newMembership];
+      }
+      return updatedMemberships || null;
+    }
+
+    //handle old format membership in Cognito
+    if (typeof existingMemberships === "object") {
+      // Check if any existing membership needs to be updated based on visualId
+      return existingMemberships.visualID === newMembership.visualID
+        ? [newMembership]
+        : [existingMemberships, newMembership];
+    }
+  }
+
   async updateUserMembershipPassToDB(req) {
     try {
-      const rows = await userModel.findByEmailVisualIds(
+      const rows = await userModel.findByEmailMandaiIdVisualIds(
         [req.body.visualId],
-        req.body.email
+        req.body.email,
+        req.body.mandaiId
       );
 
       const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
@@ -261,66 +335,121 @@ class UserMembershipPassService {
       }
 
       let expiryDate = req.body.validUntil || undefined;
-
       !!userMembership.userId &&
         (await userMembershipModel.updateByUserId(userMembership.userId, {
           name: req.body.passType,
           expires_at: expiryDate,
         }));
 
-      !!userMembership.membershipId &&
-        (await userMembershipDetailsModel.updateByMembershipId(
-          userMembership.membershipId,
-          {
-            category_type: req.body.categoryType || undefined,
-            item_name: req.body.itemName || undefined,
-            plu: req.body.plu || undefined,
-            adult_qty: req.body.adultQty || undefined,
-            child_qty: req.body.childQty || undefined,
-            parking: !!req.body.parking
-              ? req.body.parking === "yes"
-                ? 1
-                : 0
-              : undefined,
-            iu: req.body.iu || undefined,
-            car_plate: req.body.carPlate || undefined,
-            membership_photo:
-              !!req.body.membershipPhoto && req.body.membershipPhoto.bytes
-                ? req.body.membershipPhoto.bytes
+      if (!!userMembership.membershipId) {
+        const updatedRecord =
+          await userMembershipDetailsModel.updateByMembershipId(
+            userMembership.membershipId,
+            {
+              category_type: req.body.categoryType || undefined,
+              item_name: req.body.itemName || undefined,
+              plu: req.body.plu || undefined,
+              adult_qty: req.body.adultQty || undefined,
+              child_qty: req.body.childQty || undefined,
+              parking: !!req.body.parking
+                ? req.body.parking === "yes"
+                  ? 1
+                  : 0
                 : undefined,
-            member_first_name:
-              !!req.body.member && !!req.body.member.firstName
-                ? req.body.member.firstName
-                : undefined,
-            member_last_name:
-              !!req.body.member && !!req.body.member.lastName
-                ? req.body.member.lastName
-                : undefined,
-            member_email: req.body.newEmail || undefined,
-            member_dob:
-              !!req.body.member && !!req.body.member.dob
-                ? req.body.member.dob
-                : undefined,
-            member_country:
-              !!req.body.member && !!req.body.member.country
-                ? req.body.member.country
-                : undefined,
-            member_identification_no:
-              !!req.body.member && !!req.body.member.identificationNo
-                ? req.body.member.identificationNo
-                : undefined,
-            member_phone_number:
-              !!req.body.member && !!req.body.member.phoneNumber
-                ? req.body.member.phoneNumber
-                : undefined,
-            co_member:
-              req.body.coMembers && req.body.coMembers.length > 0
-                ? JSON.stringify(req.body.coMembers)
-                : undefined,
-            valid_from: req.body.validFrom || undefined,
-            valid_until: expiryDate,
-          }
-        ));
+              iu: req.body.iu || undefined,
+              car_plate: req.body.carPlate || undefined,
+              membership_photo:
+                !!req.body.membershipPhoto && req.body.membershipPhoto.bytes
+                  ? req.body.membershipPhoto.bytes
+                  : undefined,
+              member_first_name:
+                !!req.body.member && !!req.body.member.firstName
+                  ? req.body.member.firstName
+                  : undefined,
+              member_last_name:
+                !!req.body.member && !!req.body.member.lastName
+                  ? req.body.member.lastName
+                  : undefined,
+              member_email: req.body.newEmail || undefined,
+              member_dob:
+                !!req.body.member && !!req.body.member.dob
+                  ? req.body.member.dob
+                  : undefined,
+              member_country:
+                !!req.body.member && !!req.body.member.country
+                  ? req.body.member.country
+                  : undefined,
+              member_identification_no:
+                !!req.body.member && !!req.body.member.identificationNo
+                  ? req.body.member.identificationNo
+                  : undefined,
+              member_phone_number:
+                !!req.body.member && !!req.body.member.phoneNumber
+                  ? req.body.member.phoneNumber
+                  : undefined,
+              co_member:
+                req.body.coMembers && req.body.coMembers.length > 0
+                  ? JSON.stringify(req.body.coMembers)
+                  : undefined,
+              valid_from: req.body.validFrom || undefined,
+              valid_until: expiryDate,
+            }
+          );
+        if (updatedRecord && updatedRecord.row_affected === 0) {
+          await this.insertMembershipDetails(
+            userMembership.userId,
+            userMembership.membershipId,
+            {
+              categoryType: req.body.categoryType,
+              itemName: req.body.itemName || null,
+              plu: req.body.plu || null,
+              adultQty: req.body.adultQty,
+              childQty: req.body.childQty,
+              parking: req.body.parking === "yes" ? 1 : 0,
+              iu: req.body.iu || null,
+              carPlate: req.body.carPlate || null,
+              membershipPhotoBytes:
+                !!req.body.membershipPhoto && !!req.body.membershipPhoto.bytes
+                  ? req.body.membershipPhoto.bytes
+                  : null,
+              firstName:
+                !!req.body.member && !!req.body.member.firstName
+                  ? req.body.member.firstName
+                  : null,
+              lastName:
+                !!req.body.member && !!req.body.member.lastName
+                  ? req.body.member.lastName
+                  : null,
+              email:
+                !!req.body.member && !!req.body.member.email
+                  ? req.body.member.email
+                  : null,
+              dob:
+                !!req.body.member && !!req.body.member.dob
+                  ? req.body.member.dob
+                  : null,
+              country:
+                !!req.body.member && !!req.body.member.country
+                  ? req.body.member.country
+                  : null,
+              identificationNo:
+                !!req.body.member && !!req.body.member.identificationNo
+                  ? req.body.member.identificationNo
+                  : null,
+              phoneNumber:
+                !!req.body.member && !!req.body.member.phoneNumber
+                  ? req.body.member.phoneNumber
+                  : null,
+              coMember:
+                req.body.coMembers && req.body.coMembers.length > 0
+                  ? JSON.stringify(req.body.coMembers)
+                  : null,
+              validFrom: !!req.body.validFrom ? req.body.validFrom : null,
+              validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+            }
+          );
+        }
+      }
       console.log("Successfully updated user membership pass details in DB");
       return {
         dbProceed: "success",
@@ -352,35 +481,12 @@ class UserMembershipPassService {
         getOrCheck(cognitoUser, "custom:membership")
       );
 
-      const newMembership = {
-        name: req.body.passType,
-        visualID: req.body.visualId,
-        expiry: req.body.validUntil || null,
-      };
-
       // reformat "custom:membership" to JSON array
-      let updatedMemberships;
-      if (existingMemberships === null) {
-        updatedMemberships = [newMembership];
-      } else if (Array.isArray(existingMemberships)) {
-        // Check if any existing membership needs to be updated based on visualId
-        const membershipToUpdateIdx = existingMemberships.findIndex(
-          (membership) => membership.visualID === newMembership.visualID
-        );
-        if (membershipToUpdateIdx) {
-          existingMemberships[membershipToUpdateIdx] = newMembership;
-          updatedMemberships = [...existingMemberships];
-        } else {
-          updatedMemberships = [...existingMemberships, newMembership];
-        }
-      } else if (typeof existingMemberships === "object") {
-        // Check if existing membership needs to be updated based on visualId
-        if (existingMemberships.visualID === newMembership.visualID) {
-          updatedMemberships = [newMembership];
-        } else {
-          updatedMemberships = [existingMemberships, newMembership];
-        }
-      }
+      const updatedMemberships = this.formatMembershipData(
+        req,
+        existingMemberships
+      );
+
       await cognitoService.cognitoAdminUpdateNewUser(
         [
           {
@@ -407,9 +513,10 @@ class UserMembershipPassService {
         `userMembershipPassService.updateMembershipInCognito Error: ${error}`,
         req
       );
-      throw new Error(
-        JSON.stringify(
-          MembershipPassErrors.membershipPassCognitoError(req.body.language)
+      JSON.stringify(
+        MembershipErrors.ciamMembershipUserNotFound(
+          req.body.email,
+          req.body.language
         )
       );
     }
@@ -426,11 +533,14 @@ class UserMembershipPassService {
         mandaiId: req.body.mandaiId,
         visualId: req.body.visualId,
         dateOfBirth: req.body.member.dob,
-        expiryDate: req.body.validUntil,
+        expiryDate: req.body.validUntil ? req.body.validUntil : "",
         membershipType: req.body.categoryType,
-        familyMembers: req.body.coMembers.map(
-          (member) => member.firstName + " " + member.lastName
-        ),
+        familyMembers:
+          req.body.coMember && req.body.coMember.length
+            ? req.body.coMembers
+                .filter((co) => co.firstName || co.lastName)
+                .map((member) => member.firstName + " " + member.lastName)
+            : "",
       };
 
       let data = { action: action, body: sqsBody };
@@ -451,7 +561,7 @@ class UserMembershipPassService {
       );
       throw new Error(
         JSON.stringify(
-          MembershipPassErrors.membershipPassSQSError(req.body.language)
+          MembershipPassErrors.createMembershipPassError(req.body.language)
         )
       );
     }

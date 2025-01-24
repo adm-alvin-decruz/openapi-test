@@ -89,6 +89,7 @@ class UserMembershipDetails {
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         user_membership_details_id: result.insertId,
+        row_affected: result && result.affectedRows ? result.affectedRows : 0
       };
     } catch (error) {
       loggerService.error(

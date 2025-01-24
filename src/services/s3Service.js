@@ -1,7 +1,6 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 
-const MembershipPassErrors = require("../config/https/errors/membershipPassErrors");
 const loggerService = require("../logs/logger");
 
 const uploadThumbnailToS3 = async (req) => {
@@ -11,8 +10,7 @@ const uploadThumbnailToS3 = async (req) => {
 
     await s3Client.send(
       new PutObjectCommand({
-        // Bucket: `mwg-passkit-${process.env.APP_ENV}`,
-        Bucket: `mwg-passkit-sandbox`,
+        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
@@ -25,9 +23,10 @@ const uploadThumbnailToS3 = async (req) => {
       `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`
     );
     throw new Error(
-      JSON.stringify(
-        MembershipPassErrors.membershipPassS3Error(req.body.language)
-      )
+      JSON.stringify({
+        status: "failed",
+        isFrom: "s3",
+      })
     );
   }
 };

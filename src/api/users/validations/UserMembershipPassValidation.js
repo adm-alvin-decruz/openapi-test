@@ -87,6 +87,13 @@ class UserMembershipPassValidation {
         req.body.language
       ));
     }
+
+    if (req.body.membershipPhoto && !req.body.membershipPhoto.bytes) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "membershipPhoto",
+        req.body.language
+      ));
+    }
   }
 
   static validateUpdateUserMembershipPass(req) {
@@ -198,6 +205,13 @@ class UserMembershipPassValidation {
       (typeof req.body.membershipPhoto !== "object" ||
         Array.isArray(req.body.membershipPhoto))
     ) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "membershipPhoto",
+        req.body.language
+      ));
+    }
+
+    if (req.body.membershipPhoto && !req.body.membershipPhoto.bytes) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         "membershipPhoto",
         req.body.language
