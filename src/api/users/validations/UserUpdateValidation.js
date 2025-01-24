@@ -9,6 +9,11 @@ class UserUpdateValidation {
 
   //enhance get list error
   static validateRequestParams(req) {
+    if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
+      return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
+    }
+    const bodyData = req.data;
+
     //validate missing required params
     const paramsShouldNotEmpty = [
       "newEmail",
@@ -21,12 +26,11 @@ class UserUpdateValidation {
       "oldPassword",
       "address",
     ];
-    const listKeys = Object.keys(req);
-
+    const listKeys = Object.keys(bodyData);
     //if parameters have some empty string
     const paramsInvalid = paramsShouldNotEmpty
       .filter((key) => listKeys.includes(key))
-      .filter((ele) => req[`${ele}`].trim() === "");
+      .filter((ele) => bodyData[`${ele}`].trim() === "");
 
     if (paramsInvalid.length) {
       return (this.error = CommonErrors.BadRequest(
@@ -36,8 +40,8 @@ class UserUpdateValidation {
       ));
     }
 
-    if (req.dob || req.dob === "") {
-      const dob = validateDOB(req.dob);
+    if (bodyData.dob || bodyData.dob === "") {
+      const dob = validateDOB(bodyData.dob);
       if (!dob) {
         return (this.error = CommonErrors.BadRequest(
           "dob",
@@ -46,7 +50,7 @@ class UserUpdateValidation {
         ));
       }
     }
-    if (req.country && req.country.length !== 2) {
+    if (bodyData.country && bodyData.country.length !== 2) {
       return (this.error = CommonErrors.BadRequest(
         "country",
         "country_invalid",
@@ -54,9 +58,9 @@ class UserUpdateValidation {
       ));
     }
     if (
-      req.newsletter &&
-      req.newsletter.name &&
-      !["wildpass", "membership"].includes(req.newsletter.name)
+        bodyData.newsletter &&
+        bodyData.newsletter.name &&
+      !["wildpass", "membership"].includes(bodyData.newsletter.name)
     ) {
       return (this.error = CommonErrors.BadRequest(
         "newsletter",
@@ -64,22 +68,22 @@ class UserUpdateValidation {
         req.language
       ));
     }
-    if (req.newPassword) {
-      if (!req.oldPassword) {
+    if (bodyData.newPassword) {
+      if (!bodyData.oldPassword) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
       }
-      if (!passwordPattern(req.newPassword)) {
+      if (!passwordPattern(bodyData.newPassword)) {
         return (this.error = CommonErrors.PasswordErr(req.language));
       }
-      if (req.newPassword !== req.confirmPassword) {
+      if (bodyData.newPassword !== bodyData.confirmPassword) {
         return (this.error = CommonErrors.PasswordNotMatch(req.language));
       }
     }
     return (this.error = null);
   }
 
-  static execute(data) {
-    return this.validateRequestParams(data);
+  static execute(req) {
+    return this.validateRequestParams(req);
   }
 }
 

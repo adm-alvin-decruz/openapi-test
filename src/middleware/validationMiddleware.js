@@ -4,6 +4,7 @@ const loggerService = require("../logs/logger");
 const CommonErrors = require("../config/https/errors/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
+const { GROUP } = require("../utils/constants");
 
 /**
  * Validate empty request
@@ -113,10 +114,10 @@ async function AccessTokenAuthGuard(req, res, next) {
   next();
 }
 
-async function AccessTokenAuthGuardByAppId(req, res, next) {
+async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
   const mwgAppID =
     req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  if (mwgAppID.includes("aem")) {
+  if (mwgAppID.includes("aem") && req.body.group === GROUP.MEMBERSHIP_PASSES) {
     return await AccessTokenAuthGuard(req, res, next);
   }
   next();
@@ -126,6 +127,6 @@ module.exports = {
   isEmptyRequest,
   validateEmail,
   resStatusFormatter,
-  AccessTokenAuthGuardByAppId,
+  AccessTokenAuthGuardByAppIdGroupFOSeries,
   AccessTokenAuthGuard,
 };

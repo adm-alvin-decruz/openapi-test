@@ -92,6 +92,18 @@ class CommonErrors {
       statusCode: 401,
     };
   }
+
+  static RequestIsEmptyErr(lang) {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: "MWG_CIAM_PARAMS_ERR",
+        message: messageLang("request_body_is_empty", lang),
+      },
+      status: "failed",
+      statusCode: 400,
+    };
+  }
 }
 
 module.exports = CommonErrors;
