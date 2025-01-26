@@ -549,24 +549,7 @@ class UserMembershipPassService {
       req["apiTimer"] = req.processTimer.apiRequestTimer();
       req.apiTimer.log("UserMembershipPassService.sendSQSMessage starts");
 
-      const sqsBody = {
-        passType: req.body.passType,
-        name: req.body.member.firstName + " " + req.body.member.lastName,
-        mandaiId: req.body.mandaiId,
-        visualId: req.body.visualId,
-        dateOfBirth: req.body.member.dob,
-        expiryDate: req.body.validUntil ? req.body.validUntil : "",
-        membershipType: req.body.categoryType,
-        familyMembers:
-          req.body.coMember && req.body.coMember.length
-            ? req.body.coMembers
-                .filter((co) => co.firstName || co.lastName)
-                .map((member) => member.firstName + " " + member.lastName)
-            : "",
-      };
-
-      let data = { action: action, body: sqsBody };
-
+      const data = { action: action, body: req.body };
       const queueUrl = process.env.SQS_QUEUE_URL;
       const command = new SendMessageCommand({
         QueueUrl: queueUrl,
