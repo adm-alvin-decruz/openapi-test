@@ -18,6 +18,7 @@ const awsRegion = () => {
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const { omit } = require("../../utils/common");
 const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserMembershipPassService {
@@ -549,7 +550,11 @@ class UserMembershipPassService {
       req["apiTimer"] = req.processTimer.apiRequestTimer();
       req.apiTimer.log("UserMembershipPassService.sendSQSMessage starts");
 
-      const data = { action: action, body: req.body };
+      const data = {
+        action: action,
+        body: omit(req.body, ["membershipPhoto"]),
+      };
+
       const queueUrl = process.env.SQS_QUEUE_URL;
       const command = new SendMessageCommand({
         QueueUrl: queueUrl,
