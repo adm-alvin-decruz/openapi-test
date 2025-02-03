@@ -18,3 +18,6 @@ USER_POOL_CLIENT_ID = "36kv68nfvaotpbgia2kdv5ddsj"
 
 #Galaxy
 GALAXY_URL = "https://uat-connect.mandaiapi.com"
+
+#Passkit
+PASSKIT_API_KEY = ""
