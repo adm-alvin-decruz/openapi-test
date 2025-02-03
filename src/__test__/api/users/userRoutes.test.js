@@ -30,6 +30,8 @@ jest.mock("../../../api/users/usersContollers", () => ({
   userValidateResetPassword: jest.fn(),
   userGetMembershipPasses: jest.fn(),
   userVerifyToken: jest.fn(),
+  userCreateMembershipPass: jest.fn(),
+  userUpdateMembershipPass: jest.fn(),
 }));
 
 describe("User Routes", () => {
@@ -229,11 +231,22 @@ describe("User Routes", () => {
     });
     it("should return 200 and logout successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest.spyOn(userCredentialModel, 'findByUserEmail').mockResolvedValue({
+      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
         tokens: {
-          idToken: "123"
-        }
-      })
+          idToken: "123",
+        },
+      });
+      mockVerifier.verify
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        })
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        });
       jest.spyOn(userController, "userLogout").mockResolvedValue({
         membership: {
           code: 200,
@@ -244,12 +257,14 @@ describe("User Routes", () => {
         status: "success",
         statusCode: 200,
       });
-      mockVerifier.verify.mockResolvedValue({
-        email: "test@gmail.com",
-        exp: 1736420606,
-      });
+
       const response = await request(app)
-        .delete("/users/sessions").set("Authorization", "123bvasde")
+        .delete("/users/sessions", {
+          headers: {
+            "mwg-app-id": "aem",
+          },
+        })
+        .set("authorization", "123asewe")
         .send({
           email: "test@gmail.com",
         });
@@ -795,6 +810,22 @@ describe("User Routes", () => {
     });
     it("should return error when service not pass", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
+        tokens: {
+          idToken: "123",
+        },
+      });
+      mockVerifier.verify
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        })
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        });
       jest.spyOn(userController, "userGetMembershipPasses").mockRejectedValue(
         new Error(
           JSON.stringify({
@@ -812,10 +843,10 @@ describe("User Routes", () => {
       const response = await request(app)
         .post("/users/membership-passes", {
           headers: {
-            "mwg-app-id": "",
+            "mwg-app-id": "aem",
           },
         })
-        .set("Authorization", "Bearer" + Math.random())
+        .set("authorization", "123123aaasdsd")
         .send({
           email: "test@gmail.com",
           visualId: "123",
@@ -834,6 +865,22 @@ describe("User Routes", () => {
     });
     it("should return 200 and my membership result", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
+      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
+        tokens: {
+          idToken: "123",
+        },
+      });
+      mockVerifier.verify
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        })
+        .mockResolvedValueOnce({
+          email: "test@gmail.com",
+          exp: 1736420606,
+          username: "test@gmail.com",
+        });
       jest.spyOn(userController, "userGetMembershipPasses").mockResolvedValue({
         membership: {
           code: 200,
@@ -853,8 +900,12 @@ describe("User Routes", () => {
         statusCode: 200,
       });
       const response = await request(app)
-        .post("/users/membership-passes")
-        .set("Authorization", "Bearer" + Math.random())
+        .post("/users/membership-passes", {
+          headers: {
+            "mwg-app-id": "aem",
+          },
+        })
+        .set("authorization", "123vwe123")
         .send({
           email: "test@gmail.com",
           visualId: "123",
@@ -977,7 +1028,7 @@ describe("User Routes", () => {
       });
       const response = await request(app)
         .post("/token/verify")
-        .set("Authorization", "Bearer" + Math.random())
+        .set("authorization", "abcde123")
         .send({
           email: "test@gmail.com",
         });
