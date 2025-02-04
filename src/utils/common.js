@@ -29,17 +29,14 @@ const getSource = (appId) => {
 const getGroup = (group) => {
   const groupMappings = {
     wildpass: "WP",
-    'membership-passes': "MP"
+    "membership-passes": "MP",
   };
 
   return groupMappings[group] ?? "";
 };
 
 const passwordPattern = (password) => {
-  const regexPasswordValid = new RegExp(
-    '^(?=.*[a-z])(?=.*[A-Z]).{8,}$',
-    "g"
-  );
+  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z]).{8,}$", "g");
   return regexPasswordValid.test(password.toString());
 };
 
@@ -63,7 +60,13 @@ const generateSaltHash = (keyword, saltKey, hashAlgorithm = "sha256") => {
 };
 
 const formatPhoneNumber = (phoneNumber) => {
-  return phoneNumber.trim().split(" ").join("")
+  return phoneNumber.trim().split(" ").join("");
+};
+
+const omit = (obj, excludeKeys) => {
+  return Object.fromEntries(
+    Object.entries(obj).filter((e) => !excludeKeys.includes(e[0]))
+  );
 };
 
 module.exports = {
@@ -74,5 +77,6 @@ module.exports = {
   generateSecretHash,
   generateRandomToken,
   generateSaltHash,
-  formatPhoneNumber
+  formatPhoneNumber,
+  omit,
 };

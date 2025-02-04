@@ -32,7 +32,7 @@ async function validateEmail(req, res, next) {
 
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(email))) {
-    loggerService.error(`Invalid email format ${email}`, req);
+    loggerService.error(`Invalid email format ${email}`, req.body);
     return resStatusFormatter(res, 400, msg);
   }
 
@@ -102,10 +102,10 @@ async function AccessTokenAuthGuard(req, res, next) {
         .json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
-    loggerService.error(
-      `ValidationMiddleware.AccessTokenAuthGuard Error - payload: ${req}:`,
-      error
-    );
+    loggerService.error(new Error(
+      `ValidationMiddleware.AccessTokenAuthGuard Error - payload: ${error}:`,
+      req.body
+    ));
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));

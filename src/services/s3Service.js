@@ -17,10 +17,11 @@ const uploadThumbnailToS3 = async (req) => {
       })
     );
 
-    console.log("Thumbnail uploaded to S3 successfully");
+    console.log("Thumbnail uploaded to S3 successfully", req.body);
   } catch (error) {
     loggerService.error(
-      `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`
+      `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`,
+      req.body
     );
     throw new Error(
       JSON.stringify({

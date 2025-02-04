@@ -16,7 +16,7 @@ class UserLoginService {
     try {
       return await cognitoService.cognitoUserLogin(req, hashSecret);
     } catch (error) {
-      loggerService.error(`Error UserLoginService.login. Error: ${error}`, req);
+      loggerService.error(`Error UserLoginService.login. Error: ${error}`, req.body);
       throw new Error(
         JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
       );
@@ -37,7 +37,7 @@ class UserLoginService {
     } catch (error) {
       loggerService.error(
         `Error UserLoginService.getUser. Error: ${error}`,
-        req
+        req.body
       );
       throw new Error(
         JSON.stringify(

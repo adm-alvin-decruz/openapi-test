@@ -18,6 +18,7 @@ const awsRegion = () => {
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const { omit } = require("../../utils/common");
 const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserMembershipPassService {
@@ -290,7 +291,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.saveUserMembershipPassToDB Error: ${error}`,
-        req
+        req.body
       );
       throw new Error(
         JSON.stringify(MembershipPassErrors.createMembershipPassError())
@@ -479,7 +480,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.updateUserMembershipPassToDB Error: ${error}`,
-        req
+        req.body
       );
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
@@ -533,7 +534,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.updateMembershipInCognito Error: ${error}`,
-        req
+        req.body
       );
       JSON.stringify(
         MembershipErrors.ciamMembershipUserNotFound(
@@ -549,7 +550,11 @@ class UserMembershipPassService {
       req["apiTimer"] = req.processTimer.apiRequestTimer();
       req.apiTimer.log("UserMembershipPassService.sendSQSMessage starts");
 
-      const data = { action: action, body: req.body };
+      const data = {
+        action: action,
+        body: omit(req.body, ["membershipPhoto"]),
+      };
+
       const queueUrl = process.env.SQS_QUEUE_URL;
       const command = new SendMessageCommand({
         QueueUrl: queueUrl,
@@ -562,7 +567,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.sendSQSMessage Error: ${error}`,
-        req
+        req.body
       );
       throw new Error(
         JSON.stringify(
