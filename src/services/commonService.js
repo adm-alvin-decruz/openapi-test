@@ -80,14 +80,14 @@ function valJsonObjOrArray(input, req) {
   try {
     // First check if input exists
     if (!input) {
-      loggerService.error(new Error('CommonService.valJsonObjOrArray Input is required'), req);
+      loggerService.error(new Error('CommonService.valJsonObjOrArray Input is required'), req.body);
       return false;
     }
 
     // Check if input is an array
     if (Array.isArray(input)) {
       if (input.length === 0) {
-        loggerService.error(new Error('CommonService.valJsonObjOrArray Array input cannot be empty'), req);
+        loggerService.error(new Error('CommonService.valJsonObjOrArray Array input cannot be empty'), req.body);
         return false
       }
 
@@ -105,7 +105,7 @@ function valJsonObjOrArray(input, req) {
     // Check if input is an object
     if (typeof input === 'object' && input !== null) {
       if (Object.keys(input).length === 0) {
-        loggerService.log(new Error('CommonService.valJsonObjOrArray Object input cannot be empty'), req);
+        loggerService.log(new Error('CommonService.valJsonObjOrArray Object input cannot be empty'), req.body);
         return false;
       }
 
@@ -113,7 +113,7 @@ function valJsonObjOrArray(input, req) {
       return true;
     }
 
-    loggerService.error(new Error('CommonService.valJsonObjOrArray Input must be either an array or an object'), req);
+    loggerService.error(new Error('CommonService.valJsonObjOrArray Input must be either an array or an object'), req.body);
 
   } catch (error) {
     loggerService.error('CommonService.valJsonObjOrArray Validation Error:', error);

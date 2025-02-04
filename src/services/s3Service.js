@@ -10,17 +10,18 @@ const uploadThumbnailToS3 = async (req) => {
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
+        Bucket: `mwg-passkit-sandbox`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
       })
     );
 
-    console.log("Thumbnail uploaded to S3 successfully");
+    console.log("Thumbnail uploaded to S3 successfully", req.body);
   } catch (error) {
     loggerService.error(
-      `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`
+      `userMembershipPassService.uploadThumbnailToS3 Error: ${error}`,
+      req.body
     );
     throw new Error(
       JSON.stringify({

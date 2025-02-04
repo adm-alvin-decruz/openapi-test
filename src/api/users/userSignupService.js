@@ -294,7 +294,7 @@ class UserSignupService {
     } catch (error) {
       loggerService.error(
         `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
-        req
+        req.body
       );
       const errorMessage = JSON.parse(error.message);
       if (

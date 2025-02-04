@@ -291,7 +291,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.saveUserMembershipPassToDB Error: ${error}`,
-        req
+        req.body
       );
       throw new Error(
         JSON.stringify(MembershipPassErrors.createMembershipPassError())
@@ -480,7 +480,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.updateUserMembershipPassToDB Error: ${error}`,
-        req
+        req.body
       );
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
@@ -534,7 +534,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.updateMembershipInCognito Error: ${error}`,
-        req
+        req.body
       );
       JSON.stringify(
         MembershipErrors.ciamMembershipUserNotFound(
@@ -567,7 +567,7 @@ class UserMembershipPassService {
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.sendSQSMessage Error: ${error}`,
-        req
+        req.body
       );
       throw new Error(
         JSON.stringify(
