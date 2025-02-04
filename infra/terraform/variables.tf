@@ -136,3 +136,7 @@ variable "SOURCE_DB_MAPPING" {
 variable "github_hash" {
   description = "goithub commit hash"
 }
+
+variable "PASSKIT_API_KEY" {
+  description = "PASSKIT API Key"
+}
