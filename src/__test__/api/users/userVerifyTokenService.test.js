@@ -82,7 +82,37 @@ describe("UserVerifyTokenService", () => {
         statusCode: 200,
       });
     });
-    it("should response accessToken status", async () => {
+    it("should response accessToken status based on email", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByAccessToken")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "email",
+              Value: "test@gmail.com",
+            },
+          ],
+        });
+      mockVerifier.verify.mockResolvedValue({
+        username: "test@gmail.com",
+        exp: 1736420606,
+      });
+      const rs = await UserVerifyTokenService.verifyToken("123", {
+        email: "test@gmail.com",
+      });
+      expect(mockVerifier.verify).toHaveBeenCalledWith("123");
+      expect(rs).toEqual({
+        token: {
+          code: 200,
+          valid: true,
+          expired_at: "2025-01-09 11:03:26",
+          email: "test@gmail.com",
+        },
+        status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should response accessToken status based on mandaiId", async () => {
       jest
           .spyOn(cognitoService, "cognitoAdminGetUserByAccessToken")
           .mockResolvedValue({
@@ -91,25 +121,57 @@ describe("UserVerifyTokenService", () => {
                 Name: "email",
                 Value: "test@gmail.com",
               },
+              {
+                Name: "custom:mandai_id",
+                Value: "123",
+              },
             ],
           });
       mockVerifier.verify.mockResolvedValue({
         username: "test@gmail.com",
         exp: 1736420606,
       });
-      const rs = await UserVerifyTokenService.verifyToken(
-          "123",
-          "test@gmail.com"
-      );
+      const rs = await UserVerifyTokenService.verifyToken("123", {
+        mandaiId: "123",
+      });
       expect(mockVerifier.verify).toHaveBeenCalledWith("123");
       expect(rs).toEqual({
         token: {
           code: 200,
           valid: true,
           expired_at: "2025-01-09 11:03:26",
-          email: 'test@gmail.com',
+          mandaiId: "123",
         },
         status: "success",
+        statusCode: 200,
+      });
+    });
+    it("should throw error when email and mandaiId is empty", async () => {
+      jest
+        .spyOn(cognitoService, "cognitoAdminGetUserByAccessToken")
+        .mockResolvedValue({
+          UserAttributes: [
+            {
+              Name: "email",
+              Value: "test@gmail.com",
+            },
+          ],
+        });
+      mockVerifier.verify.mockResolvedValue({
+        username: "test@gmail.com",
+        exp: 1736420606,
+      });
+      const rs = await UserVerifyTokenService.verifyToken("123", {
+        email: "",
+        mandaiId: "",
+      });
+      expect(rs).toEqual({
+        membership: {
+          code: 200,
+          valid: false,
+          expired_at: null,
+        },
+        status: "failed",
         statusCode: 200,
       });
     });

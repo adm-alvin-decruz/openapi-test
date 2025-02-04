@@ -541,9 +541,9 @@ async function userGetMembershipPasses(body) {
   }
 }
 
-async function userVerifyToken(accessToken, email, lang) {
+async function userVerifyToken(accessToken, body) {
   try {
-    return await userVerifyTokenService.verifyToken(accessToken, email, lang);
+    return await userVerifyTokenService.verifyToken(accessToken, body);
   } catch (error) {
     const errorMessage = error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
