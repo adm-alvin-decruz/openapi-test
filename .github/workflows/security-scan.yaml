@@ -92,7 +92,7 @@ jobs:
 
       - name: upload trivy repo vulnerability assessment report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-repo-vulnerability-assessment-report
           path: 'trivy-repo-scan-results.sarif'
@@ -135,7 +135,7 @@ jobs:
 
       - name: upload trivy iac config vulnerability assessment report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-iac-config-vulnerability-assessment-report
           path: 'trivy-config-scan-results.sarif'
