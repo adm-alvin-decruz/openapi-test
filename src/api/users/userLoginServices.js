@@ -5,6 +5,8 @@ const LoginErrors = require("../../config/https/errors/loginErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/common");
+const passwordService = require("./userPasswordService");
+const { passwordPattern } = require("../../utils/common");
 
 class UserLoginService {
   async login(req) {
@@ -13,10 +15,54 @@ class UserLoginService {
       process.env.USER_POOL_CLIENT_ID,
       process.env.USER_POOL_CLIENT_SECRET
     );
+    const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(
+      req.body.email
+    );
+    if (
+      userHasFirstLogin &&
+      userHasFirstLogin.username &&
+      (!userHasFirstLogin.password_hash || !userHasFirstLogin.password_salt)
+    ) {
+      throw new Error(
+        JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
+      );
+    }
+    const isMatchedPasswordForFirstLogin =
+      userHasFirstLogin &&
+      userHasFirstLogin.username &&
+      userHasFirstLogin.password_hash &&
+      userHasFirstLogin.password_salt
+        ? passwordService
+            .createPassword(req.body.password, userHasFirstLogin.password_salt)
+            .toUpperCase() === userHasFirstLogin.password_hash.toUpperCase()
+        : false;
+
+    if (isMatchedPasswordForFirstLogin && !passwordPattern(req.body.password)) {
+      throw new Error(
+        JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
+      );
+    }
     try {
-      return await cognitoService.cognitoUserLogin(req, hashSecret);
+      const loginRs = await cognitoService.cognitoUserLogin(
+        {
+          email: req.body.email,
+          password: isMatchedPasswordForFirstLogin
+            ? `${userHasFirstLogin.password_hash}${userHasFirstLogin.password_salt}`.trim()
+            : req.body.password,
+        },
+        hashSecret
+      );
+      isMatchedPasswordForFirstLogin &&
+        (await cognitoService.cognitoAdminSetUserPassword(
+          req.body.email,
+          req.body.password
+        ));
+      return loginRs;
     } catch (error) {
-      loggerService.error(`Error UserLoginService.login. Error: ${error}`, req.body);
+      loggerService.error(
+        `Error UserLoginService.login. Error: ${error}`,
+        req.body
+      );
       throw new Error(
         JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
       );
@@ -49,7 +95,10 @@ class UserLoginService {
 
   async updateUser(id, tokens) {
     try {
-      await userCredentialModel.updateTokens(id, tokens);
+      await userCredentialModel.updateByUserId(id, {
+        tokens: JSON.stringify(tokens),
+        last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
+      });
     } catch (error) {
       loggerService.error(
         `Error UserLoginService.updateUser. Error: ${error} - userId: ${id}`,

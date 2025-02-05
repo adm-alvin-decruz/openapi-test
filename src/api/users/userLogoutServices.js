@@ -36,7 +36,9 @@ class UserLogoutService {
 
     try {
       await cognitoService.cognitoUserLogout(userInfo.email);
-      await userCredentialModel.updateTokens(userInfo.userId, null);
+      await userCredentialModel.updateByUserId(userInfo.userId, {
+        tokens: null
+      });
       return {
         email: userInfo.email,
       };
