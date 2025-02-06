@@ -21,3 +21,4 @@ GALAXY_URL = "https://uat-connect.mandaiapi.com"
 
 #Passkit
 PASSKIT_API_KEY = ""
+EMAIL_SERVICE_API_KEY = ""

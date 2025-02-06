@@ -140,3 +140,7 @@ variable "github_hash" {
 variable "PASSKIT_API_KEY" {
   description = "PASSKIT API Key"
 }
+
+variable "EMAIL_SERVICE_API_KEY" {
+  description = "EMAIL SERVICE API KEY"
+}
