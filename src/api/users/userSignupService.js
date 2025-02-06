@@ -12,7 +12,6 @@ const userModel = require("../../db/models/userModel");
 const {
   getCurrentUTCTimestamp,
   convertDateToMySQLFormat,
-  currentDateAddHours,
 } = require("../../utils/dateUtils");
 const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/common");
@@ -81,23 +80,6 @@ class UserSignupService {
     return commonService.replaceSqlPlaceholders(sql, params);
   }
 
-  userMembershipModelExecution(membershipData) {
-    const sql = `
-      INSERT INTO user_memberships
-      (user_id, name, visual_id, expires_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    const params = [
-      membershipData.user_id,
-      membershipData.name,
-      membershipData.visual_id,
-      membershipData.expires_at,
-      getCurrentUTCTimestamp(),
-      getCurrentUTCTimestamp(),
-    ];
-    return commonService.replaceSqlPlaceholders(sql, params);
-  }
-
   userCredentialModelExecution(credentialData) {
     const sql = `
       INSERT INTO user_credentials
@@ -153,7 +135,7 @@ class UserSignupService {
     return commonService.replaceSqlPlaceholders(sql, params);
   }
 
-  importUserInformation(userDB, req, hashPassword, salt) {
+  importUserInformation(userDB, req, hashPassword, salt, phoneNumber) {
     return [
       req.body.newsletter && req.body.newsletter.name
         ? this.userNewsletterModelExecution({
@@ -171,7 +153,7 @@ class UserSignupService {
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
-        phone_number: req.body.phoneNumber ? req.body.phoneNumber : null,
+        phone_number: !!phoneNumber ? phoneNumber : null,
         zoneinfo: req.body.country ? req.body.country : null,
         address: req.body.address ? req.body.address : null,
         picture: req.body.picture ? req.body.picture : null,
@@ -182,15 +164,15 @@ class UserSignupService {
     ].filter((work) => !!work);
   }
 
-  async saveUserDB({ req, mandaiId, hashPassword, saltPassword }) {
+  async saveUserDB({ req, phoneNumber, mandaiId, hashPassword, saltPassword }) {
     const source = getSource(req.headers["mwg-app-id"]);
 
     let userDB = null;
     try {
       userDB = await userModel.create({
         email: req.body.email,
-        given_name: req.body.firstName || "",
-        family_name: req.body.lastName || "",
+        given_name: req.body.firstName ? req.body.firstName.trim() : "",
+        family_name: req.body.lastName ? req.body.lastName.trim() : "",
         birthdate: req.body.dob || null,
         mandai_id: mandaiId,
         source: source.sourceDB,
@@ -204,8 +186,8 @@ class UserSignupService {
         action: "failed",
         data: this.userModelExecution({
           email: req.body.email,
-          given_name: req.body.firstName || "",
-          family_name: req.body.lastName || "",
+          given_name: req.body.firstName ? req.body.firstName.trim() : "",
+          family_name: req.body.lastName ? req.body.lastName.trim() : "",
           birthdate: req.body.dob || null,
           mandai_id: mandaiId,
           source: source.sourceDB,
@@ -219,10 +201,21 @@ class UserSignupService {
     }
 
     if (userDB && userDB.user_id) {
-      !!req.body.migrations && await userMigrationsModel.updateMembershipUserAccounts(req.body.email, req.body.batchNo, userDB.user_id);
+      !!req.body.migrations &&
+        (await userMigrationsModel.updateMembershipUserAccounts(
+          req.body.email,
+          req.body.batchNo,
+          userDB.user_id
+        ));
       try {
         await pool.transaction(
-          this.importUserInformation(userDB, req, hashPassword, saltPassword)
+          this.importUserInformation(
+            userDB,
+            req,
+            hashPassword,
+            saltPassword,
+            phoneNumber
+          )
         );
       } catch (error) {
         await failedJobsModel.create({
@@ -273,7 +266,9 @@ class UserSignupService {
 
   async preparePassword(req) {
     if (!!req.body.migrations) {
-      const saltPassword = !!req.body.passwordSalt ? req.body.passwordSalt : passwordService.createSaltKey(5);
+      const saltPassword = !!req.body.passwordSalt
+        ? req.body.passwordSalt
+        : passwordService.createSaltKey(5);
       const passwordTemporary = crypto.randomUUID();
       const hashPassword = !!req.body.passwordHash
         ? req.body.passwordHash
@@ -293,7 +288,9 @@ class UserSignupService {
         },
       };
     }
-    const hashPassword = await passwordService.hashPassword(req.body.password.toString())
+    const hashPassword = await passwordService.hashPassword(
+      req.body.password.toString()
+    );
     return {
       db: {
         hashPassword: hashPassword,
@@ -328,8 +325,8 @@ class UserSignupService {
 
       await cognitoService.cognitoAdminCreateUser({
         email: req.body.email,
-        firstName: req.body.firstName || "",
-        lastName: req.body.lastName || "",
+        firstName: req.body.firstName ? req.body.firstName.trim() : "",
+        lastName: req.body.lastName ? req.body.lastName.trim() : "",
         birthdate: req.body.dob || "",
         address: req.body.address || "",
         phoneNumber: phoneNumber,
@@ -344,7 +341,7 @@ class UserSignupService {
       // set user password in cognito
       await cognitoService.cognitoAdminSetUserPassword(
         req.body.email,
-          passwordCredential.cognito.hashPassword
+        passwordCredential.cognito.hashPassword
       );
 
       // set user into cognito group
@@ -361,6 +358,7 @@ class UserSignupService {
 
       await this.saveUserDB({
         req,
+        phoneNumber,
         mandaiId,
         hashPassword: passwordCredential.db.hashPassword,
         saltPassword: passwordCredential.db.salt,
@@ -374,7 +372,8 @@ class UserSignupService {
         `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
         req.body
       );
-      const errorMessage = JSON.parse(error.message);
+      const errorMessage =
+        error && error.message ? JSON.parse(error.message) : "";
       if (
         errorMessage &&
         errorMessage.rawError &&
