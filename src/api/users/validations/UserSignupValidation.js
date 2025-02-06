@@ -9,13 +9,9 @@ class UserSignupValidation {
 
   static validateRequestMembershipPasses(req) {
     //validate missing required params
-    const requireParams = [
-      "email",
-      "firstName",
-      "lastName",
-      "password",
-      "confirmPassword",
-    ];
+    const requireParams = !!req.migrations
+      ? ["email", "firstName", "lastName"]
+      : ["email", "firstName", "lastName", "password", "confirmPassword"];
     const listKeys = Object.keys(req);
     const paramsMissing = requireParams.filter(
       (key) => !listKeys.includes(key)
@@ -27,16 +23,17 @@ class UserSignupValidation {
         req.language
       ));
     }
-
-    const paramsShouldNotEmpty = [
-      "email",
-      "firstName",
-      "lastName",
-      "country",
-      "phoneNumber",
-      "password",
-      "confirmPassword",
-    ];
+    const paramsShouldNotEmpty = !!req.migrations
+      ? ["email", "firstName", "lastName"]
+      : [
+          "email",
+          "firstName",
+          "lastName",
+          "country",
+          "phoneNumber",
+          "password",
+          "confirmPassword",
+        ];
     //if parameters have some empty string
     const paramsInvalid = paramsShouldNotEmpty
       .filter((key) => listKeys.includes(key))

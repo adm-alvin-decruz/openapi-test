@@ -53,6 +53,33 @@ class UserMigrationsModel {
     }
   }
 
+  static async updateMembershipUserAccounts(email, batchNo, userId) {
+    try{
+      const sql = `
+        UPDATE user_migrations
+        SET
+          signup = true, user_id = ?,
+          updated_at = NOW()
+        WHERE email = ? AND batch_no = FROM_UNIXTIME(?)
+      `;
+      const params = [
+        userId,
+        email,
+        batchNo
+      ];
+      const result = await pool.execute(sql, params);
+
+      console.log( {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.info
+      });
+
+      return result;
+    } catch (error) {
+      throw new Error (`UserMigrationModel: ${error}`);
+    }
+  }
+
   static async findByEmailAndBatch(email, batchNo) {
     const sql = `SELECT * FROM ${this.tableName} WHERE email = ? AND batch_no = DATE(?)`;
     const params = [email, batchNo];

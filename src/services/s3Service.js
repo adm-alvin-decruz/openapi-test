@@ -15,7 +15,7 @@ const uploadThumbnailToS3 = async (req) => {
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: `mwg-passkit-sandbox`,
+        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
@@ -40,7 +40,7 @@ const preSignedURLS3 = async (path) => {
   try {
     const s3Client = new S3Client({});
     const command = new GetObjectCommand({
-      Bucket: `mwg-passkit-sandbox`,
+      Bucket: `mwg-passkit-${process.env.APP_ENV}`,
       Key: path,
     });
     return await getSignedUrl(s3Client, command, {

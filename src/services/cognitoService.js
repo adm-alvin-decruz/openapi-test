@@ -14,7 +14,6 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
-const { messageLang, formatPhoneNumber} = require("../utils/common");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -44,15 +43,15 @@ class Cognito {
     return result;
   }
 
-  static async cognitoUserLogin(req, hashSecret) {
+  static async cognitoUserLogin({ email, password }, hashSecret) {
     const userLoginParams = new AdminInitiateAuthCommand({
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: process.env.USER_POOL_ID,
       ClientId: process.env.USER_POOL_CLIENT_ID,
       AuthParameters: {
         SECRET_HASH: hashSecret,
-        USERNAME: req.body.email,
-        PASSWORD: req.body.password,
+        USERNAME: email,
+        PASSWORD: password,
       },
     });
     try {
@@ -64,7 +63,8 @@ class Cognito {
       };
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoUserLogin Error: ${error} userEmail: ${req.body.email}`
+        `cognitoService.cognitoUserLogin Error: ${error} userEmail: ${email}`,
+        password
       );
       throw new Error(
         JSON.stringify({
@@ -182,14 +182,9 @@ class Cognito {
         { Name: "name", Value: `${firstName} ${lastName}` },
         { Name: "email", Value: email },
         { Name: "birthdate", Value: birthdate },
-        { Name: "address", Value: address ? address : "" },
-        { Name: "phone_number", Value: phoneNumber ? formatPhoneNumber(phoneNumber) : "" },
-        { Name: "zoneinfo", Value: country ? country : "" },
-        // custom fields
-        {
-          Name: "custom:membership",
-          Value: groups ? JSON.stringify(groups) : "null",
-        },
+        { Name: "address", Value: address },
+        { Name: "phone_number", Value: phoneNumber },
+        { Name: "zoneinfo", Value: country },
         { Name: "custom:mandai_id", Value: mandaiId },
         { Name: "custom:newsletter", Value: JSON.stringify(newsletter) },
         { Name: "custom:terms_conditions", Value: "null" },
@@ -213,7 +208,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
-          rawError: error.toString()
+          rawError: error.toString(),
         })
       );
     }
@@ -278,7 +273,7 @@ class Cognito {
         JSON.stringify({
           status: "failed",
           data: error,
-          rawError: error.toString()
+          rawError: error.toString(),
         })
       );
     }
