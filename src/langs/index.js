@@ -80,7 +80,8 @@ module.exports = {
     membership_pass_coMembers: "The co-members data is empty or invalid.",
     membership_pass_membershipPhoto: "The photo data is empty or invalid.",
     request_body_is_empty: "Request body is empty",
-    membership_pass_existed_error: "Membership pass exist"
+    membership_pass_existed_error: "Membership pass exist",
+    password_require_change: "Incorrect password or your password does not meet the security requirements. It must include at least one uppercase and one lowercase letter. Please try again or reset your password if needed."
   },
   zh: {
     signup_email: "此电子邮件地址已被用于 Mandai 帐户。",
@@ -155,7 +156,8 @@ module.exports = {
     membership_pass_coMembers: "共同会员数据为空或无效。",
     membership_pass_membershipPhoto: "照片数据为空或无效。",
     request_body_is_empty: "请求体为空",
-    membership_pass_existed_error: "会员通行证已存在"
+    membership_pass_existed_error: "会员通行证已存在",
+    password_require_change: "密码错误或不符合安全要求。必须包含至少一个大写字母和一个小写字母。请重试，或在需要时重置密码。"
   },
   kr: {
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
@@ -241,7 +243,8 @@ module.exports = {
     membership_pass_membershipPhoto:
       "사진 데이터가 비어 있거나 유효하지 않습니다.",
     request_body_is_empty: "요청 본문이 비어 있습니다",
-    membership_pass_existed_error: "멤버십 패스가 존재합니다"
+    membership_pass_existed_error: "멤버십 패스가 존재합니다",
+    password_require_change: "비밀번호가 틀렸거나 보안 요구 사항을 충족하지 않습니다. 대문자와 소문자를 각각 최소 하나 이상 포함해야 합니다. 다시 시도하거나 필요하면 비밀번호를 재설정하세요."
   },
   ja: {
     signup_email:
@@ -324,6 +327,7 @@ module.exports = {
     membership_pass_coMembers: "共同会員データが空または無効です。",
     membership_pass_membershipPhoto: "写真データが空または無効です。",
     request_body_is_empty: "リクエストボディが空です",
-    membership_pass_existed_error: "メンバーシップパスが存在します"
+    membership_pass_existed_error: "メンバーシップパスが存在します",
+    password_require_change: "パスワードが間違っているか、セキュリティ要件を満たしていません。少なくとも1つの大文字と1つの小文字を含める必要があります。もう一度お試しいただくか、必要に応じてパスワードをリセットしてください。"
   },
 };

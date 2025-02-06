@@ -46,51 +46,21 @@ class UserCredential {
     return rows;
   }
 
-  static async update(id, credentialData) {
-    const now = getCurrentUTCTimestamp();
-    const sql = `
-      UPDATE user_credentials
-      SET username = ?, password_hash = ?, tokens = ?, last_login = ?, updated_at = ?
-      WHERE id = ?
-    `;
-    const params = [
-      credentialData.username,
-      credentialData.password_hash,
-      JSON.stringify(credentialData.tokens),
-      credentialData.last_login,
-      now,
-      id,
-    ];
-    await pool.execute(sql, params);
-  }
+  static async findUserHasFirstLogin(email) {
+    try {
+      const sql = `SELECT uc.username, umua.password_hash, umua.password_salt
+                  FROM user_credentials uc
+                  INNER JOIN emp_membership_user_accounts umua ON umua.email = uc.username COLLATE utf8mb4_general_ci
+                  WHERE umua.picked = 1 AND uc.username = ? AND uc.last_login IS NULL AND uc.tokens IS NULL`;
 
-  static async updateTokens(id, credentialData) {
-    const now = getCurrentUTCTimestamp();
-    const sql = `
-      UPDATE user_credentials
-      SET tokens = ?, updated_at = ?, last_login = ?
-      WHERE user_id = ?
-    `;
-    const params = [
-      credentialData && credentialData.accessToken
-        ? JSON.stringify(credentialData)
-        : null,
-      now,
-      now,
-      id,
-    ];
-    await pool.execute(sql, params);
-  }
-
-  static async updatePassword(userId, password_hash) {
-    const now = getCurrentUTCTimestamp();
-    const sql = `
-      UPDATE user_credentials
-      SET password_hash = ?, updated_at = ?
-      WHERE user_id = ?
-    `;
-    const params = [password_hash, now, userId];
-    await pool.execute(sql, params);
+      const [rows] = await pool.query(sql, [email]);
+      return rows;
+    } catch (error) {
+      loggerService.error(
+        `Error userCredentialModel.findUserHasFirstLogin. Error: ${error} - userEmail: ${email}`
+      );
+      return error;
+    }
   }
 
   static async updateByUserEmail(username, data) {

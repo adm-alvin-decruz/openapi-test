@@ -104,6 +104,18 @@ class CommonErrors {
       statusCode: 400,
     };
   }
+
+  static PasswordRequireChange(lang) {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: "MWG_CIAM_REQUIRE_CHANGE_PASSWORD",
+        message: messageLang("password_require_change", lang),
+      },
+      status: "failed",
+      statusCode: 400,
+    };
+  }
 }
 
 module.exports = CommonErrors;

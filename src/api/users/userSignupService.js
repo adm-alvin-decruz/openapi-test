@@ -1,7 +1,11 @@
 const crypto = require("crypto");
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
-const { getSource, getGroup } = require("../../utils/common");
+const {
+  getSource,
+  getGroup,
+  formatPhoneNumber,
+} = require("../../utils/common");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
 const passwordService = require("./userPasswordService");
 const userModel = require("../../db/models/userModel");
@@ -13,7 +17,9 @@ const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/common");
 const commonService = require("../../services/commonService");
 const failedJobsModel = require("../../db/models/failedJobsModel");
+const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
+const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -74,35 +80,17 @@ class UserSignupService {
     return commonService.replaceSqlPlaceholders(sql, params);
   }
 
-  userMembershipModelExecution(membershipData) {
-    const sql = `
-      INSERT INTO user_memberships
-      (user_id, name, visual_id, expires_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    const params = [
-      membershipData.user_id,
-      membershipData.name,
-      membershipData.visual_id,
-      membershipData.expires_at,
-      getCurrentUTCTimestamp(),
-      getCurrentUTCTimestamp(),
-    ];
-    return commonService.replaceSqlPlaceholders(sql, params);
-  }
-
   userCredentialModelExecution(credentialData) {
     const sql = `
       INSERT INTO user_credentials
-      (user_id, username, password_hash, tokens, last_login, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (user_id, username, password_hash, salt, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
     const params = [
       credentialData.user_id,
       credentialData.username,
       credentialData.password_hash,
-      credentialData.tokens,
-      credentialData.last_login,
+      credentialData.salt,
       getCurrentUTCTimestamp(),
       getCurrentUTCTimestamp(),
     ];
@@ -147,7 +135,7 @@ class UserSignupService {
     return commonService.replaceSqlPlaceholders(sql, params);
   }
 
-  importUserInformation(userDB, req, hashPassword) {
+  importUserInformation(userDB, req, hashPassword, salt, phoneNumber) {
     return [
       req.body.newsletter && req.body.newsletter.name
         ? this.userNewsletterModelExecution({
@@ -161,12 +149,11 @@ class UserSignupService {
         user_id: userDB.user_id,
         username: req.body.email,
         password_hash: hashPassword,
-        tokens: null,
-        last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
+        salt: salt,
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
-        phone_number: req.body.phoneNumber ? req.body.phoneNumber : null,
+        phone_number: !!phoneNumber ? phoneNumber : null,
         zoneinfo: req.body.country ? req.body.country : null,
         address: req.body.address ? req.body.address : null,
         picture: req.body.picture ? req.body.picture : null,
@@ -177,16 +164,16 @@ class UserSignupService {
     ].filter((work) => !!work);
   }
 
-  async saveUserDB({ req, mandaiId, hashPassword }) {
+  async saveUserDB({ req, phoneNumber, mandaiId, hashPassword, saltPassword }) {
     const source = getSource(req.headers["mwg-app-id"]);
 
     let userDB = null;
     try {
       userDB = await userModel.create({
         email: req.body.email,
-        given_name: req.body.firstName,
-        family_name: req.body.lastName,
-        birthdate: req.body.dob,
+        given_name: req.body.firstName ? req.body.firstName.trim() : "",
+        family_name: req.body.lastName ? req.body.lastName.trim() : "",
+        birthdate: req.body.dob || null,
         mandai_id: mandaiId,
         source: source.sourceDB,
         active: true,
@@ -199,9 +186,9 @@ class UserSignupService {
         action: "failed",
         data: this.userModelExecution({
           email: req.body.email,
-          given_name: req.body.firstName,
-          family_name: req.body.lastName,
-          birthdate: req.body.dob,
+          given_name: req.body.firstName ? req.body.firstName.trim() : "",
+          family_name: req.body.lastName ? req.body.lastName.trim() : "",
+          birthdate: req.body.dob || null,
           mandai_id: mandaiId,
           source: source.sourceDB,
           active: true,
@@ -214,22 +201,106 @@ class UserSignupService {
     }
 
     if (userDB && userDB.user_id) {
+      !!req.body.migrations &&
+        (await userMigrationsModel.updateMembershipUserAccounts(
+          req.body.email,
+          req.body.batchNo,
+          userDB.user_id
+        ));
       try {
         await pool.transaction(
-          this.importUserInformation(userDB, req, hashPassword)
+          this.importUserInformation(
+            userDB,
+            req,
+            hashPassword,
+            saltPassword,
+            phoneNumber
+          )
         );
       } catch (error) {
         await failedJobsModel.create({
           uuid: crypto.randomUUID(),
           name: "failedCreateNewUserInformation",
           action: "failed",
-          data: this.importUserInformation(userDB, req, hashPassword).join("|"),
+          data: this.importUserInformation(
+            userDB,
+            req,
+            hashPassword,
+            saltPassword
+          ).join("|"),
           source: 2,
           triggered_at: null,
           status: 0,
         });
       }
     }
+  }
+
+  generateNewsletter(req) {
+    if (!!req.body.migrations && req.body.newsletter === 1) {
+      return {
+        name: "membership",
+        type: "1",
+        subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
+      };
+    }
+    return req.body && req.body.newsletter && req.body.newsletter.name
+      ? {
+          name: "membership",
+          type: "1",
+          subscribe: req.body.newsletter && !!req.body.newsletter.subscribe,
+        }
+      : null;
+  }
+
+  generatePhoneNumber(req) {
+    if (!!req.body.migrations && !!req.body.phoneNumber) {
+      return formatPhoneNumber(req.body.phoneNumber).startsWith("+")
+        ? formatPhoneNumber(req.body.phoneNumber)
+        : `+65${formatPhoneNumber(req.body.phoneNumber)}`;
+    }
+    return !!req.body.phoneNumber
+      ? formatPhoneNumber(req.body.phoneNumber)
+      : "";
+  }
+
+  async preparePassword(req) {
+    if (!!req.body.migrations) {
+      const saltPassword = !!req.body.passwordSalt
+        ? req.body.passwordSalt
+        : passwordService.createSaltKey(5);
+      const passwordTemporary = crypto.randomUUID();
+      const hashPassword = !!req.body.passwordHash
+        ? req.body.passwordHash
+        : passwordService.createPassword(passwordTemporary, saltPassword);
+
+      return {
+        db: {
+          hashPassword: hashPassword,
+          salt: saltPassword,
+        },
+        cognito: {
+          hashPassword:
+            !!req.body.passwordSalt && !!req.body.passwordHash
+              ? `${req.body.passwordHash}${req.body.passwordSalt}`.trim()
+              : `${hashPassword}CiAm`,
+          salt: null,
+        },
+      };
+    }
+    const hashPassword = await passwordService.hashPassword(
+      req.body.password.toString()
+    );
+    return {
+      db: {
+        hashPassword: hashPassword,
+        salt: null,
+      },
+      cognito: {
+        hashPassword: req.body.password,
+        salt: null,
+      },
+    };
   }
 
   async signup(req) {
@@ -242,50 +313,55 @@ class UserSignupService {
     }
     try {
       const mandaiId = this.generateMandaiId(req);
-      //hash password
-      const hashPassword = await passwordService.hashPassword(
-        req.body.password.toString()
-      );
+
+      //prepare password information dynamic by migrations flag
+      const passwordCredential = await this.preparePassword(req);
+
+      //generate newsletter dynamic by migrations flag
+      const newsletterMapping = this.generateNewsletter(req);
+
+      //generate phoneNumber dynamic by migrations flag
+      const phoneNumber = this.generatePhoneNumber(req);
 
       await cognitoService.cognitoAdminCreateUser({
         email: req.body.email,
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
-        birthdate: req.body.dob,
-        address: req.body.address,
-        phoneNumber: req.body.phoneNumber,
-        country: req.body.country,
-        /*
-        TODO: enhance add FO series later
-         */
-        groups: null,
+        firstName: req.body.firstName ? req.body.firstName.trim() : "",
+        lastName: req.body.lastName ? req.body.lastName.trim() : "",
+        birthdate: req.body.dob || "",
+        address: req.body.address || "",
+        phoneNumber: phoneNumber,
+        country: req.body.country || "",
         mandaiId: mandaiId,
-        newsletter:
-          req.body && req.body.newsletter && req.body.newsletter.name
-            ? {
-                name: "membership",
-                type: "1",
-                subscribe:
-                  req.body.newsletter && !!req.body.newsletter.subscribe,
-              }
-            : null,
+        newsletter: newsletterMapping,
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
           : "",
       });
+
+      // set user password in cognito
       await cognitoService.cognitoAdminSetUserPassword(
         req.body.email,
-        req.body.password
+        passwordCredential.cognito.hashPassword
       );
+
+      // set user into cognito group
       await cognitoService.cognitoAdminAddUserToGroup(
         req.body.email,
         req.body.group
       );
 
+      //update picked = 1 in emp_membership+user_accounts tbl
+      !!req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 1,
+        }));
+
       await this.saveUserDB({
         req,
+        phoneNumber,
         mandaiId,
-        hashPassword,
+        hashPassword: passwordCredential.db.hashPassword,
+        saltPassword: passwordCredential.db.salt,
       });
 
       return {
@@ -296,7 +372,8 @@ class UserSignupService {
         `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
         req.body
       );
-      const errorMessage = JSON.parse(error.message);
+      const errorMessage =
+        error && error.message ? JSON.parse(error.message) : "";
       if (
         errorMessage &&
         errorMessage.rawError &&

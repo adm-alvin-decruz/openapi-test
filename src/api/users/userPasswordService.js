@@ -106,6 +106,29 @@ class PasswordService {
       throw err;
     }
   }
+
+  static createHash(binaryKey, hashAlgorithm = 'sha1') {
+    if (!hashAlgorithm) hashAlgorithm = 'sha1';
+
+    // Verify the algorithm is supported
+    if (!crypto.getHashes().includes(hashAlgorithm.toLowerCase())) {
+      throw new Error(`Unrecognized hash name: ${hashAlgorithm}`);
+    }
+
+    // Compute the hash
+    const hash = crypto.createHash(hashAlgorithm);
+    return hash.update(binaryKey).digest('hex');
+  }
+
+  static createPassword(password, saltKey, passwordFormat = 'sha1') {
+    const keyword = Buffer.from(`${password}${saltKey}`.trim(), 'utf8');
+    return this.createHash(keyword, passwordFormat);
+  }
+
+  static createSaltKey(size) {
+    const buffer = crypto.randomBytes(size);
+    return buffer.toString('base64');
+  }
 }
 
 module.exports = PasswordService;
