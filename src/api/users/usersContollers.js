@@ -14,7 +14,6 @@ const loggerService = require("../../logs/logger");
 const responseHelper = require("../../helpers/responseHelpers");
 const processTimer = require("../../utils/processTimer");
 const dbService = require("./usersDBService");
-const appConfig = require("../../config/appConfig");
 const UserLoginJob = require("./userLoginJob");
 const UserLogoutJob = require("./userLogoutJob");
 const UserSignupJob = require("./userSignupJob");

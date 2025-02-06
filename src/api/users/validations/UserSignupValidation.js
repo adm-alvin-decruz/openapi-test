@@ -24,7 +24,7 @@ class UserSignupValidation {
       ));
     }
     const paramsShouldNotEmpty = !!req.migrations
-      ? ["email", "firstName", "lastName", "country", "phoneNumber"]
+      ? ["email", "firstName", "lastName"]
       : [
           "email",
           "firstName",
