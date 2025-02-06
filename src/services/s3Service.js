@@ -1,4 +1,9 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 require("dotenv").config();
 
 const loggerService = require("../logs/logger");
@@ -10,7 +15,7 @@ const uploadThumbnailToS3 = async (req) => {
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
+        Bucket: `mwg-passkit-sandbox`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
@@ -31,7 +36,30 @@ const uploadThumbnailToS3 = async (req) => {
     );
   }
 };
-
+const preSignedURLS3 = async (path) => {
+  try {
+    const s3Client = new S3Client({});
+    const command = new GetObjectCommand({
+      Bucket: `mwg-passkit-sandbox`,
+      Key: path,
+    });
+    return await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
+  } catch (error) {
+    loggerService.error(
+      `userMembershipPassService.preSignedURL Error: ${error}`,
+      path
+    );
+    throw new Error(
+      JSON.stringify({
+        status: "failed",
+        isFrom: "s3",
+      })
+    );
+  }
+};
 module.exports = {
   uploadThumbnailToS3,
+  preSignedURLS3,
 };

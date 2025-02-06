@@ -5,7 +5,7 @@ const userModel = require("../../db/models/userModel");
 const userMembershipModel = require("../../db/models/userMembershipModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const loggerService = require("../../logs/logger");
-const { uploadThumbnailToS3 } = require("../../services/s3Service");
+const { uploadThumbnailToS3, preSignedURLS3 } = require("../../services/s3Service");
 const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
 
 const awsRegion = () => {
@@ -58,7 +58,10 @@ class UserMembershipPassService {
       }
 
       // store pass data in db
-      await this.saveUserMembershipPassToDB(user.id, req);
+      const createMembershipRs = await this.saveUserMembershipPassToDB(
+        user.id,
+        req
+      );
 
       // update user's cognito memberships info
       await this.updateMembershipInCognito(req);
@@ -66,6 +69,12 @@ class UserMembershipPassService {
       // upload member photo to S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         await uploadThumbnailToS3(req);
+        await userMembershipDetailsModel.updateByMembershipId(
+          createMembershipRs.membershipId,
+          {
+            membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
+          }
+        );
       }
 
       if (
@@ -92,7 +101,7 @@ class UserMembershipPassService {
   async update(req) {
     try {
       // update pass data in db
-      await this.updateUserMembershipPassToDB(req);
+      const updateMembershipRs = await this.updateUserMembershipPassToDB(req);
 
       // update pass expiry in cognito (if present in request)
       await this.updateMembershipInCognito(req);
@@ -100,6 +109,12 @@ class UserMembershipPassService {
       // update member photo in S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         await uploadThumbnailToS3(req);
+        await userMembershipDetailsModel.updateByMembershipId(
+          updateMembershipRs.membershipId,
+          {
+            membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
+          }
+        );
       }
 
       // send message to SQS to re-generate passkit
@@ -155,7 +170,7 @@ class UserMembershipPassService {
       parking,
       iu,
       carPlate,
-      membershipPhotoBytes,
+      membershipPhoto,
       firstName,
       lastName,
       email,
@@ -180,7 +195,7 @@ class UserMembershipPassService {
         parking: parking,
         iu: iu,
         car_plate: carPlate,
-        membership_photo: membershipPhotoBytes,
+        membership_photo: membershipPhoto,
         member_first_name: firstName,
         member_last_name: lastName,
         member_email: email,
@@ -206,7 +221,7 @@ class UserMembershipPassService {
           parking: parking,
           iu: iu,
           car_plate: carPlate,
-          membership_photo: membershipPhotoBytes,
+          membership_photo: membershipPhoto,
           member_first_name: firstName,
           member_last_name: lastName,
           member_email: email,
@@ -247,10 +262,7 @@ class UserMembershipPassService {
             parking: req.body.parking === "yes" ? 1 : 0,
             iu: req.body.iu || null,
             carPlate: req.body.carPlate || null,
-            membershipPhotoBytes:
-              !!req.body.membershipPhoto && !!req.body.membershipPhoto.bytes
-                ? req.body.membershipPhoto.bytes
-                : null,
+            membershipPhoto: null,
             firstName:
               !!req.body.member && !!req.body.member.firstName
                 ? req.body.member.firstName
@@ -288,6 +300,9 @@ class UserMembershipPassService {
           }
         ));
       console.log("Successfully saved user membership pass details to DB");
+      return {
+        membershipId: userMembership.membership_id,
+      };
     } catch (error) {
       loggerService.error(
         `userMembershipPassService.saveUserMembershipPassToDB Error: ${error}`,
@@ -381,10 +396,7 @@ class UserMembershipPassService {
                 : undefined,
               iu: req.body.iu || undefined,
               car_plate: req.body.carPlate || undefined,
-              membership_photo:
-                !!req.body.membershipPhoto && req.body.membershipPhoto.bytes
-                  ? req.body.membershipPhoto.bytes
-                  : undefined,
+              membership_photo: undefined,
               member_first_name:
                 !!req.body.member && !!req.body.member.firstName
                   ? req.body.member.firstName
@@ -431,10 +443,7 @@ class UserMembershipPassService {
               parking: req.body.parking === "yes" ? 1 : 0,
               iu: req.body.iu || null,
               carPlate: req.body.carPlate || null,
-              membershipPhotoBytes:
-                !!req.body.membershipPhoto && !!req.body.membershipPhoto.bytes
-                  ? req.body.membershipPhoto.bytes
-                  : null,
+              membershipPhoto: null,
               firstName:
                 !!req.body.member && !!req.body.member.firstName
                   ? req.body.member.firstName
@@ -475,7 +484,7 @@ class UserMembershipPassService {
       }
       console.log("Successfully updated user membership pass details in DB");
       return {
-        dbProceed: "success",
+        membershipId: userMembership.membershipId,
       };
     } catch (error) {
       loggerService.error(
