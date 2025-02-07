@@ -46,7 +46,7 @@ CREATE TABLE emp_membership_user_passes (
     member_dob DATETIME NULL,
     member_identification_no VARCHAR(10) NULL,
     member_phone_number VARCHAR(256) NULL,
-    picked BOOLEAN NULL COMMENT '0: no, 1: yes',
+    picked TINYINT(4) NULL COMMENT '0: no, 1: yes, 2: failed, 3: existed',
     created_at DATETIME NULL,
     updated_at DATETIME NULL,
 

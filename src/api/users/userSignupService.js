@@ -254,6 +254,13 @@ class UserSignupService {
   }
 
   generatePhoneNumber(req) {
+    if (
+      req.body.phoneNumber === "0" ||
+      req.body.phoneNumber === "null" ||
+      req.body.phoneNumber === "undefined"
+    ) {
+      return "";
+    }
     if (!!req.body.migrations && !!req.body.phoneNumber) {
       return formatPhoneNumber(req.body.phoneNumber).startsWith("+")
         ? formatPhoneNumber(req.body.phoneNumber)
@@ -307,6 +314,9 @@ class UserSignupService {
     //check user exists
     const isUserExisted = await this.isUserExistedInCognito(req.body.email);
     if (isUserExisted) {
+      req.body.migrations && await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+        picked: 3
+      });
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
@@ -372,6 +382,9 @@ class UserSignupService {
         `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
         req.body
       );
+      req.body.migrations && await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+        picked: 2
+      });
       const errorMessage =
         error && error.message ? JSON.parse(error.message) : "";
       if (
