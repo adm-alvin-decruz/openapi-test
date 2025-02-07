@@ -122,6 +122,9 @@ jobs:
           # // run phase2 migration accounts data
           echo "running ciam-phase2-migrations-accounts-data-uat-20250205.sql script"
           mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-phase2-migrations-accounts-data-uat-20250205.sql
+          # // create passkit generator tables for apple web service
+          echo "running passkit-generator-tables-20250207.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/passkit-generator-tables-20250207.sql
 
       - name: Verify Deployment
         run: echo "Run Query to verify db update/rollback  of database/table is successful"
