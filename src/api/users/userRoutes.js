@@ -19,6 +19,7 @@ const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/common");
+const loggerService = require("../../logs/logger");
 
 const pong = { pong: "pang" };
 
@@ -61,6 +62,9 @@ router.post("/users", isEmptyRequest, validateEmail, async (req, res) => {
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
       req.apiTimer.end("Route CIAM Signup New User Error", startTimer);
+      console.error("[CIAM-MAIN] Route CIAM Signup New User Error", req.body);
+      loggerService.error(new Error(`Route CIAM Signup New User Error ${error}`), req, "CIAM signup");
+
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
