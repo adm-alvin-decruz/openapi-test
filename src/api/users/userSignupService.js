@@ -20,15 +20,12 @@ const failedJobsModel = require("../../db/models/failedJobsModel");
 const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
+const { GROUP } = require("../../utils/constants");
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
     try {
-      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-        email
-      );
-
-      return getOrCheck(userCognito, "custom:mandai_id");
+      return await cognitoService.cognitoAdminGetUserByEmail(email);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
       const errorData =
@@ -311,21 +308,71 @@ class UserSignupService {
   }
 
   async signup(req) {
+    //prepare password information dynamic by migrations flag
+    const passwordCredential = await this.preparePassword(req);
+
     //check user exists
-    const isUserExisted = await this.isUserExistedInCognito(req.body.email);
-    if (isUserExisted) {
-      req.body.migrations && await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
-        picked: 3
-      });
+    const userExistedInCognito = await this.isUserExistedInCognito(
+      req.body.email
+    );
+    if (
+      userExistedInCognito &&
+      getOrCheck(userExistedInCognito, "custom:mandai_id")
+    ) {
+      //check is user email existed at wildpass group
+      const userGroupsAtCognito =
+        await cognitoService.cognitoAdminListGroupsForUser(req.body.email);
+      const groups =
+        userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
+          ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
+          : [];
+      if (
+        groups.includes(GROUP.WILD_PASS) &&
+        !groups.includes(GROUP.MEMBERSHIP_PASSES)
+      ) {
+        // set user password in cognito
+        try {
+          await cognitoService.cognitoAdminSetUserPassword(
+            req.body.email,
+            passwordCredential.cognito.hashPassword
+          );
+          !!req.body.migrations &&
+            (await empMembershipUserAccountsModel.updateByEmail(
+              req.body.email,
+              {
+                picked: 1,
+              }
+            ));
+          return {
+            mandaiId: getOrCheck(userExistedInCognito, "custom:mandai_id"),
+          };
+        } catch (error) {
+          loggerService.error(
+            `userSignupService.signup with user existed in group WILDPASS Error: ${error} - userEmail: ${req.body.email}`,
+            req.body
+          );
+          req.body.migrations &&
+            (await empMembershipUserAccountsModel.updateByEmail(
+              req.body.email,
+              {
+                picked: 3,
+              }
+            ));
+          throw new Error(
+            JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
+          );
+        }
+      }
+      req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 3,
+        }));
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
     }
     try {
       const mandaiId = this.generateMandaiId(req);
-
-      //prepare password information dynamic by migrations flag
-      const passwordCredential = await this.preparePassword(req);
 
       //generate newsletter dynamic by migrations flag
       const newsletterMapping = this.generateNewsletter(req);
@@ -382,9 +429,10 @@ class UserSignupService {
         `userSignupService.signup Error: ${error} - userEmail: ${req.body.email}`,
         req.body
       );
-      req.body.migrations && await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
-        picked: 2
-      });
+      req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 2,
+        }));
       const errorMessage =
         error && error.message ? JSON.parse(error.message) : "";
       if (
