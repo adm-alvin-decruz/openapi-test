@@ -63,7 +63,7 @@ const appConfig = {
   //AEM Callback URL
   AEM_CALLBACK_URL_DEV: 'https://dev-members.mandai.com',
   AEM_CALLBACK_URL_UAT: 'https://uat-members.mandai.com',
-  AEM_CALLBACK_URL_PROD: 'https://www.mandai.com',
+  AEM_CALLBACK_URL_PROD: 'https://members.mandai.com',
   AEM_CALLBACK_PATH: '/bin/wrs/ciam/auth/callback',
 };
 
