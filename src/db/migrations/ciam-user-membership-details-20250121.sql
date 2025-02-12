@@ -30,4 +30,4 @@ CREATE TABLE `user_membership_details` (
   KEY `idx_member_email` (`member_email`),
   CONSTRAINT `fk_membership_id` FOREIGN KEY (`user_membership_id`) REFERENCES `user_memberships` (`id`),
   CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
