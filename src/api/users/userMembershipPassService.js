@@ -132,8 +132,8 @@ class UserMembershipPassService {
             req.body.email,
             req.body.batchNo,
             {
-              pass_request: true,
-              co_member_request: true,
+              pass_request: 1,
+              co_member_request: 1,
             }
           ));
         await this.sendSQSMessage(
