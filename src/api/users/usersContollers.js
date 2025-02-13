@@ -556,7 +556,6 @@ async function userCreateMembershipPass(req, res) {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
-
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {

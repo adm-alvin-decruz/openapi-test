@@ -7,16 +7,26 @@ class UserMembershipPassValidation {
   }
 
   static validateCreateUserMembershipPass(req) {
-    const requiredParams = [
-      "email",
-      "mandaiId",
-      "group",
-      "passType",
-      "visualId",
-      "categoryType",
-      "adultQty",
-      "childQty",
-    ];
+    const requiredParams = req.body && req.body.migrations
+      ? [
+          "email",
+          "group",
+          "passType",
+          "visualId",
+          "categoryType",
+          "adultQty",
+          "childQty",
+        ]
+      : [
+          "email",
+          "mandaiId",
+          "group",
+          "passType",
+          "visualId",
+          "categoryType",
+          "adultQty",
+          "childQty",
+        ];
 
     const requestParams = Object.keys(req.body);
     const missingParams = requiredParams.filter(
