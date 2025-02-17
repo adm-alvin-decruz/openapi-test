@@ -29,7 +29,7 @@ CREATE TABLE `emp_membership_user_passes` (
   `customer_id` int DEFAULT NULL,
   `pass_type` varchar(12) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'FOM,FOBP...',
   `visual_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `pass_no` int DEFAULT NULL,
+  `picture_id` int DEFAULT NULL,
   `category_type` varchar(128) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `item_name` varchar(128) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `adult_qty` tinyint(1) DEFAULT NULL,

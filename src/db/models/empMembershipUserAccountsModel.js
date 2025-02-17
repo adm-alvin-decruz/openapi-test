@@ -40,8 +40,14 @@ class EmpMembershipUserAccountsModel {
       };
     } catch (error) {
       loggerService.error(
-        `Error EmpMembershipUserAccountsModel.updateByEmail Error: ${error} - userEmail: ${email}`,
-        data
+          {
+            EmpMembershipUserAccountsModel: {
+              error: JSON.stringify(error),
+              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            },
+          },
+          {},
+          "EmpMembershipUserPassesModel.updateByEmail"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

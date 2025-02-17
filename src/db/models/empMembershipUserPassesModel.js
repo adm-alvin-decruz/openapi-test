@@ -1,6 +1,6 @@
-const pool = require('../connections/mysqlConn');
-const commonService = require('../../services/commonService');
-const {getCurrentUTCTimestamp} = require("../../utils/dateUtils");
+const pool = require("../connections/mysqlConn");
+const commonService = require("../../services/commonService");
+const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/common");
 
@@ -10,8 +10,8 @@ class EmpMembershipUserPassesModel {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push("updated_at = ?");
@@ -40,8 +40,14 @@ class EmpMembershipUserPassesModel {
       };
     } catch (error) {
       loggerService.error(
-          `Error EmpMembershipUserPassesModel.updateByEmail Error: ${error} - userEmail: ${email}`,
-          data
+        {
+          EmpMembershipUserPassesModel: {
+            error: JSON.stringify(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        "EmpMembershipUserPassesModel.updateByEmail"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

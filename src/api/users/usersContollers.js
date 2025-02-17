@@ -532,7 +532,8 @@ async function userGetMembershipPasses(body) {
   try {
     return await UserGetMembershipPassesJob.perform(body);
   } catch (error) {
-    const errorMessage = error && error.message ? JSON.parse(error.message) : '';
+    const errorMessage =
+      error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
@@ -544,7 +545,8 @@ async function userVerifyToken(accessToken, body) {
   try {
     return await userVerifyTokenService.verifyToken(accessToken, body);
   } catch (error) {
-    const errorMessage = error && error.message ? JSON.parse(error.message) : "";
+    const errorMessage =
+      error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
@@ -556,6 +558,18 @@ async function userCreateMembershipPass(req, res) {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
+  loggerService.log(
+    {
+      user: {
+        membership: req.body.group,
+        action: "userCreateMembershipPass",
+        api_header: req.headers,
+        api_body: req.body,
+        layer: "controller",
+      },
+    },
+    "userCreateMembershipPass Start Request"
+  );
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
@@ -571,13 +585,54 @@ async function userCreateMembershipPass(req, res) {
   const message =
     UserMembershipPassValidation.validateCreateUserMembershipPass(req);
   if (!!message) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userCreateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: message,
+        },
+      },
+      {},
+      "userCreateMembershipPass End Request"
+    );
     return res.status(400).json(message);
   }
 
   try {
     const data = await userCreateMembershipPassJob.perform(req);
+    loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userCreateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: data,
+        },
+      },
+      "userCreateMembershipPass End Request - Success"
+    );
     return res.status(data.statusCode).json(data);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userCreateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: JSON.stringify(error),
+        },
+      },
+      {},
+      "userCreateMembershipPass End Request"
+    );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);
   }
@@ -588,6 +643,18 @@ async function userUpdateMembershipPass(req, res) {
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
+  loggerService.log(
+    {
+      user: {
+        membership: req.body.group,
+        action: "userUpdateMembershipPass",
+        api_header: req.headers,
+        api_body: req.body,
+        layer: "controller",
+      },
+    },
+    "userUpdateMembershipPass Start Request"
+  );
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
@@ -603,13 +670,54 @@ async function userUpdateMembershipPass(req, res) {
   const message =
     UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
   if (!!message) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userUpdateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: message,
+        },
+      },
+      {},
+      "userUpdateMembershipPass End Request"
+    );
     return res.status(400).json(message);
   }
 
   try {
     const data = await userUpdateMembershipPassJob.perform(req);
+    loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userUpdateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: data,
+        },
+      },
+      "userUpdateMembershipPass End Request - Success"
+    );
     return res.status(data.statusCode).json(data);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "userUpdateMembershipPass",
+          layer: "controller",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: JSON.stringify(error),
+        },
+      },
+      {},
+      "userCreateMembershipPass End Request"
+    );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);
   }
