@@ -565,7 +565,7 @@ async function userCreateMembershipPass(req, res) {
         action: "userCreateMembershipPass",
         api_header: req.headers,
         api_body: req.body,
-        layer: "controller",
+        layer: "controller.userCreateMembershipPass",
       },
     },
     "userCreateMembershipPass Start Request"
@@ -590,7 +590,7 @@ async function userCreateMembershipPass(req, res) {
         user: {
           membership: req.body.group,
           action: "userCreateMembershipPass",
-          layer: "controller",
+          layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
           response_to_client: message,
@@ -609,7 +609,7 @@ async function userCreateMembershipPass(req, res) {
         user: {
           membership: req.body.group,
           action: "userCreateMembershipPass",
-          layer: "controller",
+          layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
           response_to_client: data,
@@ -620,18 +620,18 @@ async function userCreateMembershipPass(req, res) {
     return res.status(data.statusCode).json(data);
   } catch (error) {
     loggerService.error(
-      {
-        user: {
-          membership: req.body.group,
-          action: "userCreateMembershipPass",
-          layer: "controller",
-          api_header: req.headers,
-          api_body: req.body,
-          response_to_client: JSON.stringify(error),
+        {
+          user: {
+            membership: req.body.group,
+            action: "userCreateMembershipPass",
+            layer: "controller.userCreateMembershipPass",
+            api_header: req.headers,
+            api_body: req.body,
+            response_to_client: error,
+          },
         },
-      },
-      {},
-      "userCreateMembershipPass End Request"
+        {},
+        "userCreateMembershipPass End Request"
     );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);
@@ -650,7 +650,7 @@ async function userUpdateMembershipPass(req, res) {
         action: "userUpdateMembershipPass",
         api_header: req.headers,
         api_body: req.body,
-        layer: "controller",
+        layer: "controller.userUpdateMembershipPass",
       },
     },
     "userUpdateMembershipPass Start Request"
@@ -675,7 +675,7 @@ async function userUpdateMembershipPass(req, res) {
         user: {
           membership: req.body.group,
           action: "userUpdateMembershipPass",
-          layer: "controller",
+          layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
           response_to_client: message,
@@ -694,7 +694,7 @@ async function userUpdateMembershipPass(req, res) {
         user: {
           membership: req.body.group,
           action: "userUpdateMembershipPass",
-          layer: "controller",
+          layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
           response_to_client: data,
@@ -709,14 +709,14 @@ async function userUpdateMembershipPass(req, res) {
         user: {
           membership: req.body.group,
           action: "userUpdateMembershipPass",
-          layer: "controller",
+          layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: JSON.stringify(error),
+          response_to_client: error,
         },
       },
       {},
-      "userCreateMembershipPass End Request"
+      "userUpdateMembershipPass End Request"
     );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);

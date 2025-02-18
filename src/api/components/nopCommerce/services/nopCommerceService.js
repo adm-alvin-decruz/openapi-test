@@ -3,7 +3,8 @@ const appConfig = require("../../../../config/appConfig");
 const ApiUtils = require("../../../../utils/apiUtils");
 const axios = require("axios");
 const loggerService = require("../../../../logs/logger");
-const userMembershipModel = require("../../../../db/models/appTokenModel");
+const appTokenModel = require("../../../../db/models/appTokenModel");
+const { maskKeyRandomly } = require("../../../../utils/common");
 
 const nopCommerceAccessTokenUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
@@ -13,15 +14,36 @@ const nopCommerceGetMembershipUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
 }${appConfig.NOP_COMMERCE_GET_MEMBERSHIP_PATH}`;
 
+//custom axios for workable with parse image stream
+async function callingNopCommerce(token, pictureId) {
+  return await axios.post(
+    nopCommerceGetMembershipUrl,
+    {
+      token,
+      storeId: 1,
+      pictureId,
+    },
+    {
+      responseType: "arraybuffer", // Get raw image buffer
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+}
+
 /**
  * handle retrieve membership photo
  * @param pictureId
  * @return {Promise<string>}
  */
 async function retrieveMembershipPhoto(pictureId) {
-  const accessToken = await getAccessToken();
-  if (!accessToken) {
-    return undefined;
+  const appToken = await appTokenModel.getLatestToken("nopCommerce");
+  let tokenNopCommerce = "";
+  if (appToken && appToken.token && appToken.token.accessToken) {
+    tokenNopCommerce = appToken.token.accessToken;
+  } else {
+    tokenNopCommerce = await getAccessToken();
   }
   try {
     loggerService.log(
@@ -30,7 +52,7 @@ async function retrieveMembershipPhoto(pictureId) {
           path: nopCommerceGetMembershipUrl,
           layer: "nopCommerceService.retrieveMembershipPhoto",
           data: {
-            token: accessToken,
+            token: maskKeyRandomly(tokenNopCommerce),
             storeId: 1,
             pictureId: pictureId,
           },
@@ -44,29 +66,30 @@ async function retrieveMembershipPhoto(pictureId) {
       },
       "Start retrieveMembershipPhoto"
     );
-    //custom axios for workable with parse image stream
-    const response = await axios.post(
-      nopCommerceGetMembershipUrl,
-      {
-        token: accessToken,
-        storeId: 1,
-        pictureId: pictureId,
-      },
-      {
-        responseType: "arraybuffer", // Get raw image buffer
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
 
-    if (!response || !response.data) {
+    let response = await callingNopCommerce(tokenNopCommerce, pictureId);
+
+    //retry 1 time  for get new access token in case token expire
+    if (
+      !response ||
+      !response.data ||
+      !Buffer.from(response.data).toString("base64")
+    ) {
+      tokenNopCommerce = await getAccessToken();
+      response = await callingNopCommerce(tokenNopCommerce, pictureId);
+    }
+
+    if (
+      !response ||
+      !response.data ||
+      !Buffer.from(response.data).toString("base64")
+    ) {
       loggerService.error(
         {
           nopCommerceService: {
             layer: "nopCommerceService.retrieveMembershipPhoto",
             data: {
-              token: accessToken,
+              token: maskKeyRandomly(tokenNopCommerce),
               storeId: 1,
               pictureId: pictureId,
             },
@@ -112,7 +135,7 @@ async function retrieveMembershipPhoto(pictureId) {
           path: nopCommerceGetMembershipUrl,
           layer: "nopCommerceService.retrieveMembershipPhoto",
           data: {
-            token: accessToken || undefined,
+            token: maskKeyRandomly(tokenNopCommerce) || undefined,
             storeId: 1,
             pictureId: pictureId,
           },
@@ -128,22 +151,24 @@ async function retrieveMembershipPhoto(pictureId) {
 }
 
 async function getAccessToken() {
+  const appToken = await appTokenModel.getLatestToken("nopCommerce");
+  if (
+    !appToken ||
+    !appToken.credentials ||
+    !appToken.credentials.client_secret
+  ) {
+    return undefined;
+  }
   try {
-    const appToken = await userMembershipModel.getLatestToken("nopCommerce");
-    if (
-      !appToken ||
-      !appToken.credentials ||
-      !appToken.credentials.client_secret
-    ) {
-      return undefined;
-    }
     loggerService.log(
       {
         nopCommerceService: {
           path: nopCommerceAccessTokenUrl,
           layer: "nopCommerceService.getAccessToken",
           data: {
-            membershipSecretKey: appToken.credentials.client_secret,
+            membershipSecretKey: maskKeyRandomly(
+              appToken.credentials.client_secret
+            ),
             storeId: appToken.configuration.storeId,
           },
         },
@@ -162,12 +187,16 @@ async function getAccessToken() {
         storeId: appToken.configuration.storeId,
       }
     );
+
+    await appTokenModel.updateTokenByClient("nopCommerce", {
+      accessToken: response.GenerateMembershipTokenResult.Message,
+    });
+
     loggerService.log(
       {
         nopCommerceService: {
           path: nopCommerceAccessTokenUrl,
           layer: "nopCommerceService.getAccessToken",
-          data: response,
         },
       },
       "End getAccessToken from NopCommerce - Success"
@@ -180,7 +209,9 @@ async function getAccessToken() {
           path: nopCommerceAccessTokenUrl,
           layer: "nopCommerceService.getAccessToken",
           data: {
-            membershipSecretKey: "fa7xt2ak1g7i1cb1r7h118j114gf9",
+            membershipSecretKey: maskKeyRandomly(
+              appToken.credentials.client_secret
+            ),
             storeId: 1,
           },
           error: JSON.stringify(error),

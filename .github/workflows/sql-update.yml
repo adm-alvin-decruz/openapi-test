@@ -129,6 +129,10 @@ jobs:
           # // create config table 20250212-ciam-config-table.sql
           echo "running 20250212-ciam-config-table.sql script"
           mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/20250212-ciam-config-table.sql.sql
+          
+          # // migrate data nopCommerce for table ciam-phase2-migrations-app-tokens-data-20250218.sql
+          echo "running ciam-phase2-migrations-app-tokens-data-20250218.sql script"
+          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-phase2-migrations-app-tokens-data-20250218.sql
 
       - name: Verify Deployment
         run: echo "Run Query to verify db update/rollback  of database/table is successful"
