@@ -1,21 +1,22 @@
 name: sql-update-action
 run-name: ${{ github.event.inputs.sql-environment }} Sql Update. Job ${{ github.job }} started by ${{ github.actor }}
-
 on:
   workflow_dispatch:
     inputs:
       sql-environment:
         type: environment
         description: Select the environment
-
+      sql-script-path:
+        description: "Full absolute path to SQL script"
+        required: true
+        type: string
 jobs:
-  sql-backup:
+  sql-update-with-backup:
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
     steps:
       - name: checkout Repo
         uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -25,106 +26,81 @@ jobs:
           role-to-assume: ${{ secrets.role_arn }}
           role-external-id: ${{ secrets.external_id }}
           role-skip-session-tagging: true
-
-      - name: Get Timestamp
-        env:
-          TZ: Asia/Singapore
-        run: echo "TIMESTAMP=$(date +%d%m%y-%H%M%S)" >> $GITHUB_ENV
-
-      - name: Create Backup
+      - name: Set Dynamic Database Env Variables
+        id: set-db-env
         run: |
+          # Retrieve RDS Cluster information
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          
+          # Set Values as environment variables
+          {
+            echo "DB_SERVER_ENDPOINT=$DB_SERVER_ENDPOINT"
+            echo "DB_USERNAME=$DB_USERNAME"
+            echo "DB_PASSWORD=$DB_PASSWORD"
+          } >> $GITHUB_ENV
+      - name: Create and Verify Backup
+        id: backup
+        env:
+          TZ: Asia/Singapore
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_SERVER_ENDPOINT: ${{ env.DB_SERVER_ENDPOINT }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+        run: |
           mkdir ./backups
-          BACKUP_FILE="./backups/ciam-${{ github.event.inputs.sql-environment }}-aurora-mysql-backup-$TIMESTAMP.sql.gz"
-          mysqldump -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD --single-transaction --routines --triggers -B ciam -y | gzip > $BACKUP_FILE
-
+          echo "TIMESTAMP=$(date +%d%m%y-%H%M%S)" >> "$GITHUB_ENV"
+          BACKUP_FILE="./backups/mfa-${{ github.event.inputs.sql-environment }}-mysql-backup-$TIMESTAMP.sql.gz"
+          
+          # Create a temporary file for mysqldump errors
+          ERROR_LOG=$(mktemp)
+          # Run mysqldump with all specified parameters and capture both output and errors
+          if ! mysqldump -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD \
+            --single-transaction --routines --triggers -B ciam -y 2>"$ERROR_LOG" | gzip > "$BACKUP_FILE"; then
+            echo "mysqldump failed with error:"
+            cat "$ERROR_LOG"
+            rm "$ERROR_LOG"
+            exit 1
+          fi
+          # Check for any errors in the error log
+          if [ -s "$ERROR_LOG" ]; then
+            echo "mysqldump reported errors:"
+            cat "$ERROR_LOG"
+            rm "$ERROR_LOG"
+            exit 1
+          fi
+          # Remove error log
+          rm "$ERROR_LOG"
+          # Verify backup file exists and is not empty
           if [ ! -s "$BACKUP_FILE" ]; then
             echo "Backup file is empty. Terminating job."
             exit 1
           fi
-
-      - name: Upload to S3
-        run: |
-          S3_BUCKET=$(aws s3 ls | awk '{print $3}' | grep 'ciam-membership-${{ github.event.inputs.sql-environment }}')
-          echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
-          aws s3 sync ./backups s3://$S3_BUCKET/ciam-rds-backups/
-
+          # Verify backup file can be read
+          if ! gzip -t "$BACKUP_FILE"; then
+            echo "Backup file is corrupted. Terminating job."
+            exit 1
+          fi
+          echo "backup_created=true" >> $GITHUB_OUTPUT
       - name: Upload Backup as Artifacts
+        id: upload-backup
+        if: steps.backup.outputs.backup_created == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ciam-rds-backup
           path: ./backups
-          retention-days: 7
-
-  sql-update:
-    name: Run sql query in ciam database
-    needs: sql-backup
-    runs-on: commonservices-${{ github.event.inputs.sql-environment }}
-    environment: ${{ github.event.inputs.sql-environment }}
-
-    steps:
-      - name: Checking out repo
-        uses: actions/checkout@v3
-
-      # Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-1
-          role-to-assume: ${{ secrets.role_arn }}
-          role-external-id: ${{ secrets.external_id }}
-          role-skip-session-tagging: true
-
-      - name: Run Backup Query
-        run: echo "Run Backup Query to take backup of database/table impacted"
-
-      - name: verify Backup
-        run: echo "Run verify Backup Query to verify backup of database/table impacted"
-
-      - name: psql query execute
+          retention-days: 14
+      - name: Run SQL Update
+        if: steps.backup.outputs.backup_created == 'true' && steps.upload-backup.conclusion == 'success'
+        env:
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_SERVER_ENDPOINT: ${{ env.DB_SERVER_ENDPOINT }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
         run: |
-          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
-          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
-          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
-          # echo "Running ciam-users-20240821.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-users-20240821.sql
-          # echo "running app-token-seeds.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/app-token-seeds.sql
-          # echo "running switches-20240927.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/switches-20240927.sql
-          # echo "running CDT-119-birthdate-bug-fix.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-119-birthdate-bug-fix.sql
-          # echo "running ciam-user-migrations-table-20241021.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-migrations-table-20241021.sql
-          # echo "running wildpass-user-emp-ori-for-prod.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/wildpass-user-emp-ori-for-prod.sql
-          # echo "running create-failed_jobs-table-20241031.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/create-failed_jobs-table-20241031.sql
-          # echo "running CDT-159-bug-user-migration-fix.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/CDT-159-bug-user-migration-fix.sql
-          # echo "running email-domains-table-20241109.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/email-domains-table-20241109.sql
-          # echo "running purge_user-20250108.sql script"
-          # mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/purge_user-20250108.sql
-          # // add salt column
-          echo "running salt-column-20250103.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/salt-column-20250103.sql
-          # // create membership details table
-          echo "running ciam-user-membership-details-20250121.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-user-membership-details-20250121.sql
-          # // run phase2 migration tables
-          echo "running ciam-phase2-migrations-tables-20250204.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-phase2-migrations-tables-20250204.sql
-          # // run phase2 migration accounts data
-          echo "running ciam-phase2-migrations-accounts-data-uat-20250205.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/ciam-phase2-migrations-accounts-data-uat-20250205.sql
-          # // create passkit generator tables for apple web service
-          echo "running passkit-generator-tables-20250207.sql script"
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam < ./src/db/migrations/passkit-generator-tables-20250207.sql
-
+          echo "list all databases"
+          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 -u "$DB_USERNAME" -e "SHOW DATABASES;"
+          echo "running ${{ github.event.inputs.sql-script-path }}"
+          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -D ciam < "${{ github.event.inputs.sql-script-path }}"
       - name: Verify Deployment
-        run: echo "Run Query to verify db update/rollback  of database/table is successful"
+        if: steps.backup.outputs.backup_created == 'true' && steps.upload-backup.conclusion == 'success'
+        run: echo "Run Query to verify db update/rollback of database/table is successful"
