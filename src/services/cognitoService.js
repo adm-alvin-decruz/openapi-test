@@ -14,6 +14,7 @@ const {
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
+const { maskKeyRandomly } = require("../utils/common");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -55,7 +56,31 @@ class Cognito {
       },
     });
     try {
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            password: maskKeyRandomly(password),
+            hashSecret: maskKeyRandomly(hashSecret),
+            action: "cognitoUserLogin",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoUserLogin Service"
+      );
       const loginSession = await client.send(userLoginParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            password: maskKeyRandomly(password),
+            hashSecret: maskKeyRandomly(hashSecret),
+            action: "cognitoUserLogin",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoUserLogin Service - Success"
+      );
       return {
         accessToken: loginSession.AuthenticationResult.AccessToken,
         refreshToken: loginSession.AuthenticationResult.RefreshToken,
@@ -63,8 +88,18 @@ class Cognito {
       };
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoUserLogin Error: ${error} userEmail: ${email}`,
-        password
+        {
+          cognitoService: {
+            email,
+            password: maskKeyRandomly(password),
+            hashSecret: maskKeyRandomly(hashSecret),
+            action: "cognitoUserLogin",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoUserLogin Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -81,11 +116,43 @@ class Cognito {
         UserPoolId: process.env.USER_POOL_ID,
         Username: username,
       });
+      loggerService.log(
+        {
+          cognitoService: {
+            username,
+            action: "cognitoUserLogout",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoUserLogout Service"
+      );
       await client.send(userLogout);
+      loggerService.log(
+        {
+          cognitoService: {
+            username,
+            action: "cognitoUserLogout",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoUserLogout Service - Success"
+      );
       return {
         message: "success",
       };
     } catch (error) {
+      loggerService.error(
+        {
+          cognitoService: {
+            username,
+            action: "cognitoUserLogout",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoUserLogout Service - Failed"
+      );
       return {
         message: JSON.stringify(error),
       };
@@ -99,10 +166,40 @@ class Cognito {
     });
 
     try {
-      return await client.send(getUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminGetUserByEmail",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminGetUserByEmail Service"
+      );
+      const userInfo = await client.send(getUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminGetUserByEmail",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoAdminGetUserByEmail Service - Success"
+      );
+      return userInfo;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminGetUserByEmail Error: ${error} userEmail: ${email}`
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminGetUserByEmail",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminGetUserByEmail Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -119,10 +216,40 @@ class Cognito {
     });
 
     try {
-      return await client.send(getUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            token: maskKeyRandomly(token),
+            action: "cognitoAdminGetUserByAccessToken",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminGetUserByAccessToken Service"
+      );
+      const rs = await client.send(getUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            response: `${rs}`,
+            action: "cognitoAdminGetUserByAccessToken",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoAdminGetUserByAccessToken Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminGetUserByAccessToken Error: ${error}`
+        {
+          cognitoService: {
+            token: maskKeyRandomly(token),
+            action: "cognitoAdminGetUserByAccessToken",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminGetUserByAccessToken Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -141,10 +268,41 @@ class Cognito {
     });
 
     try {
-      return await client.send(groupsBelongUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminListGroupsForUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminListGroupsForUser Service"
+      );
+      const groups = await client.send(groupsBelongUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            groups,
+            action: "cognitoAdminListGroupsForUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoAdminListGroupsForUser Service - Success"
+      );
+      return groups;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminListGroupsForUser Error: ${error} userEmail: ${email}`
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminListGroupsForUser",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminListGroupsForUser Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -198,10 +356,42 @@ class Cognito {
     const newUserParams = new AdminCreateUserCommand(newUserArray);
 
     try {
-      return await client.send(newUserParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            params: `${newUserArray.UserAttributes}`,
+            action: "cognitoAdminCreateUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminCreateUser Service"
+      );
+      const rs = await client.send(newUserParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            action: "cognitoAdminCreateUser",
+            layer: "services.cognitoService",
+            response: `${rs}`,
+          },
+        },
+        "[CIAM] End cognitoAdminCreateUser Service - Success"
+      );
+      return rs;
     } catch (error) {
-      loggerService.error(
-        `cognitoService.cognitoAdminCreateUser Error: ${error} userEmail: ${email}`
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            params: `${newUserArray.UserAttributes}`,
+            action: "cognitoAdminCreateUser",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminCreateUser Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -221,10 +411,43 @@ class Cognito {
       Permanent: true,
     });
     try {
-      return await client.send(setPasswordParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            password: maskKeyRandomly(password),
+            action: "cognitoAdminSetUserPassword",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminSetUserPassword Service"
+      );
+      const rs = await client.send(setPasswordParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminSetUserPassword",
+            layer: "services.cognitoService",
+            response: `${rs}`,
+          },
+        },
+        "[CIAM] End cognitoAdminSetUserPassword Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminSetUserPassword Error: ${error} userEmail: ${email}`
+        {
+          cognitoService: {
+            email,
+            password: maskKeyRandomly(password),
+            action: "cognitoAdminSetUserPassword",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminSetUserPassword Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -241,10 +464,41 @@ class Cognito {
       Username: email,
     });
     try {
-      return await client.send(setDeleteUserParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminDeleteUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminDeleteUser Service - Success"
+      );
+      const rs = await client.send(setDeleteUserParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminDeleteUser",
+            layer: "services.cognitoService",
+            response: `${rs}`,
+          },
+        },
+        "[CIAM] End cognitoAdminDeleteUser Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminDeleteUser Error: ${error}`
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminDeleteUser",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminDeleteUser Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -262,11 +516,43 @@ class Cognito {
       UserAttributes: params,
     });
     try {
-      return await client.send(userUpdateParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            params,
+            action: "cognitoAdminUpdateNewUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminUpdateNewUser Service"
+      );
+      const rs = await client.send(userUpdateParams);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            response: `${rs}`,
+            action: "cognitoAdminUpdateNewUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoAdminUpdateNewUser Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminUpdateNewUser Error: ${error} userEmai: ${email}`,
-        params
+        {
+          cognitoService: {
+            email,
+            params,
+            action: "cognitoAdminUpdateNewUser",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminUpdateNewUser Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -285,10 +571,44 @@ class Cognito {
       PreviousPassword: oldPassword,
     });
     try {
-      return await client.send(userChangePassword);
+      loggerService.log(
+        {
+          cognitoService: {
+            action: "cognitoUserChangePassword",
+            layer: "services.cognitoService",
+            accessToken: maskKeyRandomly(accessToken),
+            password: maskKeyRandomly(password),
+            oldPassword: maskKeyRandomly(oldPassword),
+          },
+        },
+        "[CIAM] Start cognitoUserChangePassword Service - Success"
+      );
+      const rs = await client.send(userChangePassword);
+      loggerService.log(
+        {
+          cognitoService: {
+            response: `${rs}`,
+            action: "cognitoUserChangePassword",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoUserChangePassword Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoUserChangePassword Error: ${error}`
+        {
+          cognitoService: {
+            action: "cognitoUserChangePassword",
+            layer: "services.cognitoService",
+            error: `${error}`,
+            accessToken: maskKeyRandomly(accessToken),
+            password: maskKeyRandomly(password),
+            oldPassword: maskKeyRandomly(oldPassword),
+          },
+        },
+        {},
+        "[CIAM] End cognitoUserChangePassword Service - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -306,14 +626,42 @@ class Cognito {
       GroupName: group,
     });
     try {
-      return await client.send(adminAddUserToGroup);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            group,
+            action: "cognitoUserChangePassword",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminAddUserToGroup Service"
+      );
+      const rs = await client.send(adminAddUserToGroup);
+      loggerService.log(
+        {
+          cognitoService: {
+            response: `${rs}`,
+            action: "cognitoAdminAddUserToGroup",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] End cognitoAdminAddUserToGroup Service - Success"
+      );
+      return rs;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminAddUserToGroup Error: ${error}`,
         {
-          email,
-          group,
-        }
+          cognitoService: {
+            action: "cognitoAdminAddUserToGroup",
+            layer: "services.cognitoService",
+            error: `${error}`,
+            email,
+            group,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminAddUserToGroup Service - Failed"
       );
       throw new Error(
         JSON.stringify({
