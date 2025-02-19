@@ -14,7 +14,7 @@ on:
 
 jobs:
   sql-generate-report:
-    name: Run SQL Statements
+    name: Generate SQL Report
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
 
