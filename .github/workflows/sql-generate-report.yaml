@@ -41,9 +41,12 @@ jobs:
             exit 1
           fi
 
-      - name: Execute MySQL query
+      - name: Set Timestamp
         env:
           TZ: Asia/Singapore
+        run: echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
+
+      - name: Execute MySQL query
         run: |
           # Get database connection details with error handling
           if ! DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints \
@@ -68,10 +71,8 @@ jobs:
             echo "Error: Failed to get database password"
             exit 1
           fi
-          
 
           mkdir -p ./reports
-          echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
 
           # Create report file with metadata
           {
@@ -94,7 +95,7 @@ jobs:
               echo "Error: Query execution failed or timed out"
               exit 1
             fi
-          } > "./reports/query-results-${{ env.TIMESTAMP }}.sql"
+          } > ./reports/query-results-${{ env.TIMESTAMP }}.sql
 
       - name: Generate Report
         uses: actions/upload-artifact@v4
