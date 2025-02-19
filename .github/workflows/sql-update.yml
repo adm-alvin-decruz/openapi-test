@@ -34,7 +34,7 @@ jobs:
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
 
-        echo "::add-mask::$DB_PASSWORD"
+          echo "::add-mask::$DB_PASSWORD"
           
           # Set Values as environment variables
           {
@@ -42,6 +42,7 @@ jobs:
             echo "DB_USERNAME=$DB_USERNAME"
             echo "DB_PASSWORD=$DB_PASSWORD"
           } >> $GITHUB_ENV
+
       - name: Create and Verify Backup
         id: backup
         env:
