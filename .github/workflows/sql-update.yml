@@ -33,6 +33,8 @@ jobs:
           DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
           DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
           DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+
+        echo "::add-mask::$DB_PASSWORD"
           
           # Set Values as environment variables
           {
@@ -98,9 +100,9 @@ jobs:
           DB_USERNAME: ${{ env.DB_USERNAME }}
         run: |
           echo "list all databases"
-          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 -u "$DB_USERNAME" -e "SHOW DATABASES;"
+          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -e "SHOW DATABASES;"
           echo "running ${{ github.event.inputs.sql-script-path }}"
-          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -D ciam < "${{ github.event.inputs.sql-script-path }}"
+          mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -D ciam < ${{ github.event.inputs.sql-script-path }}
       - name: Verify Deployment
         if: steps.backup.outputs.backup_created == 'true' && steps.upload-backup.conclusion == 'success'
         run: echo "Run Query to verify db update/rollback of database/table is successful"
