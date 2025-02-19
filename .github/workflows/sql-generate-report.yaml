@@ -105,13 +105,23 @@ jobs:
 
       - name: Verify reports generated
         run: |
-          if [ ! -s ./reports/query-results-${{ env.TIMESTAMP }}.sql ]; then
-            echo "Warning: The query returned no results"
+          # Check if file exists
+          if [ ! -f ./reports/query-results-${{ env.TIMESTAMP }}.sql ]; then
+            echo "Error: Report file does not exist"
+            exit 1
+          fi
+
+          # Check if query returned any results (look for lines after the headers)
+          result_count=$(tail -n +6 "./reports/query-results-${{ env.TIMESTAMP }}.sql" | grep -v '^$' | wc -l)
+          
+          if [ "$result_count" -le 1 ]; then  # Allow for column headers
+            echo "Warning: The query returned no data rows"
             exit 1
           fi
           
-          # Check file size not more than 1GB
+          # Check file size
           file_size=$(stat -f%z "./reports/query-results-${{ env.TIMESTAMP }}.sql" 2>/dev/null || stat -c%s "./reports/query-results-${{ env.TIMESTAMP }}.sql")
+          echo "File size: $file_size bytes"
           if [ "$file_size" -gt 1073741824 ]; then  # 1GB limit
             echo "Warning: Report file is larger than 1GB"
             exit 1
