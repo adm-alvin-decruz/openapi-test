@@ -31,7 +31,6 @@ const uploadThumbnailToS3 = async (req) => {
       new PutObjectCommand({
         Bucket: `mwg-passkit-${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
-        Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
       })
