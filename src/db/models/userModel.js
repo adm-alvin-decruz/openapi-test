@@ -106,7 +106,7 @@ class User {
   /** Find users mandai_id for*/
   static async findFullMandaiId(email) {
     try {
-      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
+      const sql = `SELECT u.id, u.birthdate, u.given_name, u.family_name, u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   WHERE u.active = 1 AND u.email = ?`;
