@@ -74,29 +74,50 @@ jobs:
 
           mkdir -p ./reports
 
-          # Create report file with metadata
+          # Create report file with metadata and SQL-friendly format
           {
             echo "-- Report generated on $(date)"
             echo "-- Environment: ${{ github.event.inputs.sql-environment }}"
             echo "-- Query executed:"
-            echo "${{ github.event.inputs.sql-query }}" 
-            echo -e "\n-- Results:"
-          
-            # Execute query and output results
-            if ! timeout 300 mysql -h $DB_SERVER_ENDPOINT \
+            echo "-- ${{ github.event.inputs.sql-query }};"
+            echo -e "\n-- Results as SELECT statement:\n"
+
+            # Execute query with proper SQL formatting
+            echo "SELECT * FROM ("
+            mysql -h $DB_SERVER_ENDPOINT \
                 -P 3306 \
                 --ssl \
                 -u $DB_USERNAME \
                 -p$DB_PASSWORD \
                 -D ciam \
                 -B \
-                --column-names \
-                -e "${{ github.event.inputs.sql-query }}"; then
-              echo "Error: Query execution failed or timed out"
-              exit 1
-            fi
-          } > ./reports/query-results-${{ env.TIMESTAMP }}.sql
-
+                -e "${{ github.event.inputs.sql-query }}" | \
+            awk 'NR==1 {
+              # Print column headers
+              printf "  SELECT "
+              for (i=1; i<=NF; i++) {
+                if (i>1) printf ", "
+                printf "'%s' AS `%s`", $i, $i
+              }
+              printf "\n"
+            }
+            NR>1 {
+              # Print data rows
+              printf "  UNION ALL SELECT "
+              for (i=1; i<=NF; i++) {
+                if (i>1) printf ", "
+                if ($i == "NULL" || $i == "") printf "NULL"
+                else {
+                  gsub(/"/, "\\\"", $i)  # Escape double quotes
+                  gsub(/'\''/, "\\'\''", $i)  # Escape single quotes
+                  printf "'%s'", $i
+                }
+              }
+              printf "\n"
+            }'
+            echo ") AS query_results;"
+          } > "./reports/query-results-${{ env.TIMESTAMP }}.sql"
+      
       - name: Generate Report
         uses: actions/upload-artifact@v4
         with:
