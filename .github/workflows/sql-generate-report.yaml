@@ -8,7 +8,7 @@ on:
         type: environment
         description: Select the environment
       table-names:
-        description: "Table names to dump (comma-separated, e.g, or 'ALL' for entire database"
+        description: "Table names to dump (comma-separated, or 'ALL' for entire database)"
         required: true
         type: string
       where-clause:
@@ -95,7 +95,7 @@ jobs:
           mkdir -p ./dumps
 
           # Prepare mysqldump options
-          MYSQLDUMP_OPTS="--single-transaction --skip-lock-tables --column-statistics=0"
+          MYSQLDUMP_OPTS="--single-transaction --skip-lock-tables"
 
           # Add WHERE clause if provided
           if [[ -n "${{ github.event.inputs.where-clause }}" ]]; then
