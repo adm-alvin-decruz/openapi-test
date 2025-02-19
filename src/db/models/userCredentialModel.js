@@ -47,17 +47,25 @@ class UserCredential {
   }
 
   static async findUserHasFirstLogin(email) {
-    try {
-      const sql = `SELECT uc.username, umua.password_hash, umua.password_salt
+    const sql = `SELECT uc.username, umua.password_hash, umua.password_salt
                   FROM user_credentials uc
                   INNER JOIN emp_membership_user_accounts umua ON umua.email = uc.username COLLATE utf8mb4_general_ci
                   WHERE umua.picked = 1 AND uc.username = ? AND uc.last_login IS NULL AND uc.tokens IS NULL`;
-
+    try {
       const [rows] = await pool.query(sql, [email]);
       return rows;
     } catch (error) {
       loggerService.error(
-        `Error userCredentialModel.findUserHasFirstLogin. Error: ${error} - userEmail: ${email}`
+        {
+          userCredentialModel: {
+            email,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
+            layer: "userCredentialModel.findUserHasFirstLogin",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] findUserHasFirstLogin DB - Failed"
       );
       return error;
     }
@@ -98,8 +106,17 @@ class UserCredential {
       };
     } catch (error) {
       loggerService.error(
-        `Error userCredentialModel.updateByUserEmail Error: ${error} - userEmail: ${username}`,
-        data
+        {
+          userCredentialModel: {
+            userId: userId,
+            data: data,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            layer: "userCredentialModel.updateByUserEmail",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] updateByUserEmail DB - Failed"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -140,8 +157,17 @@ class UserCredential {
       };
     } catch (error) {
       loggerService.error(
-        `Error userCredentialModel.updateByUserId Error: ${error} - userId: ${userId}`,
-        data
+        {
+          userCredentialModel: {
+            userId: userId,
+            data: data,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            layer: "userCredentialModel.updateByUserId",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] updateByUserId DB - Failed"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

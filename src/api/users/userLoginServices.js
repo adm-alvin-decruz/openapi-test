@@ -60,8 +60,17 @@ class UserLoginService {
       return loginRs;
     } catch (error) {
       loggerService.error(
-        `Error UserLoginService.login. Error: ${error}`,
-        req.body
+        {
+          user: {
+            email: req.body.email,
+            action: "login",
+            body: req.body,
+            layer: "userLoginServices.login",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] Login Service trigger Login Execution - Failed"
       );
       throw new Error(
         JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
@@ -82,8 +91,17 @@ class UserLoginService {
       };
     } catch (error) {
       loggerService.error(
-        `Error UserLoginService.getUser. Error: ${error}`,
-        req.body
+        {
+          user: {
+            email: req.body.email,
+            action: "login",
+            body: req.body,
+            layer: "userLoginServices.getUser",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] Login Service Get User - Failed"
       );
       throw new Error(
         JSON.stringify(
@@ -101,8 +119,16 @@ class UserLoginService {
       });
     } catch (error) {
       loggerService.error(
-        `Error UserLoginService.updateUser. Error: ${error} - userId: ${id}`,
-        tokens
+        {
+          user: {
+            userId: id,
+            action: "login",
+            layer: "userLoginServices.getUser",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] Login Service Update User - Failed"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -118,14 +144,46 @@ class UserLoginService {
       );
     }
     try {
+      loggerService.log(
+        {
+          user: {
+            email: req.body.email,
+            action: "login",
+            layer: "userLoginServices.execute",
+          },
+        },
+        "[CIAM] Start Login Service "
+      );
       const loginSession = await this.login(req);
       await this.updateUser(userInfo.userId, loginSession);
+      loggerService.log(
+        {
+          user: {
+            email: req.body.email,
+            action: "login",
+            layer: "userLoginServices.execute",
+          },
+        },
+        "[CIAM] End Login Service - Success"
+      );
       return {
         accessToken: loginSession.accessToken,
         mandaiId: userInfo.mandaiId,
         email: userInfo.email,
       };
     } catch (error) {
+      loggerService.log(
+        {
+          user: {
+            email: req.body.email,
+            action: "login",
+            layer: "userLoginServices.execute",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End Login Service - Failed"
+      );
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));
     }
