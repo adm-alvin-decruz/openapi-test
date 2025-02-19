@@ -69,6 +69,24 @@ const omit = (obj, excludeKeys) => {
   );
 };
 
+const maskKeyRandomly = (key) => {
+  if (key.length <= 3) {
+    return "***"; // If key is too short, return as is
+  }
+
+  const start = 3 || 0; // Keep first 3 characters
+  const end = key.length - 2 || 0; // Keep last 3 characters
+
+  // Choose a random starting position within the middle section
+  const maskPosition = Math.floor(Math.random() * (end - start - 2)) + start;
+
+  return (
+    key.substring(0, maskPosition) +
+    "*".repeat(maskPosition) +
+    key.substring(maskPosition + maskPosition)
+  );
+};
+
 module.exports = {
   messageLang,
   getSource,
@@ -79,4 +97,5 @@ module.exports = {
   generateSaltHash,
   formatPhoneNumber,
   omit,
+  maskKeyRandomly,
 };

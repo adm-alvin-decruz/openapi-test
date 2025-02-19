@@ -4,9 +4,13 @@ const cognitoService = require("../../services/cognitoService");
 const userModel = require("../../db/models/userModel");
 const userMembershipModel = require("../../db/models/userMembershipModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
+const userMigrationsMembershipPassesModel = require("../../db/models/UserMigrationsMembershipPassesModel");
+const empMembershipUserPassesModel = require("../../db/models/EmpMembershipUserPassesModel");
+const configsModel = require("../../db/models/ConfigsModel");
 const loggerService = require("../../logs/logger");
-const { uploadThumbnailToS3, preSignedURLS3 } = require("../../services/s3Service");
+const { uploadThumbnailToS3 } = require("../../services/s3Service");
 const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
+const nopCommerceService = require("../components/nopCommerce/services/nopCommerceService");
 
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
@@ -23,12 +27,37 @@ const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserMembershipPassService {
   async create(req) {
+    loggerService.log(
+      {
+        user: {
+          userEmail: req.body.email,
+          membership: req.body.group,
+          action: `userCreateMembershipPass - migration flow: ${!!req.body
+            .migrations}`,
+          layer: "userMembershipPassService.create",
+          api_body: req.body,
+        },
+      },
+      "Start userCreateMembershipPass Service"
+    );
+    const migrationsFlag = req.body && req.body.migrations;
+    const userInfo = migrationsFlag
+      ? await userModel.findByEmail(req.body.email)
+      : null;
+    const mandaiId =
+      userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
+    const passTypeMapping = await this.getPassType(req);
     try {
       const user = await userModel.findByEmailMandaiId(
         req.body.email,
-        req.body.mandaiId
+        mandaiId
       );
       if (!user || !user.id) {
+        req.body &&
+          req.body.migrations &&
+          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+            picked: 2,
+          }));
         await Promise.reject(
           JSON.stringify(
             MembershipErrors.ciamMembershipUserNotFound(
@@ -42,11 +71,16 @@ class UserMembershipPassService {
       const rows = await userModel.findByEmailMandaiIdVisualIds(
         [req.body.visualId],
         req.body.email,
-        req.body.mandaiId
+        mandaiId
       );
 
       const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
       if (userMembership && userMembership.visualId === req.body.visualId) {
+        req.body &&
+          req.body.migrations &&
+          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+            picked: 2,
+          }));
         await Promise.reject(
           JSON.stringify(
             MembershipPassErrors.membershipPassExistedError(
@@ -56,23 +90,48 @@ class UserMembershipPassService {
           )
         );
       }
-
       // store pass data in db
       const createMembershipRs = await this.saveUserMembershipPassToDB(
         user.id,
-        req
+        {
+          ...req,
+          passType: passTypeMapping.toLowerCase(),
+        }
       );
 
       // update user's cognito memberships info
       await this.updateMembershipInCognito(req);
 
+      if (req.body.migrations && req.body.pictureId) {
+        const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(
+          req.body.pictureId
+        );
+
+        if (photoBase64) {
+          await uploadThumbnailToS3({
+            body: {
+              membershipPhoto: {
+                bytes: photoBase64.split("data:image/jpeg;base64,")[1],
+              },
+              mandaiId,
+              visualId: req.body.visualId,
+            },
+          });
+          await userMembershipDetailsModel.updateByMembershipId(
+            createMembershipRs.membershipId,
+            {
+              membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
+            }
+          );
+        }
+      }
       // upload member photo to S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         await uploadThumbnailToS3(req);
         await userMembershipDetailsModel.updateByMembershipId(
           createMembershipRs.membershipId,
           {
-            membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
+            membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
       }
@@ -83,9 +142,75 @@ class UserMembershipPassService {
         req.body.member.lastName &&
         req.body.member.dob
       ) {
-        await this.sendSQSMessage(req, "createMembershipPass");
+        req.body &&
+          req.body.migrations &&
+          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
+            req.body.email,
+            req.body.batchNo,
+            {
+              pass_request: 1,
+              co_member_request: 1,
+            }
+          ));
+        await this.sendSQSMessage(
+          {
+            ...req,
+            body: {
+              ...req.body,
+              mandaiId: mandaiId,
+              passType: passTypeMapping.toLowerCase(),
+            },
+          },
+          "createMembershipPass"
+        );
+        return loggerService.log(
+          {
+            user: {
+              action: `userCreateMembershipPass - migration flow: ${!!req.body
+                .migrations}`,
+              layer: "userMembershipPassService.create",
+              triggerSQSAction: "success",
+            },
+          },
+          "End userCreateMembershipPass Service - Success"
+        );
+      } else {
+        req.body &&
+          req.body.migrations &&
+          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+            picked: 1,
+          }));
       }
+      return loggerService.log(
+        {
+          user: {
+            action: `userCreateMembershipPass - migration flow: ${!!req.body
+              .migrations}`,
+            layer: "userMembershipPassService.create",
+            triggerSQSAction: "unused",
+          },
+        },
+        "End userCreateMembershipPass Service - Success"
+      );
     } catch (error) {
+      loggerService.error(
+        {
+          user: {
+            userEmail: req.body.email,
+            action: `userCreateMembershipPass - migration flow: ${!!req.body
+              .migrations}`,
+            layer: "userMembershipPassService.create",
+            error: JSON.stringify(error),
+          },
+        },
+        {},
+        "End userCreateMembershipPass Service - Failed"
+      );
+      req.body &&
+        req.body.migrations &&
+        (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+          picked: 2,
+        }));
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
         throw new Error(
@@ -100,6 +225,18 @@ class UserMembershipPassService {
 
   async update(req) {
     try {
+      loggerService.log(
+        {
+          user: {
+            userEmail: req.body.email,
+            membership: req.body.group,
+            action: `userUpdateMembershipPass`,
+            layer: "userMembershipPassService.update",
+            data: req.body,
+          },
+        },
+        "Start userUpdateMembershipPass Service"
+      );
       // update pass data in db
       const updateMembershipRs = await this.updateUserMembershipPassToDB(req);
 
@@ -125,8 +262,44 @@ class UserMembershipPassService {
         req.body.member.dob
       ) {
         await this.sendSQSMessage(req, "updateMembershipPass");
+        loggerService.log(
+          {
+            user: {
+              userEmail: req.body.email,
+              membership: req.body.group,
+              action: `userUpdateMembershipPass`,
+              layer: "userMembershipPassService.update",
+              triggerSQS: "success",
+            },
+          },
+          "End userUpdateMembershipPass Service - Success"
+        );
       }
+      loggerService.log(
+        {
+          user: {
+            userEmail: req.body.email,
+            membership: req.body.group,
+            action: `userUpdateMembershipPass`,
+            layer: "userMembershipPassService.update",
+          },
+        },
+        "End userUpdateMembershipPass Service - Success"
+      );
     } catch (error) {
+      loggerService.error(
+        {
+          user: {
+            userEmail: req.body.email,
+            membership: req.body.group,
+            action: `userUpdateMembershipPass`,
+            layer: "userMembershipPassService.update",
+            error: JSON.stringify(error),
+          },
+        },
+        {},
+        "End userUpdateMembershipPass Service - Failed"
+      );
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
         throw new Error(
@@ -141,16 +314,44 @@ class UserMembershipPassService {
 
   async createUserMembership(userId, { passType, visualId, validUntil }) {
     try {
-      return await userMembershipModel.create({
+      loggerService.log(
+        {
+          user: {
+            userId: userId,
+            membership: { passType, visualId, validUntil },
+            layer: "userMembershipPassService.createUserMembership",
+          },
+        },
+        "Start createUserMembership"
+      );
+      const createMembershipRs = await userMembershipModel.create({
         user_id: userId,
         name: passType,
         visual_id: visualId,
         expires_at: validUntil,
       });
+      loggerService.log(
+        {
+          user: {
+            userId: userId,
+            membership: { passType, visualId, validUntil },
+            layer: "userMembershipPassService.createUserMembership",
+          },
+        },
+        "End createUserMembership - Success"
+      );
+      return createMembershipRs;
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.saveMembership Error: ${error} - userId: ${userId}`,
-        { passType, visualId, validUntil }
+        {
+          user: {
+            userId: userId,
+            membership: { passType, visualId, validUntil },
+            layer: "userMembershipPassService.createUserMembership",
+          },
+        },
+        {},
+        "End createUserMembership - Failed"
       );
       throw new Error(
         JSON.stringify(MembershipPassErrors.createMembershipPassError())
@@ -184,7 +385,40 @@ class UserMembershipPassService {
     }
   ) {
     try {
-      return await userMembershipDetailsModel.create({
+      loggerService.log(
+        {
+          user: {
+            userId: userId,
+            membershipId: membershipId,
+            layer: "userMembershipPassService.insertMembershipDetails",
+            data: {
+              user_id: userId,
+              user_membership_id: membershipId,
+              category_type: categoryType,
+              item_name: itemName,
+              plu: plu,
+              adult_qty: adultQty,
+              child_qty: childQty,
+              parking: parking,
+              iu: iu,
+              car_plate: carPlate,
+              membership_photo: membershipPhoto,
+              member_first_name: firstName,
+              member_last_name: lastName,
+              member_email: email,
+              member_dob: dob,
+              member_country: country,
+              member_identification_no: identificationNo,
+              member_phone_number: phoneNumber,
+              co_member: coMember,
+              valid_from: validFrom,
+              valid_until: validUntil,
+            },
+          },
+        },
+        "Start insertMembershipDetails"
+      );
+      await userMembershipDetailsModel.create({
         user_id: userId,
         user_membership_id: membershipId,
         category_type: categoryType,
@@ -207,32 +441,50 @@ class UserMembershipPassService {
         valid_from: validFrom,
         valid_until: validUntil,
       });
+      return loggerService.log(
+        {
+          user: {
+            userId: userId,
+            membershipId: membershipId,
+            layer: "userMembershipPassService.insertMembershipDetails",
+          },
+        },
+        "End insertMembershipDetails - Success"
+      );
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.insertMembershipDetails Error: ${error} - userId: ${userId} - membershipId: ${membershipId}`,
         {
-          user_id: userId,
-          user_membership_id: membershipId,
-          category_type: categoryType,
-          item_name: itemName,
-          plu: plu,
-          adult_qty: adultQty,
-          child_qty: childQty,
-          parking: parking,
-          iu: iu,
-          car_plate: carPlate,
-          membership_photo: membershipPhoto,
-          member_first_name: firstName,
-          member_last_name: lastName,
-          member_email: email,
-          member_dob: dob,
-          member_country: country,
-          member_identification_no: identificationNo,
-          member_phone_number: phoneNumber,
-          co_member: coMember,
-          valid_from: validFrom,
-          valid_until: validUntil,
-        }
+          user: {
+            userId: userId,
+            membershipId: membershipId,
+            layer: "userMembershipPassService.insertMembershipDetails",
+            data: {
+              user_id: userId,
+              user_membership_id: membershipId,
+              category_type: categoryType,
+              item_name: itemName,
+              plu: plu,
+              adult_qty: adultQty,
+              child_qty: childQty,
+              parking: parking,
+              iu: iu,
+              car_plate: carPlate,
+              membership_photo: membershipPhoto,
+              member_first_name: firstName,
+              member_last_name: lastName,
+              member_email: email,
+              member_dob: dob,
+              member_country: country,
+              member_identification_no: identificationNo,
+              member_phone_number: phoneNumber,
+              co_member: coMember,
+              valid_from: validFrom,
+              valid_until: validUntil,
+            },
+          },
+        },
+        {},
+        "End insertMembershipDetails - Failed"
       );
       throw new Error(
         JSON.stringify(MembershipPassErrors.createMembershipPassError())
@@ -243,7 +495,7 @@ class UserMembershipPassService {
   async saveUserMembershipPassToDB(userId, req) {
     try {
       const userMembership = await this.createUserMembership(userId, {
-        passType: req.body.passType,
+        passType: req.passType,
         visualId: req.body.visualId,
         validUntil: req.body.validUntil || null,
       });
@@ -299,24 +551,33 @@ class UserMembershipPassService {
             validUntil: !!req.body.validUntil ? req.body.validUntil : null,
           }
         ));
-      console.log("Successfully saved user membership pass details to DB");
+
       return {
         membershipId: userMembership.membership_id,
       };
     } catch (error) {
-      loggerService.error(
-        `userMembershipPassService.saveUserMembershipPassToDB Error: ${error}`,
-        req.body
-      );
       throw new Error(
         JSON.stringify(MembershipPassErrors.createMembershipPassError())
       );
     }
   }
 
-  formatMembershipData(req, existingMemberships) {
+  async getPassType(req) {
+    const passTypeMapping =
+      req.body.migrations &&
+      (await configsModel.findByConfigKey(
+        "membership-passes",
+        "pass-type-mapping"
+      ));
+    return !!passTypeMapping
+      ? passTypeMapping[`${req.body.passType}`]
+      : req.body.passType;
+  }
+
+  async formatMembershipData(req, existingMemberships) {
+    const passTypeMapping = await this.getPassType(req);
     const newMembership = {
-      name: req.body.passType,
+      name: passTypeMapping,
       visualID: req.body.visualId,
       expiry: req.body.validUntil || null,
     };
@@ -353,6 +614,15 @@ class UserMembershipPassService {
 
   async updateUserMembershipPassToDB(req) {
     try {
+      loggerService.log(
+        {
+          user: {
+            data: req.body,
+            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+          },
+        },
+        "Start updateUserMembershipPassToDB"
+      );
       const rows = await userModel.findByEmailMandaiIdVisualIds(
         [req.body.visualId],
         req.body.email,
@@ -482,14 +752,29 @@ class UserMembershipPassService {
           );
         }
       }
-      console.log("Successfully updated user membership pass details in DB");
+      loggerService.log(
+        {
+          user: {
+            userMembership: userMembership,
+            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+          },
+        },
+        "End updateUserMembershipPassToDB - Success"
+      );
       return {
         membershipId: userMembership.membershipId,
       };
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.updateUserMembershipPassToDB Error: ${error}`,
-        req.body
+        {
+          user: {
+            data: req.body,
+            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+            error: JSON.stringify(error),
+          },
+        },
+        {},
+        "End updateUserMembershipPassToDB - Failed"
       );
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
@@ -505,6 +790,16 @@ class UserMembershipPassService {
 
   async updateMembershipInCognito(req) {
     try {
+      loggerService.log(
+        {
+          user: {
+            userEmail: req.body.email,
+            layer: "userMembershipPassService.updateMembershipInCognito",
+            data: req.body,
+          },
+        },
+        "Start updateMembershipInCognito"
+      );
       const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(
         req.body.email
       );
@@ -536,14 +831,30 @@ class UserMembershipPassService {
         ],
         req.body.email
       );
-      console.log("Updated user data in Cognito");
+      loggerService.log(
+        {
+          user: {
+            userEmail: req.body.email,
+            layer: "userMembershipPassService.updateMembershipInCognito",
+            data: req.body,
+          },
+        },
+        "End updateMembershipInCognito - Success"
+      );
       return {
         cognitoProceed: "success",
       };
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.updateMembershipInCognito Error: ${error}`,
-        req.body
+        {
+          user: {
+            userEmail: req.body.email,
+            layer: "userMembershipPassService.updateMembershipInCognito",
+            error: JSON.stringify(error),
+          },
+        },
+        {},
+        "End updateMembershipInCognito - Failed"
       );
       JSON.stringify(
         MembershipErrors.ciamMembershipUserNotFound(
@@ -556,28 +867,56 @@ class UserMembershipPassService {
 
   async sendSQSMessage(req, action) {
     try {
-      req["apiTimer"] = req.processTimer.apiRequestTimer();
-      req.apiTimer.log("UserMembershipPassService.sendSQSMessage starts");
-
       const data = {
         action: action,
         body: omit(req.body, ["membershipPhoto"]),
       };
 
       const queueUrl = process.env.SQS_QUEUE_URL;
+      loggerService.log(
+        {
+          SQS: {
+            queueURL: queueUrl,
+            messageBody: JSON.stringify(data),
+            layer: "userMembershipPassService.sendSQSMessage",
+            data: data,
+          },
+        },
+        "Start sendSQSMessage"
+      );
+
       const command = new SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify(data),
       });
 
-      let result = await sqsClient.send(command);
-      req.apiTimer.end("UserMembershipPassService.sendSQSMessage"); // log end time
+      const result = await sqsClient.send(command);
+      loggerService.log(
+        {
+          SQS: {
+            queueURL: queueUrl,
+            messageBody: JSON.stringify(data),
+            layer: "userMembershipPassService.sendSQSMessage",
+            data: result,
+          },
+        },
+        "End sendSQSMessage - Success"
+      );
       return result;
     } catch (error) {
       loggerService.error(
-        `userMembershipPassService.sendSQSMessage Error: ${error}`,
-        req.body
+        {
+          SQS: {
+            queueURL: queueUrl,
+            messageBody: JSON.stringify(data),
+            layer: "userMembershipPassService.sendSQSMessage",
+            error: JSON.stringify(error),
+          },
+        },
+        {},
+        "End sendSQSMessage - Failed"
       );
+
       throw new Error(
         JSON.stringify(
           MembershipPassErrors.createMembershipPassError(req.body.language)

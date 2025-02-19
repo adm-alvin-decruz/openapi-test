@@ -49,8 +49,14 @@ class UserMembershipDetails {
       };
     } catch (error) {
       loggerService.error(
-        `Error UserMembershipDetailsModel.create. Error: ${error}`,
-        membershipDetailsData
+        {
+          UserMembershipDetailsModel: {
+            error: JSON.stringify(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        "UserMembershipDetails.create"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -89,12 +95,18 @@ class UserMembershipDetails {
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         user_membership_details_id: result.insertId,
-        row_affected: result && result.affectedRows ? result.affectedRows : 0
+        row_affected: result && result.affectedRows ? result.affectedRows : 0,
       };
     } catch (error) {
       loggerService.error(
-        `Error UserMembershipDetailsModel.updateByMembershipId. Error: ${error} - membershipId: ${membershipId}`,
-        updatedDetailsData
+        {
+          UserMembershipDetailsModel: {
+            error: JSON.stringify(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        "UserMembershipDetails.updateByMembershipId"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

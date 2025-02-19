@@ -65,6 +65,13 @@ const appConfig = {
   AEM_CALLBACK_URL_UAT: 'https://uat-members.mandai.com',
   AEM_CALLBACK_URL_PROD: 'https://members.mandai.com',
   AEM_CALLBACK_PATH: '/bin/wrs/ciam/auth/callback',
+
+  //NopCommerce URL
+  NOP_COMMERCE_URL_DEV: 'https://www.mandaiapi.com/uat-store',
+  NOP_COMMERCE_URL_UAT: 'https://www.mandaiapi.com/uat-store',
+  NOP_COMMERCE_URL_PROD: 'https://www.mandaiapi.com/store',
+  NOP_COMMERCE_ACCESS_TOKEN_PATH: '/GenerateMembershipToken',
+  NOP_COMMERCE_GET_MEMBERSHIP_PATH: '/MembershipGetPictureFile'
 };
 
 module.exports = appConfig;

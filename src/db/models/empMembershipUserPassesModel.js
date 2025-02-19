@@ -1,10 +1,10 @@
 const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/common");
+const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const loggerService = require("../../logs/logger");
+const CommonErrors = require("../../config/https/errors/common");
 
-class EmpMembershipUserAccountsModel {
+class EmpMembershipUserPassesModel {
   static async updateByEmail(email, data) {
     const now = getCurrentUTCTimestamp();
 
@@ -18,7 +18,7 @@ class EmpMembershipUserAccountsModel {
 
     // Construct the SQL query
     const sql = `
-      UPDATE emp_membership_user_accounts
+      UPDATE emp_membership_user_passes
       SET ${updateFields.join(", ")}
       WHERE email = ?
     `;
@@ -40,18 +40,18 @@ class EmpMembershipUserAccountsModel {
       };
     } catch (error) {
       loggerService.error(
-          {
-            EmpMembershipUserAccountsModel: {
-              error: JSON.stringify(error),
-              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            },
+        {
+          EmpMembershipUserPassesModel: {
+            error: JSON.stringify(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
-          {},
-          "EmpMembershipUserPassesModel.updateByEmail"
+        },
+        {},
+        "EmpMembershipUserPassesModel.updateByEmail"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 }
 
-module.exports = EmpMembershipUserAccountsModel;
+module.exports = EmpMembershipUserPassesModel;

@@ -17,7 +17,6 @@ class UserCreateMembershipPassJob {
   async perform(req) {
     try {
       await UserMembershipPassService.create(req);
-      console.log("Successfully created user membership pass");
       return this.success(req.body.language);
     } catch (error) {
       throw error;
@@ -41,7 +40,6 @@ class UserUpdateMembershipPassJob {
   async perform(req) {
     try {
       await UserMembershipPassService.update(req);
-      console.log("Successfully updated user membership pass");
       return this.success(req.body.language);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
