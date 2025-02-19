@@ -7,9 +7,13 @@ on:
       sql-environment:
         type: environment
         description: Select the environment
-      sql-query:
-        description: "SQL Query to Execute"
+      table-names:
+        description: "Table names to dump (comma-separated, e.g, or 'ALL' for entire database"
         required: true
+        type: string
+      where-clause:
+        description: "Optional WHERE clause for data filtering"
+        required: false
         type: string
 
 jobs:
@@ -33,20 +37,36 @@ jobs:
           role-external-id: ${{ secrets.external_id }}
           role-skip-session-tagging: true
 
-      - name: Validate SQL Query
+      - name: Validate Input Parameters
         run: |
-          # Check if query starts with SELECT
-          if [[ ! "${{ github.event.inputs.sql-query }}" =~ ^[[:space:]]*SELECT ]]; then
-            echo "Error: Only SELECT queries are allowed for security reasons [report generation only]"
-            exit 1
+          # Validate table names
+          if [[ "${{ github.event.inputs.table-names }}" != "ALL" ]]; then
+            IFS=',' read -ra TABLES <<< "${{ github.event.inputs.table-names }}"
+            for table in "${TABLES[@]}"; do
+              if [[ ! "$table" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                echo "Error: Invalid table name format: $table"
+                exit 1
+              fi
+            done
           fi
 
+          # Validate WHERE clause if provided
+          if [[ -n "${{ github.event.inputs.where-clause }}" ]]; then
+            if [[ "${{ github.event.inputs.where-clause }}" =~ ^[[:space:]]*DELETE[[:space:]] || \
+                  "${{ github.event.inputs.where-clause }}" =~ ^[[:space:]]*DROP[[:space:]] || \
+                  "${{ github.event.inputs.where-clause }}" =~ ^[[:space:]]*UPDATE[[:space:]] || \
+                  "${{ github.event.inputs.where-clause }}" =~ ^[[:space:]]*INSERT[[:space:]] ]]; then
+              echo "Error: WHERE clause contains prohibited operations"
+              exit 1
+            fi
+          fi
+      
       - name: Set Timestamp
         env:
           TZ: Asia/Singapore
         run: echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
 
-      - name: Execute MySQL query
+      - name: Execute MySQL dump
         run: |
           # Get database connection details with error handling
           if ! DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints \
@@ -72,77 +92,67 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ./reports
+          mkdir -p ./dumps
 
-          # Create report file with metadata and SQL-friendly format
+          # Prepare mysqldump options
+          MYSQLDUMP_OPTS="--single-transaction --skip-lock-tables --column-statistics=0"
+
+          # Add WHERE clause if provided
+          if [[ -n "${{ github.event.inputs.where-clause }}" ]]; then
+            MYSQLDUMP_OPTS="$MYSQLDUMP_OPTS --where=\"${{ github.event.inputs.where-clause }}\""
+          fi
+
+          # Create dump file with metadata headers
           {
-            echo "-- Report generated on $(date)"
+            echo "-- Dump generated on $(date)"
             echo "-- Environment: ${{ github.event.inputs.sql-environment }}"
-            echo "-- Query executed:"
-            echo "-- ${{ github.event.inputs.sql-query }};"
-            echo -e "\n-- Results as SELECT statement:\n"
+            echo "-- Tables: ${{ github.event.inputs.table-names }}"
+            if [[ -n "${{ github.event.inputs.where-clause }}" ]]; then
+              echo "-- WHERE clause: ${{ github.event.inputs.where-clause }}"
+            fi
+            echo -e "\n"
+          } > "./dumps/dump-report-${{ env.TIMESTAMP }}.sql"
 
-            # Execute query with proper SQL formatting
-            echo "SELECT * FROM ("
-            mysql -h $DB_SERVER_ENDPOINT \
-                -P 3306 \
-                --ssl \
-                -u $DB_USERNAME \
-                -p$DB_PASSWORD \
-                -D ciam \
-                -B \
-                -e "${{ github.event.inputs.sql-query }}" | \
-            awk 'NR==1 {
-              # Print column headers
-              printf "  SELECT "
-              for (i=1; i<=NF; i++) {
-                if (i>1) printf ", "
-                printf "'%s' AS `%s`", $i, $i
-              }
-              printf "\n"
-            }
-            NR>1 {
-              # Print data rows
-              printf "  UNION ALL SELECT "
-              for (i=1; i<=NF; i++) {
-                if (i>1) printf ", "
-                if ($i == "NULL" || $i == "") printf "NULL"
-                else {
-                  gsub(/"/, "\\\"", $i)  # Escape double quotes
-                  gsub(/'\''/, "\\'\''", $i)  # Escape single quotes
-                  printf "'%s'", $i
-                }
-              }
-              printf "\n"
-            }'
-            echo ") AS query_results;"
-          } > "./reports/query-results-${{ env.TIMESTAMP }}.sql"
+
+          # Execute mysqldump based on input
+          if [[ "${{ github.event.inputs.table-names }}" == "ALL" ]]; then
+            # Dump entire database
+            mysqldump -h "$DB_SERVER_ENDPOINT" \
+              -P 3306 \
+              --ssl \
+              -u "$DB_USERNAME" \
+              -p"$DB_PASSWORD" \
+              $MYSQLDUMP_OPTS \
+              ciam >> "./dumps/dump-report-${{ env.TIMESTAMP }}.sql"
+          else
+            # Dump specific tables
+            IFS=',' read -ra TABLES <<< "${{ github.event.inputs.table-names }}"
+            mysqldump -h "$DB_SERVER_ENDPOINT" \
+              -P 3306 \
+              --ssl \
+              -u "$DB_USERNAME" \
+              -p"$DB_PASSWORD" \
+              $MYSQLDUMP_OPTS \
+              ciam "${TABLES[@]}" >> "./dumps/dump-report-${{ env.TIMESTAMP }}.sql"
+          fi
       
       - name: Generate Report
         uses: actions/upload-artifact@v4
         with:
           name: query-results-${{env.TIMESTAMP}}
-          path: ./reports/query-results-*.sql
+          path: ./dumps/dump-report-*.sql
           retention-days: 60
 
       - name: Verify reports generated
         run: |
           # Check if file exists
-          if [ ! -f ./reports/query-results-${{ env.TIMESTAMP }}.sql ]; then
+          if [ ! -f ./dumps/dump-report-${{ env.TIMESTAMP }}.sql ]; then
             echo "Error: Report file does not exist"
-            exit 1
-          fi
-
-          # Check if query returned any results (look for lines after the headers)
-          result_count=$(tail -n +6 "./reports/query-results-${{ env.TIMESTAMP }}.sql" | grep -v '^$' | wc -l)
-          
-          if [ "$result_count" -le 1 ]; then  # Allow for column headers
-            echo "Warning: The query returned no data rows"
             exit 1
           fi
           
           # Check file size
-          file_size=$(stat -f%z "./reports/query-results-${{ env.TIMESTAMP }}.sql" 2>/dev/null || stat -c%s "./reports/query-results-${{ env.TIMESTAMP }}.sql")
+          file_size=$(stat -f%z "./dumps/dump-report-${{ env.TIMESTAMP }}.sql" 2>/dev/null || stat -c%s "./dumps/dump-report-${{ env.TIMESTAMP }}.sql")
           echo "File size: $file_size bytes"
           if [ "$file_size" -gt 1073741824 ]; then  # 1GB limit
             echo "Warning: Report file is larger than 1GB"
