@@ -33,18 +33,68 @@ jobs:
           role-external-id: ${{ secrets.external_id }}
           role-skip-session-tagging: true
 
-      - name: Get Timestamp
-        env:
-          TZ: Asia/Singapore
-        run: echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
+      - name: Validate SQL Query
+        run: |
+          # Check if query starts with SELECT
+          if [[ ! "${{ github.event.inputs.sql-query }}" =~ ^[[:space:]]*SELECT ]]; then
+            echo "Error: Only SELECT queries are allowed for security reasons [report generation only]"
+            exit 1
+          fi
 
       - name: Execute MySQL query
+        env:
+          TZ: Asia/Singapore
         run: |
-          DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} --query 'DBClusterEndpoints[*].[Endpoint]' --filters 'Name=db-cluster-endpoint-type,Values=writer' --output text)
-          DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_user)
-          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 --query 'SecretString' --output text|jq -r .db_password)
+          # Get database connection details with error handling
+          if ! DB_SERVER_ENDPOINT=$(aws rds describe-db-cluster-endpoints \
+            --db-cluster-identifier ciam-${{ github.event.inputs.sql-environment }} \
+            --query 'DBClusterEndpoints[*].[Endpoint]' \
+            --filters 'Name=db-cluster-endpoint-type,Values=writer' \
+            --output text); then
+            echo "Error: Failed to get database endpoint"
+            exit 1
+          fi
+
+          if ! DB_USERNAME=$(aws secretsmanager get-secret-value \
+            --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 \
+            --query 'SecretString' --output text | jq -r .db_user); then
+            echo "Error: Failed to get database username"
+            exit 1
+          fi
+
+          if ! DB_PASSWORD=$(aws secretsmanager get-secret-value \
+            --secret-id ciam-${{ github.event.inputs.sql-environment }}-db-user1 \
+            --query 'SecretString' --output text | jq -r .db_password); then
+            echo "Error: Failed to get database password"
+            exit 1
+          fi
+          
+
           mkdir -p ./reports
-          mysql -h $DB_SERVER_ENDPOINT -P 3306 --ssl -u $DB_USERNAME -p$DB_PASSWORD -D ciam -e "${{ github.event.inputs.sql-query }}" | sed "s/\t/,/g" > ./reports/query-results-${{env.TIMESTAMP}}.csv
+          echo "TIMESTAMP=$(date +%d%m%y-%H%M)" >> $GITHUB_ENV
+
+          # Create report file with metadata
+          {
+            echo "-- Report generated on $(date)"
+            echo "-- Environment: ${{ github.event.inputs.sql-environment }}"
+            echo "-- Query executed:"
+            echo "${{ github.event.inputs.sql-query }}" 
+            echo -e "\n-- Results:"
+          
+            # Execute query and output results
+            if ! timeout 300 mysql -h $DB_SERVER_ENDPOINT \
+                -P 3306 \
+                --ssl \
+                -u $DB_USERNAME \
+                -p$DB_PASSWORD \
+                -D ciam \
+                -B \
+                --column-names \
+                -e "${{ github.event.inputs.sql-query }}"; then
+              echo "Error: Query execution failed or timed out"
+              exit 1
+            fi
+          } > "./reports/query-results-${{ env.TIMESTAMP }}.sql"
 
       - name: Generate Report
         uses: actions/upload-artifact@v4
@@ -53,10 +103,17 @@ jobs:
           path: ./reports/query-results-*.csv
           retention-days: 60
 
-      - name: Verify all reports generated
+      - name: Verify reports generated
         run: |
           if [ ! -s ./reports/query-results-${{ env.TIMESTAMP }}.csv ]; then
             echo "Warning: The query returned no results"
+            exit 1
+          fi
+          
+          # Check file size not more than 1GB
+          file_size=$(stat -f%z "./reports/query-results-${{ env.TIMESTAMP }}.sql" 2>/dev/null || stat -c%s "./reports/query-results-${{ env.TIMESTAMP }}.sql")
+          if [ "$file_size" -gt 1073741824 ]; then  # 1GB limit
+            echo "Warning: Report file is larger than 1GB"
             exit 1
           fi
 
