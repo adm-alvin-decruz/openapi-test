@@ -15,12 +15,12 @@ const nopCommerceGetMembershipUrl = `${
 }${appConfig.NOP_COMMERCE_GET_MEMBERSHIP_PATH}`;
 
 //custom axios for workable with parse image stream
-async function callingNopCommerce(token, pictureId) {
+async function callingNopCommerce(token, pictureId, storeId) {
   return await axios.post(
     nopCommerceGetMembershipUrl,
     {
       token,
-      storeId: 1,
+      storeId,
       pictureId,
     },
     {
@@ -53,7 +53,7 @@ async function retrieveMembershipPhoto(pictureId) {
           layer: "nopCommerceService.retrieveMembershipPhoto",
           data: {
             token: maskKeyRandomly(tokenNopCommerce),
-            storeId: 1,
+            storeId: appToken.configuration.storeId,
             pictureId: pictureId,
           },
           config: {
@@ -67,7 +67,7 @@ async function retrieveMembershipPhoto(pictureId) {
       "Start retrieveMembershipPhoto"
     );
 
-    let response = await callingNopCommerce(tokenNopCommerce, pictureId);
+    let response = await callingNopCommerce(tokenNopCommerce, pictureId, appToken.configuration.storeId);
 
     //retry 1 time  for get new access token in case token expire
     if (
@@ -76,7 +76,7 @@ async function retrieveMembershipPhoto(pictureId) {
       !Buffer.from(response.data).toString("base64")
     ) {
       tokenNopCommerce = await getAccessToken();
-      response = await callingNopCommerce(tokenNopCommerce, pictureId);
+      response = await callingNopCommerce(tokenNopCommerce, pictureId, appToken.configuration.storeId);
     }
 
     if (
@@ -90,7 +90,7 @@ async function retrieveMembershipPhoto(pictureId) {
             layer: "nopCommerceService.retrieveMembershipPhoto",
             data: {
               token: maskKeyRandomly(tokenNopCommerce),
-              storeId: 1,
+              storeId: appToken.configuration.storeId,
               pictureId: pictureId,
             },
             config: {
@@ -136,7 +136,7 @@ async function retrieveMembershipPhoto(pictureId) {
           layer: "nopCommerceService.retrieveMembershipPhoto",
           data: {
             token: maskKeyRandomly(tokenNopCommerce) || undefined,
-            storeId: 1,
+            storeId: appToken.configuration.storeId,
             pictureId: pictureId,
           },
           error: JSON.stringify(error),
@@ -212,7 +212,7 @@ async function getAccessToken() {
             membershipSecretKey: maskKeyRandomly(
               appToken.credentials.client_secret
             ),
-            storeId: 1,
+            storeId: appToken.configuration.storeId,
           },
           error: JSON.stringify(error),
         },
