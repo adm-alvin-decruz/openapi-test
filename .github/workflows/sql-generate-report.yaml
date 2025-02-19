@@ -105,7 +105,7 @@ jobs:
 
       - name: Verify reports generated
         run: |
-          if [ ! -s ./reports/query-results-${{ env.TIMESTAMP }}.csv ]; then
+          if [ ! -s ./reports/query-results-${{ env.TIMESTAMP }}.sql ]; then
             echo "Warning: The query returned no results"
             exit 1
           fi
