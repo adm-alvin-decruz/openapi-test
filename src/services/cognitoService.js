@@ -192,7 +192,6 @@ class Cognito {
     lastName,
     birthdate,
     address,
-    groups,
     mandaiId,
     newsletter,
     source,

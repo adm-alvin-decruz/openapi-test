@@ -21,6 +21,15 @@ const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 const { GROUP } = require("../../utils/constants");
+const { SendMessageCommand, SQSClient } = require("@aws-sdk/client-sqs");
+
+const awsRegion = () => {
+  const env = process.env.AWS_REGION_NAME;
+  if (!env) return "ap-southeast-1";
+  if (env === "false") return "ap-southeast-1";
+  return env;
+};
+const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -307,6 +316,158 @@ class UserSignupService {
     };
   }
 
+  //https://mandaiwildlifereserve.atlassian.net/browse/CIAM-181
+  async checkUserBelongWildPass(userEmail, userCognito) {
+    if (!userCognito) return false;
+
+    const membershipBelongWildPass = JSON.stringify(
+      getOrCheck(userCognito, "custom:membership")
+    ).includes(GROUP.WILD_PASS);
+
+    const userGroupsAtCognito =
+      await cognitoService.cognitoAdminListGroupsForUser(userEmail);
+
+    const groups =
+      userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
+        ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
+        : [];
+
+    return (
+      (groups.includes(GROUP.WILD_PASS) &&
+        !groups.includes(GROUP.MEMBERSHIP_PASSES)) ||
+      membershipBelongWildPass
+    );
+  }
+
+  async sendSQSMessage(body, action) {
+    try {
+      const data = {
+        action: action,
+        body: body,
+      };
+
+      const queueUrl = process.env.SQS_QUEUE_URL;
+      const command = new SendMessageCommand({
+        QueueUrl: queueUrl,
+        MessageBody: JSON.stringify(data),
+      });
+
+      console.log("data**********", data);
+      return await sqsClient.send(command);
+    } catch (error) {
+      loggerService.error(
+        `UserSignupMembershipPasses.sendSQSMessage Error: ${error}`,
+        body
+      );
+    }
+  }
+
+  //it can happen with normal signup flow + migration flow
+  async handleUpdateUserBelongWildPass(
+    req,
+    userCognito,
+    userDB,
+    passwordCredential
+  ) {
+    try {
+      await cognitoService.cognitoAdminSetUserPassword(
+        req.body.email,
+        passwordCredential.cognito.hashPassword
+      );
+
+      const firstNameDB = userDB.given_name || "";
+      const lastNameDB = userDB.family_name || "";
+      const dobCognito = getOrCheck(userCognito, "birthdate") || null;
+      const isTriggerUpdateInfo =
+        firstNameDB !== req.body.firstName ||
+        lastNameDB !== req.body.lastName ||
+        (req.body.dob && dobCognito !== req.body.dob);
+
+      if (isTriggerUpdateInfo) {
+        await userModel.update(userDB.id, {
+          given_name: req.body.firstName || undefined,
+          family_name: req.body.lastName || undefined,
+          birthdate: req.body.dob
+            ? convertDateToMySQLFormat(req.body.dob)
+            : undefined,
+        });
+        let userName = getOrCheck(userCognito, "name");
+        const userFirstName = getOrCheck(userCognito, "given_name");
+        const userLastName = getOrCheck(userCognito, "family_name");
+
+        if (req.body.firstName && userFirstName) {
+          userName = userName.replace(
+            userFirstName.toString(),
+            req.body.firstName
+          );
+        }
+
+        if (req.body.firstName && userLastName) {
+          userName = userName.replace(
+            userLastName.toString(),
+            req.body.firstName
+          );
+        }
+        await cognitoService.cognitoAdminUpdateNewUser(
+          [
+            {
+              Name: "given_name",
+              Value: req.body.firstName,
+            },
+            {
+              Name: "family_name",
+              Value: req.body.lastName,
+            },
+            {
+              Name: "name",
+              Value: userName,
+            },
+          ],
+          req.body.email
+        );
+        //require field when trigger generate passkit & cardface
+        if (
+          isTriggerUpdateInfo &&
+          req.body.firstName &&
+          req.body.lastName &&
+          userDB.visualId
+        ) {
+          await this.sendSQSMessage(
+            {
+              firstName: req.body.firstName || userDB.given_name,
+              lastName: req.body.lastName || userDB.family_name,
+              dob: req.body.dob || dobCognito,
+              mandaiID: getOrCheck(userCognito, "custom:mandai_id"),
+              visualID: userDB.visualId,
+              email: req.body.email,
+            },
+            "signUpMembershipPasses"
+          );
+        }
+      }
+
+      !!req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 1,
+        }));
+      return {
+        mandaiId: getOrCheck(userCognito, "custom:mandai_id"),
+      };
+    } catch (error) {
+      loggerService.error(
+        `userSignupService.signup with user existed in group WILDPASS Error: ${error} - userEmail: ${req.body.email}`,
+        req.body
+      );
+      req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 3,
+        }));
+      throw new Error(
+        JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
+      );
+    }
+  }
+
   async signup(req) {
     loggerService.log(
       {
@@ -332,48 +493,25 @@ class UserSignupService {
       getOrCheck(userExistedInCognito, "custom:mandai_id")
     ) {
       //check is user email existed at wildpass group
-      const userGroupsAtCognito =
-        await cognitoService.cognitoAdminListGroupsForUser(req.body.email);
-      const groups =
-        userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
-          ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
-          : [];
+      const userBelongWildpassGroup = await this.checkUserBelongWildPass(
+        req.body.email,
+        userExistedInCognito
+      );
+
+      const userInfo = await userModel.findFullMandaiId(req.body.email);
+
       if (
-        groups.includes(GROUP.WILD_PASS) &&
-        !groups.includes(GROUP.MEMBERSHIP_PASSES)
+        userInfo &&
+        userInfo.length &&
+        userInfo[0] &&
+        userBelongWildpassGroup
       ) {
-        // set user password in cognito
-        try {
-          await cognitoService.cognitoAdminSetUserPassword(
-            req.body.email,
-            passwordCredential.cognito.hashPassword
-          );
-          !!req.body.migrations &&
-            (await empMembershipUserAccountsModel.updateByEmail(
-              req.body.email,
-              {
-                picked: 1,
-              }
-            ));
-          return {
-            mandaiId: getOrCheck(userExistedInCognito, "custom:mandai_id"),
-          };
-        } catch (error) {
-          loggerService.error(
-            `userSignupService.signup with user existed in group WILDPASS Error: ${error} - userEmail: ${req.body.email}`,
-            req.body
-          );
-          req.body.migrations &&
-            (await empMembershipUserAccountsModel.updateByEmail(
-              req.body.email,
-              {
-                picked: 3,
-              }
-            ));
-          throw new Error(
-            JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
-          );
-        }
+        return await this.handleUpdateUserBelongWildPass(
+          req,
+          userExistedInCognito,
+          userInfo[0],
+          passwordCredential
+        );
       }
       req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {

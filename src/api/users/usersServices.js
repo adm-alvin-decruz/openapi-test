@@ -121,15 +121,14 @@ async function cognitoCreateUser(req){
       if (cognitoRes.$metadata.httpStatusCode !== 200) {
         return 'Lambda user creation failed';
       }
-      if (cognitoRes.$metadata.httpStatusCode === 200) {
-         await cognitoService.cognitoAdminAddUserToGroup(
-            req.body.email,
-            GROUP.WILD_PASS
-        );
-      }
       req.apiTimer.end('Cognito Create User ended');
       return cognitoRes;
     });
+
+    await cognitoService.cognitoAdminAddUserToGroup(
+      req.body.email,
+      GROUP.WILD_PASS
+    );
 
     // save to DB
     req.body.password = await passwordService.hashPassword(newUserArray.TemporaryPassword);
