@@ -139,7 +139,7 @@ jobs:
       - name: Generate Report
         uses: actions/upload-artifact@v4
         with:
-          name: query-results-${{env.TIMESTAMP}}
+          name: sql-ciam-generate-report-${{env.TIMESTAMP}}
           path: ./dumps/dump-report-*.sql
           retention-days: 60
 
