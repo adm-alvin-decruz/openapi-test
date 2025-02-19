@@ -14,7 +14,7 @@ on:
 
 jobs:
   sql-generate-report:
-    name: Run SQL Statements
+    name: Generate SQL Report
     runs-on: commonservices-${{ github.event.inputs.sql-environment }}
     environment: ${{ github.event.inputs.sql-environment }}
 
@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: query-results-${{env.TIMESTAMP}}
-          path: ./reports/query-results-*.csv
+          path: ./reports/query-results-*.sql
           retention-days: 60
 
       - name: Verify reports generated
