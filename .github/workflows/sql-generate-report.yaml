@@ -95,7 +95,7 @@ jobs:
           mkdir -p ./dumps
 
           # Prepare mysqldump options
-          MYSQLDUMP_OPTS="--single-transaction --skip-lock-tables"
+          MYSQLDUMP_OPTS="--single-transaction --skip-lock-tables --no-create-info --compact --no-tablespaces"
 
           # Add WHERE clause if provided
           if [[ -n "${{ github.event.inputs.where-clause }}" ]]; then
