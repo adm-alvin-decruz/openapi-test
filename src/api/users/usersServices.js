@@ -431,18 +431,22 @@ async function updateUserCognito(body, userCognito) {
     }
   }).filter(ele => !!ele && !!ele.Name);
 
-  //cognito update user
-  await cognitoService.cognitoAdminUpdateNewUser([
-    ...cognitoParams,
-    {
-      Name: 'name',
-      Value: userName
-    },
-    {
-      Name: 'email',
-      Value: !!body.data.newEmail ? body.data.newEmail : body.email
-    }
-  ], body.email);
+  try {
+    //cognito update user
+    await cognitoService.cognitoAdminUpdateNewUser([
+      ...cognitoParams,
+      {
+        Name: 'name',
+        Value: userName
+      },
+      {
+        Name: 'email',
+        Value: !!body.data.newEmail ? body.data.newEmail : body.email
+      }
+    ], body.email);
+  } catch (error) {
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(body.language)));
+  }
 }
 
 async function adminUpdateNewUser(body, token) {
@@ -467,10 +471,11 @@ async function adminUpdateNewUser(body, token) {
     }
     //1st updatePassword -> if failed the process update user will stop
     await updatePassword(body, token, isNewEmailExisted);
-    //2nd update DB
+    //2nd update Cognito
+    await updateUserCognito(body, userCognito);
+    //3rd update DB
     await updateDB(body, userDB && userDB.id ? userDB.id : undefined, isNewEmailExisted);
-    //3rd update Cognito
-    await updateUserCognito(body, userCognito)
+
 
     return {
       membership: {

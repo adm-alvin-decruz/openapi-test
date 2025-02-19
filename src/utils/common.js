@@ -40,6 +40,11 @@ const passwordPattern = (password) => {
   return regexPasswordValid.test(password.toString());
 };
 
+const emailPattern = (email) => {
+  const regexPasswordValid = new RegExp("^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$", "g");
+  return regexPasswordValid.test(email.toString());
+};
+
 const generateSecretHash = (keyword) => {
   const clientId = process.env.USER_POOL_CLIENT_ID;
   const clientSecret = process.env.USER_POOL_CLIENT_SECRET;
@@ -98,4 +103,5 @@ module.exports = {
   formatPhoneNumber,
   omit,
   maskKeyRandomly,
+  emailPattern
 };

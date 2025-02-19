@@ -1,6 +1,6 @@
 const { validateDOB } = require("../../../services/validationService");
 const CommonErrors = require("../../../config/https/errors/common");
-const { passwordPattern } = require("../../../utils/common");
+const { passwordPattern, emailPattern } = require("../../../utils/common");
 
 class UserUpdateValidation {
   constructor() {
@@ -40,6 +40,14 @@ class UserUpdateValidation {
       ));
     }
 
+    if (bodyData.newEmail && !emailPattern(bodyData.newEmail)) {
+      return (this.error = CommonErrors.BadRequest(
+        "newEmail",
+        "newEmail_invalid",
+        req.language
+      ));
+    }
+
     if (bodyData.dob || bodyData.dob === "") {
       const dob = validateDOB(bodyData.dob);
       if (!dob) {
@@ -58,8 +66,8 @@ class UserUpdateValidation {
       ));
     }
     if (
-        bodyData.newsletter &&
-        bodyData.newsletter.name &&
+      bodyData.newsletter &&
+      bodyData.newsletter.name &&
       !["wildpass", "membership"].includes(bodyData.newsletter.name)
     ) {
       return (this.error = CommonErrors.BadRequest(
