@@ -135,16 +135,47 @@ class Cognito {
   }
 
   static async cognitoAdminListGroupsForUser(email) {
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          action: "cognitoAdminListGroupsForUser",
+          layer: "services.cognitoService",
+        },
+      },
+      "[CIAM] Start cognitoAdminListGroupsForUser Service"
+    );
     const groupsBelongUserCommand = new AdminListGroupsForUserCommand({
       UserPoolId: process.env.USER_POOL_ID,
       Username: email,
     });
 
     try {
-      return await client.send(groupsBelongUserCommand);
+      const groups = await client.send(groupsBelongUserCommand);
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            groups,
+            action: "cognitoAdminListGroupsForUser",
+            layer: "services.cognitoService",
+          },
+        },
+        "[CIAM] Start cognitoAdminListGroupsForUser Service - Success"
+      );
+      return groups;
     } catch (error) {
       loggerService.error(
-        `cognitoService.cognitoAdminListGroupsForUser Error: ${error} userEmail: ${email}`
+        {
+          cognitoService: {
+            email,
+            action: "cognitoAdminListGroupsForUser",
+            layer: "services.cognitoService",
+            error: `${error}`,
+          },
+        },
+        {},
+        "[CIAM] End cognitoAdminListGroupsForUser Service - Failed"
       );
       throw new Error(
         JSON.stringify({

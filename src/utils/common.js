@@ -41,8 +41,8 @@ const passwordPattern = (password) => {
 };
 
 const emailPattern = (email) => {
-  const regexPasswordValid = new RegExp("^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$", "g");
-  return regexPasswordValid.test(email.toString());
+  const regexEmailValid = new RegExp("^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$", "g");
+  return regexEmailValid.test(email.toString());
 };
 
 const generateSecretHash = (keyword) => {

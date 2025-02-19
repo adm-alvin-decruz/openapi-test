@@ -308,6 +308,18 @@ class UserSignupService {
   }
 
   async signup(req) {
+    loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminCreateNewUser",
+          api_header: req.headers,
+          api_body: req.body,
+          layer: "userSignupService.signup",
+        },
+      },
+      "[CIAM] Start Signup with FOs Service"
+    );
     //prepare password information dynamic by migrations flag
     const passwordCredential = await this.preparePassword(req);
 

@@ -35,26 +35,6 @@ const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
 
 /**
- * Function listAll users
- *
- * @returns array all users in userspool
- */
-async function listAll() {
-  const command = new ListUsersCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-  });
-
-  try {
-    var response = await client.send(command);
-  } catch (error) {
-    if (process.env.APP_LOG_SWITCH) {
-      console.log(error);
-    }
-  }
-  return response;
-}
-
-/**
  * Create user using admin function
  *
  * User flow step 1 signup
@@ -149,13 +129,51 @@ async function adminCreateUser(req) {
  * User created and with password FOW/FOW+
  */
 async function adminCreateNewUser(req) {
+  loggerService.log(
+    {
+      user: {
+        membership: req.body.group,
+        action: "adminCreateNewUser",
+        api_header: req.headers,
+        api_body: req.body,
+        layer: "controller.adminCreateNewUser",
+      },
+    },
+    "[CIAM] Start Signup with FOs Request"
+  );
   const message = UserSignUpValidation.execute(req.body);
   if (!!message) {
+    loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminCreateNewUser",
+          api_header: req.headers,
+          api_body: req.body,
+          layer: "controller.adminCreateNewUser",
+        },
+      },
+      "[CIAM] End Signup with FOs Request - Failed"
+    );
     throw new Error(JSON.stringify(message));
   }
   try {
     return await UserSignupJob.perform(req);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminCreateNewUser",
+          layer: "controller.adminCreateNewUser",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: `${error}`,
+        },
+      },
+      {},
+      "userUpdateMembershipPass End Request"
+    );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -284,7 +302,7 @@ async function adminUpdateUser(req, listedParams) {
 }
 
 async function adminUpdateNewUser(req, token) {
-  const message = UserUpdateValidation.execute(req.body);
+  const message = await UserUpdateValidation.execute(req.body);
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }
@@ -620,18 +638,18 @@ async function userCreateMembershipPass(req, res) {
     return res.status(data.statusCode).json(data);
   } catch (error) {
     loggerService.error(
-        {
-          user: {
-            membership: req.body.group,
-            action: "userCreateMembershipPass",
-            layer: "controller.userCreateMembershipPass",
-            api_header: req.headers,
-            api_body: req.body,
-            response_to_client: error,
-          },
+      {
+        user: {
+          membership: req.body.group,
+          action: "userCreateMembershipPass",
+          layer: "controller.userCreateMembershipPass",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: `${error}`,
         },
-        {},
-        "userCreateMembershipPass End Request"
+      },
+      {},
+      "userCreateMembershipPass End Request"
     );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);
@@ -712,7 +730,7 @@ async function userUpdateMembershipPass(req, res) {
           layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: error,
+          response_to_client: `${error}`,
         },
       },
       {},
