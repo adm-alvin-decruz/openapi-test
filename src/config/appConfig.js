@@ -61,9 +61,9 @@ const appConfig = {
   EMAIL_SERVICE_APP_ID_PROD: "emailTrigger.prod.internal.mandaiapi.ciam",
 
   //AEM Callback URL
-  AEM_CALLBACK_URL_DEV: 'https://dev-www.mandai.com',
-  AEM_CALLBACK_URL_UAT: 'https://uat-www.mandai.com',
-  AEM_CALLBACK_URL_PROD: 'https://www.mandai.com',
+  AEM_CALLBACK_URL_DEV: 'https://dev-members.mandai.com',
+  AEM_CALLBACK_URL_UAT: 'https://uat-members.mandai.com',
+  AEM_CALLBACK_URL_PROD: 'https://members.mandai.com',
   AEM_CALLBACK_PATH: '/bin/wrs/ciam/auth/callback',
 };
 

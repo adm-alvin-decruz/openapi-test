@@ -103,6 +103,10 @@ jobs:
           mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -e "SHOW DATABASES;"
           echo "running ${{ github.event.inputs.sql-script-path }}"
           mysql -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD -D ciam < ${{ github.event.inputs.sql-script-path }}
+<<<<<<< HEAD
+=======
+
+>>>>>>> 426b60932be2ae2284506e853b701183604d79ef
       - name: Verify Deployment
         if: steps.backup.outputs.backup_created == 'true' && steps.upload-backup.conclusion == 'success'
         run: echo "Run Query to verify db update/rollback of database/table is successful"
