@@ -2,7 +2,6 @@ const { validateDOB } = require("../../../services/validationService");
 const CommonErrors = require("../../../config/https/errors/common");
 const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
-const EmailDomainService = require("../../../services/emailDomainsService");
 
 class UserUpdateValidation {
   constructor() {
@@ -52,9 +51,9 @@ class UserUpdateValidation {
 
     // check email domain switch turned on ( 1 ) if email format is passed
     if (bodyData.newEmail && emailDomainService.isValidEmailFormat(bodyData.newEmail)) {
-      if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
+      if ((await emailDomainService.getCheckDomainSwitch()) === true) {
         // validate email domain to DB
-        let validDomain = await EmailDomainService.validateEmailDomain(bodyData.newEmail);
+        let validDomain = await emailDomainService.validateEmailDomain(bodyData.newEmail);
         if (!validDomain) {
           return (this.error = CommonErrors.BadRequest(
               "newEmail",
