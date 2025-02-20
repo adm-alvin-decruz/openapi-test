@@ -7,26 +7,27 @@ class UserMembershipPassValidation {
   }
 
   static validateCreateUserMembershipPass(req) {
-    const requiredParams = req.body && req.body.migrations
-      ? [
-          "email",
-          "group",
-          "passType",
-          "visualId",
-          "categoryType",
-          "adultQty",
-          "childQty",
-        ]
-      : [
-          "email",
-          "mandaiId",
-          "group",
-          "passType",
-          "visualId",
-          "categoryType",
-          "adultQty",
-          "childQty",
-        ];
+    const requiredParams =
+      req.body && req.body.migrations
+        ? [
+            "email",
+            "group",
+            "passType",
+            "visualId",
+            "categoryType",
+            "adultQty",
+            "childQty",
+          ]
+        : [
+            "email",
+            "mandaiId",
+            "group",
+            "passType",
+            "visualId",
+            "categoryType",
+            "adultQty",
+            "childQty",
+          ];
 
     const requestParams = Object.keys(req.body);
     const missingParams = requiredParams.filter(
@@ -179,13 +180,14 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (!req.body.parking || (req.body.parking && req.body.parking === "no")) {
-      if (req.body.iu !== null) {
+    if (req.body.parking && req.body.parking === "yes") {
+      if (!req.body.iu || !req.body.iu.trim().length) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
           "iu",
           req.body.language
         ));
-      } else if (req.body.carPlate !== null) {
+      }
+      if (!req.body.carPlate || !req.body.carPlate.trim().length) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
           "carPlate",
           req.body.language
