@@ -4,9 +4,9 @@ const cognitoService = require("../../services/cognitoService");
 const userModel = require("../../db/models/userModel");
 const userMembershipModel = require("../../db/models/userMembershipModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
-const userMigrationsMembershipPassesModel = require("../../db/models/UserMigrationsMembershipPassesModel");
-const empMembershipUserPassesModel = require("../../db/models/EmpMembershipUserPassesModel");
-const configsModel = require("../../db/models/ConfigsModel");
+const userMigrationsMembershipPassesModel = require("../../db/models/userMigrationsMembershipPassesModel");
+const empMembershipUserPassesModel = require("../../db/models/empMembershipUserPassesModel");
+const configsModel = require("../../db/models/configsModel");
 const loggerService = require("../../logs/logger");
 const { uploadThumbnailToS3 } = require("../../services/s3Service");
 const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
@@ -866,13 +866,13 @@ class UserMembershipPassService {
   }
 
   async sendSQSMessage(req, action) {
+    const data = {
+      action: action,
+      body: omit(req.body, ["membershipPhoto"]),
+    };
+    const queueUrl = process.env.SQS_QUEUE_URL;
+    
     try {
-      const data = {
-        action: action,
-        body: omit(req.body, ["membershipPhoto"]),
-      };
-
-      const queueUrl = process.env.SQS_QUEUE_URL;
       loggerService.log(
         {
           SQS: {

@@ -33,7 +33,7 @@ class UserMembership {
       loggerService.error(
         {
           UserMembershipModel: {
-            error: JSON.stringify(error),
+            error: `${error}`,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },

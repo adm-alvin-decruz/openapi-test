@@ -59,7 +59,7 @@ const uploadThumbnailToS3 = async (req) => {
           mandaiId: req.body.mandaiId,
           layer: "service.uploadThumbnailToS3",
           data: req.body.membershipPhoto.bytes,
-          error: JSON.stringify(error)
+          error: `${error}`
         },
       },
       {},

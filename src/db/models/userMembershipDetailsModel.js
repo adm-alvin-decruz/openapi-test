@@ -51,7 +51,7 @@ class UserMembershipDetails {
       loggerService.error(
         {
           UserMembershipDetailsModel: {
-            error: JSON.stringify(error),
+            error: `${error}`,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },
@@ -101,7 +101,7 @@ class UserMembershipDetails {
       loggerService.error(
         {
           UserMembershipDetailsModel: {
-            error: JSON.stringify(error),
+            error: `${error}`,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },
