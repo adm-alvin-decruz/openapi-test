@@ -173,8 +173,8 @@ class UserSignupService {
       {
         user: {
           action: "saveUserDB",
-          phoneNumber,
-          mandaiId,
+          phoneNumber: phoneNumber,
+          mandaiId: mandaiId,
           hashPassword: maskKeyRandomly(hashPassword),
           saltPassword: maskKeyRandomly(saltPassword),
           body: req.body,
@@ -593,6 +593,7 @@ class UserSignupService {
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
     }
+
     try {
       const mandaiId = this.generateMandaiId(req);
 
@@ -630,17 +631,18 @@ class UserSignupService {
       );
 
       //update picked = 1 in emp_membership+user_accounts tbl
-      !!req.body.migrations &&
+      !!req.body &&
+        !!req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 1,
         }));
 
       await this.saveUserDB({
         req,
-        phoneNumber,
-        mandaiId,
-        hashPassword: passwordCredential.db.hashPassword,
-        saltPassword: passwordCredential.db.salt,
+        phoneNumber: phoneNumber || "",
+        mandaiId: mandaiId || "",
+        hashPassword: passwordCredential.db.hashPassword || "",
+        saltPassword: passwordCredential.db.salt || "",
       });
       loggerService.log(
         {
@@ -657,12 +659,6 @@ class UserSignupService {
         mandaiId,
       };
     } catch (error) {
-      req.body.migrations &&
-        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
-          picked: 2,
-        }));
-      const errorMessage =
-        error && error.message ? JSON.parse(error.message) : "";
       loggerService.error(
         {
           user: {
@@ -671,11 +667,18 @@ class UserSignupService {
             api_header: req.headers,
             api_body: req.body,
             layer: "userSignupService.signup",
+            error: `${error}`,
           },
         },
         {},
         "[CIAM] End Signup with FOs Service - Failed"
       );
+      req.body.migrations &&
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
+          picked: 2,
+        }));
+      const errorMessage =
+        error && error.message ? JSON.parse(error.message) : "";
       if (
         errorMessage &&
         errorMessage.rawError &&

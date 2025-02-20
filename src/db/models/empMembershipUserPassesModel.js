@@ -42,7 +42,7 @@ class EmpMembershipUserPassesModel {
       loggerService.error(
         {
           EmpMembershipUserPassesModel: {
-            error: JSON.stringify(error),
+            error: `${error}`,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },

@@ -44,7 +44,7 @@ class EmpMembershipUserAccountsModel {
           EmpMembershipUserAccountsModel: {
             email,
             data,
-            error: JSON.stringify(error),
+            error: `${error}`,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },

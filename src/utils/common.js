@@ -41,7 +41,10 @@ const passwordPattern = (password) => {
 };
 
 const emailPattern = (email) => {
-  const regexEmailValid = new RegExp("^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$", "g");
+  const regexEmailValid = new RegExp(
+    "^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$",
+    "g"
+  );
   return regexEmailValid.test(email.toString());
 };
 
@@ -75,7 +78,7 @@ const omit = (obj, excludeKeys) => {
 };
 
 const maskKeyRandomly = (key) => {
-  if (key.length <= 3) {
+  if (key.length <= 3 || !key) {
     return "***"; // If key is too short, return as is
   }
 
@@ -103,5 +106,5 @@ module.exports = {
   formatPhoneNumber,
   omit,
   maskKeyRandomly,
-  emailPattern
+  emailPattern,
 };
