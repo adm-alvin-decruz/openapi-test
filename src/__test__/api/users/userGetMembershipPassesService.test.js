@@ -3,7 +3,7 @@ const userModel = require("../../../db/models/userModel");
 const ApiUtils = require("../../../utils/apiUtils");
 
 jest.mock("../../../db/models/userModel", () => ({
-  findByEmailVisualIds: jest.fn(),
+  findByEmailVisualIdsActive: jest.fn(),
   findFullMandaiId: jest.fn(),
 }));
 jest.mock("../../../utils/apiUtils", () => ({
@@ -21,9 +21,9 @@ describe("UserGetMembershipPassesService", () => {
   });
 
   describe("execute", () => {
-    it("should throw an error when findByEmailVisualIds throw error", async () => {
+    it("should throw an error when findByEmailVisualIdsActive throw error", async () => {
       jest
-        .spyOn(userModel, "findByEmailVisualIds")
+        .spyOn(userModel, "findByEmailVisualIdsActive")
         .mockRejectedValue("failed query");
       await expect(
         UserGetMembershipPassesService.execute({
@@ -68,7 +68,7 @@ describe("UserGetMembershipPassesService", () => {
       );
     });
     it("should return passes based on visualId with case specific visual id", async () => {
-      jest.spyOn(userModel, "findByEmailVisualIds").mockResolvedValue([
+      jest.spyOn(userModel, "findByEmailVisualIdsActive").mockResolvedValue([
         {
           email: "test@gmail.com",
           mandaiId: "123",

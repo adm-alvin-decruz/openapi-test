@@ -110,12 +110,13 @@ class User {
   }
 
   /** Find users based on visualId and email*/
-  static async findByEmailVisualIds(visualIds, email) {
+  static async findByEmailVisualIdsActive(visualIds, email) {
     try {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ?`;
+                  INNER JOIN user_membership_details umd ON umd.user_membership_id = um.id
+                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND (umd.status = 1 OR umd.valid_until >= NOW())`;
 
       return await pool.query(sql, [visualIds, email]);
     } catch (error) {
@@ -128,7 +129,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailVisualIds - Failed"
+        "[CIAM] userModel.findByEmailVisualIdsActive - Failed"
       );
       return error;
     }

@@ -40,7 +40,7 @@ class UserGetMembershipPassesService {
   }
 
   async retrieveSinglePassURL(visualIds, body) {
-    const userInfo = await userModel.findByEmailVisualIds(
+    const userInfo = await userModel.findByEmailVisualIdsActive(
       visualIds,
       body.email
     );
