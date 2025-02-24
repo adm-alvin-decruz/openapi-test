@@ -4,10 +4,13 @@ const failedJobsModel = require("../../db/models/failedJobsModel");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const passkitCommonService = require("../components/passkit/services/passkitCommonService");
 const appConfig = require("../../config/appConfig");
+const loggerService = require("../../logs/logger");
 
 class UserGetMembershipPassesService {
   constructor() {
-    this.apiEndpoint = `${appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
+    this.apiEndpoint = `${
+      appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]
+    }${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
   }
 
   /**
@@ -25,8 +28,23 @@ class UserGetMembershipPassesService {
   }
 
   async handleIntegration(userInfo) {
+    loggerService.log(
+      {
+        user: {
+          userInfo: userInfo,
+          action: `handleIntegration with Passkit`,
+          layer: "userGetMembershipPassesService.handleIntegration",
+        },
+      },
+      "Start getMembershipPasses Service"
+    );
     const response = await Promise.all(
-      userInfo.map((info) => passkitCommonService.retrievePasskit(info.mandaiId, info.membership, info.visualId)
+      userInfo.map((info) =>
+        passkitCommonService.retrievePasskit(
+          info.mandaiId,
+          info.membership,
+          info.visualId
+        )
       )
     );
     return {
@@ -56,6 +74,17 @@ class UserGetMembershipPassesService {
       }
       return await this.retrieveSinglePassURL(visualIds, body);
     } catch (error) {
+      loggerService.log(
+        {
+          user: {
+            body: body,
+            action: `handleIntegration with Passkit`,
+            layer: "userGetMembershipPassesService.execute",
+            error: `${error}`
+          },
+        },
+        "End getMembershipPasses Service - Failed"
+      );
       await failedJobsModel.create({
         uuid: crypto.randomUUID(),
         name: "failedGetMembershipPasses",

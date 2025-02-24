@@ -619,13 +619,45 @@ async function userConfirmResetPassword(body) {
 }
 
 async function userGetMembershipPasses(body) {
+  loggerService.log(
+    {
+      user: {
+        action: "userGetMembershipPasses",
+        api_body: body,
+        layer: "controller.userGetMembershipPasses",
+      },
+    },
+    "[CIAM] userGetMembershipPasses Start Request"
+  );
   const message = UserGetMembershipPassesValidation.execute(body);
   if (!!message) {
+    loggerService.log(
+        {
+          user: {
+            action: "userGetMembershipPasses",
+            api_body: body,
+            response: `${message}`,
+            layer: "controller.userGetMembershipPasses",
+          },
+        },
+        "[CIAM] End userGetMembershipPasses Request - Failed"
+    );
     throw new Error(JSON.stringify(message));
   }
   try {
     return await UserGetMembershipPassesJob.perform(body);
   } catch (error) {
+    loggerService.log(
+        {
+          user: {
+            action: "userGetMembershipPasses",
+            api_body: body,
+            response: `${error}`,
+            layer: "controller.userGetMembershipPasses",
+          },
+        },
+        "[CIAM] End userGetMembershipPasses Request - Failed"
+    );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {

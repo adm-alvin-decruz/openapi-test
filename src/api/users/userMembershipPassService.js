@@ -570,8 +570,8 @@ class UserMembershipPassService {
         "pass-type-mapping"
       ));
     return !!passTypeMapping
-      ? passTypeMapping[`${req.body.passType}`]
-      : req.body.passType;
+      ? passTypeMapping[`${req.body.passType.toLowerCase()}`]
+      : req.body.passType.toLowerCase();
   }
 
   async formatMembershipData(req, existingMemberships) {
@@ -871,7 +871,7 @@ class UserMembershipPassService {
       body: omit(req.body, ["membershipPhoto"]),
     };
     const queueUrl = process.env.SQS_QUEUE_URL;
-    
+
     try {
       loggerService.log(
         {
