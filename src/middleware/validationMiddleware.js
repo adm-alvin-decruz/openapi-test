@@ -4,6 +4,7 @@ const loggerService = require("../logs/logger");
 const CommonErrors = require("../config/https/errors/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
+const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
 
 /**
@@ -52,6 +53,26 @@ function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
 }
 
+async function refreshToken(credentialInfo) {
+  try {
+    const refreshTokenRs = await cognitoService.cognitoRefreshToken(
+      credentialInfo.tokens.refreshToken,
+      credentialInfo.tokens.userSubId
+    );
+    await userCredentialModel.updateByUserId(credentialInfo.user_id, {
+      tokens: JSON.stringify({
+        ...credentialInfo.tokens,
+        accessToken: refreshTokenRs.AuthenticationResult.AccessToken,
+        idToken: refreshTokenRs.AuthenticationResult.IdToken,
+      }),
+    });
+    console.log('refrehs', refreshTokenRs)
+    return refreshTokenRs.AuthenticationResult.AccessToken;
+  } catch (error) {
+    return undefined;
+  }
+}
+
 async function AccessTokenAuthGuard(req, res, next) {
   if (!req.headers.authorization) {
     return res
@@ -67,45 +88,55 @@ async function AccessTokenAuthGuard(req, res, next) {
   const userCredentials = await userCredentialModel.findByUserEmail(
     req.body.email
   );
+
   if (
     !userCredentials ||
     !userCredentials.tokens ||
-    !userCredentials.tokens.idToken
+    !userCredentials.tokens.accessToken ||
+    !userCredentials.tokens.refreshToken ||
+    userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  const verifier = CognitoJwtVerifier.create({
-    userPoolId: process.env.USER_POOL_ID,
-    tokenUse: "id",
-    clientId: process.env.USER_POOL_CLIENT_ID,
-  });
   const verifierAccessToken = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
     tokenUse: "access",
     clientId: process.env.USER_POOL_CLIENT_ID,
   });
   try {
-    const payload = await verifier.verify(userCredentials.tokens.idToken);
     const payloadAccessToken = await verifierAccessToken.verify(
       req.headers.authorization
     );
-    if (payload.email !== req.body.email) {
-      return res
-        .status(401)
-        .json(CommonErrors.UnauthorizedException(req.body.language));
-    }
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res
         .status(401)
         .json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
-    loggerService.error(new Error(
-      `ValidationMiddleware.AccessTokenAuthGuard Error - payload: ${error}:`,
-      req.body
-    ));
+    if (error && error.message && error.message.includes("Token expired at")) {
+      const newAccessToken = await refreshToken(userCredentials);
+      console.log('newAccessToken', newAccessToken)
+      if (newAccessToken) {
+        console.log('newAccessToken*******', newAccessToken)
+        res.newAccessToken = newAccessToken;
+        return next();
+      } else {
+        return res
+          .status(401)
+          .json(CommonErrors.UnauthorizedException(req.body.language));
+      }
+    }
+
+    loggerService.error(
+      {
+        body: req.body,
+        error: `${error}`,
+      },
+      {},
+      "AccessTokenAuthGuard Middleware Failed"
+    );
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));

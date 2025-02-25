@@ -15,6 +15,7 @@ const {
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
 const { maskKeyRandomly } = require("../utils/common");
+const usersService = require("../api/users/usersServices");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -662,6 +663,67 @@ class Cognito {
         },
         {},
         "[CIAM] End cognitoAdminAddUserToGroup Service - Failed"
+      );
+      throw new Error(
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
+      );
+    }
+  }
+
+  static async cognitoRefreshToken(refreshToken, username) {
+    const command = new AdminInitiateAuthCommand({
+      AuthFlow: "REFRESH_TOKEN_AUTH",
+      UserPoolId: process.env.USER_POOL_ID,
+      ClientId: process.env.USER_POOL_CLIENT_ID,
+      AuthParameters: {
+        REFRESH_TOKEN: refreshToken,
+        USERNAME: username,
+        SECRET_HASH: usersService.genSecretHash(
+          username,
+          process.env.USER_POOL_CLIENT_ID,
+          process.env.USER_POOL_CLIENT_SECRET
+        ),
+      },
+    });
+
+    try {
+      loggerService.log(
+        {
+          cognitoService: {
+            action: "cognitoRefreshToken",
+            layer: "services.cognitoRefreshToken",
+            token: maskKeyRandomly(refreshToken),
+          },
+        },
+        "[CIAM] Start cognitoRefreshToken Service"
+      );
+      const rs = await client.send(command);
+      loggerService.log(
+        {
+          cognitoService: {
+            response: `${rs}`,
+            action: "cognitoRefreshToken",
+            layer: "services.cognitoRefreshToken",
+          },
+        },
+        "[CIAM] End cognitoRefreshToken Service - Success"
+      );
+      return rs;
+    } catch (error) {
+      loggerService.error(
+        {
+          cognitoService: {
+            action: "cognitoRefreshToken",
+            layer: "services.cognitoRefreshToken",
+            error: `${error}`,
+            token: maskKeyRandomly(refreshToken),
+          },
+        },
+        {},
+        "[CIAM] End cognitoRefreshToken Service - Failed"
       );
       throw new Error(
         JSON.stringify({

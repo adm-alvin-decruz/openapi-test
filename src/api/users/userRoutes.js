@@ -440,7 +440,7 @@ router.post(
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuard,
-  async (req, res) => {
+  async (req, res, next) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
@@ -458,6 +458,9 @@ router.post(
 
     try {
       const data = await userController.userGetMembershipPasses(req.body);
+      if (res.newAccessToken) {
+        data.membership.accessToken = res.newAccessToken;
+      }
       return res.status(data.statusCode).json(data);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);

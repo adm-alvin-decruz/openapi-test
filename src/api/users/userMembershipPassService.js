@@ -698,10 +698,11 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
+              status: req.body.status || undefined
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
-          await this.insertMembershipDetails(
+            await this.insertMembershipDetails(
             userMembership.userId,
             userMembership.membershipId,
             {
@@ -748,6 +749,7 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+              status: req.body.status || null
             }
           );
         }
