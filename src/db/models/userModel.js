@@ -116,7 +116,7 @@ class User {
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_membership_details umd ON umd.user_membership_id = um.id
-                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND (umd.status = 1 OR umd.valid_until >= NOW())`;
+                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND umd.status = 0`;
 
       return await pool.query(sql, [visualIds, email]);
     } catch (error) {

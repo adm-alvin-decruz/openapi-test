@@ -4,9 +4,7 @@ const ApiUtils = require("../../../../utils/apiUtils");
 const loggerService = require("../../../../logs/logger");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
-const passkitEndpointGenerator = `${
-  appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]
-}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
+const passkitEndpointGenerator = `https://qkvj4jup4v7hb3rl43lxoe5wjq0hzuyi.lambda-url.ap-southeast-1.on.aws/v1/passkit/all/get`;
 
 async function setPasskitReqHeader() {
   return constructPasskitHeader();

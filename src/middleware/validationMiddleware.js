@@ -66,7 +66,6 @@ async function refreshToken(credentialInfo) {
         idToken: refreshTokenRs.AuthenticationResult.IdToken,
       }),
     });
-    console.log('refrehs', refreshTokenRs)
     return refreshTokenRs.AuthenticationResult.AccessToken;
   } catch (error) {
     return undefined;
@@ -117,9 +116,7 @@ async function AccessTokenAuthGuard(req, res, next) {
   } catch (error) {
     if (error && error.message && error.message.includes("Token expired at")) {
       const newAccessToken = await refreshToken(userCredentials);
-      console.log('newAccessToken', newAccessToken)
       if (newAccessToken) {
-        console.log('newAccessToken*******', newAccessToken)
         res.newAccessToken = newAccessToken;
         return next();
       } else {

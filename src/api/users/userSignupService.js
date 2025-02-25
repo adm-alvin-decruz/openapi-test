@@ -560,6 +560,7 @@ class UserSignupService {
     const userExistedInCognito = await this.isUserExistedInCognito(
       req.body.email
     );
+
     if (
       userExistedInCognito &&
       getOrCheck(userExistedInCognito, "custom:mandai_id")

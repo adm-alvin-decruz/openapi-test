@@ -10,7 +10,7 @@ class UserMembershipDetails {
 
     const sql = `
       INSERT INTO user_membership_details
-      (user_id, user_membership_id, category_type, item_name, plu, adult_qty, child_qty, parking, iu, car_plate, membership_photo, member_first_name, member_last_name, member_email, member_dob, member_country, member_identification_no, member_phone_number, co_member, valid_from, valid_until, created_at, updated_at)
+      (user_id, user_membership_id, category_type, item_name, plu, adult_qty, child_qty, parking, iu, car_plate, membership_photo, member_first_name, member_last_name, member_email, member_dob, member_country, member_identification_no, member_phone_number, co_member, valid_from, valid_until, created_at, updated_at, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -38,6 +38,7 @@ class UserMembershipDetails {
       membershipDetailsData.valid_until,
       now,
       now,
+      membershipDetailsData.status
     ];
 
     try {

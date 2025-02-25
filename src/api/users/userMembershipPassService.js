@@ -134,53 +134,53 @@ class UserMembershipPassService {
             membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
+        if (
+          req.body.member &&
+          req.body.member.firstName &&
+          req.body.member.lastName &&
+          req.body.member.dob
+        ) {
+          req.body &&
+            req.body.migrations &&
+            (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
+              req.body.email,
+              req.body.batchNo,
+              {
+                pass_request: 1,
+                co_member_request: 1,
+              }
+            ));
+          await this.sendSQSMessage(
+            {
+              ...req,
+              body: {
+                ...req.body,
+                mandaiId: mandaiId,
+                passType: passTypeMapping.toLowerCase(),
+              },
+            },
+            "createMembershipPass"
+          );
+          return loggerService.log(
+            {
+              user: {
+                action: `userCreateMembershipPass - migration flow: ${!!req.body
+                  .migrations}`,
+                layer: "userMembershipPassService.create",
+                triggerSQSAction: "success",
+              },
+            },
+            "End userCreateMembershipPass Service - Success"
+          );
+        } else {
+          req.body &&
+            req.body.migrations &&
+            (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+              picked: 1,
+            }));
+        }
       }
 
-      if (
-        req.body.member &&
-        req.body.member.firstName &&
-        req.body.member.lastName &&
-        req.body.member.dob
-      ) {
-        req.body &&
-          req.body.migrations &&
-          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
-            req.body.email,
-            req.body.batchNo,
-            {
-              pass_request: 1,
-              co_member_request: 1,
-            }
-          ));
-        await this.sendSQSMessage(
-          {
-            ...req,
-            body: {
-              ...req.body,
-              mandaiId: mandaiId,
-              passType: passTypeMapping.toLowerCase(),
-            },
-          },
-          "createMembershipPass"
-        );
-        return loggerService.log(
-          {
-            user: {
-              action: `userCreateMembershipPass - migration flow: ${!!req.body
-                .migrations}`,
-              layer: "userMembershipPassService.create",
-              triggerSQSAction: "success",
-            },
-          },
-          "End userCreateMembershipPass Service - Success"
-        );
-      } else {
-        req.body &&
-          req.body.migrations &&
-          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-            picked: 1,
-          }));
-      }
       return loggerService.log(
         {
           user: {
@@ -252,29 +252,29 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
+        // send message to SQS to re-generate passkit
+        if (
+          req.body.member &&
+          req.body.member.firstName &&
+          req.body.member.lastName &&
+          req.body.member.dob
+        ) {
+          await this.sendSQSMessage(req, "updateMembershipPass");
+          loggerService.log(
+            {
+              user: {
+                userEmail: req.body.email,
+                membership: req.body.group,
+                action: `userUpdateMembershipPass`,
+                layer: "userMembershipPassService.update",
+                triggerSQS: "success",
+              },
+            },
+            "End userUpdateMembershipPass Service - Success"
+          );
+        }
       }
 
-      // send message to SQS to re-generate passkit
-      if (
-        req.body.member &&
-        req.body.member.firstName &&
-        req.body.member.lastName &&
-        req.body.member.dob
-      ) {
-        await this.sendSQSMessage(req, "updateMembershipPass");
-        loggerService.log(
-          {
-            user: {
-              userEmail: req.body.email,
-              membership: req.body.group,
-              action: `userUpdateMembershipPass`,
-              layer: "userMembershipPassService.update",
-              triggerSQS: "success",
-            },
-          },
-          "End userUpdateMembershipPass Service - Success"
-        );
-      }
       loggerService.log(
         {
           user: {
@@ -382,6 +382,7 @@ class UserMembershipPassService {
       coMember,
       validFrom,
       validUntil,
+      status,
     }
   ) {
     try {
@@ -413,6 +414,7 @@ class UserMembershipPassService {
               co_member: coMember,
               valid_from: validFrom,
               valid_until: validUntil,
+              status: status || null,
             },
           },
         },
@@ -440,6 +442,7 @@ class UserMembershipPassService {
         co_member: coMember,
         valid_from: validFrom,
         valid_until: validUntil,
+        status: status || null,
       });
       return loggerService.log(
         {
@@ -480,6 +483,7 @@ class UserMembershipPassService {
               co_member: coMember,
               valid_from: validFrom,
               valid_until: validUntil,
+              status: status || null,
             },
           },
         },
@@ -698,11 +702,11 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
-              status: req.body.status || undefined
+              status: req.body.status || undefined,
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
-            await this.insertMembershipDetails(
+          await this.insertMembershipDetails(
             userMembership.userId,
             userMembership.membershipId,
             {
@@ -749,7 +753,7 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
-              status: req.body.status || null
+              status: req.body.status || null,
             }
           );
         }

@@ -132,14 +132,20 @@ router.put(
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        const accessToken =
+        let accessToken =
           req.headers && req.headers.authorization
             ? req.headers.authorization.toString()
             : "";
+        if (accessToken && res.newAccessToken) {
+          accessToken = res.newAccessToken;
+        }
         const updateRs = await userController.adminUpdateNewUser(
           req,
           accessToken
         );
+        if (res.newAccessToken) {
+          updateRs.membership.accessToken = res.newAccessToken;
+        }
         req.apiTimer.end("Route CIAM Update New User Success", startTimer);
         return res.status(updateRs.statusCode).send(updateRs);
       } catch (error) {

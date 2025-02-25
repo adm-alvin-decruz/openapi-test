@@ -15,7 +15,7 @@ const {
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
 const { maskKeyRandomly } = require("../utils/common");
-const usersService = require("../api/users/usersServices");
+const crypto = require("crypto");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -632,7 +632,7 @@ class Cognito {
           cognitoService: {
             email,
             group,
-            action: "cognitoUserChangePassword",
+            action: "cognitoAdminAddUserToGroup",
             layer: "services.cognitoService",
           },
         },
@@ -681,11 +681,10 @@ class Cognito {
       AuthParameters: {
         REFRESH_TOKEN: refreshToken,
         USERNAME: username,
-        SECRET_HASH: usersService.genSecretHash(
-          username,
-          process.env.USER_POOL_CLIENT_ID,
-          process.env.USER_POOL_CLIENT_SECRET
-        ),
+        SECRET_HASH: crypto
+          .createHmac("sha256", process.env.USER_POOL_CLIENT_SECRET)
+          .update(`${username}${process.env.USER_POOL_CLIENT_ID}`)
+          .digest("base64"),
       },
     });
 
