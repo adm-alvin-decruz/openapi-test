@@ -132,14 +132,20 @@ router.put(
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        const accessToken =
+        let accessToken =
           req.headers && req.headers.authorization
             ? req.headers.authorization.toString()
             : "";
+        if (accessToken && res.newAccessToken) {
+          accessToken = res.newAccessToken;
+        }
         const updateRs = await userController.adminUpdateNewUser(
           req,
           accessToken
         );
+        if (res.newAccessToken) {
+          updateRs.membership.accessToken = res.newAccessToken;
+        }
         req.apiTimer.end("Route CIAM Update New User Success", startTimer);
         return res.status(updateRs.statusCode).send(updateRs);
       } catch (error) {
@@ -440,7 +446,7 @@ router.post(
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuard,
-  async (req, res) => {
+  async (req, res, next) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
@@ -458,6 +464,9 @@ router.post(
 
     try {
       const data = await userController.userGetMembershipPasses(req.body);
+      if (res.newAccessToken) {
+        data.membership.accessToken = res.newAccessToken;
+      }
       return res.status(data.statusCode).json(data);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);

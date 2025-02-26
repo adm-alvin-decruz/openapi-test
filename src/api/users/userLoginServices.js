@@ -7,6 +7,7 @@ const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/common");
 const passwordService = require("./userPasswordService");
 const { passwordPattern } = require("../../utils/common");
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
 
 class UserLoginService {
   async login(req) {
@@ -113,8 +114,21 @@ class UserLoginService {
 
   async updateUser(id, tokens) {
     try {
+      const verifierAccessToken = CognitoJwtVerifier.create({
+        userPoolId: process.env.USER_POOL_ID,
+        tokenUse: "access",
+        clientId: process.env.USER_POOL_CLIENT_ID,
+      });
+
+      const payloadAccessToken = await verifierAccessToken.verify(
+        tokens.accessToken
+      );
+
       await userCredentialModel.updateByUserId(id, {
-        tokens: JSON.stringify(tokens),
+        tokens: JSON.stringify({
+          ...tokens,
+          userSubId: payloadAccessToken.sub || "",
+        }),
         last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
       });
     } catch (error) {

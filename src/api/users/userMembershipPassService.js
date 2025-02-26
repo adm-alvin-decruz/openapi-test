@@ -134,53 +134,53 @@ class UserMembershipPassService {
             membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
+        if (
+          req.body.member &&
+          req.body.member.firstName &&
+          req.body.member.lastName &&
+          req.body.member.dob
+        ) {
+          req.body &&
+            req.body.migrations &&
+            (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
+              req.body.email,
+              req.body.batchNo,
+              {
+                pass_request: 1,
+                co_member_request: 1,
+              }
+            ));
+          await this.sendSQSMessage(
+            {
+              ...req,
+              body: {
+                ...req.body,
+                mandaiId: mandaiId,
+                passType: passTypeMapping.toLowerCase(),
+              },
+            },
+            "createMembershipPass"
+          );
+          return loggerService.log(
+            {
+              user: {
+                action: `userCreateMembershipPass - migration flow: ${!!req.body
+                  .migrations}`,
+                layer: "userMembershipPassService.create",
+                triggerSQSAction: "success",
+              },
+            },
+            "End userCreateMembershipPass Service - Success"
+          );
+        } else {
+          req.body &&
+            req.body.migrations &&
+            (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
+              picked: 1,
+            }));
+        }
       }
 
-      if (
-        req.body.member &&
-        req.body.member.firstName &&
-        req.body.member.lastName &&
-        req.body.member.dob
-      ) {
-        req.body &&
-          req.body.migrations &&
-          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
-            req.body.email,
-            req.body.batchNo,
-            {
-              pass_request: 1,
-              co_member_request: 1,
-            }
-          ));
-        await this.sendSQSMessage(
-          {
-            ...req,
-            body: {
-              ...req.body,
-              mandaiId: mandaiId,
-              passType: passTypeMapping.toLowerCase(),
-            },
-          },
-          "createMembershipPass"
-        );
-        return loggerService.log(
-          {
-            user: {
-              action: `userCreateMembershipPass - migration flow: ${!!req.body
-                .migrations}`,
-              layer: "userMembershipPassService.create",
-              triggerSQSAction: "success",
-            },
-          },
-          "End userCreateMembershipPass Service - Success"
-        );
-      } else {
-        req.body &&
-          req.body.migrations &&
-          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-            picked: 1,
-          }));
-      }
       return loggerService.log(
         {
           user: {
@@ -252,29 +252,29 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
+        // send message to SQS to re-generate passkit
+        if (
+          req.body.member &&
+          req.body.member.firstName &&
+          req.body.member.lastName &&
+          req.body.member.dob
+        ) {
+          await this.sendSQSMessage(req, "updateMembershipPass");
+          loggerService.log(
+            {
+              user: {
+                userEmail: req.body.email,
+                membership: req.body.group,
+                action: `userUpdateMembershipPass`,
+                layer: "userMembershipPassService.update",
+                triggerSQS: "success",
+              },
+            },
+            "End userUpdateMembershipPass Service - Success"
+          );
+        }
       }
 
-      // send message to SQS to re-generate passkit
-      if (
-        req.body.member &&
-        req.body.member.firstName &&
-        req.body.member.lastName &&
-        req.body.member.dob
-      ) {
-        await this.sendSQSMessage(req, "updateMembershipPass");
-        loggerService.log(
-          {
-            user: {
-              userEmail: req.body.email,
-              membership: req.body.group,
-              action: `userUpdateMembershipPass`,
-              layer: "userMembershipPassService.update",
-              triggerSQS: "success",
-            },
-          },
-          "End userUpdateMembershipPass Service - Success"
-        );
-      }
       loggerService.log(
         {
           user: {
@@ -382,6 +382,7 @@ class UserMembershipPassService {
       coMember,
       validFrom,
       validUntil,
+      status,
     }
   ) {
     try {
@@ -413,6 +414,7 @@ class UserMembershipPassService {
               co_member: coMember,
               valid_from: validFrom,
               valid_until: validUntil,
+              status: status || null,
             },
           },
         },
@@ -440,6 +442,7 @@ class UserMembershipPassService {
         co_member: coMember,
         valid_from: validFrom,
         valid_until: validUntil,
+        status: status || null,
       });
       return loggerService.log(
         {
@@ -480,6 +483,7 @@ class UserMembershipPassService {
               co_member: coMember,
               valid_from: validFrom,
               valid_until: validUntil,
+              status: status || null,
             },
           },
         },
@@ -570,8 +574,8 @@ class UserMembershipPassService {
         "pass-type-mapping"
       ));
     return !!passTypeMapping
-      ? passTypeMapping[`${req.body.passType}`]
-      : req.body.passType;
+      ? passTypeMapping[`${req.body.passType.toLowerCase()}`]
+      : req.body.passType.toLowerCase();
   }
 
   async formatMembershipData(req, existingMemberships) {
@@ -698,6 +702,7 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
+              status: req.body.status || undefined,
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
@@ -748,6 +753,7 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+              status: req.body.status || null,
             }
           );
         }
@@ -789,31 +795,24 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-    try {
-      loggerService.log(
-        {
-          user: {
-            userEmail: req.body.email,
-            layer: "userMembershipPassService.updateMembershipInCognito",
-            data: req.body,
-          },
+    loggerService.log(
+      {
+        user: {
+          userEmail: req.body.email,
+          layer: "userMembershipPassService.updateMembershipInCognito",
+          data: req.body,
         },
-        "Start updateMembershipInCognito"
-      );
-      const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(
-        req.body.email
-      );
+      },
+      "Start updateMembershipInCognito"
+    );
+    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
 
-      const existingMemberships = JSON.parse(
-        getOrCheck(cognitoUser, "custom:membership")
-      );
+    const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
 
-      // reformat "custom:membership" to JSON array
-      const updatedMemberships = this.formatMembershipData(
-        req,
-        existingMemberships
-      );
+    // reformat "custom:membership" to JSON array
+    const updatedMemberships = this.formatMembershipData(req, existingMemberships);
 
+    try {
       await cognitoService.cognitoAdminUpdateNewUser(
         [
           {
@@ -836,7 +835,7 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: req.body,
+            data: JSON.stringify(updatedMemberships),
           },
         },
         "End updateMembershipInCognito - Success"
@@ -850,6 +849,7 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
+            data: JSON.stringify(updatedMemberships),
             error: JSON.stringify(error),
           },
         },
@@ -871,7 +871,7 @@ class UserMembershipPassService {
       body: omit(req.body, ["membershipPhoto"]),
     };
     const queueUrl = process.env.SQS_QUEUE_URL;
-    
+
     try {
       loggerService.log(
         {

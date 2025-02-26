@@ -1,7 +1,7 @@
 INSERT INTO `configs` (`config`, `key`, `value`, `created_at`, `updated_at`)
 VALUES
-	('membership-passes', 'pass-type-mapping', '{\"FOM\": \"FOM\", \"FOW\": \"FOW\", \"FOBP\": \"FOBP\", \"FOMP\": \"FOMP\", \"FONS\": \"FONS\", \"FORS\": \"FORS\", \"FOSZ\": \"FOSZ\", \"FOWP\": \"FOW+\", \"FORFWA\": \"FORFWA\"}', '2025-02-02 18:07:15', '2025-02-02 18:07:15'),
-	('membership-passes', 'pass-type', '[\"FOSZ\", \"FOBP\", \"FONS\", \"FORS\", \"FOW\", \"FOWP\", \"FORFWA\", \"FOM\", \"FOMP\"]', '2025-02-02 18:07:15', '2025-02-02 18:07:15');
+	('membership-passes', 'pass-type-mapping', '{\"fom\": \"fom\", \"fow\": \"fow\", \"fobp\": \"fobp\", \"fomp\": \"fomp\", \"fons\": \"fons\", \"fors\": \"fors\", \"fosz\": \"fosz\", \"fowp\": \"fowp\", \"forfwa\": \"forfwa\"}', '2025-02-02 18:07:15', '2025-02-02 18:07:15'),
+	('membership-passes', 'pass-type', '[\"fosz\", \"fobp\", \"fons\", \"fors\", \"fow\", \"fowp\", \"forfwa\", \"fom\", \"fomp\"]', '2025-02-02 18:07:15', '2025-02-02 18:07:15');
 
 
 INSERT INTO `app_tokens` (`client`, `credentials`, `token`, `configuration`, `expires_at`, `created_at`, `updated_at`)

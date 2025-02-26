@@ -6,6 +6,12 @@ class UserMembershipPassValidation {
     this.error = null;
   }
 
+  static isRequestFromAEM(headers) {
+    const mwgAppID =
+      headers && headers["mwg-app-id"] ? headers["mwg-app-id"] : "";
+    return mwgAppID.includes("aem");
+  }
+
   static validateCreateUserMembershipPass(req) {
     const requiredParams =
       req.body && req.body.migrations
@@ -40,7 +46,9 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (req.body.member?.dob) {
+    const requestFromAEM = this.isRequestFromAEM(req.headers);
+
+    if (req.body.member?.dob && requestFromAEM) {
       const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
@@ -119,7 +127,7 @@ class UserMembershipPassValidation {
       "validUntil",
       "coMembers",
     ];
-
+    const requestFromAEM = this.isRequestFromAEM(req.headers);
     const requestParams = Object.keys(req.body);
     const missingParams = requiredParams.filter(
       (param) => !requestParams.includes(param)
@@ -131,7 +139,7 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (req.body.member?.dob) {
+    if (req.body.member?.dob && requestFromAEM) {
       const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
