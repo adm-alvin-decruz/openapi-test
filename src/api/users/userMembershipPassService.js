@@ -368,6 +368,7 @@ class UserMembershipPassService {
       plu,
       adultQty,
       childQty,
+      status,
       parking,
       iu,
       carPlate,
@@ -381,8 +382,7 @@ class UserMembershipPassService {
       phoneNumber,
       coMember,
       validFrom,
-      validUntil,
-      status,
+      validUntil
     }
   ) {
     try {
@@ -400,6 +400,7 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
+              status: status,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -413,8 +414,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil,
-              status: status || null,
+              valid_until: validUntil
             },
           },
         },
@@ -428,6 +428,7 @@ class UserMembershipPassService {
         plu: plu,
         adult_qty: adultQty,
         child_qty: childQty,
+        status: (typeof status !== 'undefined' && status !== null) ? status : null,
         parking: parking,
         iu: iu,
         car_plate: carPlate,
@@ -441,8 +442,7 @@ class UserMembershipPassService {
         member_phone_number: phoneNumber,
         co_member: coMember,
         valid_from: validFrom,
-        valid_until: validUntil,
-        status: status || null,
+        valid_until: validUntil
       });
       return loggerService.log(
         {
@@ -469,6 +469,7 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
+              status: (typeof status !== 'undefined' && status !== null) ? status : null,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -482,8 +483,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil,
-              status: status || null,
+              valid_until: validUntil
             },
           },
         },
@@ -515,6 +515,7 @@ class UserMembershipPassService {
             plu: req.body.plu || null,
             adultQty: req.body.adultQty,
             childQty: req.body.childQty,
+            status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
             parking: req.body.parking === "yes" ? 1 : 0,
             iu: req.body.iu || null,
             carPlate: req.body.carPlate || null,
@@ -702,7 +703,7 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
-              status: req.body.status || undefined,
+              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : undefined,
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
@@ -753,7 +754,7 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
-              status: req.body.status || null,
+              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
             }
           );
         }
