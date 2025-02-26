@@ -795,31 +795,24 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-    try {
-      loggerService.log(
-        {
-          user: {
-            userEmail: req.body.email,
-            layer: "userMembershipPassService.updateMembershipInCognito",
-            data: req.body,
-          },
+    loggerService.log(
+      {
+        user: {
+          userEmail: req.body.email,
+          layer: "userMembershipPassService.updateMembershipInCognito",
+          data: req.body,
         },
-        "Start updateMembershipInCognito"
-      );
-      const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(
-        req.body.email
-      );
+      },
+      "Start updateMembershipInCognito"
+    );
+    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
 
-      const existingMemberships = JSON.parse(
-        getOrCheck(cognitoUser, "custom:membership")
-      );
+    const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
 
-      // reformat "custom:membership" to JSON array
-      const updatedMemberships = this.formatMembershipData(
-        req,
-        existingMemberships
-      );
+    // reformat "custom:membership" to JSON array
+    const updatedMemberships = this.formatMembershipData(req, existingMemberships);
 
+    try {
       await cognitoService.cognitoAdminUpdateNewUser(
         [
           {
@@ -842,7 +835,7 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: req.body,
+            data: JSON.stringify(updatedMemberships),
           },
         },
         "End updateMembershipInCognito - Success"
@@ -856,6 +849,7 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
+            data: JSON.stringify(updatedMemberships),
             error: JSON.stringify(error),
           },
         },
