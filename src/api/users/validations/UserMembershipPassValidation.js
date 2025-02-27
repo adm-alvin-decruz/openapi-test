@@ -122,10 +122,6 @@ class UserMembershipPassValidation {
       "group",
       "passType",
       "visualId",
-      "categoryType",
-      "member",
-      "validUntil",
-      "coMembers",
     ];
     const requestFromAEM = this.isRequestFromAEM(req.headers);
     const requestParams = Object.keys(req.body);
@@ -149,19 +145,19 @@ class UserMembershipPassValidation {
       }
     }
 
-    if (!req.body.member.firstName) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member_first_name",
-        req.body.language
-      ));
-    }
+    // if (!req.body.member.firstName) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "member_first_name",
+    //     req.body.language
+    //   ));
+    // }
 
-    if (!req.body.member.lastName) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member_last_name",
-        req.body.language
-      ));
-    }
+    // if (!req.body.member.lastName) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "member_last_name",
+    //     req.body.language
+    //   ));
+    // }
 
     if (
       req.body.adultQty &&
