@@ -513,16 +513,17 @@ router.post("/token/verify", isEmptyRequest, async (req, res) => {
 });
 
 /**
- * Create Membership Pass
- * @param {JSON} req
- * @param {JSON} res
- * @returns
+ * API - Create Membership Pass
  */
 router.post(
   "/users/my-membership",
   isEmptyRequest,
   userController.userCreateMembershipPass
 );
+
+/**
+ * API - Update Membership Pass
+ */
 router.put(
   "/users/my-membership",
   isEmptyRequest,

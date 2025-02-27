@@ -511,29 +511,31 @@ class Cognito {
   }
 
   static async cognitoAdminUpdateNewUser(params, email) {
+    console.log("Debug Cognito 3.1", email);
     const userUpdateParams = new AdminUpdateUserAttributesCommand({
       UserPoolId: process.env.USER_POOL_ID,
       Username: email,
       UserAttributes: params,
     });
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            params,
-            action: "cognitoAdminUpdateNewUser",
-            layer: "services.cognitoService",
-          },
+    console.log("Debug Cognito 3.2", userUpdateParams);
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          params,
+          action: "cognitoAdminUpdateNewUser",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoAdminUpdateNewUser Service"
-      );
+      },
+      "[CIAM] Start cognitoAdminUpdateNewUser Service"
+    );
+    try {
       const rs = await client.send(userUpdateParams);
       loggerService.log(
         {
           cognitoService: {
             email,
-            response: `${rs}`,
+            response: JSON.stringify(rs),
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
           },
@@ -549,7 +551,7 @@ class Cognito {
             params,
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
-            error: `${error}`,
+            error: new Error("cognitoAdminUpdateNewUser error", error),
           },
         },
         {},
