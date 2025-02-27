@@ -730,6 +730,7 @@ async function userCreateMembershipPass(req, res) {
 
   try {
     const data = await userCreateMembershipPassJob.perform(req);
+
     loggerService.log(
       {
         user: {
@@ -753,7 +754,7 @@ async function userCreateMembershipPass(req, res) {
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: `${error}`,
+          response_to_client: error,
         },
       },
       {},
@@ -793,8 +794,7 @@ async function userUpdateMembershipPass(req, res) {
       .send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const message =
-    UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
+  const message = UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {

@@ -516,24 +516,25 @@ class Cognito {
       Username: email,
       UserAttributes: params,
     });
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            params,
-            action: "cognitoAdminUpdateNewUser",
-            layer: "services.cognitoService",
-          },
+
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          params,
+          action: "cognitoAdminUpdateNewUser",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoAdminUpdateNewUser Service"
-      );
+      },
+      "[CIAM] Start cognitoAdminUpdateNewUser Service"
+    );
+    try {
       const rs = await client.send(userUpdateParams);
       loggerService.log(
         {
           cognitoService: {
             email,
-            response: `${rs}`,
+            response: JSON.stringify(rs),
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
           },
@@ -549,7 +550,7 @@ class Cognito {
             params,
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
-            error: `${error}`,
+            error: new Error("cognitoAdminUpdateNewUser error", error),
           },
         },
         {},

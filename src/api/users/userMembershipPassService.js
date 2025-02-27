@@ -100,7 +100,7 @@ class UserMembershipPassService {
       );
 
       // update user's cognito memberships info
-      await this.updateMembershipInCognito(req);
+      let updateCognito = await this.updateMembershipInCognito(req);
 
       if (req.body.migrations && req.body.pictureId) {
         const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(
@@ -807,50 +807,37 @@ class UserMembershipPassService {
       "Start updateMembershipInCognito"
     );
     const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
-
     const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
-
     // reformat "custom:membership" to JSON array
-    const updatedMemberships = this.formatMembershipData(req, existingMemberships);
+    const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
+    let updateParams = [
+      {Name: "custom:membership", Value: JSON.stringify(updatedMemberships)},
+      {Name: "custom:vehicle_iu", Value: req.body.iu || "null"},
+      {Name: "custom:vehicle_plate", Value: req.body.carPlate || "null"}
+    ];
 
     try {
-      await cognitoService.cognitoAdminUpdateNewUser(
-        [
-          {
-            Name: "custom:membership",
-            Value: JSON.stringify(updatedMemberships),
-          },
-          {
-            Name: "custom:vehicle_iu",
-            Value: req.body.iu || "null",
-          },
-          {
-            Name: "custom:vehicle_plate",
-            Value: req.body.carPlate || "null",
-          },
-        ],
-        req.body.email
-      );
+      let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email);
       loggerService.log(
         {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(updatedMemberships),
+            params: JSON.stringify(updateParams),
+            data: JSON.stringify(cognitoResult)
           },
         },
         "End updateMembershipInCognito - Success"
       );
-      return {
-        cognitoProceed: "success",
-      };
+      return {cognitoProceed: "success"};
+
     } catch (error) {
       loggerService.error(
         {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(updatedMemberships),
+            params: JSON.stringify(updateParams),
             error: JSON.stringify(error),
           },
         },
