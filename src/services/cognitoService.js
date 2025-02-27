@@ -511,13 +511,12 @@ class Cognito {
   }
 
   static async cognitoAdminUpdateNewUser(params, email) {
-    console.log("Debug Cognito 3.1", email);
     const userUpdateParams = new AdminUpdateUserAttributesCommand({
       UserPoolId: process.env.USER_POOL_ID,
       Username: email,
       UserAttributes: params,
     });
-    console.log("Debug Cognito 3.2", userUpdateParams);
+
     loggerService.log(
       {
         cognitoService: {
