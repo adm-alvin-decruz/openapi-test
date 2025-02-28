@@ -1,6 +1,5 @@
 // db
 const userModel = require("../../db/models/userModel");
-const userMembershipModel = require("../../db/models/userMembershipModel");
 const userNewsletterModel = require("../../db/models/userNewletterModel");
 const userDetailModel = require("../../db/models/userDetailsModel");
 const userMigrationsModel = require("../../db/models/userMigrationsModel");
@@ -19,8 +18,8 @@ async function getDBUserByEmail(reqBody) {
 
 async function queryWPUserByEmail(reqBody) {
   let result = await userModel.findWPFullData(reqBody.email);
-
-  if (JSON.stringify(result.data) == "[]") {
+  console.log('russsssssss', result)
+  if (JSON.stringify(result.data) == "[]" || !result.data) {
     throw new Error(`DB result is empty: ${result.sql_statement}`);
   }
   return result.data;
@@ -102,15 +101,6 @@ async function userNewsletterModelExecuteUpdate(userId, newsletter) {
   };
 
   return await userNewsletterModel.updateByUserId(userId, updateFields);
-}
-
-async function userMembershipModelExecuteUpdate(userId, group) {
-  //enhance update visual_id, expire_at later
-  const updateFields = {
-    name: group ? group : undefined,
-  };
-
-  return await userMembershipModel.updateByUserId(userId, updateFields);
 }
 
 async function userDetailsModelExecuteUpdate(

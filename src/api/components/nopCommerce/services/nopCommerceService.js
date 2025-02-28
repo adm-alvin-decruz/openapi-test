@@ -139,7 +139,7 @@ async function retrieveMembershipPhoto(pictureId) {
             storeId: appToken.configuration.storeId,
             pictureId: pictureId,
           },
-          error: JSON.stringify(error),
+          error: `${error}`,
         },
       },
       {},
@@ -214,7 +214,7 @@ async function getAccessToken() {
             ),
             storeId: appToken.configuration.storeId,
           },
-          error: JSON.stringify(error),
+          error: `${error}`,
         },
       },
       {

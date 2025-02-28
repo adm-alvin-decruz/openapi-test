@@ -193,6 +193,7 @@ class UserMembershipPassService {
         "End userCreateMembershipPass Service - Success"
       );
     } catch (error) {
+      console.log('errorrrr', error)
       loggerService.error(
         {
           user: {
@@ -200,7 +201,7 @@ class UserMembershipPassService {
             action: `userCreateMembershipPass - migration flow: ${!!req.body
               .migrations}`,
             layer: "userMembershipPassService.create",
-            error: JSON.stringify(error),
+            error: `${error}`,
           },
         },
         {},
@@ -294,7 +295,7 @@ class UserMembershipPassService {
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
             layer: "userMembershipPassService.update",
-            error: JSON.stringify(error),
+            error: `${error}`,
           },
         },
         {},
@@ -553,6 +554,7 @@ class UserMembershipPassService {
                 : null,
             validFrom: !!req.body.validFrom ? req.body.validFrom : null,
             validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+            status: null
           }
         ));
 
@@ -776,7 +778,7 @@ class UserMembershipPassService {
           user: {
             data: req.body,
             layer: "userMembershipPassService.updateUserMembershipPassToDB",
-            error: JSON.stringify(error),
+            error: `${error}`,
           },
         },
         {},
@@ -850,7 +852,7 @@ class UserMembershipPassService {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
             data: JSON.stringify(updatedMemberships),
-            error: JSON.stringify(error),
+            error: `${error}`,
           },
         },
         {},
@@ -910,7 +912,7 @@ class UserMembershipPassService {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
             layer: "userMembershipPassService.sendSQSMessage",
-            error: JSON.stringify(error),
+            error: `${error}`,
           },
         },
         {},
