@@ -245,6 +245,7 @@ class UserMembershipPassService {
 
       // update member photo in S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
+        // let updatePhoto = true; // commented due to no checking for passkit generate for now.
         await uploadThumbnailToS3(req);
         await userMembershipDetailsModel.updateByMembershipId(
           updateMembershipRs.membershipId,
@@ -252,14 +253,9 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
-        // send message to SQS to re-generate passkit
-        if (
-          req.body.member &&
-          req.body.member.firstName &&
-          req.body.member.lastName &&
-          req.body.member.dob
-        ) {
-          await this.sendSQSMessage(req, "updateMembershipPass");
+        // send message to SQS to re-generate passkit (Trigger whenever pass update)
+        // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) {
+          let sendSQSMessage = await this.sendSQSMessage(req, "updateMembershipPass");
           loggerService.log(
             {
               user: {
@@ -267,12 +263,12 @@ class UserMembershipPassService {
                 membership: req.body.group,
                 action: `userUpdateMembershipPass`,
                 layer: "userMembershipPassService.update",
-                triggerSQS: "success",
+                triggerSQS: JSON.stringify(sendSQSMessage),
               },
             },
             "End userUpdateMembershipPass Service - Success"
           );
-        }
+        // }
       }
 
       loggerService.log(
@@ -854,6 +850,7 @@ class UserMembershipPassService {
   }
 
   async sendSQSMessage(req, action) {
+    delete req.body.membershipPhoto;
     const data = {
       action: action,
       body: omit(req.body, ["membershipPhoto"]),
@@ -867,6 +864,7 @@ class UserMembershipPassService {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
             layer: "userMembershipPassService.sendSQSMessage",
+            body: req.body,
             data: data,
           },
         },
@@ -898,7 +896,7 @@ class UserMembershipPassService {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
             layer: "userMembershipPassService.sendSQSMessage",
-            error: JSON.stringify(error),
+            error: new Error("userMembershipPassService.sendSQSMessage error", error),
           },
         },
         {},
