@@ -18,7 +18,6 @@ async function getDBUserByEmail(reqBody) {
 
 async function queryWPUserByEmail(reqBody) {
   let result = await userModel.findWPFullData(reqBody.email);
-  console.log('russsssssss', result)
   if (JSON.stringify(result.data) == "[]" || !result.data) {
     throw new Error(`DB result is empty: ${result.sql_statement}`);
   }

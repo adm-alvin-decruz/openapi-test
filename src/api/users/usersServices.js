@@ -51,6 +51,7 @@ const {
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const { formatDateToMySQLDateTime, convertDateToMySQLFormat, convertDateFromMySQLToSlash} = require("../../utils/dateUtils");
 
 /**
  * Function User signup service
@@ -87,13 +88,14 @@ async function handleSignupForWildpassUserExisted(req, membershipData) {
   const isMemberActive = membershipData.status === 1;
   if (isMemberActive) {
     //generate cardface and passkit based on membershipData for galaxy import
+    const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
     const reqBasedOnMembership = {
       ...req,
       body: {
         ...req.body,
-        firstName: membershipData.firstName,
-        lastName: membershipData.lastName,
-        dob: membershipData.dob,
+        firstName: membershipData.firstName || "",
+        lastName: membershipData.lastName || "",
+        dob: convertDateFromMySQLToSlash(getDobFromDB),
         mandaiID: membershipData.mandaiId
       }
     };

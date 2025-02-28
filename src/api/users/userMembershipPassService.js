@@ -100,7 +100,7 @@ class UserMembershipPassService {
       );
 
       // update user's cognito memberships info
-      await this.updateMembershipInCognito(req);
+      let updateCognito = await this.updateMembershipInCognito(req);
 
       if (req.body.migrations && req.body.pictureId) {
         const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(
@@ -193,7 +193,6 @@ class UserMembershipPassService {
         "End userCreateMembershipPass Service - Success"
       );
     } catch (error) {
-      console.log('errorrrr', error)
       loggerService.error(
         {
           user: {
@@ -246,6 +245,7 @@ class UserMembershipPassService {
 
       // update member photo in S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
+        // let updatePhoto = true; // commented due to no checking for passkit generate for now.
         await uploadThumbnailToS3(req);
         await userMembershipDetailsModel.updateByMembershipId(
           updateMembershipRs.membershipId,
@@ -253,14 +253,9 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
-        // send message to SQS to re-generate passkit
-        if (
-          req.body.member &&
-          req.body.member.firstName &&
-          req.body.member.lastName &&
-          req.body.member.dob
-        ) {
-          await this.sendSQSMessage(req, "updateMembershipPass");
+        // send message to SQS to re-generate passkit (Trigger whenever pass update)
+        // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) {
+          let sendSQSMessage = await this.sendSQSMessage(req, "updateMembershipPass");
           loggerService.log(
             {
               user: {
@@ -268,12 +263,12 @@ class UserMembershipPassService {
                 membership: req.body.group,
                 action: `userUpdateMembershipPass`,
                 layer: "userMembershipPassService.update",
-                triggerSQS: "success",
+                triggerSQS: JSON.stringify(sendSQSMessage),
               },
             },
             "End userUpdateMembershipPass Service - Success"
           );
-        }
+        // }
       }
 
       loggerService.log(
@@ -369,6 +364,7 @@ class UserMembershipPassService {
       plu,
       adultQty,
       childQty,
+      status,
       parking,
       iu,
       carPlate,
@@ -382,8 +378,7 @@ class UserMembershipPassService {
       phoneNumber,
       coMember,
       validFrom,
-      validUntil,
-      status,
+      validUntil
     }
   ) {
     try {
@@ -401,6 +396,7 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
+              status: status,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -414,8 +410,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil,
-              status: status || null,
+              valid_until: validUntil
             },
           },
         },
@@ -429,6 +424,7 @@ class UserMembershipPassService {
         plu: plu,
         adult_qty: adultQty,
         child_qty: childQty,
+        status: (typeof status !== 'undefined' && status !== null) ? status : null,
         parking: parking,
         iu: iu,
         car_plate: carPlate,
@@ -442,8 +438,7 @@ class UserMembershipPassService {
         member_phone_number: phoneNumber,
         co_member: coMember,
         valid_from: validFrom,
-        valid_until: validUntil,
-        status: status || null,
+        valid_until: validUntil
       });
       return loggerService.log(
         {
@@ -470,6 +465,7 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
+              status: (typeof status !== 'undefined' && status !== null) ? status : null,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -483,8 +479,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil,
-              status: status || null,
+              valid_until: validUntil
             },
           },
         },
@@ -516,6 +511,7 @@ class UserMembershipPassService {
             plu: req.body.plu || null,
             adultQty: req.body.adultQty,
             childQty: req.body.childQty,
+            status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
             parking: req.body.parking === "yes" ? 1 : 0,
             iu: req.body.iu || null,
             carPlate: req.body.carPlate || null,
@@ -554,7 +550,6 @@ class UserMembershipPassService {
                 : null,
             validFrom: !!req.body.validFrom ? req.body.validFrom : null,
             validUntil: !!req.body.validUntil ? req.body.validUntil : null,
-            status: null
           }
         ));
 
@@ -704,7 +699,7 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
-              status: req.body.status || undefined,
+              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : undefined,
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
@@ -755,7 +750,7 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
-              status: req.body.status || null,
+              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
             }
           );
         }
@@ -808,51 +803,38 @@ class UserMembershipPassService {
       "Start updateMembershipInCognito"
     );
     const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
-
     const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
-
     // reformat "custom:membership" to JSON array
-    const updatedMemberships = this.formatMembershipData(req, existingMemberships);
+    const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
+    let updateParams = [
+      {Name: "custom:membership", Value: JSON.stringify(updatedMemberships)},
+      {Name: "custom:vehicle_iu", Value: req.body.iu || "null"},
+      {Name: "custom:vehicle_plate", Value: req.body.carPlate || "null"}
+    ];
 
     try {
-      await cognitoService.cognitoAdminUpdateNewUser(
-        [
-          {
-            Name: "custom:membership",
-            Value: JSON.stringify(updatedMemberships),
-          },
-          {
-            Name: "custom:vehicle_iu",
-            Value: req.body.iu || "null",
-          },
-          {
-            Name: "custom:vehicle_plate",
-            Value: req.body.carPlate || "null",
-          },
-        ],
-        req.body.email
-      );
+      let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email);
       loggerService.log(
         {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(updatedMemberships),
+            params: JSON.stringify(updateParams),
+            data: JSON.stringify(cognitoResult)
           },
         },
         "End updateMembershipInCognito - Success"
       );
-      return {
-        cognitoProceed: "success",
-      };
+      return {cognitoProceed: "success"};
+
     } catch (error) {
       loggerService.error(
         {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(updatedMemberships),
-            error: `${error}`,
+            params: JSON.stringify(updateParams),
+            error:  `${error}`,
           },
         },
         {},
@@ -868,6 +850,7 @@ class UserMembershipPassService {
   }
 
   async sendSQSMessage(req, action) {
+    delete req.body.membershipPhoto;
     const data = {
       action: action,
       body: omit(req.body, ["membershipPhoto"]),
@@ -881,6 +864,7 @@ class UserMembershipPassService {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
             layer: "userMembershipPassService.sendSQSMessage",
+            body: req.body,
             data: data,
           },
         },

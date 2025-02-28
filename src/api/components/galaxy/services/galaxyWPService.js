@@ -68,7 +68,6 @@ class GalaxyWPService {
         MessageBody: JSON.stringify(data),
       });
 
-      console.log('signuppppppp', data)
       let result = await sqsClient.send(command);
 
       req.apiTimer.end('GalaxyWPService.galaxyToSQS'); // log end time

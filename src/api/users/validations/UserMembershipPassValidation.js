@@ -58,19 +58,21 @@ class UserMembershipPassValidation {
       }
     }
 
-    if (req.body.adultQty !== 1 && req.body.adultQty !== 2) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "adultQty",
-        req.body.language
-      ));
-    }
+    // commented, revisit this validation if require
+    // if (req.body.adultQty !== 1 && req.body.adultQty !== 2) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "adultQty",
+    //     req.body.language
+    //   ));
+    // }
 
-    if (req.body.childQty < 0 || req.body.childQty > 2) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "childQty",
-        req.body.language
-      ));
-    }
+    // commented, revisit this validation if require, chilQty can be more than 2
+    // if (req.body.childQty < 0 || req.body.childQty > 2) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "childQty",
+    //     req.body.language
+    //   ));
+    // }
 
     if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
@@ -122,10 +124,6 @@ class UserMembershipPassValidation {
       "group",
       "passType",
       "visualId",
-      "categoryType",
-      "member",
-      "validUntil",
-      "coMembers",
     ];
     const requestFromAEM = this.isRequestFromAEM(req.headers);
     const requestParams = Object.keys(req.body);
@@ -149,19 +147,19 @@ class UserMembershipPassValidation {
       }
     }
 
-    if (!req.body.member.firstName) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member_first_name",
-        req.body.language
-      ));
-    }
+    // if (!req.body.member.firstName) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "member_first_name",
+    //     req.body.language
+    //   ));
+    // }
 
-    if (!req.body.member.lastName) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member_last_name",
-        req.body.language
-      ));
-    }
+    // if (!req.body.member.lastName) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "member_last_name",
+    //     req.body.language
+    //   ));
+    // }
 
     if (
       req.body.adultQty &&
