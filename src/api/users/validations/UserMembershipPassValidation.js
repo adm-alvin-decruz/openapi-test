@@ -58,19 +58,21 @@ class UserMembershipPassValidation {
       }
     }
 
-    if (req.body.adultQty !== 1 && req.body.adultQty !== 2) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "adultQty",
-        req.body.language
-      ));
-    }
+    // commented, revisit this validation if require
+    // if (req.body.adultQty !== 1 && req.body.adultQty !== 2) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "adultQty",
+    //     req.body.language
+    //   ));
+    // }
 
-    if (req.body.childQty < 0 || req.body.childQty > 2) {
-      return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "childQty",
-        req.body.language
-      ));
-    }
+    // commented, revisit this validation if require, chilQty can be more than 2
+    // if (req.body.childQty < 0 || req.body.childQty > 2) {
+    //   return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //     "childQty",
+    //     req.body.language
+    //   ));
+    // }
 
     if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
