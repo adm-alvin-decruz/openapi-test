@@ -51,11 +51,12 @@ async function adminCreateUser(req) {
     try {
       let response;
       // check if user exist
-      var memberExist = await usersService.getUserMembership(req);
+      var membershipData = await usersService.getUserMembership(req);
 
       let responseSource = "ciam";
 
-      if (memberExist.status === "success") {
+      // if member already has wildpass
+      if (membershipData.status === "hasWildpass") {
         // prepare response
         let errorConfig = usersService.processError(
           req.body,
@@ -83,7 +84,7 @@ async function adminCreateUser(req) {
         response["source"] = responseSource;
         return response;
       } else {
-        response = await usersService.userSignup(req, memberExist);
+        response = await usersService.userSignup(req, membershipData);
       }
 
       return response;

@@ -59,14 +59,14 @@ const { formatDateToMySQLDateTime, convertDateToMySQLFormat, convertDateFromMySQ
  * @param memberExist
  * @returns
  */
-async function userSignup(req, memberExist) {
+async function userSignup(req, membershipData) {
   // get switches from DB
   req["dbSwitch"] = await switchService.getAllSwitches();
   // set the source base on app ID
   req["body"]["source"] = commonService.setSource(req);
 
-  if (memberExist.status === 'membership_passes') {
-    return handleSignupForWildpassUserExisted(req, memberExist.data);
+  if (membershipData.status === 'hasMembershipPasses') {
+    return handleSignupForWildpassUserExisted(req, membershipData.data);
   }
   // generate Mandai ID
   let mandaiID = usersSignupHelper.generateMandaiID(req.body);
@@ -132,10 +132,10 @@ async function handleSignupForWildpassUserExisted(req, membershipData) {
  * Cognito create user
  *
  * @param {json} req
- * @param membershipPassesData
+ * @param membershipData
  * @returns
  */
-async function cognitoCreateUser(req, membershipPassesData) {
+async function cognitoCreateUser(req, membershipData) {
   req["apiTimer"] = req.processTimer.apiRequestTimer();
   req.apiTimer.log("usersServices.cognitoCreateUser start"); // log process time
   // prepare array  to create user
@@ -175,15 +175,15 @@ async function cognitoCreateUser(req, membershipPassesData) {
   };
 
   let updateParams = [];
-  if (membershipPassesData && membershipPassesData.userId && membershipPassesData.mandaiId) {
+  if (membershipData && membershipData.userId && membershipData.mandaiId) {
     updateParams = [
       {
         Name: "given_name",
-        Value: req.body.firstName || membershipPassesData.firstName,
+        Value: req.body.firstName || membershipData.firstName,
       },
       {
         Name: "family_name",
-        Value: req.body.lastName || membershipPassesData.lastName,
+        Value: req.body.lastName || membershipData.lastName,
       },
       {
         Name: "custom:membership",
@@ -231,7 +231,7 @@ async function cognitoCreateUser(req, membershipPassesData) {
       newUserArray.TemporaryPassword
     );
     const dbResponse = await retryOperation(async () => {
-      return usersSignupHelper.createUserSignupDB(req, membershipPassesData);
+      return usersSignupHelper.createUserSignupDB(req, membershipData);
     });
 
     // push to queue for Galaxy Import Pass
@@ -359,10 +359,10 @@ async function getUserMembership(req) {
       //adding new status for handling signup
       //cover for case user_memberships table have wildpass exists but missing at users table
       if (userMembershipPasses && userMembershipPasses.email && userMembershipPasses.hasWildpass === 0) {
-        response = { status: "membership_passes", data: userMembershipPasses };
+        response = { status: "hasMembershipPasses", data: userMembershipPasses };
       } else {
         //cover for case user_memberships table have wildpass exists but missing at users table
-        response = { status: userMembershipPasses && userMembershipPasses.hasWildpass === 0 ? "success" : "failed", data: error };
+        response = { status: userMembershipPasses && userMembershipPasses.hasWildpass === 0 ? "hasWildpass" : "noWildpass", data: error };
       }
     }
     req.apiTimer.end("usersServices.getUserMembership error"); // log end time
