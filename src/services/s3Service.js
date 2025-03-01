@@ -27,7 +27,7 @@ const uploadThumbnailToS3 = async (req) => {
       "Start uploadThumbnailToS3"
     );
 
-    await s3Client.send(
+    let uploadPhoto = await s3Client.send(
       new PutObjectCommand({
         Bucket: `mwg-passkit-${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
@@ -44,11 +44,12 @@ const uploadThumbnailToS3 = async (req) => {
           visualId: req.body.visualId,
           mandaiId: req.body.mandaiId,
           layer: "service.uploadThumbnailToS3",
-          data: req.body.membershipPhoto.bytes,
+          data: JSON.stringify(uploadPhoto),
         },
       },
       "Start uploadThumbnailToS3 - Success"
     );
+    return uploadPhoto;
   } catch (error) {
     loggerService.error(
       {
