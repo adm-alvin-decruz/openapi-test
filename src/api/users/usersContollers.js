@@ -56,7 +56,7 @@ async function adminCreateUser(req) {
       let responseSource = "ciam";
 
       // if member already has wildpass
-      if (membershipData.status === "hasWildpass") {
+      if (membershipData.status === "hasWildpass" || membershipData.status === "success") {
         // prepare response
         let errorConfig = usersService.processError(
           req.body,

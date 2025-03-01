@@ -104,7 +104,7 @@ async function handleSignupForWildpassUserExisted(req, membershipData) {
     await usersSignupHelper.insertUserMembership(req, membershipData.userId);
 
     //handle upsert newsletter for wildpass - checking*******
-    await usersSignupHelper.insertUserNewletter(req, membershipData.userId);
+    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberActive);
 
     //calling galaxy sqs for keep current flow not change
     const galaxySQS = await galaxyWPService.galaxyToSQS(reqBasedOnMembership, "userSignup");
