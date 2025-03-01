@@ -371,9 +371,8 @@ class UserSignupService {
         : [];
 
     return (
-      (groups.includes(GROUP.WILD_PASS) &&
-        !groups.includes(GROUP.MEMBERSHIP_PASSES)) ||
-      membershipBelongWildPass
+      (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
+      !groups.includes(GROUP.MEMBERSHIP_PASSES)
     );
   }
 
@@ -420,10 +419,13 @@ class UserSignupService {
         },
         "[CIAM] Start handleUpdateUserBelongWildPass Service"
       );
+
       await cognitoService.cognitoAdminSetUserPassword(
         req.body.email,
         passwordCredential.cognito.hashPassword
       );
+
+      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group)
 
       const firstNameDB = userDB.given_name || "";
       const lastNameDB = userDB.family_name || "";
@@ -475,25 +477,6 @@ class UserSignupService {
           ],
           req.body.email
         );
-        //require field when trigger generate passkit & cardface
-        if (
-          isTriggerUpdateInfo &&
-          req.body.firstName &&
-          req.body.lastName &&
-          userDB.visualId
-        ) {
-          await this.sendSQSMessage(
-            {
-              firstName: req.body.firstName || userDB.given_name,
-              lastName: req.body.lastName || userDB.family_name,
-              dob: req.body.dob || dobCognito,
-              mandaiID: getOrCheck(userCognito, "custom:mandai_id"),
-              visualID: userDB.visualId,
-              email: req.body.email,
-            },
-            "signUpMembershipPasses"
-          );
-        }
       }
 
       !!req.body.migrations &&

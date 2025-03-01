@@ -51,18 +51,24 @@ const {
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const { formatDateToMySQLDateTime, convertDateToMySQLFormat, convertDateFromMySQLToSlash} = require("../../utils/dateUtils");
 
 /**
  * Function User signup service
  * @param {json} req
+ * @param memberExist
  * @returns
  */
-async function userSignup(req) {
+async function userSignup(req, membershipData) {
   // get switches from DB
   req["dbSwitch"] = await switchService.getAllSwitches();
   // set the source base on app ID
   req["body"]["source"] = commonService.setSource(req);
 
+  // if user has membership passes account, handle signup for wildpass. MP - membership-passes, WP-wildpass
+  if (membershipData.status === 'hasMembershipPasses') {
+    return handleMPAccountSignupWP(req, membershipData.data);
+  }
   // generate Mandai ID
   let mandaiID = usersSignupHelper.generateMandaiID(req.body);
   if (mandaiID.error) {
@@ -72,20 +78,65 @@ async function userSignup(req) {
 
   // prepare membership group
   req["body"]["membershipGroup"] = commonService.prepareMembershipGroup(
-    req.body
+      req.body
   );
 
   // call cognitoCreateUser function
   return cognitoCreateUser(req);
 }
 
+async function handleMPAccountSignupWP(req, membershipData) {
+  const isMemberActive = membershipData.status === 1;
+  if (isMemberActive) {
+    //generate cardface and passkit based on membershipData for galaxy import
+    const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+    const reqBasedOnMembership = {
+      ...req,
+      body: {
+        ...req.body,
+        firstName: membershipData.firstName || "",
+        lastName: membershipData.lastName || "",
+        dob: convertDateFromMySQLToSlash(getDobFromDB),
+        mandaiID: membershipData.mandaiId
+      }
+    };
+
+    //insert wildpass for prepare galaxy import
+    await usersSignupHelper.insertUserMembership(req, membershipData.userId);
+
+    //handle upsert newsletter for wildpass - checking*******
+    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberActive);
+
+    //calling galaxy sqs for keep current flow not change
+    const galaxySQS = await galaxyWPService.galaxyToSQS(reqBasedOnMembership, "userSignup");
+
+    // user migration - update user_migrations table for signup & sqs status
+    if (req.body.migrations) {
+      if (galaxySQS.$metadata.httpStatusCode === 200) {
+        await userDBService.updateUserMigration(reqBasedOnMembership, "signup", "signupSQS");
+      }
+    }
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USER_SIGNUP_WP_FROM_MP_SUCCESS",
+        message: "We noticed you're a member, and we're excited to let you know that we’ll be using the details from your membership profile to activate your WildPass benefits. Thank you for being a valued member!"
+      },
+      status: "success",
+      statusCode: "200"
+    }
+  }
+  //2.c scenario with upsert if user already being membership have not pass active
+  return cognitoCreateUser(req, membershipData)
+}
 /**
  * Cognito create user
  *
  * @param {json} req
+ * @param membershipData
  * @returns
  */
-async function cognitoCreateUser(req) {
+async function cognitoCreateUser(req, membershipData) {
   req["apiTimer"] = req.processTimer.apiRequestTimer();
   req.apiTimer.log("usersServices.cognitoCreateUser start"); // log process time
   // prepare array  to create user
@@ -124,13 +175,46 @@ async function cognitoCreateUser(req) {
     ],
   };
 
+  let updateParams = [];
+  if (membershipData && membershipData.userId && membershipData.mandaiId) {
+    updateParams = [
+      {
+        Name: "given_name",
+        Value: req.body.firstName || membershipData.firstName,
+      },
+      {
+        Name: "family_name",
+        Value: req.body.lastName || membershipData.lastName,
+      },
+      {
+        Name: "custom:membership",
+        Value: JSON.stringify(commonService.prepareMembershipGroup(
+            req.body
+        )),
+      },
+    ];
+    if (req.body.dob) {
+      updateParams.push({
+        Name: "birthdate",
+        Value: req.body.dob,
+      })
+    }
+    if (!!req.body.newsletter && !!req.body.newsletter.name && !!req.body.newsletter.type) {
+      updateParams.push({
+        Name: "custom:newsletter",
+        Value: JSON.stringify(req.body.newsletter),
+      })
+    }
+  }
+
+
   var newUserParams = new AdminCreateUserCommand(newUserArray);
 
   try {
     let response = {};
     // create user in Lambda
     const cognitoResponse = await retryOperation(async () => {
-      const cognitoRes = await client.send(newUserParams);
+      const cognitoRes = updateParams.length > 0 ? await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email) : await client.send(newUserParams);
       if (cognitoRes.$metadata.httpStatusCode !== 200) {
         return "Lambda user creation failed";
       }
@@ -148,7 +232,7 @@ async function cognitoCreateUser(req) {
       newUserArray.TemporaryPassword
     );
     const dbResponse = await retryOperation(async () => {
-      return usersSignupHelper.createUserSignupDB(req);
+      return usersSignupHelper.createUserSignupDB(req, membershipData);
     });
 
     // push to queue for Galaxy Import Pass
@@ -255,6 +339,7 @@ async function getUserMembership(req) {
       getMemberJson,
       response
     );
+
     // prepare response to client
     let responseToInternal = responseHelper.craftGetMemberShipInternalRes(
       "",
@@ -270,7 +355,16 @@ async function getUserMembership(req) {
     if (error.name === "UserNotFoundException") {
       response = { status: "not found", data: error };
     } else {
-      response = { status: "failed", data: error };
+      //read db for query user membership passes active
+      const userMembershipPasses = await userModel.queryUserMembershipPassesActiveByEmail(req.body.email);
+      //adding new status for handling signup
+      //cover for case user_memberships table have wildpass exists but missing at users table
+      if (userMembershipPasses && userMembershipPasses.email && userMembershipPasses.hasWildpass === 0) {
+        response = { status: "hasMembershipPasses", data: userMembershipPasses };
+      } else {
+        //cover for case user_memberships table have wildpass exists but missing at users table
+        response = { status: userMembershipPasses && userMembershipPasses.hasWildpass === 0 ? "hasWildpass" : "noWildpass", data: error };
+      }
     }
     req.apiTimer.end("usersServices.getUserMembership error"); // log end time
   }
