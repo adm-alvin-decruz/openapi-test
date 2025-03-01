@@ -127,7 +127,13 @@ async function handleMPAccountSignupWP(req, membershipData) {
     }
   }
   //2.c scenario with upsert if user already being membership have not pass active
-  return cognitoCreateUser(req, membershipData)
+  return cognitoCreateUser({
+    ...req,
+    body: {
+      ...req.body,
+      mandaiID: membershipData.mandaiId
+    }
+  }, membershipData)
 }
 /**
  * Cognito create user
