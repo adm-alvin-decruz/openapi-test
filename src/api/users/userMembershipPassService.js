@@ -41,17 +41,11 @@ class UserMembershipPassService {
       "Start userCreateMembershipPass Service"
     );
     const migrationsFlag = req.body && req.body.migrations;
-    const userInfo = migrationsFlag
-      ? await userModel.findByEmail(req.body.email)
-      : null;
-    const mandaiId =
-      userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
+    const userInfo = migrationsFlag ? await userModel.findByEmail(req.body.email) : null;
+    const mandaiId = userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
     const passTypeMapping = await this.getPassType(req);
     try {
-      const user = await userModel.findByEmailMandaiId(
-        req.body.email,
-        mandaiId
-      );
+      const user = await userModel.findByEmailMandaiId(req.body.email, mandaiId);
       if (!user || !user.id) {
         req.body &&
           req.body.migrations &&
@@ -90,6 +84,7 @@ class UserMembershipPassService {
           )
         );
       }
+
       // store pass data in db
       const createMembershipRs = await this.saveUserMembershipPassToDB(
         user.id,
@@ -102,13 +97,12 @@ class UserMembershipPassService {
       // update user's cognito memberships info
       let updateCognito = await this.updateMembershipInCognito(req);
 
+      let uploadPhoto;
+      // migration flow image with base64 bytes - upload member photo to S3
       if (req.body.migrations && req.body.pictureId) {
-        const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(
-          req.body.pictureId
-        );
-
+        const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(req.body.pictureId);
         if (photoBase64) {
-          await uploadThumbnailToS3({
+          uploadPhoto = await uploadThumbnailToS3({
             body: {
               membershipPhoto: {
                 bytes: photoBase64.split("data:image/jpeg;base64,")[1],
@@ -117,6 +111,7 @@ class UserMembershipPassService {
               visualId: req.body.visualId,
             },
           });
+
           await userMembershipDetailsModel.updateByMembershipId(
             createMembershipRs.membershipId,
             {
@@ -125,60 +120,56 @@ class UserMembershipPassService {
           );
         }
       }
-      // upload member photo to S3
+
+      // normal flow image with base64 bytes - upload member photo to S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
-        await uploadThumbnailToS3(req);
+        uploadPhoto = await uploadThumbnailToS3(req);
         await userMembershipDetailsModel.updateByMembershipId(
           createMembershipRs.membershipId,
           {
             membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
-        if (
-          req.body.member &&
-          req.body.member.firstName &&
-          req.body.member.lastName &&
-          req.body.member.dob
-        ) {
-          req.body &&
-            req.body.migrations &&
-            (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
-              req.body.email,
-              req.body.batchNo,
-              {
-                pass_request: 1,
-                co_member_request: 1,
-              }
-            ));
-          await this.sendSQSMessage(
+      }
+
+      // send to SQS and update migrations DB
+      if (req.body.member && req.body.coMembers && uploadPhoto.$metadata.httpStatusCode === 200) {
+        // TODO: migrations flow need to update query
+        req.body && req.body.migrations &&
+          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
+            req.body.email,
+            req.body.batchNo,
             {
-              ...req,
-              body: {
-                ...req.body,
-                mandaiId: mandaiId,
-                passType: passTypeMapping.toLowerCase(),
-              },
+              pass_request: 1,
+              co_member_request: 1,
+            }
+          ));
+
+        await this.sendSQSMessage(
+          {
+            ...req,
+            body: {
+              ...req.body,
+              mandaiId: mandaiId,
+              passType: passTypeMapping.toLowerCase(),
             },
-            "createMembershipPass"
-          );
-          return loggerService.log(
-            {
-              user: {
-                action: `userCreateMembershipPass - migration flow: ${!!req.body
-                  .migrations}`,
-                layer: "userMembershipPassService.create",
-                triggerSQSAction: "success",
-              },
+          },
+          "createMembershipPass"
+        );
+        return loggerService.log(
+          {
+            user: {
+              action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
+              layer: "userMembershipPassService.create",
+              triggerSQSAction: "success",
             },
-            "End userCreateMembershipPass Service - Success"
-          );
-        } else {
-          req.body &&
-            req.body.migrations &&
-            (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-              picked: 1,
-            }));
-        }
+          },
+          "End userCreateMembershipPass Service - Success"
+        );
+      } else {
+        req.body &&
+          req.body.migrations &&
+          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {picked: 1}));
       }
 
       return loggerService.log(
@@ -200,7 +191,7 @@ class UserMembershipPassService {
             action: `userCreateMembershipPass - migration flow: ${!!req.body
               .migrations}`,
             layer: "userMembershipPassService.create",
-            error: JSON.stringify(error),
+            error: new Error(error),
           },
         },
         {},
