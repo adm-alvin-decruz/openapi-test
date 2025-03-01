@@ -302,7 +302,7 @@ async function adminUpdateNewUser(req, token) {
         membership: req.body.group,
         action: "adminUpdateNewUser",
         api_header: req.headers,
-        api_body: req.body,
+        api_body: JSON.stringify(req.body),
         layer: "controller.adminUpdateNewUser",
         token: maskKeyRandomly(token),
       },
@@ -317,7 +317,7 @@ async function adminUpdateNewUser(req, token) {
           membership: req.body.group,
           action: "adminUpdateNewUser",
           api_header: req.headers,
-          api_body: req.body,
+          api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateNewUser",
           token: maskKeyRandomly(token),
         },
@@ -336,7 +336,7 @@ async function adminUpdateNewUser(req, token) {
           membership: req.body.group,
           action: "adminUpdateNewUser",
           api_header: req.headers,
-          api_body: req.body,
+          api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateNewUser",
           token: maskKeyRandomly(token),
           error: `${error}`,
@@ -707,14 +707,13 @@ async function userCreateMembershipPass(req, res) {
       .send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const message =
-    UserMembershipPassValidation.validateCreateUserMembershipPass(req);
+  const message = UserMembershipPassValidation.validateCreateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {
         user: {
           membership: req.body.group,
-          action: "userCreateMembershipPass",
+          action: "userCreateMembershipPass Validation",
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
@@ -734,11 +733,11 @@ async function userCreateMembershipPass(req, res) {
       {
         user: {
           membership: req.body.group,
-          action: "userCreateMembershipPass",
+          action: "userCreateMembershipPass call userCreateMembershipPassJob.perform",
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: data,
+          response_from_client: data,
         },
       },
       "[CIAM] userCreateMembershipPass End Request - Success"

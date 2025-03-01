@@ -21,8 +21,8 @@ class UserMembershipPassValidation {
             "passType",
             "visualId",
             "categoryType",
-            "adultQty",
-            "childQty",
+            // "adultQty",
+            // "childQty",
           ]
         : [
             "email",

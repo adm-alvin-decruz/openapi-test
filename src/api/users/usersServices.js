@@ -65,8 +65,9 @@ async function userSignup(req, membershipData) {
   // set the source base on app ID
   req["body"]["source"] = commonService.setSource(req);
 
+  // if user has membership passes account, handle signup for wildpass. MP - membership-passes, WP-wildpass
   if (membershipData.status === 'hasMembershipPasses') {
-    return handleSignupForWildpassUserExisted(req, membershipData.data);
+    return handleMPAccountSignupWP(req, membershipData.data);
   }
   // generate Mandai ID
   let mandaiID = usersSignupHelper.generateMandaiID(req.body);
@@ -84,7 +85,7 @@ async function userSignup(req, membershipData) {
   return cognitoCreateUser(req);
 }
 
-async function handleSignupForWildpassUserExisted(req, membershipData) {
+async function handleMPAccountSignupWP(req, membershipData) {
   const isMemberActive = membershipData.status === 1;
   if (isMemberActive) {
     //generate cardface and passkit based on membershipData for galaxy import
