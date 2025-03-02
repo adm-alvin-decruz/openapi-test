@@ -182,7 +182,7 @@ class UserMembershipPassService {
             action: `userCreateMembershipPass - migration flow: ${!!req.body
               .migrations}`,
             layer: "userMembershipPassService.create",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
@@ -550,40 +550,44 @@ class UserMembershipPassService {
   }
 
   async formatMembershipData(req, existingMemberships) {
-    const passTypeMapping = await this.getPassType(req);
-    const newMembership = {
-      name: passTypeMapping,
-      visualID: req.body.visualId,
-      expiry: req.body.validUntil || null,
-    };
+    try{
+      const passTypeMapping = await this.getPassType(req);
+      const newMembership = {
+        name: passTypeMapping,
+        visualID: req.body.visualId,
+        expiry: req.body.validUntil || null,
+      };
 
-    if (existingMemberships === null) {
-      return [newMembership];
-    }
-
-    //handle new format membership in Cognito
-    if (Array.isArray(existingMemberships)) {
-      let updatedMemberships;
-      // Check if any existing membership needs to be updated based on visualId
-      const membershipToUpdateIdx = existingMemberships.findIndex(
-        (membership) => membership.visualID === newMembership.visualID
-      );
-
-      if (membershipToUpdateIdx >= 0) {
-        existingMemberships[membershipToUpdateIdx] = newMembership;
-        updatedMemberships = [...existingMemberships];
-      } else {
-        updatedMemberships = [...existingMemberships, newMembership];
+      if (existingMemberships === null) {
+        return [newMembership];
       }
-      return updatedMemberships || null;
-    }
 
-    //handle old format membership in Cognito
-    if (typeof existingMemberships === "object") {
-      // Check if any existing membership needs to be updated based on visualId
-      return existingMemberships.visualID === newMembership.visualID
-        ? [newMembership]
-        : [existingMemberships, newMembership];
+      //handle new format membership in Cognito
+      if (Array.isArray(existingMemberships)) {
+        let updatedMemberships;
+        // Check if any existing membership needs to be updated based on visualId
+        const membershipToUpdateIdx = existingMemberships.findIndex(
+          (membership) => membership.visualID === newMembership.visualID
+        );
+
+        if (membershipToUpdateIdx >= 0) {
+          existingMemberships[membershipToUpdateIdx] = newMembership;
+          updatedMemberships = [...existingMemberships];
+        } else {
+          updatedMemberships = [...existingMemberships, newMembership];
+        }
+        return updatedMemberships || null;
+      }
+
+      //handle old format membership in Cognito
+      if (typeof existingMemberships === "object") {
+        // Check if any existing membership needs to be updated based on visualId
+        return existingMemberships.visualID === newMembership.visualID
+          ? [newMembership]
+          : [existingMemberships, newMembership];
+      }
+    } catch (error) {
+      console.log("UserMembershipPassService.formatMembershipData error", new Error(error));
     }
   }
 
@@ -766,16 +770,6 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-    loggerService.log(
-      {
-        user: {
-          userEmail: req.body.email,
-          layer: "userMembershipPassService.updateMembershipInCognito",
-          data: req.body,
-        },
-      },
-      "Start updateMembershipInCognito"
-    );
     const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
     const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
     // reformat "custom:membership" to JSON array
@@ -785,6 +779,20 @@ class UserMembershipPassService {
       {Name: "custom:vehicle_iu", Value: req.body.iu || "null"},
       {Name: "custom:vehicle_plate", Value: req.body.carPlate || "null"}
     ];
+
+    loggerService.log(
+      {
+        user: {
+          userEmail: req.body.email,
+          existingMemberships: JSON.stringify(existingMemberships),
+          updatedMemberships: JSON.stringify(updatedMemberships),
+          params: updateParams,
+          layer: "userMembershipPassService.updateMembershipInCognito",
+          data: JSON.stringify(req.body),
+        },
+      },
+      "Start updateMembershipInCognito"
+    );
 
     try {
       let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email);
@@ -808,7 +816,7 @@ class UserMembershipPassService {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
             params: JSON.stringify(updateParams),
-            error: JSON.stringify(error),
+            error: new Error(error),
           },
         },
         {},
