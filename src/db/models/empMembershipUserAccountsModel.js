@@ -49,7 +49,7 @@ class EmpMembershipUserAccountsModel {
           },
         },
         {},
-        "EmpMembershipUserPassesModel.updateByEmail"
+        "EmpMembershipUserPassesModel.updatePassState"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
