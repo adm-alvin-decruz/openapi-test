@@ -61,8 +61,8 @@ class UserMembershipPassService {
         );
       }
 
+      // 1st: check membership pass exist
       const rows = await userModel.findByEmailMandaiIdVisualIds([req.body.visualId], req.body.email, mandaiId);
-
       const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
       if (userMembership && userMembership.visualId === req.body.visualId) {
         req.body && req.body.migrations && (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
@@ -76,18 +76,11 @@ class UserMembershipPassService {
         );
       }
 
-      // store pass data in db
-      const createMembershipRs = await this.saveUserMembershipPassToDB(
-        user.id,
-        {
-          ...req,
-          passType: passTypeMapping.toLowerCase(),
-        }
-      );
-
-      // update user's cognito memberships info
+      // 2nd: update user's cognito memberships info
       let updateCognito = await this.updateMembershipInCognito(req);
 
+      // 3rd: upload photo
+      // TODO: if upload photo success, data can save to DB together in #4
       let uploadPhoto;
       // migration flow image with base64 bytes - upload member photo to S3
       if (req.body.migrations && req.body.pictureId) {
@@ -102,19 +95,24 @@ class UserMembershipPassService {
               visualId: req.body.visualId,
             },
           });
-
-          await userMembershipDetailsModel.updateByMembershipId(
-            createMembershipRs.membershipId,
-            {
-              membership_photo: `users/${mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
-            }
-          );
         }
       }
 
       // normal flow image with base64 bytes - upload member photo to S3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         uploadPhoto = await uploadThumbnailToS3(req);
+      }
+
+      // 4th: store pass data in db
+      const createMembershipRs = await this.saveUserMembershipPassToDB(
+        user.id,
+        {
+          ...req,
+          passType: passTypeMapping.toLowerCase(),
+        }
+      );
+
+      if (uploadPhoto.$metadata.httpStatusCode === 200) {
         await userMembershipDetailsModel.updateByMembershipId(
           createMembershipRs.membershipId,
           {
@@ -211,13 +209,15 @@ class UserMembershipPassService {
         },
         "Start userUpdateMembershipPass Service"
       );
-      // update pass data in db
-      const updateMembershipRs = await this.updateUserMembershipPassToDB(req);
-
       // update pass expiry in cognito (if present in request)
       await this.updateMembershipInCognito(req);
 
+      // update pass data in db
+      // TODO: improve the flow which flow first, 2nd, 3rd ...
+      const updateMembershipRs = await this.updateUserMembershipPassToDB(req);
+
       // update member photo in S3
+      // TODO: move upload photo up, so after upload photo, data can save to DB together in #3
       if (req.body.membershipPhoto && req.body.membershipPhoto?.bytes) {
         // let updatePhoto = true; // commented due to no checking for passkit generate for now.
         await uploadThumbnailToS3(req);
@@ -227,8 +227,9 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
+
         // send message to SQS to re-generate passkit (Trigger whenever pass update)
-        // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) {
+        // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
           let sendSQSMessage = await this.sendSQSMessage(req, "updateMembershipPass");
           loggerService.log(
             {
@@ -242,7 +243,7 @@ class UserMembershipPassService {
             },
             "End userUpdateMembershipPass Service - Success"
           );
-        // }
+        // } // disabled, gen passkit whenever update
       }
 
       loggerService.log(
@@ -770,7 +771,7 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
+    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email.trim().toLowerCase());
     const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
     // reformat "custom:membership" to JSON array
     const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
@@ -795,7 +796,7 @@ class UserMembershipPassService {
     );
 
     try {
-      let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email);
+      let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email.trim().toLowerCase());
       loggerService.log(
         {
           user: {

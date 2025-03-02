@@ -518,6 +518,7 @@ router.post("/token/verify", isEmptyRequest, async (req, res) => {
 router.post(
   "/users/my-membership",
   isEmptyRequest,
+  validateEmail,
   userController.userCreateMembershipPass
 );
 
@@ -527,6 +528,7 @@ router.post(
 router.put(
   "/users/my-membership",
   isEmptyRequest,
+  validateEmail,
   userController.userUpdateMembershipPass
 );
 

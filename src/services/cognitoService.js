@@ -56,19 +56,21 @@ class Cognito {
         PASSWORD: password,
       },
     });
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            password: maskKeyRandomly(password),
-            hashSecret: maskKeyRandomly(hashSecret),
-            action: "cognitoUserLogin",
-            layer: "services.cognitoService",
-          },
+
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          password: maskKeyRandomly(password),
+          hashSecret: maskKeyRandomly(hashSecret),
+          action: "cognitoUserLogin",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoUserLogin Service"
-      );
+      },
+      "[CIAM] Start cognitoUserLogin Service"
+    );
+
+    try {
       const loginSession = await client.send(userLoginParams);
       loggerService.log(
         {
