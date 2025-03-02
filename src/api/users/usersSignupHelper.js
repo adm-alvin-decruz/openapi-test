@@ -7,7 +7,9 @@ const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const dbConfig = require('../../config/dbConfig');
-const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat} = require('../../utils/dateUtils');
+const commonService = require("../../services/commonService");
+const loggerService = require("../../logs/logger");
 
 /**
  * Generate mandaiID
@@ -116,20 +118,23 @@ function generateVisualID(reqBody) {
   return `${year}${sources[source]}${groups[group]}${month}${numbers}`;
 }
 
-async function createUserSignupDB(req){
+async function createUserSignupDB(req, membershipData){
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersSignupHelper.createUserSignupDB starts'); // log process time
   // insert to user table
-  let newUserResult= await insertUser(req);
+  // if singup wildpass but account already have membership passes - reuse this for upsert
+  const userExisted = !!membershipData && !!membershipData.userId;
+  let newUserResult= userExisted ? await updateUser(membershipData.userId, req) : await insertUser(req);
+
   if(!newUserResult.error){
-    // insert to membership table
+    // insert to membership table - membership-passes have empty so keep insert
     let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
-    // insert to newsletter table
-    let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id);
-    // insert to credential table
-    let newUserCredentialResult = await insertUserCredential(req, newUserResult.user_id);
-    // insert to detail table
-    let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id);
+    // upsert to newsletter table
+    let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id, userExisted);
+    // insert to credential table - if membership-passes ignore update user credential
+    let newUserCredentialResult = !userExisted ? await insertUserCredential(req, newUserResult.user_id) : {};
+    // upsert to detail table
+    let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
 
     // user migrations - update user_migrations user ID
     if(req.body.migrations) {
@@ -186,6 +191,36 @@ async function insertUser(req){
   }
 }
 
+async function updateUser(userId, req) {
+  const envSource = JSON.parse(dbConfig.SOURCE_DB_MAPPING);
+  try {
+    const updateUserRs = await userModel.update(userId, {
+      given_name: req.body.firstName,
+      family_name: req.body.lastName,
+      birthdate: req.body.dob ? convertDateToMySQLFormat(req.body.dob) : undefined,
+      source: envSource[commonService.setSource(req)],
+      active: true,
+      created_at: req.body.registerTime ? req.body.registerTime : getCurrentUTCTimestamp()
+    })
+    return {
+      user_id: updateUserRs && updateUserRs.user_id ? updateUserRs.user_id : "",
+      error: null
+    }
+  } catch (error) {
+    loggerService.error(
+        {
+          userSignupHelper: {
+            layer: 'userSignupHelper.updateUser',
+            error: `${error}`
+          },
+        },
+        {},
+        "userSignupHelper.updateUser"
+    );
+    throw new Error(`userSignupHelper.updateUser error: ${error}`)
+  }
+}
+
 /**
  * Function insert User Membership to DB
  *
@@ -212,7 +247,7 @@ async function insertUserMembership(req, dbUserID){
     return result;
 
   } catch (error) {
-    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    let catchError = new Error(`userSignupHelper.insertUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
   }
@@ -223,9 +258,10 @@ async function insertUserMembership(req, dbUserID){
  *
  * @param {json} req
  * @param {string} dbUserID
+ * @param userExisted
  * @returns
  */
-async function insertUserNewletter(req, dbUserID){
+async function insertUserNewletter(req, dbUserID, userExisted){
   // process newsletter
   let newsletterName;
   let newslettertype;
@@ -235,9 +271,16 @@ async function insertUserNewletter(req, dbUserID){
     newslettertype = req.body.newsletter.type;
     newsletterSubs = req.body.newsletter.subscribe;
   }
+  const newsletterExisted = await userNewsletterModel.findByUserId(dbUserID);
   try {
     // Create a new user
-    const result = await userNewsletterModel.create({
+    const result = userExisted && !!newsletterExisted && !!newsletterExisted.user_id
+   ? await userNewsletterModel.updateByUserId(dbUserID, {
+      name: newsletterName,
+      type: newslettertype,
+      subscribe: newsletterSubs
+    })
+    : await userNewsletterModel.create({
       user_id: dbUserID,
       name: newsletterName,
       type: newslettertype,
@@ -288,11 +331,20 @@ async function insertUserCredential(req, dbUserID){
  * @param {string} dbUserID
  * @returns
  */
-async function insertUserDetail(req, dbUserID){
+async function insertUserDetail(req, dbUserID, userExisted){
   // process user detail
   try {
     // Create a new user
-    const result = await userDetailModel.create({
+    const result = userExisted ? await userDetailModel.updateByUserId(dbUserID, {
+      user_id: dbUserID,
+      phone_number: req.body.phone ? req.body.phone : undefined,
+      zoneinfo: req.body.zone ? req.body.zone : undefined,
+      address: req.body.address ? req.body.address : undefined,
+      picture: req.body.picture ? req.body.picture : undefined,
+      vehicle_iu: req.body.vehicleIU ? req.body.vehicleIU : undefined,
+      vehicle_plate: req.body.vehiclePlate ? req.body.vehiclePlate : undefined,
+      extra: req.body.extra ? req.body.extra : undefined
+    }) : await userDetailModel.create({
       user_id: dbUserID,
       phone_number: req.body.phone ? req.body.phone : null,
       zoneinfo: req.body.zone ? req.body.zone : null,
@@ -335,5 +387,7 @@ async function updateUserMigration(req, dbUserID){
 module.exports = {
   generateMandaiID,
   generateVisualID,
-  createUserSignupDB
+  createUserSignupDB,
+  insertUserMembership,
+  insertUserNewletter
 };

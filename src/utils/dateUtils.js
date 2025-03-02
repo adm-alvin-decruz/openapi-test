@@ -8,6 +8,12 @@ const convertDateToMySQLFormat = (dateString) => {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+const convertDateFromMySQLToSlash = (dateString) => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-');
+  return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+}
+
 function formatDateToMySQLDateTime(date) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
@@ -35,5 +41,6 @@ module.exports = {
   convertDateToMySQLFormat,
   formatDateToMySQLDateTime,
   currentDateAddHours,
-  convertDateFormat
+  convertDateFormat,
+  convertDateFromMySQLToSlash
 };

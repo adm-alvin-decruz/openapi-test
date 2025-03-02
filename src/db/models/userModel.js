@@ -190,7 +190,7 @@ class User {
     const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_newsletters un ON un.user_id = u.id
-                  WHERE u.email = ? AND u.active=1`;
+                  WHERE u.email = ? AND u.active=1 AND um.name = 'wildpass'`;
     try {
       const rows = await pool.query(sql, [email]);
 
@@ -278,7 +278,7 @@ class User {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        user_id: result.insertId,
+        user_id: id,
       };
     } catch (error) {
       loggerService.error(
@@ -449,6 +449,35 @@ class User {
       );
 
       return { error: logError };
+    }
+  }
+
+  static async queryUserMembershipPassesActiveByEmail(email) {
+    const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId, 
+                    MAX(CASE WHEN um.name <> 'wildpass' THEN 1 ELSE 0 END) AS hasMembershipPasses,
+                    MAX(CASE WHEN um.name = 'wildpass' THEN 1 ELSE 0 END) AS hasWildpass,
+                    MAX(CASE WHEN umd.status = 0 THEN 1 ELSE 0 END) AS status
+                 FROM users u
+                 LEFT JOIN user_memberships um ON um.user_id = u.id
+                 LEFT JOIN user_membership_details umd ON umd.user_membership_id = um.id
+                 WHERE u.email = ? AND u.active = 1
+                 GROUP BY u.email, u.given_name, u.family_name, u.birthdate, u.mandai_id`;
+    try {
+      const rows = await pool.query(sql, [email]);
+
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+          {
+            userModel: {
+              email,
+              error: `${error}`,
+              sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+            },
+          },
+          {},
+          "[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed"
+      );
     }
   }
 }

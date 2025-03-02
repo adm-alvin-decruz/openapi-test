@@ -51,13 +51,12 @@ async function adminCreateUser(req) {
     try {
       let response;
       // check if user exist
-      var memberExist = await usersService.getUserMembership(req);
+      var membershipData = await usersService.getUserMembership(req);
 
-      // if signup check aem flag true, check user exist in AEM
-      let aemNoMembership;
       let responseSource = "ciam";
 
-      if (memberExist.status === "success" || aemNoMembership === "false") {
+      // if member already has wildpass
+      if (membershipData.status === "hasWildpass" || membershipData.status === "success") {
         // prepare response
         let errorConfig = usersService.processError(
           req.body,
@@ -85,7 +84,7 @@ async function adminCreateUser(req) {
         response["source"] = responseSource;
         return response;
       } else {
-        response = await usersService.userSignup(req);
+        response = await usersService.userSignup(req, membershipData);
       }
 
       return response;

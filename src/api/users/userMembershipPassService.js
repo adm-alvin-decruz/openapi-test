@@ -265,7 +265,7 @@ class UserMembershipPassService {
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
             layer: "userMembershipPassService.update",
-            error: JSON.stringify(error),
+            error: new Error(error),
           },
         },
         {},
@@ -752,7 +752,7 @@ class UserMembershipPassService {
           user: {
             data: req.body,
             layer: "userMembershipPassService.updateUserMembershipPassToDB",
-            error: JSON.stringify(error),
+            error: new Error(error),
           },
         },
         {},
