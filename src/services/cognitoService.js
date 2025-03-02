@@ -56,19 +56,21 @@ class Cognito {
         PASSWORD: password,
       },
     });
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            password: maskKeyRandomly(password),
-            hashSecret: maskKeyRandomly(hashSecret),
-            action: "cognitoUserLogin",
-            layer: "services.cognitoService",
-          },
+
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          password: maskKeyRandomly(password),
+          hashSecret: maskKeyRandomly(hashSecret),
+          action: "cognitoUserLogin",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoUserLogin Service"
-      );
+      },
+      "[CIAM] Start cognitoUserLogin Service"
+    );
+
+    try {
       const loginSession = await client.send(userLoginParams);
       loggerService.log(
         {
@@ -166,22 +168,25 @@ class Cognito {
       Username: email,
     });
 
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            action: "cognitoAdminGetUserByEmail",
-            layer: "services.cognitoService",
-          },
+    loggerService.log(
+      {
+        cognitoService: {
+          email: email,
+          CognitoGetUserResult: getUserCommand,
+          action: "cognitoAdminGetUserByEmail",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoAdminGetUserByEmail Service"
-      );
+      },
+      "[CIAM] Start cognitoAdminGetUserByEmail Service"
+    );
+
+    try {
       const userInfo = await client.send(getUserCommand);
       loggerService.log(
         {
           cognitoService: {
-            email,
+            email: email,
+            userInfo: JSON.stringify(userInfo),
             action: "cognitoAdminGetUserByEmail",
             layer: "services.cognitoService",
           },
@@ -193,10 +198,11 @@ class Cognito {
       loggerService.error(
         {
           cognitoService: {
-            email,
+            email: email,
+            CognitoGetUserResult: getUserCommand,
             action: "cognitoAdminGetUserByEmail",
             layer: "services.cognitoService",
-            error: `${error}`,
+            error: new Error("cognitoAdminGetUserByEmail error: ", error),
           },
         },
         {},
