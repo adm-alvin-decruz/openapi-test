@@ -214,7 +214,7 @@ class User {
   }
 
   /** Find passes belong user */
-  static async findPassesByUserEmail(passes, email) {
+  static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
     try {
       const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
                     CASE
@@ -223,9 +223,9 @@ class User {
                     END AS isBelong
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE u.email = ? AND u.active = 1`;
+                  WHERE (u.email = ? OR u.mandai_id = ?) AND u.active = 1`;
 
-      return await pool.query(sql, [passes, email]);
+      return await pool.query(sql, [passes, email, mandaiId]);
     } catch (error) {
       loggerService.error(
         {

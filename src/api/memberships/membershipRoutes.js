@@ -6,6 +6,7 @@ const processTimer = require('../../utils/processTimer');
 const membershipsController = require('./membershipsControllers');
 const validationService = require('../../services/validationService');
 const CommonErrors = require("../../config/https/errors/common");
+const {isEmptyRequest, validateEmail} = require("../../middleware/validationMiddleware");
 
 const pong = {'pong': 'pang'};
 
@@ -19,7 +20,7 @@ router.get('/ping', async (req, res) => {
  * Get membership by email
  * Response
  */
-router.post("/users/memberships", async (req, res) => {
+router.post("/users/memberships", isEmptyRequest, validateEmail, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
