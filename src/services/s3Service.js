@@ -9,27 +9,27 @@ require("dotenv").config();
 const loggerService = require("../logs/logger");
 
 const uploadThumbnailToS3 = async (req) => {
-  try {
-    const s3Client = new S3Client({});
-    const buffer = Buffer.from(req.body.membershipPhoto.bytes, "base64");
+  const s3Client = new S3Client({});
 
-    loggerService.log(
-      {
-        uploadThumbnailToS3: {
-          bucket: `mwg-passkit-${process.env.APP_ENV}`,
-          path: `mwg-passkit-${process.env.APP_ENV}`,
-          visualId: req.body.visualId,
-          mandaiId: req.body.mandaiId,
-          layer: "service.uploadThumbnailToS3",
-          data: req.body.membershipPhoto.bytes,
-        },
+  loggerService.log(
+    {
+      uploadThumbnailToS3: {
+        bucket: `mwg-passkit-${process.env.APP_ENV}`,
+        path: `mwg-passkit-${process.env.APP_ENV}`,
+        visualId: req.body.visualId,
+        mandaiId: req.body.mandaiId,
+        layer: "service.uploadThumbnailToS3",
+        data: req.body.membershipPhoto.bytes,
       },
-      "Start uploadThumbnailToS3"
-    );
+    },
+    "Start uploadThumbnailToS3"
+  );
 
+  try {
+    const buffer = Buffer.from(req.body.membershipPhoto.bytes, "base64");
     let uploadPhoto = await s3Client.send(
       new PutObjectCommand({
-        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
+        Bucket: `mwg-passkit-sandbox`, //${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
@@ -47,7 +47,7 @@ const uploadThumbnailToS3 = async (req) => {
           data: JSON.stringify(uploadPhoto),
         },
       },
-      "Start uploadThumbnailToS3 - Success"
+      "Success uploadThumbnailToS3"
     );
     return uploadPhoto;
   } catch (error) {
@@ -60,7 +60,7 @@ const uploadThumbnailToS3 = async (req) => {
           mandaiId: req.body.mandaiId,
           layer: "service.uploadThumbnailToS3",
           data: req.body.membershipPhoto.bytes,
-          error: `${error}`
+          error: new Error("uploadThumbnailToS3 error: ", error),
         },
       },
       {},

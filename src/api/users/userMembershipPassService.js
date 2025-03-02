@@ -40,6 +40,7 @@ class UserMembershipPassService {
       },
       "Start userCreateMembershipPass Service"
     );
+
     const migrationsFlag = req.body && req.body.migrations;
     const userInfo = migrationsFlag ? await userModel.findByEmail(req.body.email) : null;
     const mandaiId = userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
@@ -49,9 +50,7 @@ class UserMembershipPassService {
       if (!user || !user.id) {
         req.body &&
           req.body.migrations &&
-          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-            picked: 2,
-          }));
+          (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
         await Promise.reject(
           JSON.stringify(
             MembershipErrors.ciamMembershipUserNotFound(
@@ -62,19 +61,11 @@ class UserMembershipPassService {
         );
       }
 
-      const rows = await userModel.findByEmailMandaiIdVisualIds(
-        [req.body.visualId],
-        req.body.email,
-        mandaiId
-      );
+      const rows = await userModel.findByEmailMandaiIdVisualIds([req.body.visualId], req.body.email, mandaiId);
 
       const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
       if (userMembership && userMembership.visualId === req.body.visualId) {
-        req.body &&
-          req.body.migrations &&
-          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-            picked: 2,
-          }));
+        req.body && req.body.migrations && (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
         await Promise.reject(
           JSON.stringify(
             MembershipPassErrors.membershipPassExistedError(
@@ -169,7 +160,7 @@ class UserMembershipPassService {
       } else {
         req.body &&
           req.body.migrations &&
-          (await empMembershipUserPassesModel.updateByEmail(req.body.email, {picked: 1}));
+          (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 1}));
       }
 
       return loggerService.log(
@@ -191,24 +182,16 @@ class UserMembershipPassService {
             action: `userCreateMembershipPass - migration flow: ${!!req.body
               .migrations}`,
             layer: "userMembershipPassService.create",
-            error: new Error(error),
+            error: `${error}`,
           },
         },
         {},
         "End userCreateMembershipPass Service - Failed"
       );
-      req.body &&
-        req.body.migrations &&
-        (await empMembershipUserPassesModel.updateByEmail(req.body.email, {
-          picked: 2,
-        }));
+      req.body && req.body.migrations && (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
-        throw new Error(
-          JSON.stringify(
-            MembershipPassErrors.createMembershipPassError(req.body.language)
-          )
-        );
+        throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)));
       }
       throw new Error(error);
     }
@@ -848,20 +831,19 @@ class UserMembershipPassService {
     };
     const queueUrl = process.env.SQS_QUEUE_URL;
 
-    try {
-      loggerService.log(
-        {
-          SQS: {
-            queueURL: queueUrl,
-            messageBody: JSON.stringify(data),
-            layer: "userMembershipPassService.sendSQSMessage",
-            body: req.body,
-            data: data,
-          },
+    loggerService.log(
+      {
+        SQS: {
+          queueURL: queueUrl,
+          messageBody: JSON.stringify(data),
+          layer: "userMembershipPassService.sendSQSMessage",
+          body: JSON.stringify(req.body)
         },
-        "Start sendSQSMessage"
-      );
+      },
+      "Start sendSQSMessage"
+    );
 
+    try {
       const command = new SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify(data),

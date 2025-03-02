@@ -5,7 +5,7 @@ const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/common");
 
 class EmpMembershipUserPassesModel {
-  static async updateByEmail(email, data) {
+  static async updatePassState(reqBody, data) {
     const now = getCurrentUTCTimestamp();
 
     // Filter out undefined values and create SET clauses
@@ -17,17 +17,16 @@ class EmpMembershipUserPassesModel {
     updateFields.push("updated_at = ?");
 
     // Construct the SQL query
-    const sql = `
-      UPDATE emp_membership_user_passes
-      SET ${updateFields.join(", ")}
-      WHERE email = ?
-    `;
+    const sql = `UPDATE emp_membership_user_passes
+                  SET ${updateFields.join(", ")}
+                  WHERE email = ? AND pass_id = ?`;
 
     // Prepare the params array
     const params = [
       ...Object.values(data).filter((value) => value !== undefined),
       now,
-      email,
+      reqBody.email,
+      reqBody.passId
     ];
 
     // Execute the query
@@ -47,7 +46,7 @@ class EmpMembershipUserPassesModel {
           },
         },
         {},
-        "EmpMembershipUserPassesModel.updateByEmail"
+        "EmpMembershipUserPassesModel.updatePassState"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
