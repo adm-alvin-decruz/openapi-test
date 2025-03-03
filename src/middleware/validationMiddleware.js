@@ -31,20 +31,26 @@ async function validateEmail(req, res, next) {
     return resStatusFormatter(res, 400, msg);
   }
 
+  // Convert email to lowercase
+  const normalizedEmail = email.trim().toLowerCase();
+
   // optional: You can add more robust email validation here
-  if (!(await EmailDomainService.emailFormatTest(email))) {
-    loggerService.error(`Invalid email format ${email}`, req.body);
+  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
+    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
     return resStatusFormatter(res, 400, msg);
   }
 
   // if check domain switch turned on ( 1 )
   if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
     // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(email);
+    let validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
     if (!validDomain) {
       return resStatusFormatter(res, 400, msg);
     }
   }
+
+  // update the email in the request body with the normalized version
+  req.body.email = normalizedEmail;
 
   next();
 }

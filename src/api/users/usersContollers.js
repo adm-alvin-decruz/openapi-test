@@ -736,8 +736,8 @@ async function userCreateMembershipPass(req, res) {
           action: "userCreateMembershipPass call userCreateMembershipPassJob.perform",
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
-          api_body: req.body,
-          response_from_client: data,
+          api_body: JSON.stringify(req.body),
+          response_from_client: JSON.stringify(data),
         },
       },
       "[CIAM] userCreateMembershipPass End Request - Success"
