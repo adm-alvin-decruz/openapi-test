@@ -292,7 +292,7 @@ class Cognito {
         {
           cognitoService: {
             email,
-            response: JSON.stringfy(groups),
+            response: JSON.stringify(groups),
             action: "cognitoAdminListGroupsForUser",
             layer: "services.cognitoService",
           },
