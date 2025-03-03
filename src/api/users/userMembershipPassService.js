@@ -470,7 +470,7 @@ class UserMembershipPassService {
   async saveUserMembershipPassToDB(userId, req) {
     try {
       const userMembership = await this.createUserMembership(userId, {
-        passType: req.passType,
+        passType: req.passType.toLowerCase(),
         visualId: req.body.visualId,
         validUntil: req.body.validUntil || null,
       });
@@ -545,8 +545,9 @@ class UserMembershipPassService {
         "membership-passes",
         "pass-type-mapping"
       ));
-    return !!passTypeMapping
-      ? passTypeMapping[`${req.body.passType.toLowerCase()}`]
+
+    return !!passTypeMapping && passTypeMapping.value
+      ? passTypeMapping.value[`${req.body.passType.toLowerCase()}`]
       : req.body.passType.toLowerCase();
   }
 
@@ -625,7 +626,7 @@ class UserMembershipPassService {
       let expiryDate = req.body.validUntil || undefined;
       !!userMembership.userId &&
         (await userMembershipModel.updateByUserId(userMembership.userId, {
-          name: req.body.passType,
+          name: req.body.passType.toLowerCase(),
           expires_at: expiryDate,
         }));
 

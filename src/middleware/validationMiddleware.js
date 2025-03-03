@@ -23,6 +23,35 @@ function isEmptyRequest(req, res, next) {
   next();
 }
 
+async function validateEmailDisposable(req, res, next) {
+  if (!req.body.email) {
+    return next();
+  }
+
+  // Convert email to lowercase
+  const normalizedEmail = req.body.email.trim().toLowerCase();
+
+  // optional: You can add more robust email validation here
+  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
+    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
+    return resStatusFormatter(res, 400, "The email is invalid");
+  }
+
+  // if check domain switch turned on ( 1 )
+  if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
+    // validate email domain to DB
+    let validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
+    if (!validDomain) {
+      return resStatusFormatter(res, 400, "The email is invalid");
+    }
+  }
+
+  // update the email in the request body with the normalized version
+  req.body.email = normalizedEmail;
+
+  next();
+}
+
 async function validateEmail(req, res, next) {
   const { email } = req.body;
   let msg = "The email is invalid";
@@ -31,28 +60,7 @@ async function validateEmail(req, res, next) {
     return resStatusFormatter(res, 400, msg);
   }
 
-  // Convert email to lowercase
-  const normalizedEmail = email.trim().toLowerCase();
-
-  // optional: You can add more robust email validation here
-  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
-    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
-    return resStatusFormatter(res, 400, msg);
-  }
-
-  // if check domain switch turned on ( 1 )
-  if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
-    // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
-    if (!validDomain) {
-      return resStatusFormatter(res, 400, msg);
-    }
-  }
-
-  // update the email in the request body with the normalized version
-  req.body.email = normalizedEmail;
-
-  next();
+  return await validateEmailDisposable(req, res, next);
 }
 
 function resStatusFormatter(res, status, msg) {
@@ -163,4 +171,5 @@ module.exports = {
   resStatusFormatter,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   AccessTokenAuthGuard,
+  validateEmailDisposable
 };

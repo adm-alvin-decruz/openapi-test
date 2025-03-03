@@ -214,7 +214,7 @@ class User {
   }
 
   /** Find passes belong user */
-  static async findPassesByUserEmail(passes, email) {
+  static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
     try {
       const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
                     CASE
@@ -223,16 +223,16 @@ class User {
                     END AS isBelong
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE u.email = ? AND u.active = 1`;
+                  WHERE (u.email = ? OR u.mandai_id = ?) AND u.active = 1`;
 
-      return await pool.query(sql, [passes, email]);
+      return await pool.query(sql, [passes, email, mandaiId]);
     } catch (error) {
       loggerService.error(
         {
           userModel: {
             email,
             passes,
-            error: `${error}`,
+            error: new Error("userModel.findPassesByUserEmailOrMandaiId error: ", error),
           },
         },
         {},
@@ -453,7 +453,7 @@ class User {
   }
 
   static async queryUserMembershipPassesActiveByEmail(email) {
-    const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId, 
+    const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId,
                     MAX(CASE WHEN um.name <> 'wildpass' THEN 1 ELSE 0 END) AS hasMembershipPasses,
                     MAX(CASE WHEN um.name = 'wildpass' THEN 1 ELSE 0 END) AS hasWildpass,
                     MAX(CASE WHEN umd.status = 0 THEN 1 ELSE 0 END) AS status

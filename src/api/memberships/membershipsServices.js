@@ -11,8 +11,8 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { messageLang } = require("../../utils/common");
 const { GROUP } = require("../../utils/constants");
 const userModel = require("../../db/models/userModel");
+const configsModel = require("../../db/models/configsModel");
 const loggerService = require("../../logs/logger");
-const appConfig = require("../../config/appConfig");
 
 function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
   return mid === true
@@ -45,7 +45,7 @@ function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
       };
 }
 
-function passesByGroup(group) {
+async function passesByGroup(group) {
   let passes = "";
   switch (group) {
     case GROUP.WILD_PASS: {
@@ -53,7 +53,16 @@ function passesByGroup(group) {
       break;
     }
     case GROUP.MEMBERSHIP_PASSES: {
-      passes = appConfig.MEMBERSHIP_PASSES;
+      const passesSupported = await configsModel.findByConfigKey(
+        "membership-passes",
+        "pass-type"
+      );
+      passes =
+        passesSupported &&
+        passesSupported.value &&
+        passesSupported.value.length > 0
+          ? passesSupported.value
+          : "";
       break;
     }
     default: {
@@ -74,10 +83,11 @@ function checkMatchedGroup(data) {
 async function checkUserMembership(reqBody) {
   //1st priority check membership group: DB
   try {
-    const passes = passesByGroup(reqBody.group);
-    const userPasses = await userModel.findPassesByUserEmail(
+    const passes = await passesByGroup(reqBody.group);
+    const userPasses = await userModel.findPassesByUserEmailOrMandaiId(
       passes,
-      reqBody.email
+      reqBody.email,
+      reqBody.mandaiId
     );
 
     if (userPasses && userPasses.length > 0) {
@@ -114,7 +124,16 @@ async function checkUserMembership(reqBody) {
     });
   } catch (error) {
     loggerService.error(
-      `membershipsService.checkUserMembership Error: ${error}`, reqBody
+      {
+        membership: {
+          action: "checkUserMembership",
+          request: reqBody,
+          layer: "membershipsService.checkUserMembership",
+          error: new Error(error),
+        },
+      },
+      {},
+      "[CIAM] End Check User Membership - Failed"
     );
     throw new Error(
       JSON.stringify(

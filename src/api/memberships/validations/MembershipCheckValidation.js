@@ -8,12 +8,6 @@ class MembershipCheck {
   }
 
   static execute(data) {
-    if (!data.email || data.email.trim().length === 1) {
-      return (this.error = MembershipErrors.ciamMembershipEmailInvalid(
-          data.email,
-          data.language
-      ));
-    }
     if (!data.group || !GROUPS_SUPPORTS.includes(data.group)) {
       return (this.error = CommonErrors.BadRequest(
           "group",
