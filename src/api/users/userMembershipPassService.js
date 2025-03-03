@@ -772,38 +772,38 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email.trim().toLowerCase());
-    const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
-    // reformat "custom:membership" to JSON array
-    const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
-    let updateParams = [
-      {Name: "custom:membership", Value: JSON.stringify(updatedMemberships)},
-      {Name: "custom:vehicle_iu", Value: req.body.iu || "null"},
-      {Name: "custom:vehicle_plate", Value: req.body.carPlate || "null"}
-    ];
 
-    loggerService.log(
-      {
-        user: {
-          userEmail: req.body.email,
-          existingMemberships: JSON.stringify(existingMemberships),
-          updatedMemberships: JSON.stringify(updatedMemberships),
-          params: updateParams,
-          layer: "userMembershipPassService.updateMembershipInCognito",
-          data: JSON.stringify(req.body),
-        },
-      },
-      "Start updateMembershipInCognito"
-    );
 
     try {
+        const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email.trim().toLowerCase());
+        const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
+        // reformat "custom:membership" to JSON array
+        const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
+        let updateParams = [
+          {Name: "custom:membership", Value: JSON.stringify(updatedMemberships)},
+          {Name: "custom:vehicle_iu", Value: req.body.iu || "null"},
+          {Name: "custom:vehicle_plate", Value: req.body.carPlate || "null"}
+        ];
+
+        loggerService.log(
+          {
+          user: {
+            userEmail: req.body.email,
+            existingMemberships: JSON.stringify(existingMemberships),
+            updatedMemberships: JSON.stringify(updatedMemberships),
+            params: updateParams,
+            layer: "userMembershipPassService.updateMembershipInCognito",
+            data: JSON.stringify(req.body),
+          },
+       },
+       "Start updateMembershipInCognito"
+      );
       let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email.trim().toLowerCase());
       loggerService.log(
         {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            params: JSON.stringify(updateParams),
             data: JSON.stringify(cognitoResult)
           },
         },
@@ -817,7 +817,6 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             layer: "userMembershipPassService.updateMembershipInCognito",
-            params: JSON.stringify(updateParams),
             error: new Error(error),
           },
         },
