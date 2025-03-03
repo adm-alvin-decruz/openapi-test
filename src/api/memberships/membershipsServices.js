@@ -126,7 +126,7 @@ async function checkUserMembership(reqBody) {
     });
   } catch (error) {
     loggerService.error(
-      `membershipsService.checkUserMembership Error: ${error}`,
+      `membershipsService.checkUserMembership error: ${new Error (error)}`,
       reqBody
     );
     throw new Error(

@@ -232,7 +232,7 @@ class User {
           userModel: {
             email,
             passes,
-            error: `${error}`,
+            error: new Error("userModel.findPassesByUserEmailOrMandaiId error: ", error),
           },
         },
         {},
@@ -453,7 +453,7 @@ class User {
   }
 
   static async queryUserMembershipPassesActiveByEmail(email) {
-    const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId, 
+    const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId,
                     MAX(CASE WHEN um.name <> 'wildpass' THEN 1 ELSE 0 END) AS hasMembershipPasses,
                     MAX(CASE WHEN um.name = 'wildpass' THEN 1 ELSE 0 END) AS hasWildpass,
                     MAX(CASE WHEN umd.status = 0 THEN 1 ELSE 0 END) AS status

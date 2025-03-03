@@ -35,7 +35,7 @@ async function adminGetUser(reqBody) {
         membership: {
           action: "checkUserMembership",
           layer: "membershipsController.adminGetUser",
-          response: `${rs}`
+          response: JSON.stringify(rs),
         },
       },
       "[CIAM] End Check User Membership - Success"

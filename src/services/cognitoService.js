@@ -274,23 +274,25 @@ class Cognito {
       Username: email,
     });
 
-    try {
-      loggerService.log(
-        {
-          cognitoService: {
-            email,
-            action: "cognitoAdminListGroupsForUser",
-            layer: "services.cognitoService",
-          },
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          cognitoCommand: JSON.stringify(groupsBelongUserCommand),
+          action: "cognitoAdminListGroupsForUser",
+          layer: "services.cognitoService",
         },
-        "[CIAM] Start cognitoAdminListGroupsForUser Service"
-      );
+      },
+      "[CIAM] Start cognitoAdminListGroupsForUser Service"
+    );
+
+    try {
       const groups = await client.send(groupsBelongUserCommand);
       loggerService.log(
         {
           cognitoService: {
             email,
-            groups,
+            response: JSON.stringfy(groups),
             action: "cognitoAdminListGroupsForUser",
             layer: "services.cognitoService",
           },
@@ -305,7 +307,7 @@ class Cognito {
             email,
             action: "cognitoAdminListGroupsForUser",
             layer: "services.cognitoService",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
