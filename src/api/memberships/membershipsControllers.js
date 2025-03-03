@@ -48,7 +48,7 @@ async function adminGetUser(reqBody) {
           action: "checkUserMembership",
           request: reqBody,
           layer: "membershipsController.adminGetUser",
-          error: `${error}`,
+          error:  new Error(error),
         },
       },
       {},

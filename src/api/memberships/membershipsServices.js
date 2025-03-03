@@ -57,7 +57,6 @@ async function passesByGroup(group) {
         "membership-passes",
         "pass-type"
       );
-      console.log("passesSupported.value", passesSupported.value);
       passes =
         passesSupported &&
         passesSupported.value &&
@@ -90,7 +89,6 @@ async function checkUserMembership(reqBody) {
       reqBody.email,
       reqBody.mandaiId
     );
-    console.log("userPa*******sses", userPasses);
 
     if (userPasses && userPasses.length > 0) {
       return success({
@@ -126,8 +124,16 @@ async function checkUserMembership(reqBody) {
     });
   } catch (error) {
     loggerService.error(
-      `membershipsService.checkUserMembership error: ${new Error (error)}`,
-      reqBody
+      {
+        membership: {
+          action: "checkUserMembership",
+          request: reqBody,
+          layer: "membershipsService.checkUserMembership",
+          error: new Error(error),
+        },
+      },
+      {},
+      "[CIAM] End Check User Membership - Failed"
     );
     throw new Error(
       JSON.stringify(
