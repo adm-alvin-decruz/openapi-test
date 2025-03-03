@@ -42,7 +42,7 @@ class UserGetMembershipPassesService {
       userInfo.map((info) =>
         passkitCommonService.retrievePasskit(
           info.mandaiId,
-          info.membership,
+          info.membership.toLowerCase(),
           info.visualId
         )
       )

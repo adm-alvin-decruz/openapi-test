@@ -12,6 +12,7 @@ const {
   validateEmail,
   AccessTokenAuthGuard,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
+  validateEmailDisposable,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -19,7 +20,6 @@ const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/common");
-const loggerService = require("../../logs/logger");
 
 const pong = { pong: "pang" };
 
@@ -320,7 +320,11 @@ router.post(
 /**
  * User Logout API (Method DELETE)
  */
-router.delete("/users/sessions", AccessTokenAuthGuard, async (req, res) => {
+router.delete("/users/sessions",
+  isEmptyRequest,
+  AccessTokenAuthGuard,
+  validateEmailDisposable,
+  async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -333,11 +337,17 @@ router.delete("/users/sessions", AccessTokenAuthGuard, async (req, res) => {
     );
     return res.status(401).send({ message: "Unauthorized" });
   }
-  const accessToken = req.headers.authorization.toString();
+  let accessToken =
+    req.headers && req.headers.authorization
+       ? req.headers.authorization.toString()
+       : "";
+  if (accessToken && res.newAccessToken) {
+     accessToken = res.newAccessToken;
+  }
   try {
     const data = await userController.userLogout(
       accessToken,
-      req.query.language
+      req.body
     );
     return res.status(data.statusCode).json(data);
   } catch (error) {

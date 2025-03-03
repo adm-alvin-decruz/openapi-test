@@ -519,7 +519,7 @@ async function userLogin(req) {
   }
 }
 
-async function userLogout(token, lang) {
+async function userLogout(token, body) {
   try {
     loggerService.log(
       {
@@ -530,14 +530,14 @@ async function userLogout(token, lang) {
       },
       "[CIAM] Start Logout Request"
     );
-    return await UserLogoutJob.perform(token, lang);
+    return await UserLogoutJob.perform(token, body);
   } catch (error) {
     loggerService.error(
       {
         user: {
           token: maskKeyRandomly(token),
           layer: "controller.userLogout",
-          error: `${error}`,
+          error: new Error(error),
         },
       },
       {},
