@@ -40,6 +40,14 @@ class UserCredential {
     return rows;
   }
 
+  static async findByUserEmailOrMandaiId(email, mandaiId) {
+    const sql = `SELECT * FROM users u
+                INNER JOIN user_credentials uc ON uc.username = u.email
+                WHERE u.email = ? OR u.mandai_id = ?`;
+    const [rows] = await pool.query(sql, [email, mandaiId]);
+    return rows;
+  }
+
   static async findByPasswordHash(password) {
     const sql = "SELECT * FROM user_credentials WHERE password_hash = ?";
     const [rows] = await pool.query(sql, [password]);

@@ -15,7 +15,7 @@ const { GROUP } = require("../utils/constants");
  * @returns
  */
 function isEmptyRequest(req, res, next) {
-  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
     if (Object.keys(req.body).length === 0) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
@@ -93,13 +93,15 @@ async function AccessTokenAuthGuard(req, res, next) {
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  if (!req.body || !req.body.email) {
+  if (!req.body || (!req.body.email && !req.body.mandaiId)) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  const userCredentials = await userCredentialModel.findByUserEmail(
-    req.body.email
+
+  const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
+    req.body.email || '',
+      req.body.mandaiId || ''
   );
 
   if (
