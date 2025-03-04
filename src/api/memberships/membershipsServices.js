@@ -91,17 +91,23 @@ async function checkUserMembership(reqBody) {
       reqBody.mandaiId || null
     );
 
+    //find user info matched at users model - might have not linked memberships
+    const userInfo = await userModel.findByEmailOrMandaiId(
+        reqBody.email || null,
+        reqBody.mandaiId || null
+    );
+
     if (userPasses && userPasses.length > 0) {
       //cover for case user signup with WP then signup with MP
       const groups =
         reqBody.group === GROUP.MEMBERSHIP_PASSES
-          ? await getCognitoGroups(reqBody)
+          ? await getCognitoGroups(userInfo, reqBody)
           : [];
       return success({
         mid: reqBody.mid,
         group: reqBody.group,
         email: reqBody.email,
-        mandaiId: reqBody.mandaiId,
+        mandaiId: reqBody.mandaiId || userPasses[0].mandaiId,
         lang: reqBody.language,
         isMatchedGroup:
           reqBody.group === GROUP.MEMBERSHIP_PASSES
@@ -111,13 +117,13 @@ async function checkUserMembership(reqBody) {
     }
 
     //cover for case user signup with membership-passes only - 2nd priority check group on Cognito
-    const groups = await getCognitoGroups(reqBody);
+    const groups = await getCognitoGroups(userInfo, reqBody);
 
     return success({
       mid: reqBody.mid,
       group: reqBody.group,
       email: reqBody.email,
-      mandaiId: reqBody.mandaiId,
+      mandaiId: reqBody.mandaiId || userInfo.mandaiId,
       lang: reqBody.language,
       isMatchedGroup:
         groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
@@ -147,14 +153,8 @@ async function checkUserMembership(reqBody) {
 }
 
 //Get Groups from Cognito
-async function getCognitoGroups(reqBody) {
-  //find user info matched at users model
+async function getCognitoGroups(userInfo, reqBody) {
   try {
-    const userInfo = await userModel.findByEmailOrMandaiId(
-      reqBody.email || null,
-      reqBody.mandaiId || null
-    );
-
     //push this error to catch wrapper if user not found
     if (!userInfo || !userInfo.email) {
       await Promise.reject(
