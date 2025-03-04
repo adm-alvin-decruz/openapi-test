@@ -87,8 +87,8 @@ async function checkUserMembership(reqBody) {
     //find userPasses have linked with user_memberships passkit
     const userPasses = await userModel.findPassesByUserEmailOrMandaiId(
       passes,
-      reqBody.email || "",
-      reqBody.mandaiId || ""
+      reqBody.email || null,
+      reqBody.mandaiId || null
     );
 
     if (userPasses && userPasses.length > 0) {
@@ -151,8 +151,8 @@ async function getCognitoGroups(reqBody) {
   //find user info matched at users model
   try {
     const userInfo = await userModel.findByEmailOrMandaiId(
-      reqBody.email || "",
-      reqBody.mandaiId || ""
+      reqBody.email || null,
+      reqBody.mandaiId || null
     );
 
     //push this error to catch wrapper if user not found
