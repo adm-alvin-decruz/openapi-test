@@ -24,7 +24,7 @@ function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
           mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS",
           message: messageLang("membership_get_success", lang),
           email: email,
-          mandaiId: !!mandaiId ? mandaiId : null,
+          mandaiId: mandaiId,
         },
         status: "success",
         statusCode: 200,
@@ -83,27 +83,43 @@ async function checkUserMembership(reqBody) {
   try {
     //1st priority check membership group: DB
     const passes = await passesByGroup(reqBody.group);
+
+    //find userPasses have linked with user_memberships passkit
     const userPasses = await userModel.findPassesByUserEmailOrMandaiId(
       passes,
-      reqBody.email,
-      reqBody.mandaiId
+      reqBody.email || "",
+      reqBody.mandaiId || ""
     );
 
-    //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
-    const groupsCognitoInfo =
-        await cognitoService.cognitoAdminListGroupsForUser(userPasses[0].email);
-    const groups =
-        groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
-            ? groupsCognitoInfo.Groups
-            : [];
+    if (userPasses && userPasses.length > 0) {
+      //cover for case user signup with WP then signup with MP
+      const groups =
+        reqBody.group === GROUP.MEMBERSHIP_PASSES
+          ? await getCognitoGroups(reqBody)
+          : [];
+      return success({
+        mid: reqBody.mid,
+        group: reqBody.group,
+        email: reqBody.email,
+        mandaiId: reqBody.mandaiId,
+        lang: reqBody.language,
+        isMatchedGroup:
+          reqBody.group === GROUP.MEMBERSHIP_PASSES
+              ? groups.filter((gr) => gr.GroupName === reqBody.group).length > 0
+              : checkMatchedGroup(userPasses),
+      });
+    }
+
+    //cover for case user signup with membership-passes only - 2nd priority check group on Cognito
+    const groups = await getCognitoGroups(reqBody);
 
     return success({
       mid: reqBody.mid,
       group: reqBody.group,
       email: reqBody.email,
-      mandaiId: userPasses && userPasses.length > 0 ? userPasses[0].mandaiId : null,
+      mandaiId: reqBody.mandaiId,
       lang: reqBody.language,
-      isMatchedGroup: checkMatchedGroup(userPasses) ||
+      isMatchedGroup:
         groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
     });
   } catch (error) {
@@ -127,6 +143,39 @@ async function checkUserMembership(reqBody) {
         )
       )
     );
+  }
+}
+
+//Get Groups from Cognito
+async function getCognitoGroups(reqBody) {
+  //find user info matched at users model
+  try {
+    const userInfo = await userModel.findByEmailOrMandaiId(
+      reqBody.email || "",
+      reqBody.mandaiId || ""
+    );
+
+    //push this error to catch wrapper if user not found
+    if (!userInfo || !userInfo.email) {
+      await Promise.reject(
+        JSON.stringify(
+          MembershipErrors.ciamMembershipUserNotFound(
+            reqBody.email,
+            reqBody.language
+          )
+        )
+      );
+    }
+
+    //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
+    const groupsCognitoInfo =
+      await cognitoService.cognitoAdminListGroupsForUser(userInfo.email);
+
+    return groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
+      ? groupsCognitoInfo.Groups
+      : [];
+  } catch (error) {
+    return [];
   }
 }
 
