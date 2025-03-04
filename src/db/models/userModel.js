@@ -224,28 +224,43 @@ class User {
 
   /** Find passes belong user */
   static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
-    try {
-      const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
+    // build the WHERE clause dynamically based on available parameters
+    let whereClause = 'WHERE u.active = 1';
+    const params = [passes];
+
+    if (email) {
+      whereClause += ' AND u.email = ?';
+      params.push(email);
+    }
+
+    if (mandaiId) {
+      whereClause += ' AND u.mandai_id = ?';
+      params.push(mandaiId);
+    }
+    const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
                     CASE
                         WHEN um.name in (?) THEN true
                         ELSE false
                     END AS isBelong
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE (u.email = ? OR u.mandai_id = ?) AND u.active = 1`;
-
-      return await pool.query(sql, [passes, email, mandaiId]);
+                   ${whereClause}`;
+    console.log("Find passes belong user", commonService.replaceSqlPlaceholders(sql, params))
+    try {
+      return await pool.query(sql, params);
     } catch (error) {
       loggerService.error(
         {
           userModel: {
-            email,
-            passes,
-            error: new Error("userModel.findPassesByUserEmailOrMandaiId error: ", error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            error: new Error(
+              "userModel.findPassesByUserEmailOrMandaiId error: ",
+              error
+            ),
           },
         },
         {},
-        "[CIAM] userModel.findPassesByUserEmail - Failed"
+        "[CIAM] userModel.findPassesByUserEmailOrMandaiId - Failed"
       );
       throw new Error(
         JSON.stringify({
@@ -477,16 +492,53 @@ class User {
       return rows[0];
     } catch (error) {
       loggerService.error(
+        {
+          userModel: {
+            email,
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+          },
+        },
+        {},
+        "[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed"
+      );
+    }
+  }
+
+  static async findByEmailOrMandaiId(email, mandaiId) {
+     // Build the WHERE clause dynamically based on available parameters
+    let sql = 'SELECT * FROM users WHERE ';
+    const params = [];
+    if (email !== null) {
+      sql += 'email = ?';
+      params.push(email);
+
+      if (mandaiId !== null) {
+        sql += ' OR mandai_id = ?';
+        params.push(mandaiId);
+      }
+    } else {
+      // Only mid is defined
+      sql += 'mandai_id = ?';
+      params.push(mandaiId);
+    }
+
+    try {
+      const rows = await pool.query(sql, params);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
           {
             userModel: {
               email,
               error: `${error}`,
-              sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
             },
           },
           {},
-          "[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed"
+          "[CIAM] userModel.findByEmailOrMandaiId - Failed"
       );
+      throw error;
     }
   }
 }
