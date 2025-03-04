@@ -29,7 +29,7 @@ const uploadThumbnailToS3 = async (req) => {
     const buffer = Buffer.from(req.body.membershipPhoto.bytes, "base64");
     let uploadPhoto = await s3Client.send(
       new PutObjectCommand({
-        Bucket: `mwg-passkit-${process.env.APP_ENV}`,
+        Bucket: `mwg-passkit-sandbox`, //${process.env.APP_ENV}`,
         Key: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
         Body: buffer,
         ContentType: "image/png",
