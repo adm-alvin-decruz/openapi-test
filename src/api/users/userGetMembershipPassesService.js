@@ -57,9 +57,9 @@ class UserGetMembershipPassesService {
     return await this.handleIntegration(userInfo);
   }
 
-  async retrieveSinglePassURL(visualIds, body) {
+  async retrieveSinglePassURL(visualId, body) {
     const userInfo = await userModel.findByEmailVisualIdsActive(
-      visualIds,
+      visualId.trim(),
       body.email
     );
 

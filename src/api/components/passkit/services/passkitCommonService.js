@@ -4,7 +4,7 @@ const ApiUtils = require("../../../../utils/apiUtils");
 const loggerService = require("../../../../logs/logger");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
-const passkitEndpointGenerator = `https://qkvj4jup4v7hb3rl43lxoe5wjq0hzuyi.lambda-url.ap-southeast-1.on.aws/v1/passkit/all/get`;
+const passkitEndpointGenerator = `${appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
 
 async function setPasskitReqHeader() {
   return constructPasskitHeader();
@@ -33,8 +33,8 @@ async function retrievePasskit(mandaiId, membership, visualId) {
           passkitComponent: {
             data: {
               passType: membership,
-              mandaiId: mandaiId,
-              visualId: visualId,
+              mandaiId: mandaiId.trim(),
+              visualId: visualId.trim(),
             },
             action: "retrievePasskit",
             layer: "passkitCommonService.retrievePasskit",
@@ -48,8 +48,8 @@ async function retrievePasskit(mandaiId, membership, visualId) {
       headers,
       {
         passType: membership,
-        mandaiId: mandaiId,
-        visualId: visualId,
+        mandaiId: mandaiId.trim(),
+        visualId: visualId.trim(),
       }
     );
     const rsHandler = ApiUtils.handleResponse(response);
@@ -58,8 +58,8 @@ async function retrievePasskit(mandaiId, membership, visualId) {
         passkitComponent: {
           data: {
             passType: membership,
-            mandaiId: mandaiId,
-            visualId: visualId,
+            mandaiId: mandaiId.trim(),
+            visualId: visualId.trim(),
           },
           action: "retrievePasskit",
           layer: "passkitCommonService.retrievePasskit",
@@ -81,8 +81,8 @@ async function retrievePasskit(mandaiId, membership, visualId) {
         passkitComponent: {
           data: {
             passType: membership,
-            mandaiId: mandaiId,
-            visualId: visualId,
+            mandaiId: mandaiId.trim(),
+            visualId: visualId.trim(),
           },
           action: "retrievePasskit",
           layer: "passkitCommonService.retrievePasskit",
@@ -111,6 +111,5 @@ async function retrievePasskit(mandaiId, membership, visualId) {
 }
 
 module.exports = {
-  setPasskitReqHeader,
   retrievePasskit,
 };
