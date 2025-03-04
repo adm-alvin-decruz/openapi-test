@@ -175,7 +175,12 @@ async function getCognitoGroups(reqBody) {
       ? groupsCognitoInfo.Groups
       : [];
   } catch (error) {
-    return [];
+    throw new Error(JSON.stringify(
+        MembershipErrors.ciamMembershipUserNotFound(
+            reqBody.email,
+            reqBody.language
+        )
+    ))
   }
 }
 

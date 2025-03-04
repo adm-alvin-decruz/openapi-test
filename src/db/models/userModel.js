@@ -109,16 +109,25 @@ class User {
     }
   }
 
-  /** Find users based on visualId and email*/
+  /**
+   * Find pass by email, visualId/s and status needs to be active
+   *
+   * @param {*} visualIds
+   * @param {*} email
+   * @returns
+   */
   static async findByEmailVisualIdsActive(visualIds, email) {
+    const params = [visualIds, email];
     try {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_membership_details umd ON umd.user_membership_id = um.id
-                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND umd.status = 0`;
+                WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND (umd.status IN (0) OR umd.status IS NULL)`;
 
-      return await pool.query(sql, [visualIds, email]);
+      console.log("Find pass by email, visualId/s and status needs to be active", commonService.replaceSqlPlaceholders(sql, params))
+
+      return await pool.query(sql, params);
     } catch (error) {
       loggerService.error(
         {
