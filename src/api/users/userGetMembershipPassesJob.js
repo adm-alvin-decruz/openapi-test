@@ -16,6 +16,13 @@ class UserGetMembershipPassesJob {
   }
 
   async perform(body) {
+    // trim input
+    Object.keys(body).forEach(key => {
+      if (typeof body[key] === 'string') {
+        body[key] = body[key].trim();
+      }
+    });
+
     try {
       const rs = await UserGetMembershipPassesService.execute(body);
       return this.success(rs, body.language);

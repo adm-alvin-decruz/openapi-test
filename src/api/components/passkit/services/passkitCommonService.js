@@ -4,7 +4,7 @@ const ApiUtils = require("../../../../utils/apiUtils");
 const loggerService = require("../../../../logs/logger");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
-const passkitEndpointGenerator = `${appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
+const passkitGeneratorEndpoint = `${appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
 
 async function setPasskitReqHeader() {
   return constructPasskitHeader();
@@ -26,30 +26,33 @@ function constructPasskitHeader() {
  * @return {Promise<{urls: {apple: (*|string), google: (*|string)}, visualId}|{urls: {apple: string, google: string}, visualId}|undefined>}
  */
 async function retrievePasskit(mandaiId, membership, visualId) {
+
+  loggerService.log(
+    {
+      passkitComponent: {
+        data: {
+          passType: membership,
+          mandaiId: mandaiId,
+          visualId: visualId,
+          url: this.passkitGeneratorEndpoint
+        },
+        action: "retrievePasskit",
+        layer: "passkitCommonService.retrievePasskit",
+      },
+    },
+    "Start getMembershipPasses Service"
+  );
+
   try {
     const headers = await setPasskitReqHeader();
-    loggerService.log(
-        {
-          passkitComponent: {
-            data: {
-              passType: membership,
-              mandaiId: mandaiId.trim(),
-              visualId: visualId.trim(),
-            },
-            action: "retrievePasskit",
-            layer: "passkitCommonService.retrievePasskit",
-          },
-        },
-        "Start getMembershipPasses Service"
-    );
     const response = await ApiUtils.makeRequest(
-      passkitEndpointGenerator,
+      passkitGeneratorEndpoint,
       "post",
       headers,
       {
         passType: membership,
-        mandaiId: mandaiId.trim(),
-        visualId: visualId.trim(),
+        mandaiId: mandaiId,
+        visualId: visualId,
       }
     );
     const rsHandler = ApiUtils.handleResponse(response);
@@ -58,8 +61,8 @@ async function retrievePasskit(mandaiId, membership, visualId) {
         passkitComponent: {
           data: {
             passType: membership,
-            mandaiId: mandaiId.trim(),
-            visualId: visualId.trim(),
+            mandaiId: mandaiId,
+            visualId: visualId,
           },
           action: "retrievePasskit",
           layer: "passkitCommonService.retrievePasskit",
@@ -81,16 +84,16 @@ async function retrievePasskit(mandaiId, membership, visualId) {
         passkitComponent: {
           data: {
             passType: membership,
-            mandaiId: mandaiId.trim(),
-            visualId: visualId.trim(),
+            mandaiId: mandaiId,
+            visualId: visualId,
           },
           action: "retrievePasskit",
           layer: "passkitCommonService.retrievePasskit",
-          error: `${error}`,
+          error: new Error ("error :", error),
         },
       },
       {
-        url: passkitEndpointGenerator,
+        url: passkitGeneratorEndpoint,
         method: "post",
       },
       "End getMembershipPasses Service - Failed"

@@ -13,59 +13,6 @@ class UserGetMembershipPassesService {
     }${appConfig.PASSKIT_GET_SIGNED_URL_PATH}`;
   }
 
-  /**
-    Notes:Not support get multiple passes
-    The validation required visualId
-    List property will not manipulate now
-    ** getVisualIds will always point to body.visualId
-  */
-  getVisualIds(body) {
-    if (body && body.visualId) {
-      return [body.visualId];
-    }
-    //unique list visualId
-    return body.list.filter((item, index) => body.list.indexOf(item) === index);
-  }
-
-  async handleIntegration(userInfo) {
-    loggerService.log(
-      {
-        user: {
-          userInfo: userInfo,
-          action: `handleIntegration with Passkit`,
-          layer: "userGetMembershipPassesService.handleIntegration",
-        },
-      },
-      "Start getMembershipPasses Service"
-    );
-    const response = await Promise.all(
-      userInfo.map((info) =>
-        passkitCommonService.retrievePasskit(
-          info.mandaiId,
-          info.membership.toLowerCase(),
-          info.visualId
-        )
-      )
-    );
-    return {
-      passes: response.filter((rs) => !!rs),
-    };
-  }
-
-  async retrieveAllPassesURL(body) {
-    const userInfo = await userModel.findFullMandaiId(body.email);
-    return await this.handleIntegration(userInfo);
-  }
-
-  async retrieveSinglePassURL(visualId, body) {
-    const userInfo = await userModel.findByEmailVisualIdsActive(
-      visualId.trim(),
-      body.email
-    );
-
-    return await this.handleIntegration(userInfo);
-  }
-
   async execute(body) {
     const visualIds = this.getVisualIds(body);
     try {
@@ -104,6 +51,78 @@ class UserGetMembershipPassesService {
       );
     }
   }
+
+  /**
+    Notes:Not support get multiple passes
+    The validation required visualId
+    List property will not manipulate now
+    ** getVisualIds will always point to body.visualId
+  */
+  getVisualIds(body) {
+    if (body && body.visualId) {
+      return [body.visualId];
+    }
+    //unique list visualId
+    return body.list.filter((item, index) => body.list.indexOf(item) === index);
+  }
+
+  async retrieveAllPassesURL(body) {
+    const userInfo = await userModel.findFullMandaiId(body.email);
+    return await this.handleIntegration(userInfo);
+  }
+
+  async retrieveSinglePassURL(visualId, body) {
+    const userInfo = await userModel.findByEmailVisualIdsActive(
+      visualId,
+      body.email
+    );
+
+    let passUrl = { passes: [] };
+    if (userInfo.length > 0) {
+      passUrl = await this.handleIntegration(userInfo);
+    }
+
+    loggerService.log(
+      {
+        user: {
+          body: body,
+          action: `retrieveSinglePassURL`,
+          layer: "userGetMembershipPassesService.retrieveSinglePassURL",
+          passUrl: passUrl
+        },
+      },
+      "End getMembershipPasses Service - Failed"
+    );
+
+    return passUrl;
+  }
+
+  async handleIntegration(userInfo) {
+    loggerService.log(
+      {
+        user: {
+          userInfo: JSON.stringify(userInfo),
+          action: `handleIntegration with Passkit`,
+          layer: "userGetMembershipPassesService.handleIntegration",
+        },
+      },
+      "Start getMembershipPasses Service"
+    );
+
+    const response = await Promise.all(
+      userInfo.map((info) =>
+        passkitCommonService.retrievePasskit(
+          info.mandaiId,
+          info.membership.toLowerCase(),
+          info.visualId
+        )
+      )
+    );
+    return {
+      passes: response.filter((rs) => !!rs),
+    };
+  }
+
 }
 
 module.exports = new UserGetMembershipPassesService();
