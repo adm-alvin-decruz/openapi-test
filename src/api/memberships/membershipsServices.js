@@ -7,7 +7,6 @@
 require("dotenv").config();
 const cognitoService = require("../../services/cognitoService");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { messageLang } = require("../../utils/common");
 const { GROUP } = require("../../utils/constants");
 const userModel = require("../../db/models/userModel");
@@ -81,8 +80,8 @@ function checkMatchedGroup(data) {
 
 //Check user membership group in Cognito [membership-passes, wildpass]
 async function checkUserMembership(reqBody) {
-  //1st priority check membership group: DB
   try {
+    //1st priority check membership group: DB
     const passes = await passesByGroup(reqBody.group);
     const userPasses = await userModel.findPassesByUserEmailOrMandaiId(
       passes,
@@ -90,36 +89,21 @@ async function checkUserMembership(reqBody) {
       reqBody.mandaiId
     );
 
-    if (userPasses && userPasses.length > 0) {
-      return success({
-        mid: reqBody.mid,
-        group: reqBody.group,
-        email: reqBody.email,
-        mandaiId: userPasses[0].mandaiId ? userPasses[0].mandaiId : null,
-        lang: reqBody.language,
-        isMatchedGroup: checkMatchedGroup(userPasses),
-      });
-    }
-
     //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
     const groupsCognitoInfo =
-      await cognitoService.cognitoAdminListGroupsForUser(reqBody.email);
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-      reqBody.email
-    );
-    const mandaiId = getOrCheck(userCognito, "custom:mandai_id");
+        await cognitoService.cognitoAdminListGroupsForUser(userPasses[0].email);
     const groups =
-      groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
-        ? groupsCognitoInfo.Groups
-        : [];
+        groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
+            ? groupsCognitoInfo.Groups
+            : [];
 
     return success({
       mid: reqBody.mid,
       group: reqBody.group,
       email: reqBody.email,
-      mandaiId: !!mandaiId ? mandaiId : null,
+      mandaiId: userPasses && userPasses.length > 0 ? userPasses[0].mandaiId : null,
       lang: reqBody.language,
-      isMatchedGroup:
+      isMatchedGroup: checkMatchedGroup(userPasses) ||
         groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
     });
   } catch (error) {

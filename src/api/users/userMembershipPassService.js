@@ -772,8 +772,6 @@ class UserMembershipPassService {
   }
 
   async updateMembershipInCognito(req) {
-
-
     try {
         const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email.trim().toLowerCase());
         const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
