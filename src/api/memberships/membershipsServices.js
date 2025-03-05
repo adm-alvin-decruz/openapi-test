@@ -107,7 +107,7 @@ async function checkUserMembership(reqBody) {
         mid: reqBody.mid,
         group: reqBody.group,
         email: reqBody.email,
-        mandaiId: reqBody.mandaiId || userPasses[0].mandaiId,
+        mandaiId: reqBody.mandaiId || userInfo.mandai_id,
         lang: reqBody.language,
         isMatchedGroup:
           reqBody.group === GROUP.MEMBERSHIP_PASSES
@@ -123,7 +123,7 @@ async function checkUserMembership(reqBody) {
       mid: reqBody.mid,
       group: reqBody.group,
       email: reqBody.email,
-      mandaiId: reqBody.mandaiId || userInfo.mandaiId,
+      mandaiId: reqBody.mandaiId || userInfo.mandai_id,
       lang: reqBody.language,
       isMatchedGroup:
         groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
