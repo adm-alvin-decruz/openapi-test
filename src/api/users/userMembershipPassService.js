@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const cognitoService = require("../../services/cognitoService");
+const cognitoHelpers = require("../../helpers/cognitoHelpers");
 const userModel = require("../../db/models/userModel");
 const userMembershipModel = require("../../db/models/userMembershipModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
@@ -112,7 +113,7 @@ class UserMembershipPassService {
         }
       );
 
-      if (uploadPhoto.$metadata.httpStatusCode === 200) {
+      if (uploadPhoto && uploadPhoto.$metadata.httpStatusCode === 200) {
         await userMembershipDetailsModel.updateByMembershipId(
           createMembershipRs.membershipId,
           {
@@ -560,7 +561,7 @@ class UserMembershipPassService {
         expiry: req.body.validUntil || null,
       };
 
-      if (existingMemberships === null) {
+      if (existingMemberships === null || existingMemberships === false) {
         return [newMembership];
       }
 
@@ -775,6 +776,7 @@ class UserMembershipPassService {
     try {
         const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(req.body.email.trim().toLowerCase());
         const existingMemberships = JSON.parse(getOrCheck(cognitoUser, "custom:membership"));
+
         // reformat "custom:membership" to JSON array
         const updatedMemberships = await this.formatMembershipData(req, existingMemberships);
         let updateParams = [
@@ -796,7 +798,9 @@ class UserMembershipPassService {
        },
        "Start updateMembershipInCognito"
       );
+      // update cognito custom membership
       let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email.trim().toLowerCase());
+
       loggerService.log(
         {
           user: {
@@ -807,7 +811,7 @@ class UserMembershipPassService {
         },
         "End updateMembershipInCognito - Success"
       );
-      return {cognitoProceed: "success"};
+      return {cognitoResult: "success"};
 
     } catch (error) {
       loggerService.error(
