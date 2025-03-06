@@ -56,7 +56,10 @@ async function adminCreateUser(req) {
       let responseSource = "ciam";
 
       // if member already has wildpass
-      if (membershipData.status === "hasWildpass" || membershipData.status === "success") {
+      if (
+        membershipData.status === "hasWildpass" ||
+        membershipData.status === "success"
+      ) {
         // prepare response
         let errorConfig = usersService.processError(
           req.body,
@@ -631,15 +634,15 @@ async function userGetMembershipPasses(body) {
   const message = UserGetMembershipPassesValidation.execute(body);
   if (!!message) {
     loggerService.log(
-        {
-          user: {
-            action: "userGetMembershipPasses",
-            api_body: body,
-            response: `${message}`,
-            layer: "controller.userGetMembershipPasses",
-          },
+      {
+        user: {
+          action: "userGetMembershipPasses",
+          api_body: body,
+          response: `${message}`,
+          layer: "controller.userGetMembershipPasses",
         },
-        "[CIAM] End userGetMembershipPasses Request - Failed"
+      },
+      "[CIAM] End userGetMembershipPasses Request - Failed"
     );
     throw new Error(JSON.stringify(message));
   }
@@ -647,15 +650,15 @@ async function userGetMembershipPasses(body) {
     return await UserGetMembershipPassesJob.perform(body);
   } catch (error) {
     loggerService.log(
-        {
-          user: {
-            action: "userGetMembershipPasses",
-            api_body: body,
-            response: `${error}`,
-            layer: "controller.userGetMembershipPasses",
-          },
+      {
+        user: {
+          action: "userGetMembershipPasses",
+          api_body: body,
+          response: `${error}`,
+          layer: "controller.userGetMembershipPasses",
         },
-        "[CIAM] End userGetMembershipPasses Request - Failed"
+      },
+      "[CIAM] End userGetMembershipPasses Request - Failed"
     );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
@@ -707,7 +710,8 @@ async function userCreateMembershipPass(req, res) {
       .send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const message = UserMembershipPassValidation.validateCreateUserMembershipPass(req);
+  const message =
+    await UserMembershipPassValidation.validateCreateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {
@@ -733,7 +737,8 @@ async function userCreateMembershipPass(req, res) {
       {
         user: {
           membership: req.body.group,
-          action: "userCreateMembershipPass call userCreateMembershipPassJob.perform",
+          action:
+            "userCreateMembershipPass call userCreateMembershipPassJob.perform",
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
@@ -792,7 +797,8 @@ async function userUpdateMembershipPass(req, res) {
       .send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const message = UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
+  const message =
+    await UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {
