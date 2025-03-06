@@ -93,8 +93,8 @@ async function checkUserMembership(reqBody) {
 
     //find user info matched at users model - might have not linked memberships
     const userInfo = await userModel.findByEmailOrMandaiId(
-        reqBody.email || null,
-        reqBody.mandaiId || null
+      reqBody.email || null,
+      reqBody.mandaiId || null
     );
 
     if (userPasses && userPasses.length > 0) {
@@ -111,8 +111,8 @@ async function checkUserMembership(reqBody) {
         lang: reqBody.language,
         isMatchedGroup:
           reqBody.group === GROUP.MEMBERSHIP_PASSES
-              ? groups.filter((gr) => gr.GroupName === reqBody.group).length > 0
-              : checkMatchedGroup(userPasses),
+            ? groups.filter((gr) => gr.GroupName === reqBody.group).length > 0
+            : checkMatchedGroup(userPasses),
       });
     }
 
@@ -175,12 +175,14 @@ async function getCognitoGroups(userInfo, reqBody) {
       ? groupsCognitoInfo.Groups
       : [];
   } catch (error) {
-    throw new Error(JSON.stringify(
+    throw new Error(
+      JSON.stringify(
         MembershipErrors.ciamMembershipUserNotFound(
-            reqBody.email,
-            reqBody.language
+          reqBody.email,
+          reqBody.language
         )
-    ))
+      )
+    );
   }
 }
 

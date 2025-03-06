@@ -82,6 +82,7 @@ class UserMembership {
     await pool.execute(sql, params);
   }
 
+  //update by naming of updateByMembershipId
   static async updateByUserId(userId, data) {
     const now = getCurrentUTCTimestamp();
 
@@ -93,6 +94,7 @@ class UserMembership {
     // Add updated_at to the SET clauses
     updateFields.push("updated_at = ?");
 
+    //TODO: need to add one more condition: membershipId (id)
     // Construct the SQL query
     const sql = `
       UPDATE user_memberships
@@ -146,6 +148,32 @@ class UserMembership {
       });
     } catch (error) {
       throw error;
+    }
+  }
+
+  static async queryMembershipDetailsByMembershipId(membershipId) {
+    const sql = `SELECT u.mandai_id as mandaiId, umd.member_email as memberEmail, umd.member_first_name as firstName, umd.member_last_name as lastName, CONCAT(umd.member_dob) as dob,
+                        um.visual_id as visualId, um.name as passType, CONCAT(umd.valid_until) as expiredAt, umd.category_type as membershipType,
+                        umd.co_member as familyMembers, umd.status as status
+                 FROM users u
+                 LEFT JOIN user_memberships um ON um.user_id = u.id
+                 LEFT JOIN user_membership_details umd ON umd.user_membership_id = um.id
+                 WHERE um.id = ?`;
+    try {
+      const rows = await pool.query(sql, [membershipId]);
+
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+          {
+            UserMembershipModel: {
+              error: `${error}`,
+              sql_statement: commonService.replaceSqlPlaceholders(sql, [membershipId]),
+            },
+          },
+          {},
+          "[CIAM] UserMembership.queryMembershipDetailsByMembershipId - Failed"
+      );
     }
   }
 }
