@@ -54,7 +54,7 @@ async function retrievePasskit(data) {
       "End retrievePasskit Service - Success"
     );
     return {
-      visualId,
+      visualId: data.visualId,
       urls: {
         apple: rsHandler.applePassUrl ? rsHandler.applePassUrl : "",
         google: rsHandler.googlePassUrl ? rsHandler.googlePassUrl : "",
@@ -79,7 +79,7 @@ async function retrievePasskit(data) {
     //handle 404: case not yet add apple and google passkit
     if (error.message.includes('"status":404')) {
       return {
-        visualId,
+        visualId: data.visualId,
         urls: {
           apple: "",
           google: "",
