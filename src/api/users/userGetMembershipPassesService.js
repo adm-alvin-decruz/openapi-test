@@ -2,7 +2,7 @@ require("dotenv").config();
 const userModel = require("../../db/models/userModel");
 const failedJobsModel = require("../../db/models/failedJobsModel");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const passkitCommonService = require("../components/passkit/services/passkitCommonService");
+const passkitRetrieveService = require("../components/passkit/services/passkitRetrieveService");
 const appConfig = require("../../config/appConfig");
 const loggerService = require("../../logs/logger");
 
@@ -27,7 +27,7 @@ class UserGetMembershipPassesService {
             body: body,
             action: `handleIntegration with Passkit`,
             layer: "userGetMembershipPassesService.execute",
-            error: `${error}`
+            error: `${error}`,
           },
         },
         "End getMembershipPasses Service - Failed"
@@ -88,7 +88,7 @@ class UserGetMembershipPassesService {
           body: body,
           action: `retrieveSinglePassURL`,
           layer: "userGetMembershipPassesService.retrieveSinglePassURL",
-          passUrl: passUrl
+          passUrl: passUrl,
         },
       },
       "End getMembershipPasses Service - Failed"
@@ -110,19 +110,12 @@ class UserGetMembershipPassesService {
     );
 
     const response = await Promise.all(
-      userInfo.map((info) =>
-        passkitCommonService.retrievePasskit(
-          info.mandaiId,
-          info.membership.toLowerCase(),
-          info.visualId
-        )
-      )
+      userInfo.map((info) => passkitRetrieveService.retrievePasskit(info))
     );
     return {
       passes: response.filter((rs) => !!rs),
     };
   }
-
 }
 
 module.exports = new UserGetMembershipPassesService();

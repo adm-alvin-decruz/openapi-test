@@ -12,6 +12,7 @@ const MembershipPassErrors = require("../../config/https/errors/membershipPassEr
 const nopCommerceService = require("../components/nopCommerce/services/nopCommerceService");
 const { getPassType } = require("../../helpers/dbConfigsHelpers");
 
+const { handlePasskitExpire } = require("./helpers/passkitExpireHandler");
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
   if (!env) return "ap-southeast-1";
@@ -45,11 +46,16 @@ class UserMembershipPassService {
     const mandaiId = userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
     const passTypeMapping = await getPassType(req.body);
     try {
-      const user = await userModel.findByEmailMandaiId(req.body.email, mandaiId);
+      const user = await userModel.findByEmailMandaiId(
+        req.body.email,
+        mandaiId
+      );
       if (!user || !user.id) {
         req.body &&
           req.body.migrations &&
-          (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
+          (await empMembershipUserPassesModel.updatePassState(req.body, {
+            picked: 2,
+          }));
         await Promise.reject(
           JSON.stringify(
             MembershipErrors.ciamMembershipUserNotFound(
@@ -82,7 +88,9 @@ class UserMembershipPassService {
       let uploadPhoto;
       // migration flow image with base64 bytes - upload member photo to S3
       if (req.body.migrations && req.body.pictureId) {
-        const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(req.body.pictureId);
+        const photoBase64 = await nopCommerceService.retrieveMembershipPhoto(
+          req.body.pictureId
+        );
         if (photoBase64) {
           uploadPhoto = await uploadThumbnailToS3({
             body: {
@@ -122,7 +130,8 @@ class UserMembershipPassService {
       // send to SQS and update migrations DB
       if (req.body.member && req.body.coMembers && uploadPhoto && uploadPhoto.$metadata.httpStatusCode === 200) {
         // TODO: migrations flow need to update query
-        req.body && req.body.migrations &&
+        req.body &&
+          req.body.migrations &&
           (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
             req.body.email,
             req.body.batchNo,
@@ -146,7 +155,8 @@ class UserMembershipPassService {
         return loggerService.log(
           {
             user: {
-              action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
+              action: `userCreateMembershipPass - migration flow: ${!!req.body
+                .migrations}`,
               layer: "userMembershipPassService.create",
               triggerSQSAction: "success",
             },
@@ -156,7 +166,9 @@ class UserMembershipPassService {
       } else {
         req.body &&
           req.body.migrations &&
-          (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 1}));
+          (await empMembershipUserPassesModel.updatePassState(req.body, {
+            picked: 1,
+          }));
       }
 
       return loggerService.log(
@@ -184,10 +196,18 @@ class UserMembershipPassService {
         {},
         "End userCreateMembershipPass Service - Failed"
       );
-      req.body && req.body.migrations && (await empMembershipUserPassesModel.updatePassState(req.body, {picked: 2}));
+      req.body &&
+        req.body.migrations &&
+        (await empMembershipUserPassesModel.updatePassState(req.body, {
+          picked: 2,
+        }));
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       if (errorMessage.status === "failed") {
-        throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)));
+        throw new Error(
+          JSON.stringify(
+            MembershipPassErrors.createMembershipPassError(req.body.language)
+          )
+        );
       }
       throw new Error(error);
     }
@@ -228,21 +248,27 @@ class UserMembershipPassService {
 
         // send message to SQS to re-generate passkit (Trigger whenever pass update)
         // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
-          let sendSQSMessage = await this.sendSQSMessage(req, "updateMembershipPass");
-          loggerService.log(
-            {
-              user: {
-                userEmail: req.body.email,
-                membership: req.body.group,
-                action: `userUpdateMembershipPass`,
-                layer: "userMembershipPassService.update",
-                triggerSQS: JSON.stringify(sendSQSMessage),
-              },
+        let sendSQSMessage = await this.sendSQSMessage(
+          req,
+          "updateMembershipPass"
+        );
+        loggerService.log(
+          {
+            user: {
+              userEmail: req.body.email,
+              membership: req.body.group,
+              action: `userUpdateMembershipPass`,
+              layer: "userMembershipPassService.update",
+              triggerSQS: JSON.stringify(sendSQSMessage),
             },
-            "End userUpdateMembershipPass Service - Success"
-          );
+          },
+          "End userUpdateMembershipPass Service - Success"
+        );
         // } // disabled, gen passkit whenever update
       }
+
+      //last process: integrate passkit expire
+      await handlePasskitExpire(req, updateMembershipRs.membershipId);
 
       loggerService.log(
         {
@@ -351,7 +377,7 @@ class UserMembershipPassService {
       phoneNumber,
       coMember,
       validFrom,
-      validUntil
+      validUntil,
     }
   ) {
     try {
@@ -383,7 +409,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil
+              valid_until: validUntil,
             },
           },
         },
@@ -397,7 +423,8 @@ class UserMembershipPassService {
         plu: plu,
         adult_qty: adultQty,
         child_qty: childQty,
-        status: (typeof status !== 'undefined' && status !== null) ? status : null,
+        status:
+          typeof status !== "undefined" && status !== null ? status : null,
         parking: parking,
         iu: iu,
         car_plate: carPlate,
@@ -411,7 +438,7 @@ class UserMembershipPassService {
         member_phone_number: phoneNumber,
         co_member: coMember,
         valid_from: validFrom,
-        valid_until: validUntil
+        valid_until: validUntil,
       });
       return loggerService.log(
         {
@@ -438,7 +465,10 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
-              status: (typeof status !== 'undefined' && status !== null) ? status : null,
+              status:
+                typeof status !== "undefined" && status !== null
+                  ? status
+                  : null,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -452,7 +482,7 @@ class UserMembershipPassService {
               member_phone_number: phoneNumber,
               co_member: coMember,
               valid_from: validFrom,
-              valid_until: validUntil
+              valid_until: validUntil,
             },
           },
         },
@@ -484,7 +514,10 @@ class UserMembershipPassService {
             plu: req.body.plu || null,
             adultQty: req.body.adultQty || null,
             childQty: req.body.childQty || null,
-            status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
+            status:
+              typeof req.body.status !== "undefined" && req.body.status !== null
+                ? req.body.status
+                : null,
             parking: req.body.parking === "yes" ? 1 : 0,
             iu: req.body.iu || null,
             carPlate: req.body.carPlate || null,
@@ -675,7 +708,11 @@ class UserMembershipPassService {
                   : undefined,
               valid_from: req.body.validFrom || undefined,
               valid_until: expiryDate,
-              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : undefined,
+              status:
+                typeof req.body.status !== "undefined" &&
+                req.body.status !== null
+                  ? req.body.status
+                  : undefined,
             }
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
@@ -726,7 +763,11 @@ class UserMembershipPassService {
                   : null,
               validFrom: !!req.body.validFrom ? req.body.validFrom : null,
               validUntil: !!req.body.validUntil ? req.body.validUntil : null,
-              status: (typeof req.body.status !== 'undefined' && req.body.status !== null) ? req.body.status : null,
+              status:
+                typeof req.body.status !== "undefined" &&
+                req.body.status !== null
+                  ? req.body.status
+                  : null,
             }
           );
         }
@@ -843,7 +884,7 @@ class UserMembershipPassService {
           queueURL: queueUrl,
           messageBody: JSON.stringify(data),
           layer: "userMembershipPassService.sendSQSMessage",
-          body: JSON.stringify(req.body)
+          body: JSON.stringify(req.body),
         },
       },
       "Start sendSQSMessage"
@@ -875,7 +916,10 @@ class UserMembershipPassService {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
             layer: "userMembershipPassService.sendSQSMessage",
-            error: new Error("userMembershipPassService.sendSQSMessage error", error),
+            error: new Error(
+              "userMembershipPassService.sendSQSMessage error",
+              error
+            ),
           },
         },
         {},

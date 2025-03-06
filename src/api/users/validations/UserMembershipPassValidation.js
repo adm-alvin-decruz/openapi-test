@@ -1,5 +1,6 @@
 const MembershipPassErrors = require("../../../config/https/errors/membershipPassErrors");
 const { validateDOBiso } = require("../../../services/validationService");
+const configsModel = require("../../../db/models/configsModel");
 
 class UserMembershipPassValidation {
   constructor() {
@@ -12,7 +13,22 @@ class UserMembershipPassValidation {
     return mwgAppID.includes("aem");
   }
 
-  static validateCreateUserMembershipPass(req) {
+  static async isPassTypeValid(passType) {
+    const passesSupported = await configsModel.findByConfigKey(
+      "membership-passes",
+      "pass-type"
+    );
+
+    const passes =
+      passesSupported &&
+      passesSupported.value &&
+      passesSupported.value.length > 0
+        ? passesSupported.value
+        : [];
+    return passes.includes(passType);
+  }
+
+  static async validateCreateUserMembershipPass(req) {
     const requiredParams =
       req.body && req.body.migrations
         ? [
@@ -42,6 +58,14 @@ class UserMembershipPassValidation {
     if (missingParams.length > 0) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         missingParams[0],
+        req.body.language
+      ));
+    }
+
+    const isPassTypeValid = await this.isPassTypeValid(req.body.passType);
+    if (!isPassTypeValid) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "passType",
         req.body.language
       ));
     }
@@ -117,7 +141,7 @@ class UserMembershipPassValidation {
     }
   }
 
-  static validateUpdateUserMembershipPass(req) {
+  static async validateUpdateUserMembershipPass(req) {
     const requiredParams = [
       "email",
       "mandaiId",
@@ -133,6 +157,14 @@ class UserMembershipPassValidation {
     if (missingParams.length > 0) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         missingParams[0],
+        req.body.language
+      ));
+    }
+
+    const isPassTypeValid = await this.isPassTypeValid(req.body.passType);
+    if (!isPassTypeValid) {
+      return (this.error = MembershipPassErrors.membershipPassParamsError(
+        "passType",
         req.body.language
       ));
     }
