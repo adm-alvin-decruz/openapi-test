@@ -19,7 +19,7 @@ function createRequestBody(req, userInfo) {
     expiryDate: getCurrentUTCTimestamp(),
     membershipType: userInfo.membershipType,
     familyMembers:
-        userInfo.familyMembers.length > 0
+        userInfo.familyMembers && userInfo.familyMembers.length > 0
         ? userInfo.familyMembers.map(
             (member) => `${member.firstName} ${member.lastName}`
           )

@@ -147,7 +147,6 @@ class User {
   /** Find users based on visualId and email and mandaiId*/
   static async findByEmailMandaiIdVisualId(visualIds, email, mandaiId, passType) {
     try {
-      //TODO: add one more condition passType = name
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id

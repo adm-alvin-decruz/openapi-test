@@ -2,6 +2,7 @@ const cognitoService = require("../services/cognitoService");
 const { getOrCheck } = require("../utils/cognitoAttributes");
 const loggerService = require("../logs/logger");
 const MembershipErrors = require("../config/https/errors/membershipErrors");
+const { getPassType } = require("./dbConfigsHelpers")
 
 async function updateMembershipInCognito(data) {
   try {
@@ -71,7 +72,7 @@ async function updateMembershipInCognito(data) {
 }
 
 async function formatCustomMembershipAttribute(data, existingMemberships) {
-  const passTypeMapping = await this.getPassType(data);
+  const passTypeMapping = await getPassType(data);
   const newMembership = {
     name: passTypeMapping,
     visualID: data.visualId,
@@ -109,6 +110,5 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
 }
 
 module.exports = {
-  updateMembershipInCognito,
-  formatCustomMembershipAttribute
+  updateMembershipInCognito
 };
