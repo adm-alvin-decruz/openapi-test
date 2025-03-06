@@ -63,6 +63,31 @@ async function validateEmail(req, res, next) {
   return await validateEmailDisposable(req, res, next);
 }
 
+//only use it when combine with emptyRequest middleware
+async function lowercaseTrimKeyValueString(req, res, next) {
+  const keysAcceptedLower = ['passType'];
+  const keysAcceptedTrim = ['mandaiId', 'visualId', 'firstName', 'lastName'];
+  const keysAcceptedTrimAndLower = ['email'];
+  const keysRequest = Object.entries(req.body);
+  req.body = keysRequest.reduce((rs, [key, value]) => {
+    if (keysAcceptedLower.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.toLowerCase();
+      return rs;
+    }
+    if (keysAcceptedTrim.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.trim();
+      return rs;
+    }
+    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.toLowerCase().trim();
+      return rs;
+    }
+    rs[key] = value;
+    return rs;
+  }, {})
+  next();
+}
+
 function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
 }
@@ -173,5 +198,6 @@ module.exports = {
   resStatusFormatter,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   AccessTokenAuthGuard,
-  validateEmailDisposable
+  validateEmailDisposable,
+  lowercaseTrimKeyValueString
 };

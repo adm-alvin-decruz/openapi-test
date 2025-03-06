@@ -145,14 +145,15 @@ class User {
   }
 
   /** Find users based on visualId and email and mandaiId*/
-  static async findByEmailMandaiIdVisualIds(visualIds, email, mandaiId) {
+  static async findByEmailMandaiIdVisualId(visualIds, email, mandaiId, passType) {
     try {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND u.mandai_id = ?`;
+                  WHERE um.visual_id = ? AND u.active = 1 AND u.email = ? AND u.mandai_id = ? AND um.name = ?`;
 
-      return await pool.query(sql, [visualIds, email, mandaiId]);
+      const rows = await pool.query(sql, [visualIds, email, mandaiId, passType]);
+      return rows[0];
     } catch (error) {
       loggerService.error(
         {
@@ -164,7 +165,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailMandaiIdVisualIds - Failed"
+        "[CIAM] userModel.findByEmailMandaiIdVisualId - Failed"
       );
       return error;
     }
