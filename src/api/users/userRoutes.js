@@ -13,6 +13,7 @@ const {
   AccessTokenAuthGuard,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   validateEmailDisposable,
+  lowercaseTrimKeyValueString,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -456,6 +457,7 @@ router.post(
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuard,
+  lowercaseTrimKeyValueString,
   async (req, res, next) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
@@ -529,6 +531,7 @@ router.post(
   "/users/my-membership",
   isEmptyRequest,
   validateEmail,
+  lowercaseTrimKeyValueString,
   userController.userCreateMembershipPass
 );
 
@@ -539,6 +542,7 @@ router.put(
   "/users/my-membership",
   isEmptyRequest,
   validateEmail,
+  lowercaseTrimKeyValueString,
   userController.userUpdateMembershipPass
 );
 

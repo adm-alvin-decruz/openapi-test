@@ -1,16 +1,17 @@
 require("dotenv").config();
 
-const cognitoService = require("../../services/cognitoService");
+const { updateMembershipInCognito } = require("../../helpers/cognitoHelpers");
 const userModel = require("../../db/models/userModel");
 const userMembershipModel = require("../../db/models/userMembershipModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const userMigrationsMembershipPassesModel = require("../../db/models/userMigrationsMembershipPassesModel");
 const empMembershipUserPassesModel = require("../../db/models/empMembershipUserPassesModel");
-const configsModel = require("../../db/models/configsModel");
 const loggerService = require("../../logs/logger");
 const { uploadThumbnailToS3 } = require("../../services/s3Service");
 const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
 const nopCommerceService = require("../components/nopCommerce/services/nopCommerceService");
+const { getPassType } = require("../../helpers/dbConfigsHelpers");
+
 const { handlePasskitExpire } = require("./helpers/passkitExpireHandler");
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
@@ -20,7 +21,6 @@ const awsRegion = () => {
 };
 
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
-const { getOrCheck } = require("../../utils/cognitoAttributes");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const { omit } = require("../../utils/common");
 const sqsClient = new SQSClient({ region: awsRegion });
@@ -47,7 +47,7 @@ class UserMembershipPassService {
       : null;
     const mandaiId =
       userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
-    const passTypeMapping = await this.getPassType(req);
+    const passTypeMapping = await getPassType(req.body);
     try {
       const user = await userModel.findByEmailMandaiId(
         req.body.email,
@@ -70,13 +70,13 @@ class UserMembershipPassService {
       }
 
       // 1st: check membership pass exist
-      const rows = await userModel.findByEmailMandaiIdVisualIds(
-        [req.body.visualId],
+      const membershipInfo = await userModel.findByEmailMandaiIdVisualId(
+        req.body.visualId,
         req.body.email,
-        mandaiId
+        mandaiId,
+        req.body.passType
       );
-      const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
-      if (userMembership && userMembership.visualId === req.body.visualId) {
+      if (membershipInfo && membershipInfo.visualId === req.body.visualId) {
         req.body &&
           req.body.migrations &&
           (await empMembershipUserPassesModel.updatePassState(req.body, {
@@ -93,7 +93,7 @@ class UserMembershipPassService {
       }
 
       // 2nd: update user's cognito memberships info
-      let updateCognito = await this.updateMembershipInCognito(req);
+      await updateMembershipInCognito(req.body);
 
       // 3rd: upload photo
       // TODO: if upload photo success, data can save to DB together in #4
@@ -130,7 +130,7 @@ class UserMembershipPassService {
         }
       );
 
-      if (uploadPhoto.$metadata.httpStatusCode === 200) {
+      if (uploadPhoto && uploadPhoto.$metadata.httpStatusCode === 200) {
         await userMembershipDetailsModel.updateByMembershipId(
           createMembershipRs.membershipId,
           {
@@ -143,6 +143,7 @@ class UserMembershipPassService {
       if (
         req.body.member &&
         req.body.coMembers &&
+        uploadPhoto &&
         uploadPhoto.$metadata.httpStatusCode === 200
       ) {
         // TODO: migrations flow need to update query
@@ -244,7 +245,7 @@ class UserMembershipPassService {
         "Start userUpdateMembershipPass Service"
       );
       // update pass expiry in cognito (if present in request)
-      await this.updateMembershipInCognito(req);
+      await updateMembershipInCognito(req.body);
 
       // update pass data in db
       // TODO: improve the flow which flow first, 2nd, 3rd ...
@@ -585,64 +586,6 @@ class UserMembershipPassService {
     }
   }
 
-  async getPassType(req) {
-    const passTypeMapping =
-      req.body.migrations &&
-      (await configsModel.findByConfigKey(
-        "membership-passes",
-        "pass-type-mapping"
-      ));
-
-    return !!passTypeMapping && passTypeMapping.value
-      ? passTypeMapping.value[`${req.body.passType.toLowerCase()}`]
-      : req.body.passType.toLowerCase();
-  }
-
-  async formatMembershipData(req, existingMemberships) {
-    try {
-      const passTypeMapping = await this.getPassType(req);
-      const newMembership = {
-        name: passTypeMapping,
-        visualID: req.body.visualId,
-        expiry: req.body.validUntil || null,
-      };
-
-      if (existingMemberships === null) {
-        return [newMembership];
-      }
-
-      //handle new format membership in Cognito
-      if (Array.isArray(existingMemberships)) {
-        let updatedMemberships;
-        // Check if any existing membership needs to be updated based on visualId
-        const membershipToUpdateIdx = existingMemberships.findIndex(
-          (membership) => membership.visualID === newMembership.visualID
-        );
-
-        if (membershipToUpdateIdx >= 0) {
-          existingMemberships[membershipToUpdateIdx] = newMembership;
-          updatedMemberships = [...existingMemberships];
-        } else {
-          updatedMemberships = [...existingMemberships, newMembership];
-        }
-        return updatedMemberships || null;
-      }
-
-      //handle old format membership in Cognito
-      if (typeof existingMemberships === "object") {
-        // Check if any existing membership needs to be updated based on visualId
-        return existingMemberships.visualID === newMembership.visualID
-          ? [newMembership]
-          : [existingMemberships, newMembership];
-      }
-    } catch (error) {
-      console.log(
-        "UserMembershipPassService.formatMembershipData error",
-        new Error(error)
-      );
-    }
-  }
-
   async updateUserMembershipPassToDB(req) {
     try {
       loggerService.log(
@@ -654,15 +597,14 @@ class UserMembershipPassService {
         },
         "Start updateUserMembershipPassToDB"
       );
-      const rows = await userModel.findByEmailMandaiIdVisualIds(
-        [req.body.visualId],
+      const membershipInfo = await userModel.findByEmailMandaiIdVisualId(
+        req.body.visualId,
         req.body.email,
-        req.body.mandaiId
+        req.body.mandaiId,
+        req.body.passType
       );
 
-      const userMembership = rows && rows.length > 0 ? rows[0] : undefined;
-
-      if (!userMembership) {
+      if (!membershipInfo || !membershipInfo.membershipId) {
         await Promise.reject(
           JSON.stringify(
             MembershipErrors.ciamMembershipUserNotFound(
@@ -674,16 +616,19 @@ class UserMembershipPassService {
       }
 
       let expiryDate = req.body.validUntil || undefined;
-      !!userMembership.userId &&
-        (await userMembershipModel.updateByUserId(userMembership.userId, {
-          name: req.body.passType.toLowerCase(),
-          expires_at: expiryDate,
-        }));
+      !!membershipInfo.membershipId &&
+        (await userMembershipModel.updateByMembershipId(
+          membershipInfo.membershipId,
+          {
+            name: req.body.passType.toLowerCase(),
+            expires_at: expiryDate,
+          }
+        ));
 
-      if (!!userMembership.membershipId) {
+      if (!!membershipInfo.membershipId) {
         const updatedRecord =
           await userMembershipDetailsModel.updateByMembershipId(
-            userMembership.membershipId,
+            membershipInfo.membershipId,
             {
               category_type: req.body.categoryType || undefined,
               item_name: req.body.itemName || undefined,
@@ -738,8 +683,8 @@ class UserMembershipPassService {
           );
         if (updatedRecord && updatedRecord.row_affected === 0) {
           await this.insertMembershipDetails(
-            userMembership.userId,
-            userMembership.membershipId,
+            membershipInfo.userId,
+            membershipInfo.membershipId,
             {
               categoryType: req.body.categoryType,
               itemName: req.body.itemName || null,
@@ -796,14 +741,14 @@ class UserMembershipPassService {
       loggerService.log(
         {
           user: {
-            userMembership: userMembership,
+            userMembership: membershipInfo,
             layer: "userMembershipPassService.updateUserMembershipPassToDB",
           },
         },
         "End updateUserMembershipPassToDB - Success"
       );
       return {
-        membershipId: userMembership.membershipId,
+        membershipId: membershipInfo.membershipId,
       };
     } catch (error) {
       loggerService.error(
@@ -826,77 +771,6 @@ class UserMembershipPassService {
         );
       }
       throw new Error(error);
-    }
-  }
-
-  async updateMembershipInCognito(req) {
-    try {
-      const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(
-        req.body.email.trim().toLowerCase()
-      );
-      const existingMemberships = JSON.parse(
-        getOrCheck(cognitoUser, "custom:membership")
-      );
-      // reformat "custom:membership" to JSON array
-      const updatedMemberships = await this.formatMembershipData(
-        req,
-        existingMemberships
-      );
-      let updateParams = [
-        {
-          Name: "custom:membership",
-          Value: JSON.stringify(updatedMemberships),
-        },
-        { Name: "custom:vehicle_iu", Value: req.body.iu || "null" },
-        { Name: "custom:vehicle_plate", Value: req.body.carPlate || "null" },
-      ];
-
-      loggerService.log(
-        {
-          user: {
-            userEmail: req.body.email,
-            existingMemberships: JSON.stringify(existingMemberships),
-            updatedMemberships: JSON.stringify(updatedMemberships),
-            params: updateParams,
-            layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(req.body),
-          },
-        },
-        "Start updateMembershipInCognito"
-      );
-      let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(
-        updateParams,
-        req.body.email.trim().toLowerCase()
-      );
-      loggerService.log(
-        {
-          user: {
-            userEmail: req.body.email,
-            layer: "userMembershipPassService.updateMembershipInCognito",
-            data: JSON.stringify(cognitoResult),
-          },
-        },
-        "End updateMembershipInCognito - Success"
-      );
-      return { cognitoProceed: "success" };
-    } catch (error) {
-      loggerService.error(
-        {
-          user: {
-            userEmail: req.body.email,
-            layer: "userMembershipPassService.updateMembershipInCognito",
-            error: new Error(error),
-          },
-        },
-        {},
-        "End updateMembershipInCognito - Failed"
-      );
-      JSON.stringify(
-        MembershipErrors.ciamMembershipUserNotFound(
-          req.body.email,
-          req.body.language
-        )
-      );
     }
   }
 
