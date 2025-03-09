@@ -12,7 +12,6 @@ const MembershipPassErrors = require("../../config/https/errors/membershipPassEr
 const nopCommerceService = require("../components/nopCommerce/services/nopCommerceService");
 const { getPassType } = require("../../helpers/dbConfigsHelpers");
 
-const { handlePasskitExpire } = require("./helpers/passkitExpireHandler");
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
   if (!env) return "ap-southeast-1";
@@ -262,30 +261,21 @@ class UserMembershipPassService {
             membership_photo: `users/${req.body.mandaiId}/assets/thumbnails/${req.body.visualId}.png`,
           }
         );
-
-        // send message to SQS to re-generate passkit (Trigger whenever pass update)
-        // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
-        let sendSQSMessage = await this.sendSQSMessage(
-          req,
-          "updateMembershipPass"
-        );
-        loggerService.log(
-          {
-            user: {
-              userEmail: req.body.email,
-              membership: req.body.group,
-              action: `userUpdateMembershipPass`,
-              layer: "userMembershipPassService.update",
-              triggerSQS: JSON.stringify(sendSQSMessage),
-            },
-          },
-          "End userUpdateMembershipPass Service - Success"
-        );
         // } // disabled, gen passkit whenever update
       }
 
-      //last process: integrate passkit expire
-      await handlePasskitExpire(req, updateMembershipRs.membershipId);
+      // send message to SQS to re-generate passkit (Trigger whenever pass update)
+      // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
+      await this.sendSQSMessage(
+          {
+            ...req,
+            body: {
+              ...req.body,
+              membershipId: updateMembershipRs.membershipId
+            }
+          },
+          "updateMembershipPass"
+      );
 
       loggerService.log(
         {
