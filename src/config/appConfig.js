@@ -29,7 +29,6 @@ const appConfig = {
   PASSKIT_URL_UAT:'https://uat-services.mandaiapi.com',
   PASSKIT_URL_PROD:'https://prod-services.mandaiapi.com',
   PASSKIT_GET_SIGNED_URL_PATH:'/v1/passkit/all/get',
-  PASSKIT_EXPIRE_URL_PATH:'/v1/passkit/all/expire',
 
   // user signup generate passkit for send in the email
   SIGNUP_CHECK_AEM: false,
