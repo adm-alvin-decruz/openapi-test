@@ -455,10 +455,9 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
 router.post(
   "/users/membership-passes",
   isEmptyRequest,
-  validateEmail,
   AccessTokenAuthGuard,
   lowercaseTrimKeyValueString,
-  async (req, res, next) => {
+  async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();

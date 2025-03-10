@@ -6,6 +6,14 @@ class UserGetMembershipPassesValidation {
   }
 
   static execute(data) {
+    if (!data.email && !data.mandaiId) {
+      return (this.error = CommonErrors.BadRequest(
+          "email",
+          "membership_email_invalid",
+          data.language
+      ));
+    }
+
     if (!data || !data.visualId) {
       return (this.error = CommonErrors.BadRequest(
           "visualId",

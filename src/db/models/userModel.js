@@ -114,16 +114,29 @@ class User {
    *
    * @param {*} visualIds
    * @param {*} email
+   * @param mandaiId
    * @returns
    */
-  static async findByEmailVisualIdsActive(visualIds, email) {
-    const params = [visualIds, email];
+  static async findByEmailVisualIdsActive(visualIds, email, mandaiId) {
+    const params = [visualIds];
+    let whereClause = 'WHERE um.visual_id IN (?) AND u.active = 1 AND (umd.status IN (0) OR umd.status IS NULL)';
+
+    if (email) {
+      whereClause += ' AND u.email = ?';
+      params.push(email);
+    }
+
+    if (mandaiId) {
+      whereClause += ' AND u.mandai_id = ?';
+      params.push(mandaiId);
+    }
+
     try {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_membership_details umd ON umd.user_membership_id = um.id
-                WHERE um.visual_id IN (?) AND u.active = 1 AND u.email = ? AND (umd.status IN (0) OR umd.status IS NULL)`;
+                ${whereClause}`;
 
       console.log("Find pass by email, visualId/s and status needs to be active", commonService.replaceSqlPlaceholders(sql, params))
 

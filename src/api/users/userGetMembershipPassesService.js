@@ -74,7 +74,8 @@ class UserGetMembershipPassesService {
   async retrieveSinglePassURL(visualId, body) {
     const userInfo = await userModel.findByEmailVisualIdsActive(
       visualId,
-      body.email
+      body.email,
+      body.mandaiId
     );
 
     let passUrl = { passes: [] };
