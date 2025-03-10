@@ -117,7 +117,7 @@ class User {
    * @param mandaiId
    * @returns
    */
-  static async findByEmailVisualIdsActive(visualIds, email, mandaiId) {
+  static async findActiveVisualId(visualIds, email, mandaiId) {
     const params = [visualIds];
     let whereClause = 'WHERE um.visual_id IN (?) AND u.active = 1 AND (umd.status IN (0) OR umd.status IS NULL)';
 
@@ -151,7 +151,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailVisualIdsActive - Failed"
+        "[CIAM] userModel.findActiveVisualId - Failed"
       );
       return error;
     }
