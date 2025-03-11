@@ -30,7 +30,7 @@ class UserSignupValidation {
           "firstName",
           "lastName",
           "country",
-          "phoneNumber",
+          // "phoneNumber", // disabled for now, onsite signup may have many rubbish phone number
           "password",
           "confirmPassword",
         ];
