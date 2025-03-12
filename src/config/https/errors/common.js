@@ -67,7 +67,7 @@ class CommonErrors {
         message: messageLang("oldPassword_invalid", lang),
       },
       status: "failed",
-      statusCode: 401,
+      statusCode: 200,
     };
   }
   static UnauthorizedException(lang) {
