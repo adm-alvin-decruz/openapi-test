@@ -19,6 +19,8 @@ USER_POOL_CLIENT_ID = "5vagpdvv3mdrldkaj745pqg9ne"
 #Galaxy
 GALAXY_URL = "https://connect.mandaiapi.com"
 
-#Passkit
+#API Keys
 PASSKIT_API_KEY = ""
 EMAIL_SERVICE_API_KEY = ""
+AEM_REQ_API_KEY = ""
+NOPCOMMERCE_REQ_API_KEY = ""
