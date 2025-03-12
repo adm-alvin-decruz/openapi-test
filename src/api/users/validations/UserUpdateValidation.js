@@ -9,7 +9,9 @@ class UserUpdateValidation {
   }
 
   //enhance get list error
-  static async validateRequestParams(req) {
+  static async validateRequestParams(req, token) {
+    const privateMode = token === 'private_mode';
+
     if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
@@ -94,7 +96,7 @@ class UserUpdateValidation {
       ));
     }
     if (bodyData.newPassword) {
-      if (!bodyData.oldPassword) {
+      if (!bodyData.oldPassword && !privateMode) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
       }
       if (!passwordPattern(bodyData.newPassword)) {
@@ -107,8 +109,8 @@ class UserUpdateValidation {
     return (this.error = null);
   }
 
-  static execute(req) {
-    return this.validateRequestParams(req);
+  static execute(req, token) {
+    return this.validateRequestParams(req, token);
   }
 }
 

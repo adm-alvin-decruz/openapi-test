@@ -51,7 +51,10 @@ const {
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
-const { formatDateToMySQLDateTime, convertDateToMySQLFormat, convertDateFromMySQLToSlash} = require("../../utils/dateUtils");
+const {
+  formatDateToMySQLDateTime,
+  convertDateFromMySQLToSlash,
+} = require("../../utils/dateUtils");
 
 /**
  * Function User signup service
@@ -78,7 +81,7 @@ async function userSignup(req, membershipData) {
 
   // prepare membership group
   req["body"]["membershipGroup"] = commonService.prepareMembershipGroup(
-      req.body
+    req.body
   );
 
   // call cognitoCreateUser function
@@ -194,9 +197,7 @@ async function cognitoCreateUser(req, membershipData) {
       },
       {
         Name: "custom:membership",
-        Value: JSON.stringify(commonService.prepareMembershipGroup(
-            req.body
-        )),
+        Value: JSON.stringify(commonService.prepareMembershipGroup(req.body)),
       },
     ];
     if (req.body.dob) {
@@ -212,7 +213,6 @@ async function cognitoCreateUser(req, membershipData) {
       })
     }
   }
-
 
   var newUserParams = new AdminCreateUserCommand(newUserArray);
 
@@ -569,58 +569,80 @@ async function checkNewEmailExisted(email) {
   }
 }
 
-async function updatePassword(body, token, isNewEmailExisted) {
-  //ignore update password if newPassword not requested
-  if (!body.data.newPassword) {
-    return;
-  }
-
+async function proceedUpdatePassword(
+  userCredentialInfo,
+  hashPassword,
+  newPassword,
+  email,
+  emailCognito
+) {
   try {
-    const hashPassword = await passwordService.hashPassword(
-      body.data.newPassword.toString()
+    await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
+
+    //update password hash and new email if possible - prepare for login session
+    await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
+      password_hash: hashPassword,
+      username: email,
+    });
+  } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          userCredentialInfo: userCredentialInfo,
+          email: email,
+          emailCognito: emailCognito,
+          layer: "usersService.proceedUpdatePassword",
+          error: `${error}`,
+        },
+      },
+      {},
+      "[CIAM] Update Password Proceed - Failed"
     );
-    const userCredentialInfo = await userCredentialModel.findByUserEmail(
-      body.email
-    );
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr("en")));
+  }
+}
+
+async function updatePassword(
+  userCredentialInfo,
+  hashPassword,
+  newPassword,
+  oldPassword,
+  email,
+  emailCognito,
+  token,
+  lang = "en"
+) {
+  try {
     if (token) {
       //token is available it means Cognito will verify old password as well
       await cognitoService.cognitoUserChangePassword(
         token,
-        body.data.newPassword,
-        body.data.oldPassword
+        newPassword,
+        oldPassword
       );
 
       //update password hash and new email if possible - prepare for login session
       await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
         password_hash: hashPassword,
-        username:
-          !isNewEmailExisted && body.data.newEmail
-            ? body.data.newEmail
-            : body.email,
+        username: email,
       });
     } else {
       //token is not available -> Using argon2 to compare password
       const isMatched = await passwordService.comparePassword(
-        body.data.oldPassword,
+        oldPassword,
         userCredentialInfo.password_hash
       );
       if (isMatched) {
-        await cognitoService.cognitoAdminSetUserPassword(
-          body.email,
-          body.data.newPassword
+        await proceedUpdatePassword(
+          userCredentialInfo,
+          hashPassword,
+          newPassword,
+          email,
+          emailCognito
         );
-
-        //update password hash and new email if possible - prepare for login session
-        await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
-          password_hash: hashPassword,
-          username:
-            !isNewEmailExisted && body.data.newEmail
-              ? body.data.newEmail
-              : body.email,
-        });
       } else {
         await Promise.reject(
-          JSON.stringify(CommonErrors.OldPasswordNotMatchErr(body.language))
+          JSON.stringify(CommonErrors.OldPasswordNotMatchErr(lang))
         );
       }
     }
@@ -628,8 +650,8 @@ async function updatePassword(body, token, isNewEmailExisted) {
     loggerService.error(
       {
         user: {
-          userEmail: body.email,
-          body,
+          email: email,
+          emailCognito: email,
           layer: "usersService.updatePassword",
           error: `${error}`,
         },
@@ -637,8 +659,40 @@ async function updatePassword(body, token, isNewEmailExisted) {
       {},
       "[CIAM] Update Password - Failed"
     );
+    throw new Error(JSON.stringify(CommonErrors.OldPasswordNotMatchErr(lang)));
+  }
+}
+
+async function updatePasswordPrivateMode(
+  userCredentialInfo,
+  hashPassword,
+  newPassword,
+  email,
+  emailCognito,
+) {
+  try {
+    await proceedUpdatePassword(
+        userCredentialInfo,
+        hashPassword,
+        newPassword,
+        email,
+        emailCognito
+    );
+  } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          email: email,
+          emailCognito: emailCognito,
+          layer: "usersService.updatePasswordPrivateMode",
+          error: `${error}`,
+        },
+      },
+      {},
+      "[CIAM] Update Password Private Mode - Failed"
+    );
     throw new Error(
-      JSON.stringify(CommonErrors.OldPasswordNotMatchErr(body.language))
+      JSON.stringify(UpdateUserErrors.ciamUpdateUserErr('en'))
     );
   }
 }
@@ -718,14 +772,15 @@ async function updateUserCognito(body, userCognito) {
 }
 
 async function adminUpdateNewUser(body, token) {
+  const privateMode = token === "private_mode";
   try {
     loggerService.log(
       {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
-          body: body,
           token: maskKeyRandomly(token),
+          privateMode,
         },
       },
       "[CIAM] Start Update User FOs Service"
@@ -733,9 +788,10 @@ async function adminUpdateNewUser(body, token) {
     //get user from db
     const userDB = await userModel.findByEmail(body.email);
     //get user from cognito
-    const userCognito = token
-      ? await cognitoService.cognitoAdminGetUserByAccessToken(token)
-      : await cognitoService.cognitoAdminGetUserByEmail(body.email);
+    const userCognito =
+      token && !privateMode
+        ? await cognitoService.cognitoAdminGetUserByAccessToken(token)
+        : await cognitoService.cognitoAdminGetUserByEmail(body.email);
     const email = getOrCheck(userCognito, "email");
 
     if (email !== body.email || userDB.email !== body.email) {
@@ -753,7 +809,38 @@ async function adminUpdateNewUser(body, token) {
     }
 
     //1st updatePassword -> if failed the process update user will stop
-    await updatePassword(body, token, isNewEmailExisted);
+    //ad-hook - switch update password by private_mode
+    if (body.data && body.data.newPassword) {
+      const hashPassword = await passwordService.hashPassword(
+        body.data.newPassword.toString()
+      );
+      const userCredentialInfo = await userCredentialModel.findByUserEmail(
+        body.email
+      );
+      const latestEmail =
+        !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
+      if (privateMode) {
+        await updatePasswordPrivateMode(
+          userCredentialInfo,
+          hashPassword,
+          body.data.newPassword,
+          latestEmail,
+          body.email
+        );
+      } else {
+        await updatePassword(
+          userCredentialInfo,
+          hashPassword,
+          body.data.newPassword,
+          body.data.oldPassword,
+          latestEmail,
+          body.email,
+          token,
+          body.language
+        );
+      }
+    }
+
     //2nd update Cognito
     await updateUserCognito(body, userCognito);
     //3rd update DB
@@ -794,7 +881,6 @@ async function adminUpdateNewUser(body, token) {
       {
         user: {
           userEmail: body.email,
-          body,
           layer: "usersService.adminUpdateNewUser",
           error: `${error}`,
         },

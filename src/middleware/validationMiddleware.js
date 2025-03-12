@@ -6,6 +6,9 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
 const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
+const appConfig = require("../config/appConfig");
+const switchService = require("../services/switchService");
+const validationService = require("../services/validationService");
 
 /**
  * Validate empty request
@@ -15,7 +18,12 @@ const { GROUP } = require("../utils/constants");
  * @returns
  */
 function isEmptyRequest(req, res, next) {
-  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
+  if (
+    req.method === "POST" ||
+    req.method === "PUT" ||
+    req.method === "PATCH" ||
+    req.method === "DELETE"
+  ) {
     if (Object.keys(req.body).length === 0) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
@@ -40,7 +48,9 @@ async function validateEmailDisposable(req, res, next) {
   // if check domain switch turned on ( 1 )
   if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
     // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
+    let validDomain = await EmailDomainService.validateEmailDomain(
+      normalizedEmail
+    );
     if (!validDomain) {
       return resStatusFormatter(res, 400, "The email is invalid");
     }
@@ -65,26 +75,30 @@ async function validateEmail(req, res, next) {
 
 //only use it when combine with emptyRequest middleware
 async function lowercaseTrimKeyValueString(req, res, next) {
-  const keysAcceptedLower = ['passType'];
-  const keysAcceptedTrim = ['mandaiId', 'visualId', 'firstName', 'lastName'];
-  const keysAcceptedTrimAndLower = ['email'];
+  const keysAcceptedLower = ["passType"];
+  const keysAcceptedTrim = ["mandaiId", "visualId", "firstName", "lastName"];
+  const keysAcceptedTrimAndLower = ["email"];
   const keysRequest = Object.entries(req.body);
   req.body = keysRequest.reduce((rs, [key, value]) => {
-    if (keysAcceptedLower.includes(key) && value && typeof value === 'string') {
+    if (keysAcceptedLower.includes(key) && value && typeof value === "string") {
       rs[key] = value.toLowerCase();
       return rs;
     }
-    if (keysAcceptedTrim.includes(key) && value && typeof value === 'string') {
+    if (keysAcceptedTrim.includes(key) && value && typeof value === "string") {
       rs[key] = value.trim();
       return rs;
     }
-    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === 'string') {
+    if (
+      keysAcceptedTrimAndLower.includes(key) &&
+      value &&
+      typeof value === "string"
+    ) {
       rs[key] = value.toLowerCase().trim();
       return rs;
     }
     rs[key] = value;
     return rs;
-  }, {})
+  }, {});
   next();
 }
 
@@ -125,8 +139,8 @@ async function AccessTokenAuthGuard(req, res, next) {
   }
 
   const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
-    req.body.email || '',
-      req.body.mandaiId || ''
+    req.body.email || "",
+    req.body.mandaiId || ""
   );
 
   if (
@@ -192,6 +206,36 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
   next();
 }
 
+async function validateAPIKey(req, res, next) {
+  const validationSwitch = await switchService.findByName("api_key_validation");
+  const envAppIDArr = JSON.parse(
+    appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`]
+  );
+  const mwgAppID =
+    req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
+
+  if (!mwgAppID || !envAppIDArr.includes(mwgAppID)) {
+    return res
+      .status(401)
+      .json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  if (validationSwitch.switch === 1) {
+    const apiKey =
+      req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
+    if (apiKey && apiKey === process.env.NOPCOMMERCE_REQ_API_KEY) {
+      return next();
+    }
+  }
+  if (validationSwitch.switch === 0) {
+    return next();
+  }
+
+  return res
+    .status(401)
+    .json(CommonErrors.UnauthorizedException(req.body.language));
+}
+
 module.exports = {
   isEmptyRequest,
   validateEmail,
@@ -199,5 +243,6 @@ module.exports = {
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   AccessTokenAuthGuard,
   validateEmailDisposable,
-  lowercaseTrimKeyValueString
+  lowercaseTrimKeyValueString,
+  validateAPIKey,
 };

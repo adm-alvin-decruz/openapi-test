@@ -308,11 +308,12 @@ async function adminUpdateNewUser(req, token) {
         api_body: JSON.stringify(req.body),
         layer: "controller.adminUpdateNewUser",
         token: maskKeyRandomly(token),
+        private_mode: token === 'private_mode'
       },
     },
     "[CIAM] Start Update User with FOs Request"
   );
-  const message = await UserUpdateValidation.execute(req.body);
+  const message = await UserUpdateValidation.execute(req.body, token);
   if (!!message) {
     loggerService.error(
       {
@@ -323,6 +324,7 @@ async function adminUpdateNewUser(req, token) {
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateNewUser",
           token: maskKeyRandomly(token),
+          private_mode: token === 'private_mode'
         },
       },
       {},
@@ -343,6 +345,7 @@ async function adminUpdateNewUser(req, token) {
           layer: "controller.adminUpdateNewUser",
           token: maskKeyRandomly(token),
           error: `${error}`,
+          private_mode: token === 'private_mode'
         },
       },
       {},
