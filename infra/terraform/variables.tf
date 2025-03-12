@@ -144,3 +144,11 @@ variable "PASSKIT_API_KEY" {
 variable "EMAIL_SERVICE_API_KEY" {
   description = "EMAIL SERVICE API KEY"
 }
+
+variable "AEM_REQ_API_KEY" {
+  description = "API Key for AEM"
+}
+
+variable "NOPCOMMERCE_REQ_API_KEY" {
+  description = "API Key for Nopcommerce"
+}

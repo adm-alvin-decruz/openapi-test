@@ -100,6 +100,8 @@ module "lambda_function_ciam_membership" {
     LAMBDA_CIAM_SIGNUP_TRIGGER_PASSKIT_MAIL_FUNCTION = data.terraform_remote_state.passkit_email_trigger_function.outputs.lambda_name
     PASSKIT_API_KEY = var.PASSKIT_API_KEY
     EMAIL_SERVICE_API_KEY = var.EMAIL_SERVICE_API_KEY
+    AEM_REQ_API_KEY = var.AEM_REQ_API_KEY
+    NOPCOMMERCE_REQ_API_KEY = var.NOPCOMMERCE_REQ_API_KEY
   }
 #  allowed_triggers = {
 #    apigateway = {
