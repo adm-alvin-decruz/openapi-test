@@ -681,9 +681,10 @@ async function updateUserCognito(body, userCognito) {
         };
       }
       if (key === "phoneNumber") {
+        let phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
         return {
           Name: COGNITO_ATTRIBUTES[key],
-          Value: formatPhoneNumber(body.data.phoneNumber),
+          Value: phoneNumber,
         };
       }
 
@@ -724,7 +725,7 @@ async function adminUpdateNewUser(body, token) {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
-          body: body,
+          body: JSON.stringify(body),
           token: maskKeyRandomly(token),
         },
       },
@@ -762,17 +763,17 @@ async function adminUpdateNewUser(body, token) {
       userDB && userDB.id ? userDB.id : undefined,
       isNewEmailExisted
     );
+    let membership =
+      JSON.stringify(
+        {code: 200,mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",message: messageLang("update_success", body.language)}
+    );
     loggerService.log(
       {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
           response: {
-            membership: {
-              code: 200,
-              mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
-              message: messageLang("update_success", body.language),
-            },
+            membership: membership,
             status: "success",
             statusCode: 200,
           },

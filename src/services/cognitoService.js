@@ -518,8 +518,8 @@ class Cognito {
     loggerService.log(
       {
         cognitoService: {
-          email,
-          params,
+          email: email,
+          params: JSON.stringify(params),
           action: "cognitoAdminUpdateNewUser",
           layer: "services.cognitoService",
         },
