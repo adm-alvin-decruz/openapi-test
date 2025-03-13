@@ -10,6 +10,8 @@ class UserUpdateValidation {
 
   //enhance get list error
   static async validateRequestParams(req) {
+    const privateMode = !!req.privateMode;
+
     if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
@@ -94,7 +96,7 @@ class UserUpdateValidation {
       ));
     }
     if (bodyData.newPassword) {
-      if (!bodyData.oldPassword) {
+      if (!bodyData.oldPassword && !privateMode) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
       }
       if (!passwordPattern(bodyData.newPassword)) {

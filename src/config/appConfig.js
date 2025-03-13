@@ -71,7 +71,12 @@ const appConfig = {
   NOP_COMMERCE_URL_UAT: 'https://www.mandaiapi.com/uat-store',
   NOP_COMMERCE_URL_PROD: 'https://www.mandaiapi.com/store',
   NOP_COMMERCE_ACCESS_TOKEN_PATH: '/GenerateMembershipToken',
-  NOP_COMMERCE_GET_MEMBERSHIP_PATH: '/MembershipGetPictureFile'
+  NOP_COMMERCE_GET_MEMBERSHIP_PATH: '/MembershipGetPictureFile',
+
+  // NopCommerce APP ID Service Hub
+  PRIVATE_APP_ID_DEV:'["nopComm.Dev.servicehub.mandaipvtapi.ciam"]',
+  PRIVATE_APP_ID_UAT:'["nopComm.Uat.servicehub.mandaipvtapi.ciam"]',
+  PRIVATE_APP_ID_PROD:'["nopComm.Prod.servicehub.mandaipvtapi.ciam"]',
 };
 
 module.exports = appConfig;
