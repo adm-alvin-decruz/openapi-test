@@ -681,10 +681,9 @@ async function updateUserCognito(body, userCognito) {
         };
       }
       if (key === "phoneNumber") {
-        let phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
         return {
           Name: COGNITO_ATTRIBUTES[key],
-          Value: phoneNumber,
+          Value: body.data.phoneNumber,
         };
       }
 
@@ -696,21 +695,25 @@ async function updateUserCognito(body, userCognito) {
     .filter((ele) => !!ele && !!ele.Name);
 
   try {
+    let cognitoUpdateParams = [...cognitoParams,
+              {Name: "name", Value: userName},
+              {Name: "email", Value: !!body.data.newEmail ? body.data.newEmail : body.email}
+            ];
+    // clean up phone number
+    let phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
+    if (phoneNumber === null || phoneNumber === undefined || phoneNumber.trim() === '') {
+      // find the index of the phone_number parameter
+      const phoneIndex = cognitoUpdateParams.findIndex(cognitoUpdateParams =>
+        cognitoUpdateParams.Name === 'phone_number'
+      );
+      // rmove the phone_number parameter if found
+      if (phoneIndex !== -1) {
+        cognitoUpdateParams.splice(phoneIndex, 1);
+      }
+    }
+
     //cognito update user
-    await cognitoService.cognitoAdminUpdateNewUser(
-      [
-        ...cognitoParams,
-        {
-          Name: "name",
-          Value: userName,
-        },
-        {
-          Name: "email",
-          Value: !!body.data.newEmail ? body.data.newEmail : body.email,
-        },
-      ],
-      body.email
-    );
+    await cognitoService.cognitoAdminUpdateNewUser(cognitoUpdateParams, body.email);
   } catch (error) {
     throw new Error(
       JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(body.language))
@@ -795,7 +798,7 @@ async function adminUpdateNewUser(body, token) {
       {
         user: {
           userEmail: body.email,
-          body,
+          data: JSON.stringify(body),
           layer: "usersService.adminUpdateNewUser",
           error: `${error}`,
         },

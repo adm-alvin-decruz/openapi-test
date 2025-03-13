@@ -521,7 +521,7 @@ class Cognito {
           email: email,
           params: JSON.stringify(params),
           action: "cognitoAdminUpdateNewUser",
-          layer: "services.cognitoService",
+          layer: "cognitoService",
         },
       },
       "[CIAM] Start cognitoAdminUpdateNewUser Service"
@@ -544,8 +544,8 @@ class Cognito {
       loggerService.error(
         {
           cognitoService: {
-            email,
-            params,
+            email: email,
+            params: JSON.stringify(params),
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
             error: new Error("cognitoAdminUpdateNewUser error", error),
