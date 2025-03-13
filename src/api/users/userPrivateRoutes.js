@@ -4,7 +4,6 @@ const router = express.Router();
 
 const userController = require("./usersContollers");
 const commonService = require("../../services/commonService");
-const validationService = require("../../services/validationService");
 const {
   isEmptyRequest,
   validateEmail,
@@ -49,7 +48,8 @@ router.put(
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        const updateRs = await userController.adminUpdateNewUser(req, 'private_mode');
+        req.body.privateMode = true;
+        const updateRs = await userController.adminUpdateNewUser(req, "");
         req.apiTimer.end(
           "Route CIAM Update Membership-Passes User Success",
           startTimer

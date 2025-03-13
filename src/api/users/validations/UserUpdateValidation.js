@@ -9,8 +9,8 @@ class UserUpdateValidation {
   }
 
   //enhance get list error
-  static async validateRequestParams(req, token) {
-    const privateMode = token === 'private_mode';
+  static async validateRequestParams(req) {
+    const privateMode = !!req.privateMode;
 
     if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
@@ -109,8 +109,8 @@ class UserUpdateValidation {
     return (this.error = null);
   }
 
-  static execute(req, token) {
-    return this.validateRequestParams(req, token);
+  static execute(req) {
+    return this.validateRequestParams(req);
   }
 }
 

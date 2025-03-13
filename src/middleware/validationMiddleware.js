@@ -8,7 +8,7 @@ const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
 const appConfig = require("../config/appConfig");
 const switchService = require("../services/switchService");
-const validationService = require("../services/validationService");
+const { maskKeyRandomly } = require("../utils/common");
 
 /**
  * Validate empty request
@@ -208,21 +208,30 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 
 async function validateAPIKey(req, res, next) {
   const validationSwitch = await switchService.findByName("api_key_validation");
-  const envAppIDArr = JSON.parse(
-    appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`]
-  );
+  const privateAppId = appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`];
   const mwgAppID =
     req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
+  const apiKey =
+      req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
 
-  if (!mwgAppID || !envAppIDArr.includes(mwgAppID)) {
+  loggerService.log(
+      {
+        middleware: {
+          layer: "middleware.validateAPIKey",
+          validationSwitch: JSON.stringify(validationSwitch),
+          mwgAppID: maskKeyRandomly(mwgAppID),
+          expectedApiKey: maskKeyRandomly(process.env.NOPCOMMERCE_REQ_API_KEY),
+          incomingApiKey: maskKeyRandomly(apiKey)
+        },
+      },
+      "[CIAM] Validate Api Key Middleware - Process"
+  );
+  if (!mwgAppID || privateAppId !== mwgAppID) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-
   if (validationSwitch.switch === 1) {
-    const apiKey =
-      req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
     if (apiKey && apiKey === process.env.NOPCOMMERCE_REQ_API_KEY) {
       return next();
     }

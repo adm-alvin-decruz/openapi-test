@@ -298,7 +298,7 @@ async function adminUpdateUser(req, listedParams) {
   }
 }
 
-async function adminUpdateNewUser(req, token) {
+async function adminUpdateNewUser(req, accessToken) {
   loggerService.log(
     {
       user: {
@@ -307,13 +307,13 @@ async function adminUpdateNewUser(req, token) {
         api_header: req.headers,
         api_body: JSON.stringify(req.body),
         layer: "controller.adminUpdateNewUser",
-        token: maskKeyRandomly(token),
-        private_mode: token === 'private_mode'
+        accessToken: maskKeyRandomly(accessToken),
+        private_mode: !!req.body.privateMode,
       },
     },
     "[CIAM] Start Update User with FOs Request"
   );
-  const message = await UserUpdateValidation.execute(req.body, token);
+  const message = await UserUpdateValidation.execute(req.body);
   if (!!message) {
     loggerService.error(
       {
@@ -323,8 +323,8 @@ async function adminUpdateNewUser(req, token) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateNewUser",
-          token: maskKeyRandomly(token),
-          private_mode: token === 'private_mode'
+          accessToken: maskKeyRandomly(accessToken),
+          private_mode: !!req.body.privateMode
         },
       },
       {},
@@ -333,7 +333,7 @@ async function adminUpdateNewUser(req, token) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    return await usersService.adminUpdateNewUser(req.body, token);
+    return await usersService.adminUpdateNewUser(req.body, accessToken);
   } catch (error) {
     loggerService.error(
       {
@@ -343,9 +343,9 @@ async function adminUpdateNewUser(req, token) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateNewUser",
-          token: maskKeyRandomly(token),
+          accessToken: maskKeyRandomly(accessToken),
           error: `${error}`,
-          private_mode: token === 'private_mode'
+          private_mode: !!req.body.privateMode
         },
       },
       {},

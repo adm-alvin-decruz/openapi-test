@@ -609,14 +609,14 @@ async function updatePassword(
   oldPassword,
   email,
   emailCognito,
-  token,
+  accessToken,
   lang = "en"
 ) {
   try {
-    if (token) {
-      //token is available it means Cognito will verify old password as well
+    if (accessToken) {
+      //accessToken is available it means Cognito will verify old password as well
       await cognitoService.cognitoUserChangePassword(
-        token,
+        accessToken,
         newPassword,
         oldPassword
       );
@@ -627,7 +627,7 @@ async function updatePassword(
         username: email,
       });
     } else {
-      //token is not available -> Using argon2 to compare password
+      //accessToken is not available -> Using argon2 to compare password
       const isMatched = await passwordService.comparePassword(
         oldPassword,
         userCredentialInfo.password_hash
@@ -771,15 +771,15 @@ async function updateUserCognito(body, userCognito) {
   }
 }
 
-async function adminUpdateNewUser(body, token) {
-  const privateMode = token === "private_mode";
+async function adminUpdateNewUser(body, accessToken) {
+  const privateMode = !!body.privateMode;
   try {
     loggerService.log(
       {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
-          token: maskKeyRandomly(token),
+          accessToken: maskKeyRandomly(accessToken),
           privateMode,
         },
       },
@@ -789,8 +789,8 @@ async function adminUpdateNewUser(body, token) {
     const userDB = await userModel.findByEmail(body.email);
     //get user from cognito
     const userCognito =
-      token && !privateMode
-        ? await cognitoService.cognitoAdminGetUserByAccessToken(token)
+      accessToken && !privateMode
+        ? await cognitoService.cognitoAdminGetUserByAccessToken(accessToken)
         : await cognitoService.cognitoAdminGetUserByEmail(body.email);
     const email = getOrCheck(userCognito, "email");
 
@@ -835,7 +835,7 @@ async function adminUpdateNewUser(body, token) {
           body.data.oldPassword,
           latestEmail,
           body.email,
-          token,
+          accessToken,
           body.language
         );
       }
@@ -888,7 +888,8 @@ async function adminUpdateNewUser(body, token) {
       {},
       "[CIAM] End Update User FOs Service - Failed"
     );
-    const errorMessage = error.message ? JSON.parse(error.message) : "";
+    const errorMessage = error && typeof error.message === 'object' ? JSON.parse(error.message) : "";
+
     const errorData =
       errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
     if (errorData.name && errorData.name === "UserNotFoundException") {
@@ -925,7 +926,7 @@ async function adminUpdateNewUser(body, token) {
         )
       );
     }
-    throw new Error(JSON.stringify(errorMessage));
+    throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
   }
 }
 //#endregion
