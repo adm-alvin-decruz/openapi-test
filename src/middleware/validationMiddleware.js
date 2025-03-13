@@ -208,7 +208,8 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 
 async function validateAPIKey(req, res, next) {
   const validationSwitch = await switchService.findByName("api_key_validation");
-  const privateAppId = appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`];
+  const privateAppIdArr = JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`]);
+
   const mwgAppID =
     req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   const apiKey =
@@ -226,7 +227,7 @@ async function validateAPIKey(req, res, next) {
       },
       "[CIAM] Validate Api Key Middleware - Process"
   );
-  if (!mwgAppID || privateAppId !== mwgAppID) {
+  if (!mwgAppID || !privateAppIdArr.includes(mwgAppID)) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
