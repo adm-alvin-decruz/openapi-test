@@ -16,6 +16,7 @@ const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
 const { maskKeyRandomly } = require("../utils/common");
 const crypto = require("crypto");
+const { json } = require("stream/consumers");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -322,54 +323,42 @@ class Cognito {
     }
   }
 
-  static async cognitoAdminCreateUser({
-    email,
-    firstName,
-    lastName,
-    birthdate,
-    address,
-    mandaiId,
-    newsletter,
-    source,
-    phoneNumber,
-    country,
-  }) {
+  static async cognitoAdminCreateUser(data){
     const newUserArray = {
       UserPoolId: process.env.USER_POOL_ID,
-      Username: email,
+      Username: data.email,
       TemporaryPassword: passwordService.generatePassword(8),
       DesiredDeliveryMediums: ["EMAIL"],
       MessageAction: "SUPPRESS", // disable send verification email temp password
       UserAttributes: [
         { Name: "email_verified", Value: "true" },
-        { Name: "given_name", Value: firstName },
-        { Name: "family_name", Value: lastName },
-        { Name: "preferred_username", Value: email },
-        { Name: "name", Value: `${firstName} ${lastName}` },
-        { Name: "email", Value: email },
-        { Name: "birthdate", Value: birthdate },
-        { Name: "address", Value: address },
-        { Name: "phone_number", Value: phoneNumber },
-        { Name: "zoneinfo", Value: country },
-        { Name: "custom:mandai_id", Value: mandaiId },
-        { Name: "custom:newsletter", Value: JSON.stringify(newsletter) },
+        { Name: "given_name", Value: data.firstName },
+        { Name: "family_name", Value: data.lastName },
+        { Name: "preferred_username", Value: data.email },
+        { Name: "name", Value: `${data.firstName} ${data.lastName}` },
+        { Name: "email", Value: data.email },
+        { Name: "birthdate", Value: data.birthdate },
+        { Name: "address", Value: data.address },
+        { Name: "phone_number", Value: data.phoneNumber || ""},
+        { Name: "zoneinfo", Value: data.country },
+        { Name: "custom:mandai_id", Value: data.mandaiId },
+        { Name: "custom:newsletter", Value: JSON.stringify(data.newsletter) },
         { Name: "custom:terms_conditions", Value: "null" },
         { Name: "custom:visual_id", Value: "null" },
         { Name: "custom:vehicle_iu", Value: "null" },
         { Name: "custom:vehicle_plate", Value: "null" },
         { Name: "custom:last_login", Value: "null" },
-        { Name: "custom:source", Value: source },
+        { Name: "custom:source", Value: data.source },
       ],
     };
 
-    const newUserParams = new AdminCreateUserCommand(newUserArray);
-
     try {
+      const newUserParams = new AdminCreateUserCommand(newUserArray);
       loggerService.log(
         {
           cognitoService: {
-            email,
-            params: `${newUserArray.UserAttributes}`,
+            data: JSON.stringify(data),
+            params: JSON.stringify(newUserArray.UserAttributes),
             action: "cognitoAdminCreateUser",
             layer: "services.cognitoService",
           },
@@ -392,11 +381,12 @@ class Cognito {
       loggerService.log(
         {
           cognitoService: {
-            email,
+            email: data.email,
             params: `${newUserArray.UserAttributes}`,
             action: "cognitoAdminCreateUser",
-            layer: "services.cognitoService",
+            layer: "cognitoService.cognitoAdminCreateUser",
             error: `${error}`,
+            errorTrace: new Error("cognitoService.cognitoAdminCreateUser error", error),
           },
         },
         {},
@@ -528,10 +518,10 @@ class Cognito {
     loggerService.log(
       {
         cognitoService: {
-          email,
-          params,
+          email: email,
+          params: JSON.stringify(params),
           action: "cognitoAdminUpdateNewUser",
-          layer: "services.cognitoService",
+          layer: "cognitoService",
         },
       },
       "[CIAM] Start cognitoAdminUpdateNewUser Service"
@@ -554,8 +544,8 @@ class Cognito {
       loggerService.error(
         {
           cognitoService: {
-            email,
-            params,
+            email: email,
+            params: JSON.stringify(params),
             action: "cognitoAdminUpdateNewUser",
             layer: "services.cognitoService",
             error: new Error("cognitoAdminUpdateNewUser error", error),

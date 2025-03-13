@@ -23,7 +23,7 @@ class UserUpdateValidation {
       "firstName",
       "lastName",
       "country",
-      "phoneNumber",
+      // "phoneNumber", //disabled for now
       "newPassword",
       "confirmPassword",
       "oldPassword",

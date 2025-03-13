@@ -297,24 +297,6 @@ class UserSignupService {
       : null;
   }
 
-  generatePhoneNumber(req) {
-    if (
-      req.body.phoneNumber === "0" ||
-      req.body.phoneNumber === "null" ||
-      req.body.phoneNumber === "undefined"
-    ) {
-      return "";
-    }
-    if (!!req.body.migrations && !!req.body.phoneNumber) {
-      return formatPhoneNumber(req.body.phoneNumber).startsWith("+")
-        ? formatPhoneNumber(req.body.phoneNumber)
-        : `+65${formatPhoneNumber(req.body.phoneNumber)}`;
-    }
-    return !!req.body.phoneNumber
-      ? formatPhoneNumber(req.body.phoneNumber)
-      : "";
-  }
-
   async preparePassword(req) {
     if (!!req.body.migrations) {
       const saltPassword = !!req.body.passwordSalt
@@ -544,10 +526,7 @@ class UserSignupService {
       req.body.email
     );
 
-    if (
-      userExistedInCognito &&
-      getOrCheck(userExistedInCognito, "custom:mandai_id")
-    ) {
+    if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
       //check is user email existed at wildpass group
       const userBelongWildpassGroup = await this.checkUserBelongWildPass(
         req.body.email,
@@ -585,22 +564,27 @@ class UserSignupService {
       const newsletterMapping = this.generateNewsletter(req);
 
       //generate phoneNumber dynamic by migrations flag
-      const phoneNumber = this.generatePhoneNumber(req);
+      const phoneNumber = commonService.cleanPhoneNumber(req.body.phoneNumber);
 
-      await cognitoService.cognitoAdminCreateUser({
+      let cognitoData = {
         email: req.body.email,
         firstName: req.body.firstName ? req.body.firstName.trim() : "",
         lastName: req.body.lastName ? req.body.lastName.trim() : "",
         birthdate: req.body.dob || "",
         address: req.body.address || "",
-        phoneNumber: phoneNumber,
         country: req.body.country || "",
         mandaiId: mandaiId,
         newsletter: newsletterMapping,
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
           : "",
-      });
+      };
+
+      // Only add phoneNumber if it has a meaningful value (not null, undefined, empty string, or just whitespace)
+      if (phoneNumber !== null && phoneNumber !== undefined && phoneNumber.trim() !== '') {
+        cognitoData.phoneNumber = phoneNumber;
+      }
+      await cognitoService.cognitoAdminCreateUser(cognitoData);
 
       // set user password in cognito
       await cognitoService.cognitoAdminSetUserPassword(
@@ -632,6 +616,7 @@ class UserSignupService {
         {
           user: {
             membership: req.body.group,
+            cognitoData: cognitoData,
             action: "adminCreateNewUser",
             layer: "userSignupService.signup",
             mandaiId,
@@ -652,6 +637,7 @@ class UserSignupService {
             api_body: req.body,
             layer: "userSignupService.signup",
             error: `${error}`,
+            errorTrace: new Error("userSignupService.signup error", error),
           },
         },
         {},

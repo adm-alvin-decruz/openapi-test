@@ -737,7 +737,7 @@ async function updateUserCognito(body, userCognito) {
       if (key === "phoneNumber") {
         return {
           Name: COGNITO_ATTRIBUTES[key],
-          Value: formatPhoneNumber(body.data.phoneNumber),
+          Value: body.data.phoneNumber,
         };
       }
 
@@ -749,21 +749,25 @@ async function updateUserCognito(body, userCognito) {
     .filter((ele) => !!ele && !!ele.Name);
 
   try {
+    let cognitoUpdateParams = [...cognitoParams,
+              {Name: "name", Value: userName},
+              {Name: "email", Value: !!body.data.newEmail ? body.data.newEmail : body.email}
+            ];
+    // clean up phone number
+    let phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
+    if (phoneNumber === null || phoneNumber === undefined || phoneNumber.trim() === '') {
+      // find the index of the phone_number parameter
+      const phoneIndex = cognitoUpdateParams.findIndex(cognitoUpdateParams =>
+        cognitoUpdateParams.Name === 'phone_number'
+      );
+      // rmove the phone_number parameter if found
+      if (phoneIndex !== -1) {
+        cognitoUpdateParams.splice(phoneIndex, 1);
+      }
+    }
+
     //cognito update user
-    await cognitoService.cognitoAdminUpdateNewUser(
-      [
-        ...cognitoParams,
-        {
-          Name: "name",
-          Value: userName,
-        },
-        {
-          Name: "email",
-          Value: !!body.data.newEmail ? body.data.newEmail : body.email,
-        },
-      ],
-      body.email
-    );
+    await cognitoService.cognitoAdminUpdateNewUser(cognitoUpdateParams, body.email);
   } catch (error) {
     throw new Error(
       JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(body.language))
@@ -779,6 +783,7 @@ async function adminUpdateNewUser(body, accessToken) {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
+          body: JSON.stringify(body),
           accessToken: maskKeyRandomly(accessToken),
           privateMode,
         },
@@ -849,17 +854,17 @@ async function adminUpdateNewUser(body, accessToken) {
       userDB && userDB.id ? userDB.id : undefined,
       isNewEmailExisted
     );
+    let membership =
+      JSON.stringify(
+        {code: 200,mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",message: messageLang("update_success", body.language)}
+    );
     loggerService.log(
       {
         user: {
           userEmail: body.email,
           layer: "usersService.adminUpdateNewUser",
           response: {
-            membership: {
-              code: 200,
-              mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",
-              message: messageLang("update_success", body.language),
-            },
+            membership: membership,
             status: "success",
             statusCode: 200,
           },
