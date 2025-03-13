@@ -72,3 +72,27 @@ CREATE TABLE `emp_membership_user_passes_co_member` (
   KEY `idx_pass_id` (`pass_id`),
   KEY `idx_picked` (`picked`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: user_migration_membership_passes
+CREATE TABLE `user_migration_membership_passes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `pass_id` int DEFAULT NULL,
+  `dispatch_sqs` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `pass_request` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `pass_success` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `co_member_request` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `co_member_success` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `passkit_req` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `passkit_success` tinyint(1) DEFAULT NULL COMMENT '0: no, 1: yes',
+  `batch_no` timestamp NULL DEFAULT NULL,
+  `pass_type` tinyint DEFAULT NULL COMMENT '1: wp, 2: membership',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_email_pass_id` (`email`,`pass_id`),
+  KEY `idx_email` (`email`),
+  KEY `idx_pass_type` (`pass_type`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

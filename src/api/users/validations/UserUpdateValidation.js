@@ -1,6 +1,7 @@
 const { validateDOB } = require("../../../services/validationService");
 const CommonErrors = require("../../../config/https/errors/common");
 const { passwordPattern } = require("../../../utils/common");
+const emailDomainService = require("../../../services/emailDomainsService");
 
 class UserUpdateValidation {
   constructor() {
@@ -8,7 +9,7 @@ class UserUpdateValidation {
   }
 
   //enhance get list error
-  static validateRequestParams(req) {
+  static async validateRequestParams(req) {
     if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
@@ -40,6 +41,30 @@ class UserUpdateValidation {
       ));
     }
 
+    if (bodyData.newEmail && !emailDomainService.isValidEmailFormat(bodyData.newEmail)) {
+      return (this.error = CommonErrors.BadRequest(
+        "newEmail",
+        "newEmail_invalid",
+        req.language
+      ));
+    }
+
+    // check email domain switch turned on ( 1 ) if email format is passed
+    if (bodyData.newEmail && emailDomainService.isValidEmailFormat(bodyData.newEmail)) {
+      if ((await emailDomainService.getCheckDomainSwitch()) === true) {
+        // validate email domain to DB
+        let validDomain = await emailDomainService.validateEmailDomain(bodyData.newEmail);
+        if (!validDomain) {
+          return (this.error = CommonErrors.BadRequest(
+              "newEmail",
+              "newEmail_invalid",
+              req.language
+          ));
+        }
+      }
+    }
+
+
     if (bodyData.dob || bodyData.dob === "") {
       const dob = validateDOB(bodyData.dob);
       if (!dob) {
@@ -58,8 +83,8 @@ class UserUpdateValidation {
       ));
     }
     if (
-        bodyData.newsletter &&
-        bodyData.newsletter.name &&
+      bodyData.newsletter &&
+      bodyData.newsletter.name &&
       !["wildpass", "membership"].includes(bodyData.newsletter.name)
     ) {
       return (this.error = CommonErrors.BadRequest(

@@ -12,6 +12,8 @@ const {
   validateEmail,
   AccessTokenAuthGuard,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
+  validateEmailDisposable,
+  lowercaseTrimKeyValueString,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -19,7 +21,6 @@ const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/common");
-const loggerService = require("../../logs/logger");
 
 const pong = { pong: "pang" };
 
@@ -62,9 +63,6 @@ router.post("/users", isEmptyRequest, validateEmail, async (req, res) => {
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
       req.apiTimer.end("Route CIAM Signup New User Error", startTimer);
-      console.error("[CIAM-MAIN] Route CIAM Signup New User Error", req.body);
-      loggerService.error(new Error(`Route CIAM Signup New User Error ${error}`), req, "CIAM signup");
-
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
@@ -135,14 +133,20 @@ router.put(
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        const accessToken =
+        let accessToken =
           req.headers && req.headers.authorization
             ? req.headers.authorization.toString()
             : "";
+        if (accessToken && res.newAccessToken) {
+          accessToken = res.newAccessToken;
+        }
         const updateRs = await userController.adminUpdateNewUser(
           req,
           accessToken
         );
+        if (res.newAccessToken) {
+          updateRs.membership.accessToken = res.newAccessToken;
+        }
         req.apiTimer.end("Route CIAM Update New User Success", startTimer);
         return res.status(updateRs.statusCode).send(updateRs);
       } catch (error) {
@@ -317,7 +321,11 @@ router.post(
 /**
  * User Logout API (Method DELETE)
  */
-router.delete("/users/sessions", AccessTokenAuthGuard, async (req, res) => {
+router.delete("/users/sessions",
+  isEmptyRequest,
+  AccessTokenAuthGuard,
+  validateEmailDisposable,
+  async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -330,11 +338,17 @@ router.delete("/users/sessions", AccessTokenAuthGuard, async (req, res) => {
     );
     return res.status(401).send({ message: "Unauthorized" });
   }
-  const accessToken = req.headers.authorization.toString();
+  let accessToken =
+    req.headers && req.headers.authorization
+       ? req.headers.authorization.toString()
+       : "";
+  if (accessToken && res.newAccessToken) {
+     accessToken = res.newAccessToken;
+  }
   try {
     const data = await userController.userLogout(
       accessToken,
-      req.query.language
+      req.body
     );
     return res.status(data.statusCode).json(data);
   } catch (error) {
@@ -441,8 +455,8 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
 router.post(
   "/users/membership-passes",
   isEmptyRequest,
-  validateEmail,
   AccessTokenAuthGuard,
+  lowercaseTrimKeyValueString,
   async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
@@ -461,6 +475,9 @@ router.post(
 
     try {
       const data = await userController.userGetMembershipPasses(req.body);
+      if (res.newAccessToken) {
+        data.membership.accessToken = res.newAccessToken;
+      }
       return res.status(data.statusCode).json(data);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
@@ -507,19 +524,24 @@ router.post("/token/verify", isEmptyRequest, async (req, res) => {
 });
 
 /**
- * Create Membership Pass
- * @param {JSON} req
- * @param {JSON} res
- * @returns
+ * API - Create Membership Pass
  */
 router.post(
   "/users/my-membership",
   isEmptyRequest,
+  validateEmail,
+  lowercaseTrimKeyValueString,
   userController.userCreateMembershipPass
 );
+
+/**
+ * API - Update Membership Pass
+ */
 router.put(
   "/users/my-membership",
   isEmptyRequest,
+  validateEmail,
+  lowercaseTrimKeyValueString,
   userController.userUpdateMembershipPass
 );
 

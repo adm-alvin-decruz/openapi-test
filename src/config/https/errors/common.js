@@ -62,12 +62,12 @@ class CommonErrors {
   static OldPasswordNotMatchErr(lang) {
     return {
       membership: {
-        code: 401,
+        code: 200,
         mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
         message: messageLang("oldPassword_invalid", lang),
       },
       status: "failed",
-      statusCode: 401,
+      statusCode: 200,
     };
   }
   static UnauthorizedException(lang) {

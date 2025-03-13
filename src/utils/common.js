@@ -40,6 +40,14 @@ const passwordPattern = (password) => {
   return regexPasswordValid.test(password.toString());
 };
 
+const emailPattern = (email) => {
+  const regexEmailValid = new RegExp(
+    "^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$",
+    "g"
+  );
+  return regexEmailValid.test(email.toString());
+};
+
 const generateSecretHash = (keyword) => {
   const clientId = process.env.USER_POOL_CLIENT_ID;
   const clientSecret = process.env.USER_POOL_CLIENT_SECRET;
@@ -70,7 +78,7 @@ const omit = (obj, excludeKeys) => {
 };
 
 const maskKeyRandomly = (key) => {
-  if (key.length <= 3) {
+  if (key.length <= 3 || !key) {
     return "***"; // If key is too short, return as is
   }
 
@@ -98,4 +106,5 @@ module.exports = {
   formatPhoneNumber,
   omit,
   maskKeyRandomly,
+  emailPattern,
 };

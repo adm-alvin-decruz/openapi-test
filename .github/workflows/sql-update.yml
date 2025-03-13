@@ -59,7 +59,7 @@ jobs:
           ERROR_LOG=$(mktemp)
           # Run mysqldump with all specified parameters and capture both output and errors
           if ! mysqldump -h "$DB_SERVER_ENDPOINT" -P 3306 --ssl -u "$DB_USERNAME" -p$DB_PASSWORD \
-            --single-transaction --routines --triggers -B ciam -y 2>"$ERROR_LOG" | gzip > "$BACKUP_FILE"; then
+            --single-transaction --routines --triggers --events -B ciam -y 2>"$ERROR_LOG" | gzip > "$BACKUP_FILE"; then
             echo "mysqldump failed with error:"
             cat "$ERROR_LOG"
             rm "$ERROR_LOG"

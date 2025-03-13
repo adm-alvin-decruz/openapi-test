@@ -1,7 +1,5 @@
 const GROUP = {
   WILD_PASS: "wildpass",
-  FOW: "fow",
-  FOW_PLUS: "fow+",
   MEMBERSHIP_PASSES: "membership-passes"
 };
 

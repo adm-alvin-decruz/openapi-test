@@ -19,6 +19,7 @@ jest.mock("../../../services/validationService", () => ({
 }));
 jest.mock("../../../db/models/userCredentialModel", () => ({
   findByUserEmail: jest.fn(),
+  findByUserEmailOrMandaiId: jest.fn(),
 }));
 jest.mock("../../../api/users/usersContollers", () => ({
   userLogin: jest.fn(),
@@ -191,12 +192,16 @@ describe("User Routes", () => {
   });
   describe("DELETE:/users/sessions - Logout API", () => {
     it("should return 401 if accessToken authorization not pass", async () => {
-      const response = await request(app).delete("/users/sessions", {
-        headers: {
-          authorization: "",
-          "mwg-app-id": "aem",
-        },
-      });
+      const response = await request(app)
+        .delete("/users/sessions", {
+          headers: {
+            authorization: "",
+            "mwg-app-id": "aem",
+          },
+        })
+        .send({
+          email: "example@gmail.com",
+        });
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({
@@ -211,12 +216,16 @@ describe("User Routes", () => {
     });
     it("should return 401 if app ID is invalid", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(false);
-      const response = await request(app).delete("/users/sessions", {
-        headers: {
-          authorization: "123abcde",
-          "mwg-app-id": "aem",
-        },
-      });
+      const response = await request(app)
+        .delete("/users/sessions", {
+          headers: {
+            authorization: "123abcde",
+            "mwg-app-id": "aem",
+          },
+        })
+        .send({
+          email: "example@gmail.com",
+        });
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({
@@ -231,22 +240,24 @@ describe("User Routes", () => {
     });
     it("should return 200 and logout successfully", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
-        tokens: {
-          idToken: "123",
-        },
-      });
-      mockVerifier.verify
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
-        })
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
+      jest.spyOn(emailDomainService, "emailFormatTest").mockReturnValue(true);
+      jest
+        .spyOn(emailDomainService, "getCheckDomainSwitch")
+        .mockResolvedValue(false);
+      jest
+        .spyOn(userCredentialModel, "findByUserEmailOrMandaiId")
+        .mockResolvedValue({
+          tokens: {
+            accessToken: "123asewe",
+            refreshToken: "refdres",
+          },
         });
+
+      mockVerifier.verify.mockResolvedValueOnce({
+        email: "test@gmail.com",
+        exp: 1736420606,
+        username: "test@gmail.com",
+      });
       jest.spyOn(userController, "userLogout").mockResolvedValue({
         membership: {
           code: 200,
@@ -810,22 +821,23 @@ describe("User Routes", () => {
     });
     it("should return error when service not pass", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
-        tokens: {
-          idToken: "123",
-        },
-      });
-      mockVerifier.verify
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
-        })
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
+      jest.spyOn(emailDomainService, "emailFormatTest").mockReturnValue(true);
+      jest
+        .spyOn(emailDomainService, "getCheckDomainSwitch")
+        .mockResolvedValue(false);
+      jest
+        .spyOn(userCredentialModel, "findByUserEmailOrMandaiId")
+        .mockResolvedValue({
+          tokens: {
+            accessToken: "123123aaasdsd",
+            refreshToken: "refdres",
+          },
         });
+      mockVerifier.verify.mockResolvedValueOnce({
+        email: "test@gmail.com",
+        exp: 1736420606,
+        username: "test@gmail.com",
+      });
       jest.spyOn(userController, "userGetMembershipPasses").mockRejectedValue(
         new Error(
           JSON.stringify({
@@ -865,22 +877,24 @@ describe("User Routes", () => {
     });
     it("should return 200 and my membership result", async () => {
       jest.spyOn(validationService, "validateAppID").mockReturnValue(true);
-      jest.spyOn(userCredentialModel, "findByUserEmail").mockResolvedValue({
-        tokens: {
-          idToken: "123",
-        },
-      });
-      mockVerifier.verify
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
-        })
-        .mockResolvedValueOnce({
-          email: "test@gmail.com",
-          exp: 1736420606,
-          username: "test@gmail.com",
+      jest.spyOn(emailDomainService, "emailFormatTest").mockReturnValue(true);
+      jest
+        .spyOn(emailDomainService, "getCheckDomainSwitch")
+        .mockResolvedValue(false);
+      jest
+        .spyOn(userCredentialModel, "findByUserEmailOrMandaiId")
+        .mockResolvedValue({
+          tokens: {
+            accessToken: "123vwe123",
+            refreshToken: "refdres",
+          },
         });
+      mockVerifier.verify.mockResolvedValueOnce({
+        email: "test@gmail.com",
+        exp: 1736420606,
+        username: "test@gmail.com",
+      });
+
       jest.spyOn(userController, "userGetMembershipPasses").mockResolvedValue({
         membership: {
           code: 200,

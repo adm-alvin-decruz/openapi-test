@@ -1,3 +1,7 @@
+DROP TABLE passkit_registrations;
+DROP TABLE passkit_passes;
+DROP TABLE passkit_devices;
+
 CREATE TABLE passkit_devices (
     id INT(11) NOT NULL AUTO_INCREMENT,
     device_library_identifier VARCHAR(64) NOT NULL,
@@ -12,11 +16,16 @@ CREATE TABLE passkit_devices (
 CREATE TABLE passkit_passes (
     id INT(11) NOT NULL AUTO_INCREMENT,
     pass_type_identifier VARCHAR(128) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    expiry_date DATE NOT NULL,
+    membership_type VARCHAR(100) NOT NULL,
+    family_members JSON NOT NULL,
     serial_number VARCHAR(32) NOT NULL,
     pass_type VARCHAR(16) NOT NULL,
     mandai_id VARCHAR(32) NOT NULL,
-    created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY unique_pass (pass_type, serial_number),
     KEY idx_pass_type_id (pass_type_identifier),

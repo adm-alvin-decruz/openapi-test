@@ -1,12 +1,6 @@
 // use dotenv
 require("dotenv").config();
 
-const {
-  CognitoIdentityProviderClient,
-  AdminSetUserPasswordCommand,
-} = require("@aws-sdk/client-cognito-identity-provider");
-const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
-
 const usersService = require("./usersServices");
 const validationService = require("../../services/validationService");
 const commonService = require("../../services/commonService");
@@ -33,26 +27,7 @@ const UserValidateResetPasswordValidation = require("./validations/UserValidateR
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
 const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
-
-/**
- * Function listAll users
- *
- * @returns array all users in userspool
- */
-async function listAll() {
-  const command = new ListUsersCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-  });
-
-  try {
-    var response = await client.send(command);
-  } catch (error) {
-    if (process.env.APP_LOG_SWITCH) {
-      console.log(error);
-    }
-  }
-  return response;
-}
+const { maskKeyRandomly } = require("../../utils/common");
 
 /**
  * Create user using admin function
@@ -76,13 +51,15 @@ async function adminCreateUser(req) {
     try {
       let response;
       // check if user exist
-      var memberExist = await usersService.getUserMembership(req);
+      var membershipData = await usersService.getUserMembership(req);
 
-      // if signup check aem flag true, check user exist in AEM
-      let aemNoMembership;
       let responseSource = "ciam";
 
-      if (memberExist.status === "success" || aemNoMembership === "false") {
+      // if member already has wildpass
+      if (
+        membershipData.status === "hasWildpass" ||
+        membershipData.status === "success"
+      ) {
         // prepare response
         let errorConfig = usersService.processError(
           req.body,
@@ -110,7 +87,7 @@ async function adminCreateUser(req) {
         response["source"] = responseSource;
         return response;
       } else {
-        response = await usersService.userSignup(req);
+        response = await usersService.userSignup(req, membershipData);
       }
 
       return response;
@@ -149,13 +126,51 @@ async function adminCreateUser(req) {
  * User created and with password FOW/FOW+
  */
 async function adminCreateNewUser(req) {
+  loggerService.log(
+    {
+      user: {
+        membership: req.body.group,
+        action: "adminCreateNewUser",
+        api_header: req.headers,
+        api_body: req.body,
+        layer: "controller.adminCreateNewUser",
+      },
+    },
+    "[CIAM] Start Signup with FOs Request"
+  );
   const message = UserSignUpValidation.execute(req.body);
   if (!!message) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminCreateNewUser",
+          layer: "controller.adminCreateNewUser",
+          response_to_client: `${message}`,
+        },
+      },
+      {},
+      "[CIAM] End Signup with FOs Request - Failed"
+    );
     throw new Error(JSON.stringify(message));
   }
   try {
     return await UserSignupJob.perform(req);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminCreateNewUser",
+          layer: "controller.adminCreateNewUser",
+          api_header: req.headers,
+          api_body: req.body,
+          response_to_client: `${error}`,
+        },
+      },
+      {},
+      "userUpdateMembershipPass End Request"
+    );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -284,13 +299,55 @@ async function adminUpdateUser(req, listedParams) {
 }
 
 async function adminUpdateNewUser(req, token) {
-  const message = UserUpdateValidation.execute(req.body);
+  loggerService.log(
+    {
+      user: {
+        membership: req.body.group,
+        action: "adminUpdateNewUser",
+        api_header: req.headers,
+        api_body: JSON.stringify(req.body),
+        layer: "controller.adminUpdateNewUser",
+        token: maskKeyRandomly(token),
+      },
+    },
+    "[CIAM] Start Update User with FOs Request"
+  );
+  const message = await UserUpdateValidation.execute(req.body);
   if (!!message) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminUpdateNewUser",
+          api_header: req.headers,
+          api_body: JSON.stringify(req.body),
+          layer: "controller.adminUpdateNewUser",
+          token: maskKeyRandomly(token),
+        },
+      },
+      {},
+      "[CIAM] End Update User with FOs Request - Failed"
+    );
     throw new Error(JSON.stringify(message));
   }
   try {
     return await usersService.adminUpdateNewUser(req.body, token);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          membership: req.body.group,
+          action: "adminUpdateNewUser",
+          api_header: req.headers,
+          api_body: JSON.stringify(req.body),
+          layer: "controller.adminUpdateNewUser",
+          token: maskKeyRandomly(token),
+          error: `${error}`,
+        },
+      },
+      {},
+      "[CIAM] End Update User with FOs Request - Failed"
+    );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -430,45 +487,65 @@ async function getUser(req) {
 }
 
 /**
- * User flow step 2 after signup
- * TODO: Move to user service
- *
- * User created and in "force change password" status
- * Send Admin set user password
- */
-async function adminSetUserPassword() {
-  var setPasswordParams = new AdminSetUserPasswordCommand({
-    UserPoolId: process.env.USER_POOL_ID,
-    Username: "vinki",
-    Password: "Password123##",
-    Permanent: true,
-  });
-
-  try {
-    var response = await client.send(setPasswordParams);
-    console.log(response);
-  } catch (error) {
-    console.log(error);
-  }
-}
-/**
  * TODO: Move to user service
  *
  * @returns
  */
 async function userLogin(req) {
   try {
+    loggerService.log(
+      {
+        user: {
+          email: req.body.email,
+          password: maskKeyRandomly(req.body.password),
+          layer: "controller.userLogin",
+        },
+      },
+      "[CIAM] Start Login Request"
+    );
     return await UserLoginJob.perform(req);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          email: req.body.email,
+          password: maskKeyRandomly(req.body.password),
+          layer: "controller.userLogin",
+          error: `${error}`,
+        },
+      },
+      {},
+      "[CIAM] End Login Request - Failed"
+    );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
 }
 
-async function userLogout(token, lang) {
+async function userLogout(token, body) {
   try {
-    return await UserLogoutJob.perform(token, lang);
+    loggerService.log(
+      {
+        user: {
+          token: maskKeyRandomly(token),
+          layer: "controller.userLogout",
+        },
+      },
+      "[CIAM] Start Logout Request"
+    );
+    return await UserLogoutJob.perform(token, body);
   } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          token: maskKeyRandomly(token),
+          layer: "controller.userLogout",
+          error: new Error(error),
+        },
+      },
+      {},
+      "[CIAM] End Logout Request - Failed"
+    );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
   }
@@ -476,8 +553,27 @@ async function userLogout(token, lang) {
 
 async function userResetPassword(req) {
   try {
+    loggerService.log(
+      {
+        user: {
+          email: req.body.email,
+          layer: "controller.userLogout",
+        },
+      },
+      "[CIAM] Start userResetPassword Request"
+    );
     return await UserResetPasswordJob.perform(req);
   } catch (error) {
+    loggerService.log(
+      {
+        user: {
+          email: req.body.email,
+          layer: "controller.userLogout",
+          error: `${error}`,
+        },
+      },
+      "[CIAM] End userResetPassword Request - Failed"
+    );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
@@ -525,13 +621,45 @@ async function userConfirmResetPassword(body) {
 }
 
 async function userGetMembershipPasses(body) {
+  loggerService.log(
+    {
+      user: {
+        action: "userGetMembershipPasses",
+        api_body: body,
+        layer: "controller.userGetMembershipPasses",
+      },
+    },
+    "[CIAM] userGetMembershipPasses Start Request"
+  );
   const message = UserGetMembershipPassesValidation.execute(body);
   if (!!message) {
+    loggerService.log(
+      {
+        user: {
+          action: "userGetMembershipPasses",
+          api_body: body,
+          response: `${message}`,
+          layer: "controller.userGetMembershipPasses",
+        },
+      },
+      "[CIAM] End userGetMembershipPasses Request - Failed"
+    );
     throw new Error(JSON.stringify(message));
   }
   try {
     return await UserGetMembershipPassesJob.perform(body);
   } catch (error) {
+    loggerService.log(
+      {
+        user: {
+          action: "userGetMembershipPasses",
+          api_body: body,
+          response: `${error}`,
+          layer: "controller.userGetMembershipPasses",
+        },
+      },
+      "[CIAM] End userGetMembershipPasses Request - Failed"
+    );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
@@ -568,7 +696,7 @@ async function userCreateMembershipPass(req, res) {
         layer: "controller.userCreateMembershipPass",
       },
     },
-    "userCreateMembershipPass Start Request"
+    "[CIAM] userCreateMembershipPass Start Request"
   );
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
@@ -583,28 +711,45 @@ async function userCreateMembershipPass(req, res) {
   }
 
   const message =
-    UserMembershipPassValidation.validateCreateUserMembershipPass(req);
+    await UserMembershipPassValidation.validateCreateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {
         user: {
           membership: req.body.group,
-          action: "userCreateMembershipPass",
+          action: "userCreateMembershipPass Validation",
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: message,
+          response_to_client: `${message}`,
         },
       },
       {},
-      "userCreateMembershipPass End Request"
+      "[CIAM] userCreateMembershipPass End Request"
     );
     return res.status(400).json(message);
   }
 
   try {
     const data = await userCreateMembershipPassJob.perform(req);
+
     loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action:
+            "userCreateMembershipPass call userCreateMembershipPassJob.perform",
+          layer: "controller.userCreateMembershipPass",
+          api_header: req.headers,
+          api_body: JSON.stringify(req.body),
+          response_from_client: JSON.stringify(data),
+        },
+      },
+      "[CIAM] userCreateMembershipPass End Request - Success"
+    );
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    loggerService.error(
       {
         user: {
           membership: req.body.group,
@@ -612,26 +757,11 @@ async function userCreateMembershipPass(req, res) {
           layer: "controller.userCreateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: data,
+          response_to_client: error,
         },
       },
-      "userCreateMembershipPass End Request - Success"
-    );
-    return res.status(data.statusCode).json(data);
-  } catch (error) {
-    loggerService.error(
-        {
-          user: {
-            membership: req.body.group,
-            action: "userCreateMembershipPass",
-            layer: "controller.userCreateMembershipPass",
-            api_header: req.headers,
-            api_body: req.body,
-            response_to_client: error,
-          },
-        },
-        {},
-        "userCreateMembershipPass End Request"
+      {},
+      "[CIAM] userCreateMembershipPass End Request"
     );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);
@@ -653,7 +783,7 @@ async function userUpdateMembershipPass(req, res) {
         layer: "controller.userUpdateMembershipPass",
       },
     },
-    "userUpdateMembershipPass Start Request"
+    "[CIAM] userUpdateMembershipPass Start Request"
   );
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
@@ -668,7 +798,7 @@ async function userUpdateMembershipPass(req, res) {
   }
 
   const message =
-    UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
+    await UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
   if (!!message) {
     loggerService.error(
       {
@@ -678,11 +808,11 @@ async function userUpdateMembershipPass(req, res) {
           layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: message,
+          response_to_client: `${message}`,
         },
       },
       {},
-      "userUpdateMembershipPass End Request"
+      "[CIAM] userUpdateMembershipPass End Request"
     );
     return res.status(400).json(message);
   }
@@ -700,7 +830,7 @@ async function userUpdateMembershipPass(req, res) {
           response_to_client: data,
         },
       },
-      "userUpdateMembershipPass End Request - Success"
+      "[CIAM] userUpdateMembershipPass End Request - Success"
     );
     return res.status(data.statusCode).json(data);
   } catch (error) {
@@ -712,11 +842,11 @@ async function userUpdateMembershipPass(req, res) {
           layer: "controller.userUpdateMembershipPass",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: error,
+          response_to_client: `${error}`,
         },
       },
       {},
-      "userUpdateMembershipPass End Request"
+      "[CIAM] userUpdateMembershipPass End Request"
     );
     const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).json(errorMessage);

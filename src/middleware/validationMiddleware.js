@@ -4,6 +4,7 @@ const loggerService = require("../logs/logger");
 const CommonErrors = require("../config/https/errors/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
+const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
 
 /**
@@ -14,11 +15,40 @@ const { GROUP } = require("../utils/constants");
  * @returns
  */
 function isEmptyRequest(req, res, next) {
-  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
     if (Object.keys(req.body).length === 0) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
   }
+  next();
+}
+
+async function validateEmailDisposable(req, res, next) {
+  if (!req.body.email) {
+    return next();
+  }
+
+  // Convert email to lowercase
+  const normalizedEmail = req.body.email.trim().toLowerCase();
+
+  // optional: You can add more robust email validation here
+  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
+    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
+    return resStatusFormatter(res, 400, "The email is invalid");
+  }
+
+  // if check domain switch turned on ( 1 )
+  if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
+    // validate email domain to DB
+    let validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
+    if (!validDomain) {
+      return resStatusFormatter(res, 400, "The email is invalid");
+    }
+  }
+
+  // update the email in the request body with the normalized version
+  req.body.email = normalizedEmail;
+
   next();
 }
 
@@ -30,26 +60,55 @@ async function validateEmail(req, res, next) {
     return resStatusFormatter(res, 400, msg);
   }
 
-  // optional: You can add more robust email validation here
-  if (!(await EmailDomainService.emailFormatTest(email))) {
-    loggerService.error(`Invalid email format ${email}`, req.body);
-    return resStatusFormatter(res, 400, msg);
-  }
+  return await validateEmailDisposable(req, res, next);
+}
 
-  // if check domain switch turned on ( 1 )
-  if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
-    // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(email);
-    if (!validDomain) {
-      return resStatusFormatter(res, 400, msg);
+//only use it when combine with emptyRequest middleware
+async function lowercaseTrimKeyValueString(req, res, next) {
+  const keysAcceptedLower = ['passType'];
+  const keysAcceptedTrim = ['mandaiId', 'visualId', 'firstName', 'lastName'];
+  const keysAcceptedTrimAndLower = ['email'];
+  const keysRequest = Object.entries(req.body);
+  req.body = keysRequest.reduce((rs, [key, value]) => {
+    if (keysAcceptedLower.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.toLowerCase();
+      return rs;
     }
-  }
-
+    if (keysAcceptedTrim.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.trim();
+      return rs;
+    }
+    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === 'string') {
+      rs[key] = value.toLowerCase().trim();
+      return rs;
+    }
+    rs[key] = value;
+    return rs;
+  }, {})
   next();
 }
 
 function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
+}
+
+async function refreshToken(credentialInfo) {
+  try {
+    const refreshTokenRs = await cognitoService.cognitoRefreshToken(
+      credentialInfo.tokens.refreshToken,
+      credentialInfo.tokens.userSubId
+    );
+    await userCredentialModel.updateByUserId(credentialInfo.user_id, {
+      tokens: JSON.stringify({
+        ...credentialInfo.tokens,
+        accessToken: refreshTokenRs.AuthenticationResult.AccessToken,
+        idToken: refreshTokenRs.AuthenticationResult.IdToken,
+      }),
+    });
+    return refreshTokenRs.AuthenticationResult.AccessToken;
+  } catch (error) {
+    return undefined;
+  }
 }
 
 async function AccessTokenAuthGuard(req, res, next) {
@@ -59,53 +118,63 @@ async function AccessTokenAuthGuard(req, res, next) {
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  if (!req.body || !req.body.email) {
+  if (!req.body || (!req.body.email && !req.body.mandaiId)) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  const userCredentials = await userCredentialModel.findByUserEmail(
-    req.body.email
+
+  const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
+    req.body.email || '',
+      req.body.mandaiId || ''
   );
+
   if (
     !userCredentials ||
     !userCredentials.tokens ||
-    !userCredentials.tokens.idToken
+    !userCredentials.tokens.accessToken ||
+    !userCredentials.tokens.refreshToken ||
+    userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  const verifier = CognitoJwtVerifier.create({
-    userPoolId: process.env.USER_POOL_ID,
-    tokenUse: "id",
-    clientId: process.env.USER_POOL_CLIENT_ID,
-  });
   const verifierAccessToken = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
     tokenUse: "access",
     clientId: process.env.USER_POOL_CLIENT_ID,
   });
   try {
-    const payload = await verifier.verify(userCredentials.tokens.idToken);
     const payloadAccessToken = await verifierAccessToken.verify(
       req.headers.authorization
     );
-    if (payload.email !== req.body.email) {
-      return res
-        .status(401)
-        .json(CommonErrors.UnauthorizedException(req.body.language));
-    }
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res
         .status(401)
         .json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
-    loggerService.error(new Error(
-      `ValidationMiddleware.AccessTokenAuthGuard Error - payload: ${error}:`,
-      req.body
-    ));
+    if (error && error.message && error.message.includes("Token expired at")) {
+      const newAccessToken = await refreshToken(userCredentials);
+      if (newAccessToken) {
+        res.newAccessToken = newAccessToken;
+        return next();
+      } else {
+        return res
+          .status(401)
+          .json(CommonErrors.UnauthorizedException(req.body.language));
+      }
+    }
+
+    loggerService.error(
+      {
+        body: req.body,
+        error: `${error}`,
+      },
+      {},
+      "AccessTokenAuthGuard Middleware Failed"
+    );
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
@@ -129,4 +198,6 @@ module.exports = {
   resStatusFormatter,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   AccessTokenAuthGuard,
+  validateEmailDisposable,
+  lowercaseTrimKeyValueString
 };
