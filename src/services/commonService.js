@@ -386,6 +386,73 @@ function getDateTimeUTC8() {
   return `${year}-${month}-${day} 00:00:00`;
 }
 
+function cleanPhoneNumber(phoneNumber) {
+  // Return null for empty, undefined, or explicitly marked empty inputs
+  if (!phoneNumber || phoneNumber === '-') {
+    return null;
+  }
+
+  // Remove all non-digit characters except the plus sign
+  let cleaned = phoneNumber.replace(/[^\d+]/g, '');
+
+  // Handle phone numbers with no digits
+  if (cleaned.replace('+', '').length === 0) {
+    return null;
+  }
+
+  // Remove any non-leading plus signs
+  if (cleaned.indexOf('+') > 0) {
+    cleaned = cleaned.replace(/\+/g, '');
+    cleaned = '+' + cleaned;
+  } else if (!cleaned.startsWith('+')) {
+    // Add leading + if it doesn't exist
+    cleaned = '+65' + cleaned;
+  }
+
+  // Handle common problems
+
+  // Problem 1: Double country codes
+  // Example: +65 +81 -9044266787 -> has both +65 and +81
+  if (/^\+\d{2,3}\+\d{2,3}/.test(cleaned)) {
+    // Take the second country code as the correct one (assumption)
+    const match = cleaned.match(/^\+\d{2,3}(\+\d{2,3}.*)/);
+    if (match) {
+      cleaned = match[1];
+    }
+  }
+
+  // Problem 2: Missing or incomplete country codes
+  if (cleaned.length < 8) {
+    // Too short to be valid
+    return null;
+  }
+
+  // Problem 3: Handle North American numbers with leading 1
+  // If number starts with +1 and has 11 digits total, assume it's a valid North American number
+  if (cleaned.startsWith('+1') && cleaned.length === 12) {
+    return cleaned;
+  }
+
+  // Problem 4: Check for unreasonably long numbers
+  if (cleaned.length > 16) {
+    // E.164 numbers are typically 15 digits or less (including country code)
+    // Try to extract a valid number from the beginning
+    const possibleNumber = cleaned.substring(0, 15);
+    if (/^\+\d{1,3}\d{6,12}$/.test(possibleNumber)) {
+      return possibleNumber;
+    }
+    return null;
+  }
+
+  // Check if we have something that looks like a valid E.164 number
+  // Country code (1-3 digits) + national number (at least 6 digits)
+  if (/^\+\d{1,3}\d{6,12}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  return null;
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -405,5 +472,6 @@ module.exports = {
   convertUserAttrToNormJson,
   processUserUpdateErrors,
   getDateTimeUTC8,
-  valJsonObjOrArray
+  valJsonObjOrArray,
+  cleanPhoneNumber
 }
