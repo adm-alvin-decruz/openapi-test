@@ -102,6 +102,7 @@ module "lambda_function_ciam_membership" {
     EMAIL_SERVICE_API_KEY = var.EMAIL_SERVICE_API_KEY
     AEM_REQ_API_KEY = var.AEM_REQ_API_KEY
     NOPCOMMERCE_REQ_API_KEY = var.NOPCOMMERCE_REQ_API_KEY
+    NOPCOMMERCE_REQ_PRIVATE_API_KEY = var.NOPCOMMERCE_REQ_PRIVATE_API_KEY
   }
 #  allowed_triggers = {
 #    apigateway = {
