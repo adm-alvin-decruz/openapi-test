@@ -695,7 +695,7 @@ async function userCreateMembershipPass(req, res) {
         membership: req.body.group,
         action: "userCreateMembershipPass",
         api_header: req.headers,
-        api_body: req.body,
+        api_body: JSON.stringify(req.body),
         layer: "controller.userCreateMembershipPass",
       },
     },
@@ -719,12 +719,11 @@ async function userCreateMembershipPass(req, res) {
     loggerService.error(
       {
         user: {
+          userEmail: req.body.email,
           membership: req.body.group,
           action: "userCreateMembershipPass Validation",
           layer: "controller.userCreateMembershipPass",
-          api_header: req.headers,
-          api_body: req.body,
-          response_to_client: `${message}`,
+          response_to_client: JSON.stringify(message),
         },
       },
       {},
@@ -739,12 +738,11 @@ async function userCreateMembershipPass(req, res) {
     loggerService.log(
       {
         user: {
+          userEmail: req.body.email,
           membership: req.body.group,
           action:
             "userCreateMembershipPass call userCreateMembershipPassJob.perform",
           layer: "controller.userCreateMembershipPass",
-          api_header: req.headers,
-          api_body: JSON.stringify(req.body),
           response_from_client: JSON.stringify(data),
         },
       },
@@ -755,11 +753,10 @@ async function userCreateMembershipPass(req, res) {
     loggerService.error(
       {
         user: {
+          userEmail: req.body.email,
           membership: req.body.group,
           action: "userCreateMembershipPass",
           layer: "controller.userCreateMembershipPass",
-          api_header: req.headers,
-          api_body: req.body,
           response_to_client: error,
         },
       },
