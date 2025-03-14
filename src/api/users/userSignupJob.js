@@ -2,10 +2,6 @@ const UserSignupService = require("./userSignupService");
 const { messageLang } = require("../../utils/common");
 
 class UserSignupJob {
-  async execute(req) {
-    return await UserSignupService.signup(req);
-  }
-
   async perform(req) {
     try {
       const rs = await this.execute(req);
@@ -23,6 +19,16 @@ class UserSignupJob {
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));
     }
+  }
+
+  /**
+   * Execute the job
+   *
+   * @param {json} req
+   * @returns
+   */
+  async execute(req) {
+    return await UserSignupService.signup(req);
   }
 }
 
