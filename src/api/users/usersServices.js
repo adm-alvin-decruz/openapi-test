@@ -753,9 +753,7 @@ async function updateUserCognito(body, userCognito) {
               {Name: "name", Value: userName},
               {Name: "email", Value: !!body.data.newEmail ? body.data.newEmail : body.email}
             ];
-    // clean up phone number
-    let phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
-    if (phoneNumber === null || phoneNumber === undefined || phoneNumber.trim() === '') {
+    if (body.data.phoneNumber === null || body.data.phoneNumber === undefined || body.data.phoneNumber.trim() === '') {
       // find the index of the phone_number parameter
       const phoneIndex = cognitoUpdateParams.findIndex(cognitoUpdateParams =>
         cognitoUpdateParams.Name === 'phone_number'

@@ -333,6 +333,10 @@ async function adminUpdateNewUser(req, accessToken) {
     throw new Error(JSON.stringify(message));
   }
   try {
+    // clean up phone number
+    req.body.data.phoneNumber = commonService.cleanPhoneNumber(req.body.data.phoneNumber);
+    console.log("AAA", req.body);
+
     return await usersService.adminUpdateNewUser(req.body, accessToken);
   } catch (error) {
     loggerService.error(
