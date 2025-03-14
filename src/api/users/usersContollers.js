@@ -125,15 +125,15 @@ async function adminCreateUser(req) {
 /**
  * User created and with password FOW/FOW+
  */
-async function adminCreateNewUser(req) {
+async function adminCreateMPUser(req) {
   loggerService.log(
     {
       user: {
         membership: req.body.group,
-        action: "adminCreateNewUser",
+        action: "adminCreateMPUser",
         api_header: req.headers,
         api_body: req.body,
-        layer: "controller.adminCreateNewUser",
+        layer: "controller.adminCreateMPUser",
       },
     },
     "[CIAM] Start Signup with FOs Request"
@@ -144,8 +144,8 @@ async function adminCreateNewUser(req) {
       {
         user: {
           membership: req.body.group,
-          action: "adminCreateNewUser",
-          layer: "controller.adminCreateNewUser",
+          action: "adminCreateMPUser",
+          layer: "controller.adminCreateMPUser",
           response_to_client: `${message}`,
         },
       },
@@ -161,8 +161,8 @@ async function adminCreateNewUser(req) {
       {
         user: {
           membership: req.body.group,
-          action: "adminCreateNewUser",
-          layer: "controller.adminCreateNewUser",
+          action: "adminCreateMPUser",
+          layer: "controller.adminCreateMPUser",
           api_header: req.headers,
           api_body: req.body,
           response_to_client: `${error}`,
@@ -298,15 +298,15 @@ async function adminUpdateUser(req, listedParams) {
   }
 }
 
-async function adminUpdateNewUser(req, accessToken) {
+async function adminUpdateMPUser(req, accessToken) {
   loggerService.log(
     {
       user: {
         membership: req.body.group,
-        action: "adminUpdateNewUser",
+        action: "adminUpdateMPUser",
         api_header: req.headers,
         api_body: JSON.stringify(req.body),
-        layer: "controller.adminUpdateNewUser",
+        layer: "controller.adminUpdateMPUser",
         accessToken: maskKeyRandomly(accessToken),
         private_mode: !!req.body.privateMode,
       },
@@ -319,10 +319,10 @@ async function adminUpdateNewUser(req, accessToken) {
       {
         user: {
           membership: req.body.group,
-          action: "adminUpdateNewUser",
+          action: "adminUpdateMPUser",
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
-          layer: "controller.adminUpdateNewUser",
+          layer: "controller.adminUpdateMPUser",
           accessToken: maskKeyRandomly(accessToken),
           private_mode: !!req.body.privateMode
         },
@@ -333,20 +333,16 @@ async function adminUpdateNewUser(req, accessToken) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    // clean up phone number
-    req.body.data.phoneNumber = commonService.cleanPhoneNumber(req.body.data.phoneNumber);
-    console.log("AAA", req.body);
-
-    return await usersService.adminUpdateNewUser(req.body, accessToken);
+    return await usersService.adminUpdateMPUser(req.body, accessToken);
   } catch (error) {
     loggerService.error(
       {
         user: {
           membership: req.body.group,
-          action: "adminUpdateNewUser",
+          action: "adminUpdateMPUser",
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
-          layer: "controller.adminUpdateNewUser",
+          layer: "controller.adminUpdateMPUser",
           accessToken: maskKeyRandomly(accessToken),
           error: `${error}`,
           private_mode: !!req.body.privateMode
@@ -868,8 +864,8 @@ module.exports = {
   getUser,
   userLogin,
   userLogout,
-  adminCreateNewUser,
-  adminUpdateNewUser,
+  adminCreateMPUser,
+  adminUpdateMPUser,
   userResetPassword,
   userConfirmResetPassword,
   userValidateResetPassword,

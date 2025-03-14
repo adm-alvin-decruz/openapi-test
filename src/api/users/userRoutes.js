@@ -58,7 +58,7 @@ router.post("/users", isEmptyRequest, validateEmail, async (req, res) => {
   //#region Signup Membership Passes
   if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
     try {
-      const signupRs = await userController.adminCreateNewUser(req);
+      const signupRs = await userController.adminCreateMPUser(req);
       req.apiTimer.end("Route CIAM Signup New User Success", startTimer);
       return res.status(signupRs.statusCode).send(signupRs);
     } catch (error) {
@@ -140,7 +140,7 @@ router.put(
         if (accessToken && res.newAccessToken) {
           accessToken = res.newAccessToken;
         }
-        const updateRs = await userController.adminUpdateNewUser(
+        const updateRs = await userController.adminUpdateMPUser(
           req,
           accessToken
         );

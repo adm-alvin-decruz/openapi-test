@@ -49,7 +49,7 @@ router.put(
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
         req.body.privateMode = true;
-        const updateRs = await userController.adminUpdateNewUser(req, "");
+        const updateRs = await userController.adminUpdateMPUser(req, "");
         req.apiTimer.end(
           "Route CIAM Update Membership-Passes User Success",
           startTimer

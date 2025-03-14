@@ -773,21 +773,25 @@ async function updateUserCognito(body, userCognito) {
   }
 }
 
-async function adminUpdateNewUser(body, accessToken) {
+async function adminUpdateMPUser(body, accessToken) {
   const privateMode = !!body.privateMode;
-  try {
-    loggerService.log(
-      {
-        user: {
-          userEmail: body.email,
-          layer: "usersService.adminUpdateNewUser",
-          body: JSON.stringify(body),
-          accessToken: maskKeyRandomly(accessToken),
-          privateMode,
-        },
+  // logger
+  loggerService.log(
+    {
+      user: {
+        userEmail: body.email,
+        layer: "usersService.adminUpdateMPUser",
+        body: JSON.stringify(body),
+        accessToken: maskKeyRandomly(accessToken),
+        privateMode,
       },
-      "[CIAM] Start Update User FOs Service"
-    );
+    },
+    "[CIAM] Start Update User FOs Service"
+  );
+  // start update process
+  try {
+    // clean up phone number
+    body.data.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
     //get user from db
     const userDB = await userModel.findByEmail(body.email);
     //get user from cognito
@@ -860,7 +864,7 @@ async function adminUpdateNewUser(body, accessToken) {
       {
         user: {
           userEmail: body.email,
-          layer: "usersService.adminUpdateNewUser",
+          layer: "usersService.adminUpdateMPUser",
           response: {
             membership: membership,
             status: "success",
@@ -884,7 +888,7 @@ async function adminUpdateNewUser(body, accessToken) {
       {
         user: {
           userEmail: body.email,
-          layer: "usersService.adminUpdateNewUser",
+          layer: "usersService.adminUpdateMPUser",
           error: `${error}`,
         },
       },
@@ -1402,5 +1406,5 @@ module.exports = {
   processError,
   genSecretHash,
   processErrors,
-  adminUpdateNewUser,
+  adminUpdateMPUser,
 };
