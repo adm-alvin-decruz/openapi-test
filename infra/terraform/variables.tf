@@ -150,5 +150,9 @@ variable "AEM_REQ_API_KEY" {
 }
 
 variable "NOPCOMMERCE_REQ_API_KEY" {
-  description = "API Key for Nopcommerce"
+  description = "API Key for Nopcommerce Public endpoint"
+}
+
+variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
+  description = "API Key for Nopcommerce Private endpoint"
 }
