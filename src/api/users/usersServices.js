@@ -561,7 +561,8 @@ async function proceedUpdatePassword(
   emailCognito
 ) {
   try {
-    await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
+    let pass = await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
+    console.log("AAA", pass);
 
     //update password hash and new email if possible - prepare for login session
     await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
@@ -647,21 +648,11 @@ async function updatePassword(
   }
 }
 
-async function updatePasswordPrivateMode(
-  userCredentialInfo,
-  hashPassword,
-  newPassword,
-  email,
-  emailCognito,
-) {
+async function updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, email, emailCognito) {
+  console.log("AAA", newPassword);
   try {
-    await proceedUpdatePassword(
-        userCredentialInfo,
-        hashPassword,
-        newPassword,
-        email,
-        emailCognito
-    );
+    let proceedUpdatePasswordPvt = await proceedUpdatePassword(userCredentialInfo, hashPassword, newPassword, email, emailCognito);
+    console.log("BBB", proceedUpdatePasswordPvt);
   } catch (error) {
     loggerService.error(
       {
@@ -805,34 +796,26 @@ async function adminUpdateMPUser(body, accessToken) {
 
     //1st updatePassword -> if failed the process update user will stop
     //ad-hook - switch update password by private_mode
-    if (body.data && body.data.newPassword) {
-      const hashPassword = await passwordService.hashPassword(
-        body.data.newPassword.toString()
-      );
-      const userCredentialInfo = await userCredentialModel.findByUserEmail(
-        body.email
-      );
-      const latestEmail =
-        !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
-      if (privateMode) {
-        await updatePasswordPrivateMode(
-          userCredentialInfo,
-          hashPassword,
-          body.data.newPassword,
-          latestEmail,
-          body.email
-        );
-      } else {
-        await updatePassword(
-          userCredentialInfo,
-          hashPassword,
-          body.data.newPassword,
-          body.data.oldPassword,
-          latestEmail,
-          body.email,
-          accessToken,
-          body.language
-        );
+    if ((body.data && body.data.newPassword) || body.data.password){
+      // prepare hash password
+      try{
+        let newPassword = body.data.newPassword || null;
+        if (privateMode) {
+          newPassword = body.data.password;
+        }
+        const hashPassword = await passwordService.hashPassword(newPassword.toString());
+        const userCredentialInfo = await userCredentialModel.findByUserEmail(body.email);
+        const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
+
+        if (privateMode) {
+          await updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, latestEmail, body.email);
+        } else {
+          await updatePassword(
+            userCredentialInfo, hashPassword, newPassword, body.data.oldPassword, latestEmail, email, accessToken, body.language
+          );
+        }
+      } catch (error) {
+        console.log("AAA", error.stack);
       }
     }
 
