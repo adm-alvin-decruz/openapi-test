@@ -77,22 +77,30 @@ const omit = (obj, excludeKeys) => {
   );
 };
 
-const maskKeyRandomly = (key) => {
-  if (key.length <= 3 || !key) {
-    return "***"; // If key is too short, return as is
+const maskKeyRandomly = (str) => {
+  // Handle empty strings or null/undefined
+  if (!str) {
+    return "";
   }
 
-  const start = 3 || 0; // Keep first 3 characters
-  const end = key.length - 2 || 0; // Keep last 3 characters
+  // If string is too short (less than 11 characters), we can't show 3+5+3 pattern properly
+  if (str.length <= 10) {
+    // For very short strings, show at least first and last character if possible
+    if (str.length <= 2) {
+      return str;
+    } else if (str.length <= 6) {
+      return str[0] + "*".repeat(str.length - 2) + str[str.length - 1];
+    } else {
+      // For strings between 7-10 chars, show 2 chars at beginning and end with asterisks in middle
+      return str.substring(0, 2) + "*".repeat(3) + str.substring(str.length - 2);
+    }
+  }
 
-  // Choose a random starting position within the middle section
-  const maskPosition = Math.floor(Math.random() * (end - start - 2)) + start;
+  // For normal length strings, show first 3, middle 5 asterisks, and last 3
+  const firstPart = str.substring(0, 3);
+  const lastPart = str.substring(str.length - 3);
 
-  return (
-    key.substring(0, maskPosition) +
-    "*".repeat(maskPosition) +
-    key.substring(maskPosition + maskPosition)
-  );
+  return firstPart + "*****" + lastPart;
 };
 
 module.exports = {

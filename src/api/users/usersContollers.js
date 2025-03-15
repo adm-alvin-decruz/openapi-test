@@ -334,6 +334,11 @@ async function adminUpdateMPUser(req, accessToken) {
     throw new Error(JSON.stringify(message));
   }
   try {
+    // check if it is AEM call
+    const requestFromAEM = commonService.isRequestFromAEM(req.headers);
+    if(!requestFromAEM){
+      req.body.ncRequest = true;
+    }
     return await usersService.adminUpdateMPUser(req.body, accessToken);
   } catch (error) {
     loggerService.error(

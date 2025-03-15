@@ -100,12 +100,7 @@ router.post("/users", isEmptyRequest, validateEmail, async (req, res) => {
  *
  * Handling most HTTP validation here
  */
-router.put(
-  "/users",
-  isEmptyRequest,
-  validateEmail,
-  AccessTokenAuthGuardByAppIdGroupFOSeries,
-  async (req, res) => {
+router.put("/users", isEmptyRequest, validateEmail, AccessTokenAuthGuardByAppIdGroupFOSeries, async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     req.body.uuid = uuid;

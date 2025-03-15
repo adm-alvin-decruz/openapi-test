@@ -587,16 +587,7 @@ async function proceedUpdatePassword(
   }
 }
 
-async function updatePassword(
-  userCredentialInfo,
-  hashPassword,
-  newPassword,
-  oldPassword,
-  email,
-  emailCognito,
-  accessToken,
-  lang = "en"
-) {
+async function updatePassword(userCredentialInfo, hashPassword, newPassword, oldPassword, email, emailCognito, accessToken, lang = "en") {
   try {
     if (accessToken) {
       //accessToken is available it means Cognito will verify old password as well
@@ -750,6 +741,7 @@ async function updateUserCognito(body, userCognito) {
 
 async function adminUpdateMPUser(body, accessToken) {
   const privateMode = !!body.privateMode;
+  const ncRequest = !!body.ncRequest;
   // logger
   loggerService.log(
     {
@@ -800,14 +792,14 @@ async function adminUpdateMPUser(body, accessToken) {
       // prepare hash password
       try{
         let newPassword = body.data.newPassword || null;
-        if (privateMode) {
+        if (ncRequest) {
           newPassword = body.data.password;
         }
         const hashPassword = await passwordService.hashPassword(newPassword.toString());
         const userCredentialInfo = await userCredentialModel.findByUserEmail(body.email);
         const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
 
-        if (privateMode) {
+        if (ncRequest) {
           await updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, latestEmail, body.email);
         } else {
           await updatePassword(
