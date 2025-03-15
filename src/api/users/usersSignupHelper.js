@@ -384,10 +384,41 @@ async function updateUserMigration(req, dbUserID){
   }
 }
 
+
+async function signupMPWithUpdateIfExist(reqBody, userDBInfo){
+  // update user credential table
+  let userCredentialData = {
+    password_hash: reqBody.passwordHash ? reqBody.passwordHash : undefined,
+    salt: reqBody.passwordSalt ? reqBody.passwordSalt : null,
+  };
+  const userCredentialExistedUpdate = await userCredentialModel.updateByUserEmail(reqBody.email, userCredentialData);
+
+  // update user table
+  let userModelData = {
+    given_name: reqBody.firstName ? reqBody.firstName : undefined,
+    family_name: reqBody.lastName ? reqBody.lastName : undefined,
+    birthdate: reqBody.dob ? convertDateToMySQLFormat(reqBody.dob) : null,
+  };
+  const userExistedUpdate = await userModel.update(userDBInfo.id, userModelData);
+
+  // update user details table
+  let userDetailData = {
+    user_id: userDBInfo.id,
+    phone_number: reqBody.phoneNumber ? reqBody.phoneNumber : undefined,
+    zoneinfo: reqBody.country ? reqBody.country : undefined,
+  };
+  const userDetailExistedUpdate = await userDetailModel.upsert(userDetailData);
+
+  if(userCredentialExistedUpdate.success && userExistedUpdate.success && userDetailExistedUpdate.success){
+    return {success: true};
+  }
+}
+
 module.exports = {
   generateMandaiID,
   generateVisualID,
   createUserSignupDB,
   insertUserMembership,
-  insertUserNewletter
+  insertUserNewletter,
+  signupMPWithUpdateIfExist
 };

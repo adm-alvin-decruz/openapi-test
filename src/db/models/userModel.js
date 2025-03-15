@@ -71,7 +71,8 @@ class User {
       const sql = "SELECT * FROM users WHERE email = ?";
       const rows = await pool.query(sql, [email]);
 
-      return rows[0];
+      // rturn the first row if it exists, otherwise return an empty array
+      return rows && rows.length > 0 ? rows[0] : [];
     } catch (error) {
       loggerService.error(
         {
@@ -312,11 +313,12 @@ class User {
 
     try {
       // Execute the query
-      const result = await pool.execute(sql, params);
+      await pool.execute(sql, params);
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         user_id: id,
+        success: true
       };
     } catch (error) {
       loggerService.error(
@@ -331,6 +333,11 @@ class User {
         {},
         "[CIAM] userModel.update - Failed"
       );
+      return {
+        success: false,
+        error: error,
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined
+      };
     }
   }
 

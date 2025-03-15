@@ -23,6 +23,8 @@ const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 const { GROUP } = require("../../utils/constants");
 const { SendMessageCommand, SQSClient } = require("@aws-sdk/client-sqs");
+const switchService = require("../../services/switchService");
+const userSignupHelper = require("./usersSignupHelper");
 
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
@@ -220,11 +222,8 @@ class UserSignupService {
 
     if (userDB && userDB.user_id) {
       !!req.body.migrations &&
-        (await userMigrationsModel.updateMembershipUserAccounts(
-          req.body.email,
-          req.body.batchNo,
-          userDB.user_id
-        ));
+        (await userMigrationsModel.updateMembershipUserAccounts(req.body.email, req.body.batchNo, userDB.user_id));
+
       try {
         await pool.transaction(
           this.importUserInformation(
@@ -380,28 +379,33 @@ class UserSignupService {
     }
   }
 
-  //it can happen with normal signup flow + migration flow
-  async handleUpdateUserBelongWildPass(
-    req,
-    userCognito,
-    userDB,
-    passwordCredential
-  ) {
-    try {
-      loggerService.log(
-        {
-          user: {
-            membership: req.body.group,
-            action: "handleUpdateUserBelongWildPass",
-            body: req.body,
-            userCognito: userCognito,
-            userDB: userDB,
-            layer: "userSignupService.handleUpdateUserBelongWildPass",
-          },
+  /**
+   * Signup user to MP account for an existing wildpass
+   * it can happen with normal signup flow + migration flow
+   *
+   * @param {*} req
+   * @param {*} userCognito
+   * @param {*} userDB
+   * @param {*} passwordCredential
+   * @returns
+   */
+  async handleUpdateUserBelongWildPass(req, userCognito, userDB, passwordCredential) {
+    // logger
+    loggerService.log(
+      {
+        user: {
+          membership: req.body.group,
+          action: "handleUpdateUserBelongWildPass",
+          body: req.body,
+          userCognito: userCognito,
+          userDB: userDB,
+          layer: "userSignupService.handleUpdateUserBelongWildPass",
         },
-        "[CIAM] Start handleUpdateUserBelongWildPass Service"
-      );
+      },
+      "[CIAM] Start handleUpdateUserBelongWildPass Service"
+    );
 
+    try {
       await cognitoService.cognitoAdminSetUserPassword(
         req.body.email,
         passwordCredential.cognito.hashPassword
@@ -505,6 +509,12 @@ class UserSignupService {
     }
   }
 
+  /**
+   * Membership Passes signup request
+   *
+   * @param {JSON} req
+   * @returns
+   */
   async signup(req) {
     loggerService.log(
       {
@@ -518,53 +528,59 @@ class UserSignupService {
       },
       "[CIAM] Start Signup with FOs Service"
     );
+
+    // get switches from DB
+    const dbSwitch = await switchService.getAllSwitches();
+
     //prepare password information dynamic by migrations flag
     const passwordCredential = await this.preparePassword(req);
 
     //check user exists
-    const userExistedInCognito = await this.isUserExistedInCognito(
-      req.body.email
-    );
+    const userExistedInCognito = await this.isUserExistedInCognito(req.body.email);
 
+    // generate phoneNumber dynamic by migrations flag
+    const phoneNumber = commonService.cleanPhoneNumber(req.body.phoneNumber);
+    req.body.phoneNumber = phoneNumber;
+
+    // generate Mandai ID
+    const mandaiId = this.generateMandaiId(req);
+
+    // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
-      //check is user email existed at wildpass group
-      const userBelongWildpassGroup = await this.checkUserBelongWildPass(
-        req.body.email,
-        userExistedInCognito
-      );
+      // check is user email existed at wildpass group
+      const userBelongWildpassGroup = await this.checkUserBelongWildPass(req.body.email, userExistedInCognito);
 
       const userInfo = await userModel.findFullMandaiId(req.body.email);
 
-      if (
-        userInfo &&
-        userInfo.length &&
-        userInfo[0] &&
-        userBelongWildpassGroup
-      ) {
-        return await this.handleUpdateUserBelongWildPass(
-          req,
-          userExistedInCognito,
-          userInfo[0],
-          passwordCredential
-        );
+      if (userInfo && userInfo.length && userInfo[0] && userBelongWildpassGroup) {
+        return await this.handleUpdateUserBelongWildPass(req, userExistedInCognito, userInfo[0], passwordCredential);
       }
-      req.body.migrations &&
-        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
-          picked: 3,
-        }));
+
+      if (req.body.migrations) {
+        // if migration signup user exist then update 'switch' turned on
+        const updateIfMigrationSwitch = await switchService.findSwitchValue(dbSwitch, "migration_update_existing_user");
+
+        if (updateIfMigrationSwitch && updateIfMigrationSwitch === true) {
+
+          // update membership pass user
+          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo[0]);
+          if(update.success){
+            (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
+            return {mandaiId};
+          }
+        }
+        // perform update migration user membership account if migrations exist
+        await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 3,});
+      }
+
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
     }
 
     try {
-      const mandaiId = this.generateMandaiId(req);
-
       //generate newsletter dynamic by migrations flag
       const newsletterMapping = this.generateNewsletter(req);
-
-      //generate phoneNumber dynamic by migrations flag
-      const phoneNumber = commonService.cleanPhoneNumber(req.body.phoneNumber);
 
       let cognitoData = {
         email: req.body.email,
@@ -601,9 +617,7 @@ class UserSignupService {
       //update picked = 1 in emp_membership+user_accounts tbl
       !!req.body &&
         !!req.body.migrations &&
-        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
-          picked: 1,
-        }));
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
 
       await this.saveUserDB({
         req,

@@ -553,22 +553,6 @@ async function updateDB(body, userId, isNewEmailExisted) {
   }
 }
 
-async function checkNewEmailExisted(email) {
-  try {
-    const userDB = await userModel.findByEmail(email);
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
-    const emailCognito = getOrCheck(userCognito, "email");
-    return !!userDB.email || !!emailCognito;
-  } catch (error) {
-    const errorMessage = error.message ? JSON.parse(error.message) : "";
-    const errorData =
-      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      return false;
-    }
-  }
-}
-
 async function proceedUpdatePassword(
   userCredentialInfo,
   hashPassword,
@@ -794,6 +778,7 @@ async function adminUpdateMPUser(body, accessToken) {
     body.data.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
     //get user from db
     const userDB = await userModel.findByEmail(body.email);
+
     //get user from cognito
     const userCognito =
       accessToken && !privateMode
@@ -801,9 +786,12 @@ async function adminUpdateMPUser(body, accessToken) {
         : await cognitoService.cognitoAdminGetUserByEmail(body.email);
     const email = getOrCheck(userCognito, "email");
 
+    // check if email exist or not
     if (email !== body.email || userDB.email !== body.email) {
-      return CommonErrors.UnauthorizedException(body.language);
+      return UpdateUserErrors.ciamEmailNotExists(body.data.newEmail, body.language);
     }
+
+    // process if update email address (new email)
     let isNewEmailExisted = false;
     if (body.data && body.data.newEmail) {
       isNewEmailExisted = await checkNewEmailExisted(body.data.newEmail);
@@ -934,6 +922,22 @@ async function adminUpdateMPUser(body, accessToken) {
       );
     }
     throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
+  }
+}
+
+async function checkNewEmailExisted(email) {
+  try {
+    const userDB = await userModel.findByEmail(email);
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
+    const emailCognito = getOrCheck(userCognito, "email");
+    return !!userDB.email || !!emailCognito;
+  } catch (error) {
+    const errorMessage = error.message ? JSON.parse(error.message) : "";
+    const errorData =
+      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      return false;
+    }
   }
 }
 //#endregion

@@ -130,7 +130,7 @@ router.put(
           CommonErrors.BadRequest("group", "group_invalid", req.body.language)
         );
     }
-    //#region Update Account New logic (FO series)
+    // region Update Account Membership Passes
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
         let accessToken =
@@ -140,10 +140,7 @@ router.put(
         if (accessToken && res.newAccessToken) {
           accessToken = res.newAccessToken;
         }
-        const updateRs = await userController.adminUpdateMPUser(
-          req,
-          accessToken
-        );
+        const updateRs = await userController.adminUpdateMPUser(req, accessToken);
         if (res.newAccessToken) {
           updateRs.membership.accessToken = res.newAccessToken;
         }

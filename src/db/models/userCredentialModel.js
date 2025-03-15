@@ -110,7 +110,8 @@ class UserCredential {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        user_id: result.insertId,
+        user_id: result.changedRows,
+        success: true
       };
     } catch (error) {
       loggerService.error(
