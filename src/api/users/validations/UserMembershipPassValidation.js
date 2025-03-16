@@ -144,7 +144,7 @@ class UserMembershipPassValidation {
       "passType",
       "visualId",
     ];
-    const requestFromAEM = this.isRequestFromAEM(req.headers);
+    const requestFromAEM = commonService.isRequestFromAEM(req.headers);
     const requestParams = Object.keys(req.body);
     const missingParams = requiredParams.filter(
       (param) => !requestParams.includes(param)
