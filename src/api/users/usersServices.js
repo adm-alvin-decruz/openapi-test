@@ -562,7 +562,6 @@ async function proceedUpdatePassword(
 ) {
   try {
     let pass = await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
-    console.log("AAA", pass);
 
     //update password hash and new email if possible - prepare for login session
     await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
@@ -640,10 +639,8 @@ async function updatePassword(userCredentialInfo, hashPassword, newPassword, old
 }
 
 async function updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, email, emailCognito) {
-  console.log("AAA", newPassword);
   try {
     let proceedUpdatePasswordPvt = await proceedUpdatePassword(userCredentialInfo, hashPassword, newPassword, email, emailCognito);
-    console.log("BBB", proceedUpdatePasswordPvt);
   } catch (error) {
     loggerService.error(
       {
@@ -807,7 +804,7 @@ async function adminUpdateMPUser(body, accessToken) {
           );
         }
       } catch (error) {
-        console.log("AAA", error.stack);
+        console.log("[CIAM-MAIN] usersServices.adminUpdateMPUser Update Password Error", error.stack);
       }
     }
 
