@@ -283,11 +283,7 @@ router.get(
 /**
  * User Login API (Method POST)
  */
-router.post(
-  "/users/sessions",
-  isEmptyRequest,
-  validateEmail,
-  async (req, res) => {
+router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
