@@ -314,7 +314,7 @@ class UserSignupService {
         cognito: {
           hashPassword:
             !!req.body.passwordSalt && !!req.body.passwordHash
-              ? `${req.body.passwordHash}${req.body.passwordSalt}`.trim()
+              ? `${req.body.passwordHash}${req.body.passwordSalt}Ma6@`.trim()
               : `${hashPassword}CiAm`,
           salt: null,
         },
