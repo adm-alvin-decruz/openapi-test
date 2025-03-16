@@ -453,6 +453,17 @@ function cleanPhoneNumber(phoneNumber) {
   return null;
 }
 
+/**
+ * Check if AEM header
+ * @param {array} headers
+ * @returns
+ */
+function isRequestFromAEM(headers) {
+  const mwgAppID =
+    headers && headers["mwg-app-id"] ? headers["mwg-app-id"] : "";
+  return mwgAppID.includes("aem");
+}
+
 module.exports = {
   cleanData,
   prepareMembershipGroup,
@@ -473,5 +484,6 @@ module.exports = {
   processUserUpdateErrors,
   getDateTimeUTC8,
   valJsonObjOrArray,
-  cleanPhoneNumber
+  cleanPhoneNumber,
+  isRequestFromAEM
 }

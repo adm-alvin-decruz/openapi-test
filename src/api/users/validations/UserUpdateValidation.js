@@ -8,6 +8,10 @@ class UserUpdateValidation {
     this.error = null;
   }
 
+  static execute(req) {
+    return this.validateRequestParams(req);
+  }
+
   //enhance get list error
   static async validateRequestParams(req) {
     const privateMode = !!req.privateMode;
@@ -66,7 +70,6 @@ class UserUpdateValidation {
       }
     }
 
-
     if (bodyData.dob || bodyData.dob === "") {
       const dob = validateDOB(bodyData.dob);
       if (!dob) {
@@ -107,10 +110,6 @@ class UserUpdateValidation {
       }
     }
     return (this.error = null);
-  }
-
-  static execute(req) {
-    return this.validateRequestParams(req);
   }
 }
 

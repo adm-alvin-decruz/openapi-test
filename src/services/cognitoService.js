@@ -565,24 +565,26 @@ class Cognito {
   }
 
   static async cognitoUserChangePassword(accessToken, password, oldPassword) {
-    const userChangePassword = new ChangePasswordCommand({
+    loggerService.log(
+      {
+        cognitoService: {
+          action: "cognitoUserChangePassword",
+          layer: "services.cognitoService",
+          accessToken: maskKeyRandomly(accessToken),
+          password: maskKeyRandomly(password),
+          oldPassword: maskKeyRandomly(oldPassword),
+        },
+      },
+      "[CIAM] Start cognitoUserChangePassword Service - Success"
+    );
+
+    let passwordData = {
       AccessToken: accessToken,
       ProposedPassword: password,
       PreviousPassword: oldPassword,
-    });
+    };
+    const userChangePassword = new ChangePasswordCommand(passwordData);
     try {
-      loggerService.log(
-        {
-          cognitoService: {
-            action: "cognitoUserChangePassword",
-            layer: "services.cognitoService",
-            accessToken: maskKeyRandomly(accessToken),
-            password: maskKeyRandomly(password),
-            oldPassword: maskKeyRandomly(oldPassword),
-          },
-        },
-        "[CIAM] Start cognitoUserChangePassword Service - Success"
-      );
       const rs = await client.send(userChangePassword);
       loggerService.log(
         {

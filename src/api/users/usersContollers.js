@@ -51,7 +51,7 @@ async function adminCreateUser(req) {
     try {
       let response;
       // check if user exist
-      var membershipData = await usersService.getUserMembership(req);
+      let membershipData = await usersService.getUserMembership(req);
 
       let responseSource = "ciam";
 
@@ -98,7 +98,7 @@ async function adminCreateUser(req) {
   }
 
   // prepare error params response
-  errorConfig = usersService.processErrors(
+  let errorConfig = usersService.processErrors(
     validatedParams,
     req.body,
     "MWG_CIAM_USER_SIGNUP_ERR"
@@ -138,7 +138,7 @@ async function adminCreateMPUser(req) {
     },
     "[CIAM] Start Signup with FOs Request"
   );
-  const message = UserSignUpValidation.execute(req.body);
+  const message = UserSignUpValidation.execute(req);
   if (!!message) {
     loggerService.error(
       {
@@ -155,7 +155,8 @@ async function adminCreateMPUser(req) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    return await UserSignupJob.perform(req);
+    let signupController = await UserSignupJob.perform(req);
+    return signupController
   } catch (error) {
     loggerService.error(
       {
@@ -169,7 +170,7 @@ async function adminCreateMPUser(req) {
         },
       },
       {},
-      "userUpdateMembershipPass End Request"
+      "Signup Membership Passes Account End Request"
     );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));
@@ -333,6 +334,11 @@ async function adminUpdateMPUser(req, accessToken) {
     throw new Error(JSON.stringify(message));
   }
   try {
+    // check if it is AEM call
+    const requestFromAEM = commonService.isRequestFromAEM(req.headers);
+    if(!requestFromAEM){
+      req.body.ncRequest = true;
+    }
     return await usersService.adminUpdateMPUser(req.body, accessToken);
   } catch (error) {
     loggerService.error(

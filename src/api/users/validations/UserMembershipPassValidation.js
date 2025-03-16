@@ -1,16 +1,11 @@
 const MembershipPassErrors = require("../../../config/https/errors/membershipPassErrors");
 const { validateDOBiso } = require("../../../services/validationService");
 const configsModel = require("../../../db/models/configsModel");
+const commonService = require("../../../services/commonService");
 
 class UserMembershipPassValidation {
   constructor() {
     this.error = null;
-  }
-
-  static isRequestFromAEM(headers) {
-    const mwgAppID =
-      headers && headers["mwg-app-id"] ? headers["mwg-app-id"] : "";
-    return mwgAppID.includes("aem");
   }
 
   static async isPassTypeValid(passType) {
@@ -70,7 +65,7 @@ class UserMembershipPassValidation {
       ));
     }
 
-    const requestFromAEM = this.isRequestFromAEM(req.headers);
+    const requestFromAEM = commonService.isRequestFromAEM(req.headers);
 
     if (req.body.member?.dob && requestFromAEM) {
       const dob = validateDOBiso(req.body.member.dob);

@@ -553,22 +553,6 @@ async function updateDB(body, userId, isNewEmailExisted) {
   }
 }
 
-async function checkNewEmailExisted(email) {
-  try {
-    const userDB = await userModel.findByEmail(email);
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
-    const emailCognito = getOrCheck(userCognito, "email");
-    return !!userDB.email || !!emailCognito;
-  } catch (error) {
-    const errorMessage = error.message ? JSON.parse(error.message) : "";
-    const errorData =
-      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      return false;
-    }
-  }
-}
-
 async function proceedUpdatePassword(
   userCredentialInfo,
   hashPassword,
@@ -577,7 +561,7 @@ async function proceedUpdatePassword(
   emailCognito
 ) {
   try {
-    await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
+    let pass = await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
 
     //update password hash and new email if possible - prepare for login session
     await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
@@ -602,16 +586,7 @@ async function proceedUpdatePassword(
   }
 }
 
-async function updatePassword(
-  userCredentialInfo,
-  hashPassword,
-  newPassword,
-  oldPassword,
-  email,
-  emailCognito,
-  accessToken,
-  lang = "en"
-) {
+async function updatePassword(userCredentialInfo, hashPassword, newPassword, oldPassword, email, emailCognito, accessToken, lang = "en") {
   try {
     if (accessToken) {
       //accessToken is available it means Cognito will verify old password as well
@@ -663,21 +638,9 @@ async function updatePassword(
   }
 }
 
-async function updatePasswordPrivateMode(
-  userCredentialInfo,
-  hashPassword,
-  newPassword,
-  email,
-  emailCognito,
-) {
+async function updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, email, emailCognito) {
   try {
-    await proceedUpdatePassword(
-        userCredentialInfo,
-        hashPassword,
-        newPassword,
-        email,
-        emailCognito
-    );
+    let proceedUpdatePasswordPvt = await proceedUpdatePassword(userCredentialInfo, hashPassword, newPassword, email, emailCognito);
   } catch (error) {
     loggerService.error(
       {
@@ -775,6 +738,7 @@ async function updateUserCognito(body, userCognito) {
 
 async function adminUpdateMPUser(body, accessToken) {
   const privateMode = !!body.privateMode;
+  const ncRequest = !!body.ncRequest;
   // logger
   loggerService.log(
     {
@@ -794,6 +758,7 @@ async function adminUpdateMPUser(body, accessToken) {
     body.data.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
     //get user from db
     const userDB = await userModel.findByEmail(body.email);
+
     //get user from cognito
     const userCognito =
       accessToken && !privateMode
@@ -801,9 +766,12 @@ async function adminUpdateMPUser(body, accessToken) {
         : await cognitoService.cognitoAdminGetUserByEmail(body.email);
     const email = getOrCheck(userCognito, "email");
 
+    // check if email exist or not
     if (email !== body.email || userDB.email !== body.email) {
-      return CommonErrors.UnauthorizedException(body.language);
+      return UpdateUserErrors.ciamEmailNotExists(body.data.newEmail, body.language);
     }
+
+    // process if update email address (new email)
     let isNewEmailExisted = false;
     if (body.data && body.data.newEmail) {
       isNewEmailExisted = await checkNewEmailExisted(body.data.newEmail);
@@ -817,34 +785,26 @@ async function adminUpdateMPUser(body, accessToken) {
 
     //1st updatePassword -> if failed the process update user will stop
     //ad-hook - switch update password by private_mode
-    if (body.data && body.data.newPassword) {
-      const hashPassword = await passwordService.hashPassword(
-        body.data.newPassword.toString()
-      );
-      const userCredentialInfo = await userCredentialModel.findByUserEmail(
-        body.email
-      );
-      const latestEmail =
-        !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
-      if (privateMode) {
-        await updatePasswordPrivateMode(
-          userCredentialInfo,
-          hashPassword,
-          body.data.newPassword,
-          latestEmail,
-          body.email
-        );
-      } else {
-        await updatePassword(
-          userCredentialInfo,
-          hashPassword,
-          body.data.newPassword,
-          body.data.oldPassword,
-          latestEmail,
-          body.email,
-          accessToken,
-          body.language
-        );
+    if ((body.data && body.data.newPassword) || body.data.password){
+      // prepare hash password
+      try{
+        let newPassword = body.data.newPassword || null;
+        if (ncRequest) {
+          newPassword = body.data.password;
+        }
+        const hashPassword = await passwordService.hashPassword(newPassword.toString());
+        const userCredentialInfo = await userCredentialModel.findByUserEmail(body.email);
+        const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
+
+        if (ncRequest) {
+          await updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, latestEmail, body.email);
+        } else {
+          await updatePassword(
+            userCredentialInfo, hashPassword, newPassword, body.data.oldPassword, latestEmail, email, accessToken, body.language
+          );
+        }
+      } catch (error) {
+        console.log("[CIAM-MAIN] usersServices.adminUpdateMPUser Update Password Error", error.stack);
       }
     }
 
@@ -934,6 +894,22 @@ async function adminUpdateMPUser(body, accessToken) {
       );
     }
     throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
+  }
+}
+
+async function checkNewEmailExisted(email) {
+  try {
+    const userDB = await userModel.findByEmail(email);
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
+    const emailCognito = getOrCheck(userCognito, "email");
+    return !!userDB.email || !!emailCognito;
+  } catch (error) {
+    const errorMessage = error.message ? JSON.parse(error.message) : "";
+    const errorData =
+      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+    if (errorData.name && errorData.name === "UserNotFoundException") {
+      return false;
+    }
   }
 }
 //#endregion
