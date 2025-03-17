@@ -4,114 +4,189 @@
  */
 
 // use dotenv
-require('dotenv').config();
-const responseConfig = require('../../config/membershipConfig');
+require("dotenv").config();
+const cognitoService = require("../../services/cognitoService");
+const MembershipErrors = require("../../config/https/errors/membershipErrors");
+const { messageLang } = require("../../utils/common");
+const { GROUP } = require("../../utils/constants");
+const userModel = require("../../db/models/userModel");
+const configsModel = require("../../db/models/configsModel");
+const loggerService = require("../../logs/logger");
 
-/**
- * Function process response
- *
- * @param {JSON} attr attribute section of the cognito response
- * @param {JSON} reqBody request body
- * @param {string} status status text success | failed
- * @param {int} statusCode status code 200 | 400 | 501
- * @returns
- */
-async function processResponse(attr='', reqBody, mwgCode){
-  // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  let resConfigVar = JSON.parse(responseConfig.MEMBERSHIPS_API_RESPONSE_CONFIG);
-  let resConfig = resConfigVar[mwgCode];
-
-  // step2: process membership group
-  // check if attr is JSON with consideration of aem checkemail response
-  const isJsonAttr = isJSONObject(attr.UserAttributes);
-
-  var group = '';
-  if(resConfig.status === 'success' && isJsonAttr){
-    group = processMembership(attr, reqBody);
-  }
-  // handle aem checkemail api response
-  else if (!isJsonAttr && attr == 'aem'){
-    var exist = true;
-    if(mwgCode === 'MWG_CIAM_USERS_MEMBERSHIPS_NULL'){
-        exist = false;
-    }
-    group = processAemGroup(reqBody, exist);
-  }
-
-  // step3: craft response JSON
-  let resJson = {
-    "membership": {
-      "group": group,
-      "code": resConfig.code,
-      "mwgCode": resConfig.mwgCode,
-      "message": resConfig.message,
-      "email": reqBody.email,
-    },
-    "status": resConfig.status,
-    "statusCode": resConfig.code
-    }
-
-  return resJson;
-}
-
-/**
- * Function process group
- *
- * @param {json} attr array of user's attribute from cognito
- * @param {json} reqBody request body
- * @returns json group object
- */
-function processMembership(attr, reqBody){
-  var reqGroupName = reqBody.group;
-  let grpAttr = loopAttr(attr, 'custom:membership', '');
-
-  // parse JSON
-  if(grpAttr != false){
-    let grpJson = JSON.parse(grpAttr.Value);
-    // check if not null
-    if(grpJson != null){
-      return {[grpJson.name]: true};
-    }
-  }
-
-  return {[reqGroupName]: false}
-}
-
-/**
- * Function loop attribute to find the desire name or value
- *
- * @param {json} attr array of user's attribute from cognito or
- * @param {string} name name of attribute to be found
- * @param {*} value value of attribute to be found
- * @returns json object
- */
-function loopAttr(attr, name, value=''){
-  let foundAttr = false;
-  let userAttr = attr.UserAttributes;
-
-  Object.keys(userAttr).forEach(key => {
-    if(userAttr[key].Name === name || key === name){
-      if(value != '' || userAttr[key].Value === value){
-      // attr found, return
-      foundAttr = key;
-      } else {
-        foundAttr = userAttr[key];
+function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
+  return mid === true
+    ? {
+        membership: {
+          group: {
+            [`${group}`]: isMatchedGroup,
+          },
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS",
+          message: messageLang("membership_get_success", lang),
+          email: email,
+          mandaiId: mandaiId,
+        },
+        status: "success",
+        statusCode: 200,
       }
+    : {
+        membership: {
+          group: {
+            [`${group}`]: isMatchedGroup,
+          },
+          code: 200,
+          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_SUCCESS",
+          message: messageLang("membership_get_success", lang),
+          email: email,
+        },
+        status: "success",
+        statusCode: 200,
+      };
+}
+
+async function passesByGroup(group) {
+  let passes = "";
+  switch (group) {
+    case GROUP.WILD_PASS: {
+      passes = [`${GROUP.WILD_PASS}`];
+      break;
     }
-  });
-  return foundAttr;
+    case GROUP.MEMBERSHIP_PASSES: {
+      const passesSupported = await configsModel.findByConfigKey(
+        "membership-passes",
+        "pass-type"
+      );
+      passes =
+        passesSupported &&
+        passesSupported.value &&
+        passesSupported.value.length > 0
+          ? passesSupported.value
+          : "";
+      break;
+    }
+    default: {
+      return;
+    }
+  }
+  return passes;
 }
 
-function processAemGroup(reqBody, exist){
-  // AEM only has wildpass
-  return {["wildpass"]: exist}
+function checkMatchedGroup(data) {
+  if (data.length) {
+    return data.filter((passes) => passes.isBelong === 1).length > 0;
+  }
+  return false;
 }
 
-function isJSONObject(obj) {
-  return Array.isArray(obj);
+//Check user membership group in Cognito [membership-passes, wildpass]
+async function checkUserMembership(reqBody) {
+  try {
+    //1st priority check membership group: DB
+    const passes = await passesByGroup(reqBody.group);
+
+    //find userPasses have linked with user_memberships passkit
+    const userPasses = await userModel.findPassesByUserEmailOrMandaiId(
+      passes,
+      reqBody.email || null,
+      reqBody.mandaiId || null
+    );
+
+    //find user info matched at users model - might have not linked memberships
+    const userInfo = await userModel.findByEmailOrMandaiId(
+      reqBody.email || null,
+      reqBody.mandaiId || null
+    );
+
+    if (userPasses && userPasses.length > 0) {
+      //cover for case user signup with WP then signup with MP
+      const groups =
+        reqBody.group === GROUP.MEMBERSHIP_PASSES
+          ? await getCognitoGroups(userInfo, reqBody)
+          : [];
+      return success({
+        mid: reqBody.mid,
+        group: reqBody.group,
+        email: reqBody.email,
+        mandaiId: reqBody.mandaiId || userInfo.mandai_id,
+        lang: reqBody.language,
+        isMatchedGroup:
+          reqBody.group === GROUP.MEMBERSHIP_PASSES
+            ? groups.filter((gr) => gr.GroupName === reqBody.group).length > 0
+            : checkMatchedGroup(userPasses),
+      });
+    }
+
+    //cover for case user signup with membership-passes only - 2nd priority check group on Cognito
+    const groups = await getCognitoGroups(userInfo, reqBody);
+
+    return success({
+      mid: reqBody.mid,
+      group: reqBody.group,
+      email: reqBody.email,
+      mandaiId: reqBody.mandaiId || userInfo.mandai_id,
+      lang: reqBody.language,
+      isMatchedGroup:
+        groups.filter((gr) => gr.GroupName === reqBody.group).length > 0,
+    });
+  } catch (error) {
+    loggerService.error(
+      {
+        membership: {
+          action: "checkUserMembership",
+          request: reqBody,
+          layer: "membershipsService.checkUserMembership",
+          error: new Error(error),
+        },
+      },
+      {},
+      "[CIAM] End Check User Membership - Failed"
+    );
+    throw new Error(
+      JSON.stringify(
+        MembershipErrors.ciamMembershipUserNotFound(
+          reqBody.email,
+          reqBody.language
+        )
+      )
+    );
+  }
+}
+
+//Get Groups from Cognito
+async function getCognitoGroups(userInfo, reqBody) {
+  try {
+    //push this error to catch wrapper if user not found
+    if (!userInfo || !userInfo.email) {
+      await Promise.reject(
+        JSON.stringify(
+          MembershipErrors.ciamMembershipUserNotFound(
+            reqBody.email,
+            reqBody.language
+          )
+        )
+      );
+    }
+
+    //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
+    const groupsCognitoInfo =
+      await cognitoService.cognitoAdminListGroupsForUser(userInfo.email);
+
+    return groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
+      ? groupsCognitoInfo.Groups
+      : [];
+  } catch (error) {
+    throw new Error(
+      JSON.stringify(
+        MembershipErrors.ciamMembershipUserNotFound(
+          reqBody.email,
+          reqBody.language
+        )
+      )
+    );
+  }
 }
 
 /** export the module */
 module.exports = {
-  processMembership,processResponse
+  checkUserMembership,
 };

@@ -65,7 +65,7 @@ variable "NEW_RELIC_LICENSE_KEY_SECRET" {
 
 variable "cloudwatch_logs_retention_in_days" {
   description = "Specifies the number of days you want to retain log events in the specified log group. Possible values are: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, and 3653."
-  default = 3
+  default = 180
 }
 
 variable "AEM_URL" {
@@ -135,4 +135,24 @@ variable "SOURCE_DB_MAPPING" {
 
 variable "github_hash" {
   description = "goithub commit hash"
+}
+
+variable "PASSKIT_API_KEY" {
+  description = "PASSKIT API Key"
+}
+
+variable "EMAIL_SERVICE_API_KEY" {
+  description = "EMAIL SERVICE API KEY"
+}
+
+variable "AEM_REQ_API_KEY" {
+  description = "API Key for AEM"
+}
+
+variable "NOPCOMMERCE_REQ_API_KEY" {
+  description = "API Key for Nopcommerce Public endpoint"
+}
+
+variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
+  description = "API Key for Nopcommerce Private endpoint"
 }

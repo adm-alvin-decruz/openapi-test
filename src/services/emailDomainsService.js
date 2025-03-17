@@ -2,6 +2,7 @@ const { EmailDomainModel } = require("../db/models/emailDomainsModel");
 const loggerService = require("../logs/logger");
 const ApiUtils = require('../utils/apiUtils');
 const switchService = require('./switchService');
+const { emailPattern } = require("../utils/common");
 // use dotenv
 require('dotenv').config();
 
@@ -55,9 +56,7 @@ class EmailDomainService {
   }
 
   isValidEmailFormat(email) {
-    // Basic domain validation regex
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return emailPattern(email);
   }
 
   isValidDomainFormat(domain) {

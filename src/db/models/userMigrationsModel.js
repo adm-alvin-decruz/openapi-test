@@ -1,10 +1,10 @@
-const pool = require('../connections/mysqlConn');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
-const commonService = require('../../services/commonService');
+const pool = require("../connections/mysqlConn");
+const commonService = require("../../services/commonService");
+const loggerService = require("../../logs/logger");
 
 class UserMigrationsModel {
   constructor() {
-    this.tableName = 'user_migrations';
+    this.tableName = "user_migrations";
   }
 
   static async create(data) {
@@ -21,68 +21,89 @@ class UserMigrationsModel {
       data.passkit_email,
       data.passkit_req,
       data.batch_no,
-      data.pass_type
+      data.pass_type,
     ];
     return pool.execute(sql, params);
   }
 
   static async update(email, batchNo, data) {
-    try{
-      const sql = `
+    const sql = `
         UPDATE user_migrations
         SET
           signup = ?, signup_sqs = ?,
           updated_at = NOW()
         WHERE email = ? AND batch_no = FROM_UNIXTIME(?)
       `;
-      const params = [
-        data.signup,
-        data.signup_sqs,
-        email,
-        batchNo
-      ];
-      const result = await pool.execute(sql, params);
-
-      console.log( {
-        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        user_id: result.info
-      });
-
-      return result;
+    const params = [data.signup, data.signup_sqs, email, batchNo];
+    try {
+      return await pool.execute(sql, params);
     } catch (error) {
-      throw new Error (`UserMigrationModel: ${error}`);
+      loggerService.error(
+        {
+          userMigrationsModel: {
+            email,
+            batchNo,
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        "[CIAM] userMigrationsModel.update - Failed"
+      );
+      throw new Error(`UserMigrationModel: ${error}`);
     }
   }
 
-  static async findByEmailAndBatch(email, batchNo) {
-    const sql = `SELECT * FROM ${this.tableName} WHERE email = ? AND batch_no = DATE(?)`;
-    const params = [email, batchNo];
-    return query(sql, params);
+  static async updateMembershipUserAccounts(email, batchNo, userId) {
+    const sql = `
+        UPDATE user_migrations
+        SET
+          signup = true, user_id = ?,
+          updated_at = NOW()
+        WHERE email = ? AND batch_no = FROM_UNIXTIME(?)
+      `;
+    const params = [userId, email, batchNo];
+    try {
+      return await pool.execute(sql, params);
+    } catch (error) {
+      loggerService.error(
+        {
+          userMigrationsModel: {
+            email,
+            batchNo,
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        "[CIAM] userMigrationsModel.updateMembershipUserAccounts - Failed"
+      );
+      throw new Error(`UserMigrationModel: ${error}`);
+    }
   }
 
   replaceSqlPlaceholders(sql, params) {
     let index = 0;
     return sql.replace(/\?/g, () => {
       const value = params[index++];
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return `'${value.replace(/'/g, "''")}'`;
       } else if (value === null) {
-        return 'NULL';
+        return "NULL";
       } else {
         return value;
       }
     });
   }
 
-  static async runCustomSQL(sql, params){
+  static async runCustomSQL(sql, params) {
     const result = await pool.execute(sql, params);
 
-    console.log( {
+    console.log({
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.info
+      user_id: result.info,
     });
   }
-
 }
 
 module.exports = UserMigrationsModel;

@@ -1,7 +1,8 @@
 const lambdaService = require('../../services/lambdaService');
 require('dotenv').config();
-const processTimer = require('../../utils/processTimer');
-const switchService = require('../../services/switchService');
+const appConfig = require('../../config/appConfig');
+const ApiUtils = require('../../utils/apiUtils');
+const logger = require('../../logs/logger');
 
 async function lambdaSendEmail(req){
   req['apiTimer'] = req.processTimer.apiRequestTimer();
@@ -56,6 +57,71 @@ async function mapEmailType(emailType){
   return emailType;
 }
 
+/**
+   * Send email using email trigger service
+   *
+   * @param {json} req
+   * @returns
+   */
+async function emailServiceAPI(req) {
+  req['apiTimer'] = req.processTimer.apiRequestTimer();
+  req.apiTimer.log('usersEmailService.emailTriggerApi start'); // log process time
+
+  let appEnv = process.env.APP_ENV;
+  let emailServiceAPIUrl = "EMAIL_SERVICE_API_URL_"+appEnv.toUpperCase();
+  const apiEndpoint = appConfig[emailServiceAPIUrl]+appConfig["EMAIL_SERVICE_API_EMAIL_PATH"];
+
+  try {
+    const headers = await createEmailServiceHeader();
+    const body = await createApiRequestBody(req);
+
+    const response = await ApiUtils.makeRequest(apiEndpoint, 'post', headers, body);
+
+    req.apiTimer.end('usersEmailService.emailTriggerApi'); // log end time
+    return ApiUtils.handleResponse(response);
+  } catch (error) {
+    req.apiTimer.end('usersEmailService.emailTriggerApi'); // log end time
+    throw new Error(`usersEmailService error: ${error}`);
+  }
+}
+
+async function createApiRequestBody(req) {
+  let appEnv = process.env.APP_ENV;
+  let ciamResetPasswordEmailLink = "RESET_PASSWORD_EMAIL_LINK_"+appEnv.toUpperCase();
+  // body data
+  const body = {
+    emailFrom: appConfig.RESET_PASSWORD_EMAIL_FROM,
+    emailTo: req.body.email,
+    emailTemplateId: appConfig.RESET_PASSWORD_EMAIL_TEMPLATE_ID,
+    customData: {
+      firstName: req.body.firstName,
+      membershipPasswordRecoveryLink: `${appConfig[ciamResetPasswordEmailLink]}?passwordToken=${req.body.resetToken}`,
+      membershipPasswordRecoveryLinkExpiryDate: {
+        timeStamp: req.body.expiredAt,
+        dateFormat: "dddd, D MMM YYYY",
+      },
+      AEMWebUrl: "https://www.mandai.com",
+      group: req.body.group,
+      ID: req.body.ID,
+      caller: 'ciam'
+    }
+  };
+
+  logger.log(body, 'userEmailService.createApiRequestBody');
+  return body;
+}
+
+function createEmailServiceHeader(){
+  let appEnv = process.env.APP_ENV;
+  let emailServiceConfig = "EMAIL_SERVICE_APP_ID_"+appEnv.toUpperCase();
+  const headers = {
+    'mwg-app-id': appConfig[emailServiceConfig],
+    'x-api-key': process.env.EMAIL_SERVICE_API_KEY,
+    'Content-Type': 'application/json'
+  };
+  return headers;
+}
+
 module.exports={
-  lambdaSendEmail
+  lambdaSendEmail, emailServiceAPI
 }

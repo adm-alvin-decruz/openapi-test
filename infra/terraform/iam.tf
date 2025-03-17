@@ -51,6 +51,20 @@ data "aws_iam_policy_document" "lambda" {
       data.terraform_remote_state.sqs.outputs.sqs_queue_arn
     ]
   }
+  statement {
+    sid = "3"
+    
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:ListBucket"
+    ]
+    
+    resources = [
+      data.aws_s3_bucket.passkit.arn,
+      "${data.aws_s3_bucket.passkit.arn}/*"
+    ]
+  }
 }
 
 resource "aws_iam_policy" "lambda" {

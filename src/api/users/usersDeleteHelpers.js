@@ -4,7 +4,6 @@ const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userCredentialModel = require('../../db/models/userCredentialModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
-const dbConfig = require('../../config/dbConfig');
 require('dotenv').config();
 
 /**

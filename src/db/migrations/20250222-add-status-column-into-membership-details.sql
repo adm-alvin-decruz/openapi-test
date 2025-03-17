@@ -1,0 +1,1 @@
+ALTER TABLE user_membership_details ADD status tinyint(2) DEFAULT NULL COMMENT '0: valid, 1: voided, 2: returned, 3: replaced, 4: purchaser, 5: expired, 6: upgraded, 7: reprinted, 8: blocked, 9: unIssued, 15: inactive' AFTER child_qty ;
