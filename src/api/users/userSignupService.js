@@ -4,7 +4,6 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const {
   getSource,
   getGroup,
-  formatPhoneNumber,
   maskKeyRandomly,
 } = require("../../utils/common");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
@@ -22,17 +21,8 @@ const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 const { GROUP } = require("../../utils/constants");
-const { SendMessageCommand, SQSClient } = require("@aws-sdk/client-sqs");
 const switchService = require("../../services/switchService");
 const userSignupHelper = require("./usersSignupHelper");
-
-const awsRegion = () => {
-  const env = process.env.AWS_REGION_NAME;
-  if (!env) return "ap-southeast-1";
-  if (env === "false") return "ap-southeast-1";
-  return env;
-};
-const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -355,28 +345,6 @@ class UserSignupService {
       (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
       !groups.includes(GROUP.MEMBERSHIP_PASSES)
     );
-  }
-
-  async sendSQSMessage(body, action) {
-    try {
-      const data = {
-        action: action,
-        body: body,
-      };
-
-      const queueUrl = process.env.SQS_QUEUE_URL;
-      const command = new SendMessageCommand({
-        QueueUrl: queueUrl,
-        MessageBody: JSON.stringify(data),
-      });
-
-      return await sqsClient.send(command);
-    } catch (error) {
-      loggerService.error(
-        `UserSignupMembershipPasses.sendSQSMessage Error: ${error}`,
-        body
-      );
-    }
   }
 
   /**
