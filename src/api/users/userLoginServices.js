@@ -28,7 +28,6 @@ class UserLoginService {
         JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
       );
     }
-
     const isMatchedPasswordForFirstLogin =
       userHasFirstLogin &&
       userHasFirstLogin.username &&

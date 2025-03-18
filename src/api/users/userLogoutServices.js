@@ -9,7 +9,6 @@ class UserLogoutService {
   async getUser(token, body) {
     try {
       const userDB = await userCredentialModel.findByUserEmailOrMandaiId(body.email || '', body.mandaiId || '');
-      console.log('userDB******', userDB)
       return {
         userId: userDB.user_id ? userDB.user_id : "",
         email: userDB.email,
