@@ -19,7 +19,7 @@ class UserUpdateValidation {
   static async verifyPassword(email, password) {
     const userCredential = await userCredentialModel.findByUserEmail(email);
     //check by password salt - from migration always have salt
-    if (!!userCredential.salt) {
+    if (userCredential && userCredential.salt) {
       return passwordService
           .createPassword(password, userCredential.salt)
           .toUpperCase() === userCredential.password_hash.toUpperCase()
@@ -133,7 +133,7 @@ class UserUpdateValidation {
         passwordIsSame = await this.verifyPassword(bodyData.email, bodyData.newPassword)
       }
       if (passwordIsSame) {
-        return (this.error = CommonErrors.PasswordHasSameException(req.language));
+        return (this.error = CommonErrors.sameOldPasswordException(req.language));
       }
 
       //verify old password is not match

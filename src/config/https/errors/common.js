@@ -81,7 +81,7 @@ class CommonErrors {
       statusCode: 401,
     };
   }
-  static PasswordHasSameException(lang) {
+  static sameOldPasswordException(lang) {
     return {
       membership: {
         code: 200,
