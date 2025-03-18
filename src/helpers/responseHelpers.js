@@ -37,7 +37,7 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
   let responseToClient = {
         "membership": {
           "code": resConfig.code,
-          "mwgCode": mwgCode,
+          "mwgCode": resConfig.mwgCode,
           "message": resConfig.message
         },
         "status": resConfig.status,
