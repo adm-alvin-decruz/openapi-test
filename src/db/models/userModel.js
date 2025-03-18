@@ -501,7 +501,13 @@ class User {
     const sql = `SELECT u.id as userId, u.email, u.given_name as firstName, u.family_name as lastName, u.birthdate as dob, u.mandai_id as mandaiId,
                     MAX(CASE WHEN um.name <> 'wildpass' THEN 1 ELSE 0 END) AS hasMembershipPasses,
                     MAX(CASE WHEN um.name = 'wildpass' THEN 1 ELSE 0 END) AS hasWildpass,
-                    MAX(CASE WHEN umd.status = 0 THEN 1 ELSE 0 END) AS status
+                    MAX(
+                        CASE 
+                            WHEN umd.status = 0 THEN 1  -- Active membership
+                            WHEN umd.status IS NULL AND (umd.valid_until IS NULL OR umd.valid_until >= CURDATE()) THEN 1  -- Check valid_until only when status is NULL
+                            ELSE 0
+                        END
+                    ) AS status
                  FROM users u
                  LEFT JOIN user_memberships um ON um.user_id = u.id
                  LEFT JOIN user_membership_details umd ON umd.user_membership_id = um.id
