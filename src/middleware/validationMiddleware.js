@@ -9,6 +9,8 @@ const { GROUP } = require("../utils/constants");
 const appConfig = require("../config/appConfig");
 const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
+const commonService = require("../services/commonService");
+const { messageLang } = require("../utils/common");
 
 /**
  * Validate empty request
@@ -29,6 +31,17 @@ function isEmptyRequest(req, res, next) {
     }
   }
   next();
+}
+
+async function validateEmail(req, res, next) {
+  const { email } = req.body;
+  let msg = "The email is invalid";
+
+  if (!email) {
+    return resStatusFormatter(res, 400, msg);
+  }
+
+  return await validateEmailDisposable(req, res, next);
 }
 
 async function validateEmailDisposable(req, res, next) {
@@ -52,7 +65,7 @@ async function validateEmailDisposable(req, res, next) {
       normalizedEmail
     );
     if (!validDomain) {
-      return resStatusFormatter(res, 400, "The email is invalid");
+      return resStatusFormatterCustom(req, res, 400, "The email is invalid");
     }
   }
 
@@ -60,17 +73,6 @@ async function validateEmailDisposable(req, res, next) {
   req.body.email = normalizedEmail;
 
   next();
-}
-
-async function validateEmail(req, res, next) {
-  const { email } = req.body;
-  let msg = "The email is invalid";
-
-  if (!email) {
-    return resStatusFormatter(res, 400, msg);
-  }
-
-  return await validateEmailDisposable(req, res, next);
 }
 
 //only use it when combine with emptyRequest middleware
@@ -104,6 +106,23 @@ async function lowercaseTrimKeyValueString(req, res, next) {
 
 function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
+}
+
+function resStatusFormatterCustom(req, res, status, msg) {
+  let mwgCode=null
+  // check if response from AEM
+  const requestFromAEM = commonService.isRequestFromAEM(req.headers);
+  // custom mwg code
+  if (requestFromAEM) {
+    // custom for user signup
+    if(req.method.toLowerCase() === 'post' && req.originalUrl === '/v1/ciam/users'){
+      let signupConfig = resHelper.responseConfigHelper('users_signup', 'MWG_CIAM_USER_SIGNUP_ERR');
+      mwgCode = signupConfig.mwgCode;
+      status = signupConfig.code;
+      msg = messageLang('signup_error', req.body.language);
+    }
+  }
+  return res.status(status).json(resHelper.formatMiddlewareRes(status, msg, mwgCode));
 }
 
 async function refreshToken(credentialInfo) {
