@@ -127,22 +127,18 @@ class UserUpdateValidation {
         return (this.error = CommonErrors.PasswordNotMatch(req.language));
       }
 
-      //verify new password is same with old password
-      let passwordIsSame = false;
-      if (bodyData.newPassword) {
-        passwordIsSame = await this.verifyPassword(bodyData.email, bodyData.newPassword)
-      }
-      if (passwordIsSame) {
-        return (this.error = CommonErrors.sameOldPasswordException(req.language));
-      }
-
       //verify old password is not match
       let oldPasswordIsSame = false;
       if (bodyData.oldPassword) {
-        oldPasswordIsSame = await this.verifyPassword(bodyData.email, bodyData.oldPassword)
+        oldPasswordIsSame = await this.verifyPassword(req.email, bodyData.oldPassword)
       }
       if (!oldPasswordIsSame) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
+      }
+
+      //verify new password is same with old password
+      if (bodyData.oldPassword && bodyData.oldPassword === bodyData.newPassword) {
+        return (this.error = CommonErrors.sameOldPasswordException(req.language));
       }
     }
     return (this.error = null);

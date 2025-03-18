@@ -561,12 +561,13 @@ async function proceedUpdatePassword(
   emailCognito
 ) {
   try {
-    let pass = await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
+    await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
 
     //update password hash and new email if possible - prepare for login session
     await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
       password_hash: hashPassword,
       username: email,
+      salt: null
     });
   } catch (error) {
     loggerService.error(
@@ -600,6 +601,7 @@ async function updatePassword(userCredentialInfo, hashPassword, newPassword, old
       await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
         password_hash: hashPassword,
         username: email,
+        salt: null
       });
     } else {
       //accessToken is not available -> Using argon2 to compare password
