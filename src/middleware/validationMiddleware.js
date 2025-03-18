@@ -127,7 +127,7 @@ function resStatusFormatterCustom(req, res, status, msg) {
       let signupConfig = resHelper.responseConfigHelper('users_signup', 'MWG_CIAM_USER_SIGNUP_ERR');
       mwgCode = signupConfig.mwgCode;
       status = signupConfig.code;
-      msg = messageLang('signup_error', req.body.language);
+      msg = messageLang('email_is_invalid', req.body.language);
     }
   }
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg, mwgCode));
