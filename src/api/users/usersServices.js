@@ -89,8 +89,8 @@ async function userSignup(req, membershipData) {
 }
 
 async function handleMPAccountSignupWP(req, membershipData) {
-  const isMemberActive = membershipData.status === 1;
-  if (isMemberActive) {
+  const isMemberPassesActive = membershipData.status === 1;
+  if (isMemberPassesActive) {
     //generate cardface and passkit based on membershipData for galaxy import
     const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
     const reqBasedOnMembership = {
@@ -108,7 +108,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
     await usersSignupHelper.insertUserMembership(req, membershipData.userId);
 
     //handle upsert newsletter for wildpass - checking*******
-    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberActive);
+    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberPassesActive);
 
     //calling galaxy sqs for keep current flow not change
     const galaxySQS = await galaxyWPService.galaxyToSQS(reqBasedOnMembership, "userSignup");
