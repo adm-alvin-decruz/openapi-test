@@ -126,7 +126,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
         message: "We noticed you're a member, and we're excited to let you know that we’ll be using the details from your membership profile to activate your WildPass benefits. Thank you for being a valued member!"
       },
       status: "success",
-      statusCode: "200"
+      statusCode: 200
     }
   }
   //2.c scenario with upsert if user already being membership have not pass active
