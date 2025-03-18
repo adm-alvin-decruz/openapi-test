@@ -16,7 +16,7 @@ class SignupErrors {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USER_SIGNUP_ERR",
+        mwgCode: "MWG_CIAM_USER_SIGNUP_ACCOUNT_EXIST_ERR",
         message: messageLang('signup_email', lang),
       },
       status: "success",
