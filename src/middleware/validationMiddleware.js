@@ -108,6 +108,14 @@ function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
 }
 
+/**
+ * Customized disposable email response for AEM
+ * @param {json} req
+ * @param {json} res
+ * @param {string} status
+ * @param {string} msg
+ * @returns
+ */
 function resStatusFormatterCustom(req, res, status, msg) {
   let mwgCode=null
   // check if response from AEM
