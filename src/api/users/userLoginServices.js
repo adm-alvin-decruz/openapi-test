@@ -28,6 +28,7 @@ class UserLoginService {
         JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
       );
     }
+
     const isMatchedPasswordForFirstLogin =
       userHasFirstLogin &&
       userHasFirstLogin.username &&
@@ -38,27 +39,23 @@ class UserLoginService {
             .toUpperCase() === userHasFirstLogin.password_hash.toUpperCase()
         : false;
 
-    if (isMatchedPasswordForFirstLogin && !passwordPattern(req.body.password)) {
-      throw new Error(
-        JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
-      );
+    if (isMatchedPasswordForFirstLogin) {
+      // throw error if password match and password not match policy
+      if (!passwordPattern(req.body.password)) {
+        throw new Error(JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language)));
+      }
+
+      // sent to cognito the req password
+      const cognitoPassword = req.body.password;
+      await cognitoService.cognitoAdminSetUserPassword(req.body.email, cognitoPassword);
+    }
+
+    const loginData = {
+      email: req.body.email,
+      password: req.body.password
     }
     try {
-      const loginRs = await cognitoService.cognitoUserLogin(
-        {
-          email: req.body.email,
-          password: isMatchedPasswordForFirstLogin
-            ? `${userHasFirstLogin.password_hash}${userHasFirstLogin.password_salt}`.trim()
-            : req.body.password,
-        },
-        hashSecret
-      );
-      isMatchedPasswordForFirstLogin &&
-        (await cognitoService.cognitoAdminSetUserPassword(
-          req.body.email,
-          req.body.password
-        ));
-      return loginRs;
+      return await cognitoService.cognitoUserLogin(loginData, hashSecret);
     } catch (error) {
       loggerService.error(
         {

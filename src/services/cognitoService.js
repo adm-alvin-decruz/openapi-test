@@ -16,7 +16,6 @@ const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
 const { maskKeyRandomly } = require("../utils/common");
 const crypto = require("crypto");
-const { json } = require("stream/consumers");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 
 class Cognito {
@@ -448,12 +447,7 @@ class Cognito {
         {},
         "[CIAM] End cognitoAdminSetUserPassword Service - Failed"
       );
-      throw new Error(
-        JSON.stringify({
-          status: "failed",
-          data: error,
-        })
-      );
+      console.log(new Error(JSON.stringify({status: "failed", data: error})));
     }
   }
 
