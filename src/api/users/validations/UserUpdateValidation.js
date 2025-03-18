@@ -1,5 +1,5 @@
 const { validateDOB } = require("../../../services/validationService");
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");

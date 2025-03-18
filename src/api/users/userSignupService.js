@@ -14,7 +14,7 @@ const {
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 const pool = require("../../db/connections/mysqlConn");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const commonService = require("../../services/commonService");
 const failedJobsModel = require("../../db/models/failedJobsModel");
 const userMigrationsModel = require("../../db/models/userMigrationsModel");

@@ -1,7 +1,7 @@
 const resHelper = require("../helpers/responseHelpers");
 const EmailDomainService = require("../services/emailDomainsService");
 const loggerService = require("../logs/logger");
-const CommonErrors = require("../config/https/errors/common");
+const CommonErrors = require("../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
 const cognitoService = require("../services/cognitoService");

@@ -1,6 +1,6 @@
 const { validateDOB } = require("../../../services/validationService");
 const { passwordPattern } = require("../../../utils/common");
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const commonService = require("../../../services/commonService");
 
 class UserSignupValidation {

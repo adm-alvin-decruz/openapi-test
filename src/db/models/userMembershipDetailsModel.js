@@ -1,7 +1,7 @@
 const pool = require("../connections/mysqlConn");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
 
 class UserMembershipDetails {

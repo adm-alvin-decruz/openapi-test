@@ -1,5 +1,5 @@
 const { GROUPS_SUPPORTS } = require("../../../utils/constants");
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const MembershipErrors = require("../../../config/https/errors/membershipErrors");
 
 class MembershipCheck {
