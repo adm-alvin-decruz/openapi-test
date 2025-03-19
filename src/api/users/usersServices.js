@@ -51,6 +51,7 @@ const {
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const {
   formatDateToMySQLDateTime,
   convertDateFromMySQLToSlash,
@@ -92,7 +93,13 @@ async function handleMPAccountSignupWP(req, membershipData) {
   const isMemberPassesActive = membershipData.status === 1;
   if (isMemberPassesActive) {
     //generate cardface and passkit based on membershipData for galaxy import
+    console.log('membershipspspsps', membershipData)
     const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+    //inquiry dob one time for checking dob member is exists if null
+    if (!getDobFromDB) {
+        const membershipInfoByEmail = await userMembershipDetailsModel.findByEmailAndMembershipId(membershipData)
+    }
+
     const reqBasedOnMembership = {
       ...req,
       body: {
@@ -107,7 +114,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
     //insert wildpass for prepare galaxy import
     await usersSignupHelper.insertUserMembership(req, membershipData.userId);
 
-    //handle upsert newsletter for wildpass - checking*******
+    //handle upsert newsletter for wildpass
     await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberPassesActive);
 
     //calling galaxy sqs for keep current flow not change

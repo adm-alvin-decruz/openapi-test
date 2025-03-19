@@ -112,6 +112,11 @@ class UserMembershipDetails {
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
+
+  static async findByEmailAndMembershipId(membershipId, email) {
+    const sql = "SELECT * FROM user_membership_details WHERE user_membership_id = ? AND member_email = ?";
+    return await pool.query(sql, [membershipId, email]);
+  }
 }
 
 module.exports = UserMembershipDetails;
