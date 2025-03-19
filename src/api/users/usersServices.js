@@ -46,7 +46,6 @@ const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
 const {
   messageLang,
-  formatPhoneNumber,
   maskKeyRandomly,
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
@@ -55,6 +54,7 @@ const userMembershipDetailsModel = require("../../db/models/userMembershipDetail
 const {
   formatDateToMySQLDateTime,
   convertDateFromMySQLToSlash,
+  convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 
 /**
@@ -93,11 +93,21 @@ async function handleMPAccountSignupWP(req, membershipData) {
   const isMemberPassesActive = membershipData.status === 1;
   if (isMemberPassesActive) {
     //generate cardface and passkit based on membershipData for galaxy import
-    console.log('membershipspspsps', membershipData)
-    const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+    let getDateOfBirth = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+
     //inquiry dob one time for checking dob member is exists if null
-    if (!getDobFromDB) {
-        const membershipInfoByEmail = await userMembershipDetailsModel.findByEmailAndMembershipId(membershipData)
+    if (!getDateOfBirth) {
+      const membershipDetails = await userMembershipDetailsModel.lookupMemberDetailsHaveDob(membershipData.email);
+      // if exist dob value, use this dob value from db - if not use from WP signup request
+      getDateOfBirth =
+          membershipDetails && membershipDetails.member_dob
+              ? formatDateToMySQLDateTime(membershipDetails.member_dob).split(" ")[0]
+              : convertDateToMySQLFormat(req.body.dob);
+
+      //update dob into users table
+      await userModel.update(membershipData.userId, {
+        birthdate: getDateOfBirth
+      })
     }
 
     const reqBasedOnMembership = {
@@ -106,7 +116,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
         ...req.body,
         firstName: membershipData.firstName || "",
         lastName: membershipData.lastName || "",
-        dob: convertDateFromMySQLToSlash(getDobFromDB),
+        dob: convertDateFromMySQLToSlash(getDateOfBirth),
         mandaiID: membershipData.mandaiId
       }
     };

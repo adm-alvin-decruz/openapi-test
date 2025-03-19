@@ -113,9 +113,26 @@ class UserMembershipDetails {
     }
   }
 
-  static async findByEmailAndMembershipId(membershipId, email) {
-    const sql = "SELECT * FROM user_membership_details WHERE user_membership_id = ? AND member_email = ?";
-    return await pool.query(sql, [membershipId, email]);
+  static async lookupMemberDetailsHaveDob(email) {
+    const sql =
+      "SELECT * FROM user_membership_details WHERE member_email = ? AND member_dob IS NOT NULL";
+
+    try {
+      const rows = await pool.query(sql, [email]);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+        {
+          userMembershipDetailsModel: {
+            email,
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+          },
+        },
+        {},
+        "[CIAM] userMembershipDetailsModel.lookupMemberDetailsHaveDob - Failed"
+      );
+    }
   }
 }
 
