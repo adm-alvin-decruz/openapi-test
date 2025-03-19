@@ -386,8 +386,8 @@ async function updateUserMigration(req, dbUserID){
 }
 
 
-async function signupMPWithUpdateIfExist(reqBody, userDBInfo){
-  // update user credential table, clear token & lastLogin for make sure the user re-signup have firstLogin
+async function signupMPWithUpdateIfExist(reqBody, userDBInfo, passwordCredential){
+  // update user credential table, clear token & lastLogin for make sure the user re-signup for trigger first login
   let userCredentialData = {
     password_hash: reqBody.passwordHash ? reqBody.passwordHash : undefined,
     salt: reqBody.passwordSalt ? reqBody.passwordSalt : null,
@@ -395,6 +395,12 @@ async function signupMPWithUpdateIfExist(reqBody, userDBInfo){
     last_login: null
   };
   const userCredentialExistedUpdate = await userCredentialModel.updateByUserEmail(reqBody.email, userCredentialData);
+
+  //reset cognito password if user is existed
+  await cognitoService.cognitoAdminSetUserPassword(
+      reqBody.email,
+      passwordCredential.cognito.hashPassword
+  );
 
   // update user table
   let userModelData = {

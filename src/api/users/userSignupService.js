@@ -530,7 +530,7 @@ class UserSignupService {
         if (updateIfMigrationSwitch && updateIfMigrationSwitch === true) {
 
           // update membership pass user
-          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo);
+          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo, passwordCredential);
           if(update.success){
             (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
             return {mandaiId};
