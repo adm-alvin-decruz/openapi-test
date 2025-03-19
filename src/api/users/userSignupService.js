@@ -287,7 +287,7 @@ class UserSignupService {
   }
 
   async preparePassword(req) {
-    if (!!req.body.migrations) {
+    if (req.body.migrations) {
       const saltPassword = !!req.body.passwordSalt
         ? req.body.passwordSalt
         : passwordService.createSaltKey(5);
@@ -518,10 +518,9 @@ class UserSignupService {
       // check is user email existed at wildpass group
       const userBelongWildpassGroup = await this.checkUserBelongWildPass(req.body.email, userExistedInCognito);
 
-      const userInfo = await userModel.findFullMandaiId(req.body.email);
-
-      if (userInfo && userInfo.length && userInfo[0] && userBelongWildpassGroup) {
-        return await this.handleUpdateUserBelongWildPass(req, userExistedInCognito, userInfo[0], passwordCredential);
+      const userInfo = await userModel.findByEmail(req.body.email);
+      if (userInfo && userInfo.email && userBelongWildpassGroup) {
+        return await this.handleUpdateUserBelongWildPass(req, userExistedInCognito, userInfo, passwordCredential);
       }
 
       if (req.body.migrations) {
@@ -531,7 +530,7 @@ class UserSignupService {
         if (updateIfMigrationSwitch && updateIfMigrationSwitch === true) {
 
           // update membership pass user
-          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo[0]);
+          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo);
           if(update.success){
             (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
             return {mandaiId};

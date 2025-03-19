@@ -504,7 +504,7 @@ class User {
                     MAX(
                         CASE 
                             WHEN umd.status = 0 THEN 1  -- Active membership
-                            WHEN umd.status IS NULL AND (umd.valid_until IS NULL OR umd.valid_until >= CURDATE()) THEN 1
+                            WHEN umd.status IS NULL AND (umd.valid_until IS NOT NULL AND umd.valid_until >= CURDATE()) THEN 1
                             ELSE 0
                         END
                     ) AS status

@@ -10,6 +10,7 @@ const dbConfig = require('../../config/dbConfig');
 const { getCurrentUTCTimestamp, convertDateToMySQLFormat} = require('../../utils/dateUtils');
 const commonService = require("../../services/commonService");
 const loggerService = require("../../logs/logger");
+const cognitoService = require("../../services/cognitoService");
 
 /**
  * Generate mandaiID
@@ -386,10 +387,12 @@ async function updateUserMigration(req, dbUserID){
 
 
 async function signupMPWithUpdateIfExist(reqBody, userDBInfo){
-  // update user credential table
+  // update user credential table, clear token & lastLogin for make sure the user re-signup have firstLogin
   let userCredentialData = {
     password_hash: reqBody.passwordHash ? reqBody.passwordHash : undefined,
     salt: reqBody.passwordSalt ? reqBody.passwordSalt : null,
+    tokens: null,
+    last_login: null
   };
   const userCredentialExistedUpdate = await userCredentialModel.updateByUserEmail(reqBody.email, userCredentialData);
 
@@ -404,8 +407,8 @@ async function signupMPWithUpdateIfExist(reqBody, userDBInfo){
   // update user details table
   let userDetailData = {
     user_id: userDBInfo.id,
-    phone_number: reqBody.phoneNumber ? reqBody.phoneNumber : undefined,
-    zoneinfo: reqBody.country ? reqBody.country : undefined,
+    phone_number: reqBody.phoneNumber ? reqBody.phoneNumber : null,
+    zoneinfo: reqBody.country ? reqBody.country : null,
   };
   const userDetailExistedUpdate = await userDetailModel.upsert(userDetailData);
 
