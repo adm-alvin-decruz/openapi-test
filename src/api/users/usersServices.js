@@ -46,14 +46,15 @@ const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
 const {
   messageLang,
-  formatPhoneNumber,
   maskKeyRandomly,
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const {
   formatDateToMySQLDateTime,
   convertDateFromMySQLToSlash,
+  convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 
 /**
@@ -92,14 +93,32 @@ async function handleMPAccountSignupWP(req, membershipData) {
   const isMemberPassesActive = membershipData.status === 1;
   if (isMemberPassesActive) {
     //generate cardface and passkit based on membershipData for galaxy import
-    const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+    let getDateOfBirth = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+
+    //inquiry dob one time for checking dob member is exists if null
+    if (!getDateOfBirth) {
+      const membershipDetails = await userMembershipDetailsModel.lookupMemberDetailsHaveDob(membershipData.email);
+
+      // if exist dob value, use this dob value from db - if not use from WP signup request
+      if (membershipDetails && membershipDetails.member_dob) {
+        getDateOfBirth = formatDateToMySQLDateTime(membershipDetails.member_dob).split(" ")[0];
+      } else {
+        getDateOfBirth = convertDateToMySQLFormat(req.body.dob);
+      }
+
+      //update dob into users table
+      await userModel.update(membershipData.userId, {
+        birthdate: getDateOfBirth
+      })
+    }
+
     const reqBasedOnMembership = {
       ...req,
       body: {
         ...req.body,
         firstName: membershipData.firstName || "",
         lastName: membershipData.lastName || "",
-        dob: convertDateFromMySQLToSlash(getDobFromDB),
+        dob: convertDateFromMySQLToSlash(getDateOfBirth),
         mandaiID: membershipData.mandaiId
       }
     };
@@ -107,7 +126,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
     //insert wildpass for prepare galaxy import
     await usersSignupHelper.insertUserMembership(req, membershipData.userId);
 
-    //handle upsert newsletter for wildpass - checking*******
+    //handle upsert newsletter for wildpass
     await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberPassesActive);
 
     //calling galaxy sqs for keep current flow not change
