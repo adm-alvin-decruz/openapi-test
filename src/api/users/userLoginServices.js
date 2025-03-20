@@ -4,7 +4,7 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const LoginErrors = require("../../config/https/errors/loginErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const passwordService = require("./userPasswordService");
 const { passwordPattern } = require("../../utils/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
@@ -28,7 +28,6 @@ class UserLoginService {
         JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
       );
     }
-
     const isMatchedPasswordForFirstLogin =
       userHasFirstLogin &&
       userHasFirstLogin.username &&

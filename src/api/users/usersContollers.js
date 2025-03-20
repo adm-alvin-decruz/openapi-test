@@ -21,7 +21,7 @@ const {
 const UserSignUpValidation = require("./validations/UserSignupValidation");
 const UserUpdateValidation = require("./validations/UserUpdateValidation");
 const UserMembershipPassValidation = require("./validations/UserMembershipPassValidation");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");

@@ -5,7 +5,7 @@ const router = express.Router();
 const processTimer = require('../../utils/processTimer');
 const membershipsController = require('./membershipsControllers');
 const validationService = require('../../services/validationService');
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const { isEmptyRequest, validateEmailDisposable } = require("../../middleware/validationMiddleware");
 
 const pong = {'pong': 'pang'};

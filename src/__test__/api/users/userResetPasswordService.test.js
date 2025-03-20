@@ -1,7 +1,7 @@
 const cognitoService = require("../../../services/cognitoService");
 const UserResetPasswordService = require("../../../api/users/userResetPasswordService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const CommonUtils = require("../../../utils/common");
 const {
   getCurrentUTCTimestamp,

@@ -71,6 +71,7 @@ module.exports = {
     password_invalid: "Password does not meet complexity requirements.",
     password_require_change:
       "Incorrect password or your password does not meet the security requirements. It must include at least one uppercase and one lowercase letter. Please try again or reset your password if needed.",
+    password_has_same_with_old_password: "New password should not be the same as previous passwords.",
     phoneNumber_invalid: "Phone number is invalid.",
     request_body_is_empty: "Request body is empty",
     request_reset_password_success: "Password reset link sent to your email",
@@ -150,6 +151,7 @@ module.exports = {
     password_invalid: "密码不符合复杂性要求。",
     password_require_change:
       "密码错误或不符合安全要求。必须包含至少一个大写字母和一个小写字母。请重试，或在需要时重置密码。",
+    password_has_same_with_old_password: "新密码不应与之前的密码相同。",
     phoneNumber_invalid: "电话号码无效。",
     request_body_is_empty: "请求体为空",
     request_reset_password_success: "密码重置链接已发送到您的邮箱。",
@@ -239,6 +241,7 @@ module.exports = {
     password_invalid: "비밀번호가 일치하지 않습니다.",
     password_require_change:
       "비밀번호가 틀렸거나 보안 요구 사항을 충족하지 않습니다. 대문자와 소문자를 각각 최소 하나 이상 포함해야 합니다. 다시 시도하거나 필요하면 비밀번호를 재설정하세요.",
+    password_has_same_with_old_password: "새 비밀번호는 이전 비밀번호와 동일해서는 안 됩니다.",
     phoneNumber_invalid: "전화번호가 유효하지 않습니다.",
     request_body_is_empty: "요청 본문이 비어 있습니다",
     request_reset_password_success:
@@ -325,6 +328,7 @@ module.exports = {
     password_invalid: "パスワードが複雑性の要件を満たしていません。",
     password_require_change:
       "パスワードが間違っているか、セキュリティ要件を満たしていません。少なくとも1つの大文字と1つの小文字を含める必要があります。もう一度お試しいただくか、必要に応じてパスワードをリセットしてください。",
+    password_has_same_with_old_password: "新しいパスワードは以前のパスワードと同じであってはなりません。",
     phoneNumber_invalid: "電話番号が無効です。",
     request_body_is_empty: "リクエストボディが空です",
     request_reset_password_success:
