@@ -447,7 +447,6 @@ class Cognito {
         {},
         "[CIAM] End cognitoAdminSetUserPassword Service - Failed"
       );
-      console.log(new Error(JSON.stringify({status: "failed", data: error})));
     }
   }
 
