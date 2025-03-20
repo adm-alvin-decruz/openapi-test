@@ -103,6 +103,7 @@ module "lambda_function_ciam_membership" {
     AEM_REQ_API_KEY = var.AEM_REQ_API_KEY
     NOPCOMMERCE_REQ_API_KEY = var.NOPCOMMERCE_REQ_API_KEY
     NOPCOMMERCE_REQ_PRIVATE_API_KEY = var.NOPCOMMERCE_REQ_PRIVATE_API_KEY
+    MFA_MOBILE_REQ_PUBLIC_API_KEY = var.MFA_MOBILE_REQ_PUBLIC_API_KEY
   }
 #  allowed_triggers = {
 #    apigateway = {
