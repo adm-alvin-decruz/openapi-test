@@ -25,8 +25,9 @@ const CommonErrors = require("../../config/https/errors/commonErrors");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
-const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
+const UserResetAccessTokenJob = require("./userRefreshAccessTokenJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
+const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
 const { maskKeyRandomly } = require("../../utils/common");
 
 /**
@@ -859,6 +860,19 @@ async function userUpdateMembershipPass(req, res) {
   }
 }
 
+async function userRefreshAccessToken(accessToken, body) {
+  try {
+    return await UserResetAccessTokenJob.perform(accessToken, body);
+  } catch (error) {
+    const errorMessage =
+        error && error.message ? JSON.parse(error.message) : "";
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -876,4 +890,5 @@ module.exports = {
   userVerifyToken,
   userCreateMembershipPass,
   userUpdateMembershipPass,
+  userRefreshAccessToken
 };
