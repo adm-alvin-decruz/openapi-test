@@ -81,11 +81,22 @@ class CommonErrors {
       statusCode: 401,
     };
   }
+  static sameOldPasswordException(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
+        message: messageLang("password_has_same_with_old_password", lang),
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
   static PasswordExpireOrBeingUsed(lang) {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
+        mwgCode: "MWG_CIAM_PASSWORD_ERR_05",
         message: messageLang("token_reset_password_being_used", lang),
       },
       status: "failed",

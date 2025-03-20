@@ -1,7 +1,10 @@
 const { validateDOB } = require("../../../services/validationService");
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
+const userCredentialModel = require("../../../db/models/userCredentialModel");
+const passwordService = require("../userPasswordService");
+const argon2 = require("argon2");
 
 class UserUpdateValidation {
   constructor() {
@@ -10,6 +13,19 @@ class UserUpdateValidation {
 
   static execute(req) {
     return this.validateRequestParams(req);
+  }
+
+  //return true/false
+  static async verifyPassword(email, password) {
+    const userCredential = await userCredentialModel.findByUserEmail(email);
+    //check by password salt - from migration always have salt
+    if (userCredential && userCredential.salt) {
+      return passwordService
+          .createPassword(password, userCredential.salt)
+          .toUpperCase() === userCredential.password_hash.toUpperCase()
+    }
+    //check by password argon2 with normal flow
+    return await argon2.verify(userCredential.password_hash, password);
   }
 
   //enhance get list error
@@ -102,11 +118,27 @@ class UserUpdateValidation {
       if (!bodyData.oldPassword && !privateMode) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
       }
+
       if (!passwordPattern(bodyData.newPassword)) {
         return (this.error = CommonErrors.PasswordErr(req.language));
       }
+
       if (bodyData.newPassword !== bodyData.confirmPassword) {
         return (this.error = CommonErrors.PasswordNotMatch(req.language));
+      }
+
+      //verify old password is not match
+      let oldPasswordIsSame = false;
+      if (bodyData.oldPassword) {
+        oldPasswordIsSame = await this.verifyPassword(req.email, bodyData.oldPassword)
+      }
+      if (!oldPasswordIsSame) {
+        return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
+      }
+
+      //verify new password is same with old password
+      if (bodyData.oldPassword && bodyData.oldPassword === bodyData.newPassword) {
+        return (this.error = CommonErrors.sameOldPasswordException(req.language));
       }
     }
     return (this.error = null);
