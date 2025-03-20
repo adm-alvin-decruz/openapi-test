@@ -98,11 +98,13 @@ async function handleMPAccountSignupWP(req, membershipData) {
     //inquiry dob one time for checking dob member is exists if null
     if (!getDateOfBirth) {
       const membershipDetails = await userMembershipDetailsModel.lookupMemberDetailsHaveDob(membershipData.email);
+
       // if exist dob value, use this dob value from db - if not use from WP signup request
-      getDateOfBirth =
-          membershipDetails && membershipDetails.member_dob
-              ? formatDateToMySQLDateTime(membershipDetails.member_dob).split(" ")[0]
-              : convertDateToMySQLFormat(req.body.dob);
+      if (membershipDetails && membershipDetails.member_dob) {
+        getDateOfBirth = formatDateToMySQLDateTime(membershipDetails.member_dob).split(" ")[0];
+      } else {
+        getDateOfBirth = convertDateToMySQLFormat(req.body.dob);
+      }
 
       //update dob into users table
       await userModel.update(membershipData.userId, {
