@@ -156,3 +156,7 @@ variable "NOPCOMMERCE_REQ_API_KEY" {
 variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
   description = "API Key for Nopcommerce Private endpoint"
 }
+
+variable "MFA_MOBILE_REQ_PUBLIC_API_KEY" {
+  description = "API Key for MFA"
+}
