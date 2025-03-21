@@ -129,14 +129,7 @@ router.put("/users", isEmptyRequest, validateEmail, AccessTokenAuthGuardByAppIdG
     // region Update Account Membership Passes
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        let accessToken =
-          req.headers && req.headers.authorization
-            ? req.headers.authorization.toString()
-            : "";
-        if (accessToken && res.newAccessToken) {
-          accessToken = res.newAccessToken;
-        }
-        const updateRs = await userController.adminUpdateMPUser(req, accessToken);
+        const updateRs = await userController.adminUpdateMPUser(req);
         if (res.newAccessToken) {
           updateRs.membership.accessToken = res.newAccessToken;
         }

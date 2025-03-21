@@ -167,7 +167,7 @@ async function adminCreateMPUser(req) {
           layer: "controller.adminCreateMPUser",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: `${error}`,
+          response_to_client: new Error(error),
         },
       },
       {},
@@ -300,7 +300,7 @@ async function adminUpdateUser(req, listedParams) {
   }
 }
 
-async function adminUpdateMPUser(req, accessToken) {
+async function adminUpdateMPUser(req) {
   loggerService.log(
     {
       user: {
@@ -309,7 +309,6 @@ async function adminUpdateMPUser(req, accessToken) {
         api_header: req.headers,
         api_body: JSON.stringify(req.body),
         layer: "controller.adminUpdateMPUser",
-        accessToken: maskKeyRandomly(accessToken),
         private_mode: !!req.body.privateMode,
       },
     },
@@ -325,8 +324,8 @@ async function adminUpdateMPUser(req, accessToken) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateMPUser",
-          accessToken: maskKeyRandomly(accessToken),
-          private_mode: !!req.body.privateMode
+          private_mode: !!req.body.privateMode,
+          error: JSON.stringify(message)
         },
       },
       {},
@@ -340,7 +339,7 @@ async function adminUpdateMPUser(req, accessToken) {
     if(!requestFromAEM){
       req.body.ncRequest = true;
     }
-    return await usersService.adminUpdateMPUser(req.body, accessToken);
+    return await usersService.adminUpdateMPUser(req.body);
   } catch (error) {
     loggerService.error(
       {
@@ -350,8 +349,7 @@ async function adminUpdateMPUser(req, accessToken) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateMPUser",
-          accessToken: maskKeyRandomly(accessToken),
-          error: `${error}`,
+          error: new Error(error),
           private_mode: !!req.body.privateMode
         },
       },
