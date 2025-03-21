@@ -14,6 +14,7 @@ const {
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   validateEmailDisposable,
   lowercaseTrimKeyValueString,
+  validateAPIKey,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -531,6 +532,31 @@ router.put(
   validateEmail,
   lowercaseTrimKeyValueString,
   userController.userUpdateMembershipPass
+);
+
+/**
+ * CIAM user refresh token endpoint
+ */
+router.post(
+  "/token/refresh",
+  isEmptyRequest,
+  validateAPIKey,
+  AccessTokenAuthGuard,
+  async (req, res) => {
+    req["processTimer"] = processTimer;
+    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+    const accessToken = req.headers.authorization.toString();
+    try {
+      const data = await userController.userRefreshAccessToken(accessToken, req.body);
+      if (res.newAccessToken) {
+        data.token.accessToken = res.newAccessToken;
+      }
+      return res.status(data.statusCode).json(data);
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage);
+    }
+  }
 );
 
 module.exports = router;

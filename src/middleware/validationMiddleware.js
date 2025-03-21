@@ -220,7 +220,6 @@ async function AccessTokenAuthGuard(req, res, next) {
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-
   next();
 }
 
@@ -235,10 +234,28 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 
 async function validateAPIKey(req, res, next) {
   const validationSwitch = await switchService.findByName("api_key_validation");
-  const privateAppIdArr = JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`]);
-
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   const apiKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
+  const appId = mwgAppID.split('.')[0];
+
+  //add more data for dynamic checking
+  const apiKeyMappings = {
+    //key will be match with request header - value will be from env
+    nopComm: {
+      apiKey: process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY,
+      appId: JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`])
+    },
+    mfaMobile: {
+      apiKey: process.env.MFA_MOBILE_REQ_PUBLIC_API_KEY,
+      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
+    },
+  };
+
+  const validateData = appId ? apiKeyMappings[appId] : null;
+
+  if (!validateData) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
 
   loggerService.log(
       {
@@ -246,24 +263,23 @@ async function validateAPIKey(req, res, next) {
           layer: "middleware.validateAPIKey",
           validationSwitch: JSON.stringify(validationSwitch),
           mwgAppID: maskKeyRandomly(mwgAppID),
-          expectedApiKey: maskKeyRandomly(process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY),
+          expectedApiKey: maskKeyRandomly(validateData.apiKey),
           incomingApiKey: maskKeyRandomly(apiKey)
         },
       },
       "[CIAM] Validate Api Key Middleware - Process"
   );
-  if (!mwgAppID || !privateAppIdArr.includes(mwgAppID)) {
+  if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
   if (validationSwitch.switch === 1) {
-    if (apiKey && apiKey === process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY) {
+    if (apiKey && apiKey === validateData.apiKey) {
       return next();
     }
   }
   if (validationSwitch.switch === 0) {
     return next();
   }
-
   return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
 }
 
