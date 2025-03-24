@@ -28,7 +28,7 @@ class LoginErrors {
     };
   }
 
-  static ciamLoginUserOrPasswordInvalid(email, lang) {
+  static ciamLoginEmailOrPasswordInvalid(email, lang) {
     return {
       membership: {
         code: 200,
