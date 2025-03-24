@@ -19,6 +19,7 @@ module.exports = {
     email_is_invalid: "The email is invalid",
     email_no_record: "No record found.",
     email_not_being_used: "This email address does not have a Mandai Account.",
+    email_or_password_invalid: "The username or password you’ve entered is invalid. Please check again.",
     firstName_invalid: "The first name is invalid.",
     get_membership_failed: "Get my membership failed.",
     get_membership_success: "Get my membership success.",
@@ -103,6 +104,7 @@ module.exports = {
     email_is_invalid: "电子邮件无效",
     email_no_record: "未找到记录。",
     email_not_being_used: "此邮箱地址没有 Mandai 账户。",
+    email_or_password_invalid: "您输入的用户名或密码无效。请再检查一次。",
     firstName_invalid: "名字无效。",
     get_membership_failed: "获取我的会员资格失败",
     get_membership_success: "获取我的会员资格成功",
@@ -186,6 +188,7 @@ module.exports = {
     email_no_record: "기록을 찾을 수 없습니다.",
     email_not_being_used:
       "이 이메일 주소는 Mandai 계정을 가지고 있지 않습니다.",
+    email_or_password_invalid: "입력하신 사용자 이름 또는 비밀번호가 유효하지 않습니다. 다시 확인해주세요.",
     firstName_invalid: "이름이 유효하지 않습니다.",
     get_membership_failed: "내 멤버십 가져오기에 실패했습니다",
     get_membership_success: "내 멤버십을 성공적으로 가져왔습니다",
@@ -279,6 +282,7 @@ module.exports = {
     email_no_record: "記録が見つかりません。",
     email_not_being_used:
       "このメールアドレスはMandaiアカウントを持っていません。",
+    email_or_password_invalid: "入力したユーザー名またはパスワードが無効です。もう一度ご確認ください。",
     firstName_invalid: "名前が無効です。",
     get_membership_failed: "私のメンバーシップの取得に失敗しました",
     get_membership_success: "私のメンバーシップを取得しました",

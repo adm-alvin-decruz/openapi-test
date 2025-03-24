@@ -14,12 +14,26 @@ class LoginErrors {
       statusCode: 200,
     };
   }
+
   static ciamLoginEmailInvalid(email, lang) {
     return {
       membership: {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
         message: messageLang("membership_email_invalid", lang),
+        email: email,
+      },
+      status: "success",
+      statusCode: 200,
+    };
+  }
+
+  static ciamLoginEmailOrPasswordInvalid(email, lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
+        message: messageLang("email_or_password_invalid", lang),
         email: email,
       },
       status: "success",
