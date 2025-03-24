@@ -74,7 +74,7 @@ class UserLoginService {
       );
       throw new Error(
         JSON.stringify(
-          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+          LoginErrors.ciamLoginUserOrPasswordInvalid(req.body.email, req.body.language)
         )
       );
     }
@@ -121,7 +121,7 @@ class UserLoginService {
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
       throw new Error(
         JSON.stringify(
-          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+          LoginErrors.ciamLoginUserOrPasswordInvalid(req.body.email, req.body.language)
         )
       );
     }
