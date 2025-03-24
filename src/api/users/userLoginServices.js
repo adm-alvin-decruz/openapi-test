@@ -42,7 +42,7 @@ class UserLoginService {
         "[CIAM] Login Service trigger Login Execution - Failed"
       );
       throw new Error(
-        JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
+        JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language))
       );
     }
   }
