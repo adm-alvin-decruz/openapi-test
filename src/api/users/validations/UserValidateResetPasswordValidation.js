@@ -1,4 +1,4 @@
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 const ValidateTokenErrors = require("../../../config/https/errors/validateTokenErrors");
 
 class UserValidateResetPasswordValidation {

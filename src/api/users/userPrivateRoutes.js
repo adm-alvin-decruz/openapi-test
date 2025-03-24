@@ -14,7 +14,7 @@ const processTimer = require("../../utils/processTimer");
 const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 
 const pong = { pong: "pang" };
 

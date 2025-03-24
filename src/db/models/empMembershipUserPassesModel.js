@@ -2,7 +2,7 @@ const pool = require("../connections/mysqlConn");
 const commonService = require("../../services/commonService");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const loggerService = require("../../logs/logger");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 
 class EmpMembershipUserPassesModel {
   static async updatePassState(reqBody, data) {

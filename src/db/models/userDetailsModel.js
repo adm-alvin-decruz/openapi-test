@@ -209,21 +209,22 @@ class UserDetail {
 
       if (existingRows.length > 0) {
         // Update existing record - only update fields that were provided
-        const updateData = { ...data };
+        const updateData = { ...Object.fromEntries(
+              Object.entries(data).filter(([_, value]) => value !== undefined)
+        )};
         delete updateData.user_id; // Remove user_id from update data
 
         // If there are no fields to update, just return the existing record
         if (Object.keys(updateData).length === 0) {
           return {
             success: true,
-            data: await this.getByUserId(userData.user_id),
+            data: await this.findByUserId(userData.user_id),
             operation: 'no-change'
           };
         }
 
         const updateFields = Object.keys(updateData).map(key => `${key} = ?`).join(', ');
         const updateValues = Object.values(updateData);
-
         const sql = `
           UPDATE user_details
           SET ${updateFields}

@@ -40,20 +40,21 @@ const userUpdateHelper = require("./usersUpdateHelpers");
 const userDeleteHelper = require("./usersDeleteHelpers");
 const galaxyWPService = require("../components/galaxy/services/galaxyWPService");
 const switchService = require("../../services/switchService");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
 const {
   messageLang,
-  formatPhoneNumber,
   maskKeyRandomly,
 } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
+const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const {
   formatDateToMySQLDateTime,
   convertDateFromMySQLToSlash,
+  convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 
 /**
@@ -89,17 +90,35 @@ async function userSignup(req, membershipData) {
 }
 
 async function handleMPAccountSignupWP(req, membershipData) {
-  const isMemberActive = membershipData.status === 1;
-  if (isMemberActive) {
+  const isMemberPassesActive = membershipData.status === 1;
+  if (isMemberPassesActive) {
     //generate cardface and passkit based on membershipData for galaxy import
-    const getDobFromDB = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+    let getDateOfBirth = membershipData.dob ? formatDateToMySQLDateTime(membershipData.dob).split(" ")[0] : "";
+
+    //inquiry dob one time for checking dob member is exists if null
+    if (!getDateOfBirth) {
+      const membershipDetails = await userMembershipDetailsModel.lookupMemberDetailsHaveDob(membershipData.email);
+
+      // if exist dob value, use this dob value from db - if not use from WP signup request
+      if (membershipDetails && membershipDetails.member_dob) {
+        getDateOfBirth = formatDateToMySQLDateTime(membershipDetails.member_dob).split(" ")[0];
+      } else {
+        getDateOfBirth = convertDateToMySQLFormat(req.body.dob);
+      }
+
+      //update dob into users table
+      await userModel.update(membershipData.userId, {
+        birthdate: getDateOfBirth
+      })
+    }
+
     const reqBasedOnMembership = {
       ...req,
       body: {
         ...req.body,
         firstName: membershipData.firstName || "",
         lastName: membershipData.lastName || "",
-        dob: convertDateFromMySQLToSlash(getDobFromDB),
+        dob: convertDateFromMySQLToSlash(getDateOfBirth),
         mandaiID: membershipData.mandaiId
       }
     };
@@ -107,8 +126,8 @@ async function handleMPAccountSignupWP(req, membershipData) {
     //insert wildpass for prepare galaxy import
     await usersSignupHelper.insertUserMembership(req, membershipData.userId);
 
-    //handle upsert newsletter for wildpass - checking*******
-    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberActive);
+    //handle upsert newsletter for wildpass
+    await usersSignupHelper.insertUserNewletter(req, membershipData.userId, isMemberPassesActive);
 
     //calling galaxy sqs for keep current flow not change
     const galaxySQS = await galaxyWPService.galaxyToSQS(reqBasedOnMembership, "userSignup");
@@ -126,7 +145,7 @@ async function handleMPAccountSignupWP(req, membershipData) {
         message: "We noticed you're a member, and we're excited to let you know that we’ll be using the details from your membership profile to activate your WildPass benefits. Thank you for being a valued member!"
       },
       status: "success",
-      statusCode: "200"
+      statusCode: 200
     }
   }
   //2.c scenario with upsert if user already being membership have not pass active
@@ -488,7 +507,7 @@ async function adminUpdateUser(
   }
 }
 
-async function updateDB(body, userId, isNewEmailExisted) {
+async function updateDB(body, userId, latestEmail) {
   if (!userId) {
     throw new Error(
       JSON.stringify(
@@ -506,20 +525,13 @@ async function updateDB(body, userId, isNewEmailExisted) {
       bodyData.dob ||
       bodyData.newEmail
     ) {
-      const emailUpdate =
-        !isNewEmailExisted && bodyData.newEmail ? bodyData.newEmail : undefined;
       await userDBService.userModelExecuteUpdate(
         userId,
         bodyData.firstName,
         bodyData.lastName,
         bodyData.dob,
-        emailUpdate
+        latestEmail
       );
-    }
-    if (bodyData.newEmail && !bodyData.newPassword) {
-      await userCredentialModel.updateByUserId(userId, {
-        username: bodyData.newEmail,
-      });
     }
     if (bodyData.newsletter && bodyData.newsletter.name) {
       await userDBService.userNewsletterModelExecuteUpdate(
@@ -550,113 +562,6 @@ async function updateDB(body, userId, isNewEmailExisted) {
       "[CIAM] Update DB Service - Failed"
     );
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
-  }
-}
-
-async function proceedUpdatePassword(
-  userCredentialInfo,
-  hashPassword,
-  newPassword,
-  email,
-  emailCognito
-) {
-  try {
-    let pass = await cognitoService.cognitoAdminSetUserPassword(emailCognito, newPassword);
-
-    //update password hash and new email if possible - prepare for login session
-    await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
-      password_hash: hashPassword,
-      username: email,
-    });
-  } catch (error) {
-    loggerService.error(
-      {
-        user: {
-          userCredentialInfo: userCredentialInfo,
-          email: email,
-          emailCognito: emailCognito,
-          layer: "usersService.proceedUpdatePassword",
-          error: `${error}`,
-        },
-      },
-      {},
-      "[CIAM] Update Password Proceed - Failed"
-    );
-    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr("en")));
-  }
-}
-
-async function updatePassword(userCredentialInfo, hashPassword, newPassword, oldPassword, email, emailCognito, accessToken, lang = "en") {
-  try {
-    if (accessToken) {
-      //accessToken is available it means Cognito will verify old password as well
-      await cognitoService.cognitoUserChangePassword(
-        accessToken,
-        newPassword,
-        oldPassword
-      );
-
-      //update password hash and new email if possible - prepare for login session
-      await userCredentialModel.updateByUserId(userCredentialInfo.user_id, {
-        password_hash: hashPassword,
-        username: email,
-      });
-    } else {
-      //accessToken is not available -> Using argon2 to compare password
-      const isMatched = await passwordService.comparePassword(
-        oldPassword,
-        userCredentialInfo.password_hash
-      );
-      if (isMatched) {
-        await proceedUpdatePassword(
-          userCredentialInfo,
-          hashPassword,
-          newPassword,
-          email,
-          emailCognito
-        );
-      } else {
-        await Promise.reject(
-          JSON.stringify(CommonErrors.OldPasswordNotMatchErr(lang))
-        );
-      }
-    }
-  } catch (error) {
-    loggerService.error(
-      {
-        user: {
-          email: email,
-          emailCognito: email,
-          layer: "usersService.updatePassword",
-          error: `${error}`,
-        },
-      },
-      {},
-      "[CIAM] Update Password - Failed"
-    );
-    throw new Error(JSON.stringify(CommonErrors.OldPasswordNotMatchErr(lang)));
-  }
-}
-
-async function updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, email, emailCognito) {
-  try {
-    let proceedUpdatePasswordPvt = await proceedUpdatePassword(userCredentialInfo, hashPassword, newPassword, email, emailCognito);
-  } catch (error) {
-    loggerService.error(
-      {
-        user: {
-          email: email,
-          emailCognito: emailCognito,
-          layer: "usersService.updatePasswordPrivateMode",
-          error: `${error}`,
-        },
-      },
-      {},
-      "[CIAM] Update Password Private Mode - Failed"
-    );
-    throw new Error(
-      JSON.stringify(UpdateUserErrors.ciamUpdateUserErr('en'))
-    );
   }
 }
 
@@ -736,8 +641,7 @@ async function updateUserCognito(body, userCognito) {
   }
 }
 
-async function adminUpdateMPUser(body, accessToken) {
-  const privateMode = !!body.privateMode;
+async function adminUpdateMPUser(body) {
   const ncRequest = !!body.ncRequest;
   // logger
   loggerService.log(
@@ -746,8 +650,7 @@ async function adminUpdateMPUser(body, accessToken) {
         userEmail: body.email,
         layer: "usersService.adminUpdateMPUser",
         body: JSON.stringify(body),
-        accessToken: maskKeyRandomly(accessToken),
-        privateMode,
+        ncRequest
       },
     },
     "[CIAM] Start Update User FOs Service"
@@ -760,10 +663,7 @@ async function adminUpdateMPUser(body, accessToken) {
     const userDB = await userModel.findByEmail(body.email);
 
     //get user from cognito
-    const userCognito =
-      accessToken && !privateMode
-        ? await cognitoService.cognitoAdminGetUserByAccessToken(accessToken)
-        : await cognitoService.cognitoAdminGetUserByEmail(body.email);
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(body.email)
     const email = getOrCheck(userCognito, "email");
 
     // check if email exist or not
@@ -773,6 +673,7 @@ async function adminUpdateMPUser(body, accessToken) {
 
     // process if update email address (new email)
     let isNewEmailExisted = false;
+
     if (body.data && body.data.newEmail) {
       isNewEmailExisted = await checkNewEmailExisted(body.data.newEmail);
       if (isNewEmailExisted) {
@@ -783,38 +684,51 @@ async function adminUpdateMPUser(body, accessToken) {
       }
     }
 
+    const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
+    let newPassword = undefined;
+    let hashPassword = undefined;
     //1st updatePassword -> if failed the process update user will stop
     //ad-hook - switch update password by private_mode
-    if ((body.data && body.data.newPassword) || body.data.password){
+    if ((body.data && body.data.newPassword) || body.data.password) {
       // prepare hash password
-      try{
-        let newPassword = body.data.newPassword || null;
+      try {
+        newPassword = body.data.newPassword || undefined;
         if (ncRequest) {
           newPassword = body.data.password;
         }
-        const hashPassword = await passwordService.hashPassword(newPassword.toString());
-        const userCredentialInfo = await userCredentialModel.findByUserEmail(body.email);
-        const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
-
-        if (ncRequest) {
-          await updatePasswordPrivateMode(userCredentialInfo, hashPassword, newPassword, latestEmail, body.email);
-        } else {
-          await updatePassword(
-            userCredentialInfo, hashPassword, newPassword, body.data.oldPassword, latestEmail, email, accessToken, body.language
-          );
-        }
+        hashPassword = await passwordService.hashPassword(newPassword.toString());
+        //update password into cognito with current email - avoid new email cause it still not yet into CIAM system
+        await cognitoService.cognitoAdminSetUserPassword(body.email, newPassword);
       } catch (error) {
-        console.log("[CIAM-MAIN] usersServices.adminUpdateMPUser Update Password Error", error.stack);
+        loggerService.error(
+            {
+              user: {
+                userEmail: body.email,
+                layer: "usersService.adminUpdateMPUser",
+                error: new Error(error),
+              },
+            },
+            {},
+            "[CIAM-MAIN] usersServices.adminUpdateMPUser Update Password Error"
+        );
+        //should stop update process?
       }
     }
+
+    //update password hash and new email if possible into DB - prepare for login session
+    await userCredentialModel.updateByUserId(userDB.id, {
+      password_hash: hashPassword,
+      username: latestEmail,
+      salt: null
+    });
 
     //2nd update Cognito
     await updateUserCognito(body, userCognito);
     //3rd update DB
     await updateDB(
       body,
-      userDB && userDB.id ? userDB.id : undefined,
-      isNewEmailExisted
+      userDB.id ,
+      latestEmail
     );
     let membership =
       JSON.stringify(

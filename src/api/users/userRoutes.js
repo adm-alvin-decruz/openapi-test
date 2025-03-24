@@ -14,13 +14,14 @@ const {
   AccessTokenAuthGuardByAppIdGroupFOSeries,
   validateEmailDisposable,
   lowercaseTrimKeyValueString,
+  validateAPIKey,
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
 const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 
 const pong = { pong: "pang" };
 
@@ -128,14 +129,7 @@ router.put("/users", isEmptyRequest, validateEmail, AccessTokenAuthGuardByAppIdG
     // region Update Account Membership Passes
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
-        let accessToken =
-          req.headers && req.headers.authorization
-            ? req.headers.authorization.toString()
-            : "";
-        if (accessToken && res.newAccessToken) {
-          accessToken = res.newAccessToken;
-        }
-        const updateRs = await userController.adminUpdateMPUser(req, accessToken);
+        const updateRs = await userController.adminUpdateMPUser(req);
         if (res.newAccessToken) {
           updateRs.membership.accessToken = res.newAccessToken;
         }
@@ -531,6 +525,31 @@ router.put(
   validateEmail,
   lowercaseTrimKeyValueString,
   userController.userUpdateMembershipPass
+);
+
+/**
+ * CIAM user refresh token endpoint
+ */
+router.post(
+  "/token/refresh",
+  isEmptyRequest,
+  validateAPIKey,
+  AccessTokenAuthGuard,
+  async (req, res) => {
+    req["processTimer"] = processTimer;
+    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+    const accessToken = req.headers.authorization.toString();
+    try {
+      const data = await userController.userRefreshAccessToken(accessToken, req.body);
+      if (res.newAccessToken) {
+        data.token.accessToken = res.newAccessToken;
+      }
+      return res.status(data.statusCode).json(data);
+    } catch (error) {
+      const errorMessage = JSON.parse(error.message);
+      return res.status(errorMessage.statusCode).send(errorMessage);
+    }
+  }
 );
 
 module.exports = router;

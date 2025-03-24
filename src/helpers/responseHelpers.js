@@ -1,6 +1,7 @@
  const loggerService = require('../logs/logger');
  const userConfig = require('../config/usersConfig');
  const commonService = require('../services/commonService');
+
 /**
  *
  * @param {string} module 'user'
@@ -36,7 +37,7 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
   let responseToClient = {
         "membership": {
           "code": resConfig.code,
-          "mwgCode": mwgCode,
+          "mwgCode": resConfig.mwgCode,
           "message": resConfig.message
         },
         "status": resConfig.status,
@@ -137,11 +138,12 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
  * @param {string} msg
  * @returns
  */
-function formatMiddlewareRes(status, msg){
+function formatMiddlewareRes(status, msg, mwgCode=null){
+  mwgCode  = mwgCode || 'MWG_CIAM_PARAMS_ERR';
   return {
     "membership": {
       "code": status,
-      "mwgCode": 'MWG_CIAM_PARAMS_ERR',
+      "mwgCode": mwgCode,
       "message": msg
     },
     "status": 'failed',
@@ -173,10 +175,19 @@ function mergeJson(jsonA, jsonB) {
   return jsonB;
 }
 
+function responseConfigHelper(module, mwgCode){
+  // step1: read api response config for MEMBERSHIPS_API_RESPONSE_CONFIG
+  let resConfigVar = JSON.parse(userConfig[module.toUpperCase()+'_API_RESPONSE_CONFIG']);
+  let resConfig = resConfigVar[mwgCode];
+
+  return resConfig;
+}
+
 module.exports = {
   craftUsersApiResponse,
   craftGetMemberShipInternalRes,
   craftGetUserApiInternalRes,
   formatMiddlewareRes,
-  responseHandle
+  responseHandle,
+  responseConfigHelper
 }

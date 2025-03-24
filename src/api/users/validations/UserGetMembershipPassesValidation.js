@@ -1,4 +1,4 @@
-const CommonErrors = require("../../../config/https/errors/common");
+const CommonErrors = require("../../../config/https/errors/commonErrors");
 
 class UserGetMembershipPassesValidation {
   constructor() {

@@ -4,7 +4,6 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const {
   getSource,
   getGroup,
-  formatPhoneNumber,
   maskKeyRandomly,
 } = require("../../utils/common");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
@@ -15,24 +14,15 @@ const {
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 const pool = require("../../db/connections/mysqlConn");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const commonService = require("../../services/commonService");
 const failedJobsModel = require("../../db/models/failedJobsModel");
 const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 const { GROUP } = require("../../utils/constants");
-const { SendMessageCommand, SQSClient } = require("@aws-sdk/client-sqs");
 const switchService = require("../../services/switchService");
 const userSignupHelper = require("./usersSignupHelper");
-
-const awsRegion = () => {
-  const env = process.env.AWS_REGION_NAME;
-  if (!env) return "ap-southeast-1";
-  if (env === "false") return "ap-southeast-1";
-  return env;
-};
-const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -297,7 +287,7 @@ class UserSignupService {
   }
 
   async preparePassword(req) {
-    if (!!req.body.migrations) {
+    if (req.body.migrations) {
       const saltPassword = !!req.body.passwordSalt
         ? req.body.passwordSalt
         : passwordService.createSaltKey(5);
@@ -355,28 +345,6 @@ class UserSignupService {
       (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
       !groups.includes(GROUP.MEMBERSHIP_PASSES)
     );
-  }
-
-  async sendSQSMessage(body, action) {
-    try {
-      const data = {
-        action: action,
-        body: body,
-      };
-
-      const queueUrl = process.env.SQS_QUEUE_URL;
-      const command = new SendMessageCommand({
-        QueueUrl: queueUrl,
-        MessageBody: JSON.stringify(data),
-      });
-
-      return await sqsClient.send(command);
-    } catch (error) {
-      loggerService.error(
-        `UserSignupMembershipPasses.sendSQSMessage Error: ${error}`,
-        body
-      );
-    }
   }
 
   /**
@@ -550,10 +518,9 @@ class UserSignupService {
       // check is user email existed at wildpass group
       const userBelongWildpassGroup = await this.checkUserBelongWildPass(req.body.email, userExistedInCognito);
 
-      const userInfo = await userModel.findFullMandaiId(req.body.email);
-
-      if (userInfo && userInfo.length && userInfo[0] && userBelongWildpassGroup) {
-        return await this.handleUpdateUserBelongWildPass(req, userExistedInCognito, userInfo[0], passwordCredential);
+      const userInfo = await userModel.findByEmail(req.body.email);
+      if (userInfo && userInfo.email && userBelongWildpassGroup) {
+        return await this.handleUpdateUserBelongWildPass(req, userExistedInCognito, userInfo, passwordCredential);
       }
 
       if (req.body.migrations) {
@@ -563,7 +530,7 @@ class UserSignupService {
         if (updateIfMigrationSwitch && updateIfMigrationSwitch === true) {
 
           // update membership pass user
-          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo[0]);
+          let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo, passwordCredential);
           if(update.success){
             (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
             return {mandaiId};

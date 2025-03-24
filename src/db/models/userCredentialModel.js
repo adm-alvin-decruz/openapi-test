@@ -1,7 +1,7 @@
 const pool = require("../connections/mysqlConn");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
 
 class UserCredential {
@@ -55,10 +55,9 @@ class UserCredential {
   }
 
   static async findUserHasFirstLogin(email) {
-    const sql = `SELECT uc.username, umua.password_hash, umua.password_salt
+    const sql = `SELECT uc.username, uc.password_hash, uc.salt as password_salt
                   FROM user_credentials uc
-                  INNER JOIN emp_membership_user_accounts umua ON umua.email = uc.username COLLATE utf8mb4_general_ci
-                  WHERE umua.picked = 1 AND uc.username = ? AND uc.last_login IS NULL AND uc.tokens IS NULL`;
+                  WHERE uc.username = ? AND uc.last_login IS NULL AND uc.tokens IS NULL`;
     try {
       const [rows] = await pool.query(sql, [email]);
       return rows;

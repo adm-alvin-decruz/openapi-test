@@ -2,14 +2,13 @@ const cognitoService = require("../../services/cognitoService");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const loggerService = require("../../logs/logger");
 const LogoutErrors = require("../../config/https/errors/logoutErrors");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const { maskKeyRandomly } = require("../../utils/common");
 
 class UserLogoutService {
   async getUser(token, body) {
     try {
       const userDB = await userCredentialModel.findByUserEmailOrMandaiId(body.email || '', body.mandaiId || '');
-      console.log('userDB******', userDB)
       return {
         userId: userDB.user_id ? userDB.user_id : "",
         email: userDB.email,

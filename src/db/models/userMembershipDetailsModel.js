@@ -1,7 +1,7 @@
 const pool = require("../connections/mysqlConn");
 const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
 
 class UserMembershipDetails {
@@ -110,6 +110,28 @@ class UserMembershipDetails {
         "UserMembershipDetails.updateByMembershipId"
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+    }
+  }
+
+  static async lookupMemberDetailsHaveDob(email) {
+    const sql =
+      "SELECT * FROM user_membership_details WHERE member_email = ? AND member_dob IS NOT NULL";
+
+    try {
+      const rows = await pool.query(sql, [email]);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+        {
+          userMembershipDetailsModel: {
+            email,
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+          },
+        },
+        {},
+        "[CIAM] userMembershipDetailsModel.lookupMemberDetailsHaveDob - Failed"
+      );
     }
   }
 }

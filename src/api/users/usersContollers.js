@@ -21,12 +21,13 @@ const {
 const UserSignUpValidation = require("./validations/UserSignupValidation");
 const UserUpdateValidation = require("./validations/UserUpdateValidation");
 const UserMembershipPassValidation = require("./validations/UserMembershipPassValidation");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
-const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
+const UserResetAccessTokenJob = require("./userRefreshAccessTokenJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
+const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
 const { maskKeyRandomly } = require("../../utils/common");
 
 /**
@@ -166,7 +167,7 @@ async function adminCreateMPUser(req) {
           layer: "controller.adminCreateMPUser",
           api_header: req.headers,
           api_body: req.body,
-          response_to_client: `${error}`,
+          response_to_client: new Error(error),
         },
       },
       {},
@@ -299,7 +300,7 @@ async function adminUpdateUser(req, listedParams) {
   }
 }
 
-async function adminUpdateMPUser(req, accessToken) {
+async function adminUpdateMPUser(req) {
   loggerService.log(
     {
       user: {
@@ -308,7 +309,6 @@ async function adminUpdateMPUser(req, accessToken) {
         api_header: req.headers,
         api_body: JSON.stringify(req.body),
         layer: "controller.adminUpdateMPUser",
-        accessToken: maskKeyRandomly(accessToken),
         private_mode: !!req.body.privateMode,
       },
     },
@@ -324,8 +324,8 @@ async function adminUpdateMPUser(req, accessToken) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateMPUser",
-          accessToken: maskKeyRandomly(accessToken),
-          private_mode: !!req.body.privateMode
+          private_mode: !!req.body.privateMode,
+          error: JSON.stringify(message)
         },
       },
       {},
@@ -339,7 +339,7 @@ async function adminUpdateMPUser(req, accessToken) {
     if(!requestFromAEM){
       req.body.ncRequest = true;
     }
-    return await usersService.adminUpdateMPUser(req.body, accessToken);
+    return await usersService.adminUpdateMPUser(req.body);
   } catch (error) {
     loggerService.error(
       {
@@ -349,8 +349,7 @@ async function adminUpdateMPUser(req, accessToken) {
           api_header: req.headers,
           api_body: JSON.stringify(req.body),
           layer: "controller.adminUpdateMPUser",
-          accessToken: maskKeyRandomly(accessToken),
-          error: `${error}`,
+          error: new Error(error),
           private_mode: !!req.body.privateMode
         },
       },
@@ -859,6 +858,19 @@ async function userUpdateMembershipPass(req, res) {
   }
 }
 
+async function userRefreshAccessToken(accessToken, body) {
+  try {
+    return await UserResetAccessTokenJob.perform(accessToken, body);
+  } catch (error) {
+    const errorMessage =
+        error && error.message ? JSON.parse(error.message) : "";
+    if (!!errorMessage) {
+      throw new Error(JSON.stringify(errorMessage));
+    }
+    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -876,4 +888,5 @@ module.exports = {
   userVerifyToken,
   userCreateMembershipPass,
   userUpdateMembershipPass,
+  userRefreshAccessToken
 };

@@ -4,7 +4,7 @@ const userCredentialModel = require("../../db/models/userCredentialModel");
 const LoginErrors = require("../../config/https/errors/loginErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
-const CommonErrors = require("../../config/https/errors/common");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 const passwordService = require("./userPasswordService");
 const { passwordPattern } = require("../../utils/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
@@ -19,46 +19,14 @@ class UserLoginService {
     const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(
       req.body.email
     );
-    if (
-      userHasFirstLogin &&
-      userHasFirstLogin.username &&
-      (!userHasFirstLogin.password_hash || !userHasFirstLogin.password_salt)
-    ) {
-      throw new Error(
-        JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
-      );
-    }
-    const isMatchedPasswordForFirstLogin =
-      userHasFirstLogin &&
-      userHasFirstLogin.username &&
-      userHasFirstLogin.password_hash &&
-      userHasFirstLogin.password_salt
-        ? passwordService
-            .createPassword(req.body.password, userHasFirstLogin.password_salt)
-            .toUpperCase() === userHasFirstLogin.password_hash.toUpperCase()
-        : false;
 
-    if (isMatchedPasswordForFirstLogin && !passwordPattern(req.body.password)) {
-      throw new Error(
-        JSON.stringify(CommonErrors.PasswordRequireChange(req.body.language))
-      );
+    const loginData = {
+      email: req.body.email,
+      password: req.body.password
     }
+    await this.proceedSetPassword(userHasFirstLogin, req.body.password, req.body.language);
     try {
-      const loginRs = await cognitoService.cognitoUserLogin(
-        {
-          email: req.body.email,
-          password: isMatchedPasswordForFirstLogin
-            ? `${userHasFirstLogin.password_hash}${userHasFirstLogin.password_salt}`.trim()
-            : req.body.password,
-        },
-        hashSecret
-      );
-      isMatchedPasswordForFirstLogin &&
-        (await cognitoService.cognitoAdminSetUserPassword(
-          req.body.email,
-          req.body.password
-        ));
-      return loginRs;
+      return await cognitoService.cognitoUserLogin(loginData, hashSecret);
     } catch (error) {
       loggerService.error(
         {
@@ -74,7 +42,7 @@ class UserLoginService {
         "[CIAM] Login Service trigger Login Execution - Failed"
       );
       throw new Error(
-        JSON.stringify(CommonErrors.UnauthorizedException(req.body.language))
+        JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language))
       );
     }
   }
@@ -106,7 +74,7 @@ class UserLoginService {
       );
       throw new Error(
         JSON.stringify(
-          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)
         )
       );
     }
@@ -153,7 +121,7 @@ class UserLoginService {
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
       throw new Error(
         JSON.stringify(
-          LoginErrors.ciamLoginUserNotFound(req.body.email, req.body.language)
+          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)
         )
       );
     }
@@ -200,6 +168,50 @@ class UserLoginService {
       );
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));
+    }
+  }
+
+  async proceedSetPassword(userInfo, password, lang = 'en') {
+    //if user first login is empty - do nothing
+    if (!userInfo || !userInfo.password_hash || !userInfo.password_salt) {
+      return;
+    }
+
+    //if match argon - user is normal flow - do nothing
+    if (userInfo.password_hash.startsWith('$argon2')) {
+      return;
+    }
+
+    //this is step for set password with user migration
+    const passwordHashed = passwordService.createPassword(password, userInfo.password_salt);
+    const isMatchedPassword = passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
+
+    if (isMatchedPassword) {
+      if (!passwordPattern(password)) {
+        throw new Error(JSON.stringify(CommonErrors.PasswordRequireChange(lang)));
+      }
+
+      try {
+        await cognitoService.cognitoAdminSetUserPassword(userInfo.username, password);
+        const hashPassword = await passwordService.hashPassword(password);
+        await userCredentialModel.updateByUserEmail(userInfo.username, {
+          password_hash: hashPassword,
+          salt: null
+        });
+      } catch (error) {
+        loggerService.error(
+          {
+            user: {
+              action: "proceedSetPassword",
+              email: userInfo.username,
+              layer: "userLoginServices.proceedSetPassword",
+              error: new Error(error),
+            },
+          },
+          {},
+          "[CIAM] Proceed Set Password - Failed"
+        );
+      }
     }
   }
 }

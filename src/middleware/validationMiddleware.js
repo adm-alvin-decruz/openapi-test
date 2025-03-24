@@ -1,7 +1,7 @@
 const resHelper = require("../helpers/responseHelpers");
 const EmailDomainService = require("../services/emailDomainsService");
 const loggerService = require("../logs/logger");
-const CommonErrors = require("../config/https/errors/common");
+const CommonErrors = require("../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
 const cognitoService = require("../services/cognitoService");
@@ -9,6 +9,8 @@ const { GROUP } = require("../utils/constants");
 const appConfig = require("../config/appConfig");
 const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
+const commonService = require("../services/commonService");
+const { messageLang } = require("../utils/common");
 
 /**
  * Validate empty request
@@ -29,6 +31,17 @@ function isEmptyRequest(req, res, next) {
     }
   }
   next();
+}
+
+async function validateEmail(req, res, next) {
+  const { email } = req.body;
+  let msg = "The email is invalid";
+
+  if (!email) {
+    return resStatusFormatter(res, 400, msg);
+  }
+
+  return await validateEmailDisposable(req, res, next);
 }
 
 async function validateEmailDisposable(req, res, next) {
@@ -52,7 +65,7 @@ async function validateEmailDisposable(req, res, next) {
       normalizedEmail
     );
     if (!validDomain) {
-      return resStatusFormatter(res, 400, "The email is invalid");
+      return resStatusFormatterCustom(req, res, 400, "The email is invalid");
     }
   }
 
@@ -60,17 +73,6 @@ async function validateEmailDisposable(req, res, next) {
   req.body.email = normalizedEmail;
 
   next();
-}
-
-async function validateEmail(req, res, next) {
-  const { email } = req.body;
-  let msg = "The email is invalid";
-
-  if (!email) {
-    return resStatusFormatter(res, 400, msg);
-  }
-
-  return await validateEmailDisposable(req, res, next);
 }
 
 //only use it when combine with emptyRequest middleware
@@ -104,6 +106,31 @@ async function lowercaseTrimKeyValueString(req, res, next) {
 
 function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
+}
+
+/**
+ * Customized disposable email response for AEM
+ * @param {json} req
+ * @param {json} res
+ * @param {string} status
+ * @param {string} msg
+ * @returns
+ */
+function resStatusFormatterCustom(req, res, status, msg) {
+  let mwgCode=null
+  // check if response from AEM
+  const requestFromAEM = commonService.isRequestFromAEM(req.headers);
+  // custom mwg code
+  if (requestFromAEM) {
+    // custom for user signup
+    if(req.method.toLowerCase() === 'post' && req.originalUrl === '/v1/ciam/users'){
+      let signupConfig = resHelper.responseConfigHelper('users_signup', 'MWG_CIAM_USER_SIGNUP_ERR');
+      mwgCode = signupConfig.mwgCode;
+      status = signupConfig.code;
+      msg = messageLang('email_is_invalid', req.body.language);
+    }
+  }
+  return res.status(status).json(resHelper.formatMiddlewareRes(status, msg, mwgCode));
 }
 
 async function refreshToken(credentialInfo) {
@@ -193,7 +220,6 @@ async function AccessTokenAuthGuard(req, res, next) {
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
   }
-
   next();
 }
 
@@ -208,10 +234,28 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 
 async function validateAPIKey(req, res, next) {
   const validationSwitch = await switchService.findByName("api_key_validation");
-  const privateAppIdArr = JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`]);
-
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   const apiKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
+  const appId = mwgAppID.split('.')[0];
+
+  //add more data for dynamic checking
+  const apiKeyMappings = {
+    //key will be match with request header - value will be from env
+    nopComm: {
+      apiKey: process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY,
+      appId: JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`])
+    },
+    mfaMobile: {
+      apiKey: process.env.MFA_MOBILE_REQ_PUBLIC_API_KEY,
+      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
+    },
+  };
+
+  const validateData = appId ? apiKeyMappings[appId] : null;
+
+  if (!validateData) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
 
   loggerService.log(
       {
@@ -219,24 +263,23 @@ async function validateAPIKey(req, res, next) {
           layer: "middleware.validateAPIKey",
           validationSwitch: JSON.stringify(validationSwitch),
           mwgAppID: maskKeyRandomly(mwgAppID),
-          expectedApiKey: maskKeyRandomly(process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY),
+          expectedApiKey: maskKeyRandomly(validateData.apiKey),
           incomingApiKey: maskKeyRandomly(apiKey)
         },
       },
       "[CIAM] Validate Api Key Middleware - Process"
   );
-  if (!mwgAppID || !privateAppIdArr.includes(mwgAppID)) {
+  if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
   if (validationSwitch.switch === 1) {
-    if (apiKey && apiKey === process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY) {
+    if (apiKey && apiKey === validateData.apiKey) {
       return next();
     }
   }
   if (validationSwitch.switch === 0) {
     return next();
   }
-
   return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
 }
 
