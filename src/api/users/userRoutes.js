@@ -34,7 +34,7 @@ router.get("/ping", async (req, res) => {
 /**
  * User signup, create new CIAM user
  */
-router.post("/users", isEmptyRequest, validateEmail, async (req, res) => {
+router.post("/users", isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();

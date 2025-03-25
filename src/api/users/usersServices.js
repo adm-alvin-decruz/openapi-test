@@ -44,10 +44,7 @@ const CommonErrors = require("../../config/https/errors/commonErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
-const {
-  messageLang,
-  maskKeyRandomly,
-} = require("../../utils/common");
+const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
