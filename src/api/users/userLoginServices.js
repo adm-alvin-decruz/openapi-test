@@ -6,7 +6,7 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const passwordService = require("./userPasswordService");
-const { passwordPattern } = require("../../utils/common");
+// const { passwordPattern } = require("../../utils/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 
 class UserLoginService {
@@ -187,9 +187,10 @@ class UserLoginService {
     const isMatchedPassword = passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
 
     if (isMatchedPassword) {
-      if (!passwordPattern(password)) {
-        throw new Error(JSON.stringify(CommonErrors.PasswordRequireChange(lang)));
-      }
+      //https://mandaiwildlifereserve.atlassian.net/browse/CIAM-280
+      // if (!passwordPattern(password)) {
+      //   throw new Error(JSON.stringify(CommonErrors.PasswordRequireChange(lang)));
+      // }
 
       try {
         await cognitoService.cognitoAdminSetUserPassword(userInfo.username, password);
