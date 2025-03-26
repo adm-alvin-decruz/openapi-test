@@ -423,11 +423,23 @@ async function signupMPWithUpdateIfExist(reqBody, userDBInfo, passwordCredential
   }
 }
 
+async function updatePasswordCredential(email, passwordCredential) {
+  const dataUpdated = {
+    password_hash: passwordCredential.db.hashPassword,
+    salt: passwordCredential.db.salt,
+    tokens: null,
+    last_login: null
+  }
+
+  await userCredentialModel.updateByUserEmail(email, dataUpdated);
+}
+
 module.exports = {
   generateMandaiID,
   generateVisualID,
   createUserSignupDB,
   insertUserMembership,
   insertUserNewletter,
-  signupMPWithUpdateIfExist
+  signupMPWithUpdateIfExist,
+  updatePasswordCredential
 };
