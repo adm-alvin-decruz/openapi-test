@@ -378,8 +378,10 @@ class UserSignupService {
         req.body.email,
         passwordCredential.cognito.hashPassword
       );
+      
+      await userSignupHelper.updatePasswordCredential(req.body.email, passwordCredential);
 
-      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group)
+      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group);
 
       const firstNameDB = userDB.given_name || "";
       const lastNameDB = userDB.family_name || "";
