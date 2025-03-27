@@ -5,9 +5,8 @@ const LoginErrors = require("../../config/https/errors/loginErrors");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/commonErrors");
-const passwordService = require("./userPasswordService");
-// const { passwordPattern } = require("../../utils/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
+const { proceedSetPassword } = require('./helpers/loginHelper')
 
 class UserLoginService {
   async login(req) {
@@ -24,8 +23,9 @@ class UserLoginService {
       email: req.body.email,
       password: req.body.password
     }
-    await this.proceedSetPassword(userHasFirstLogin, req.body.password, req.body.language);
     try {
+      await proceedSetPassword(userHasFirstLogin, req.body.password, req.body.language);
+
       return await cognitoService.cognitoUserLogin(loginData, hashSecret);
     } catch (error) {
       loggerService.error(
@@ -168,51 +168,6 @@ class UserLoginService {
       );
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));
-    }
-  }
-
-  async proceedSetPassword(userInfo, password, lang = 'en') {
-    //if user first login is empty - do nothing
-    if (!userInfo || !userInfo.password_hash || !userInfo.password_salt) {
-      return;
-    }
-
-    //if match argon - user is normal flow - do nothing
-    if (userInfo.password_hash.startsWith('$argon2')) {
-      return;
-    }
-
-    //this is step for set password with user migration
-    const passwordHashed = passwordService.createPassword(password, userInfo.password_salt);
-    const isMatchedPassword = passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
-
-    if (isMatchedPassword) {
-      //https://mandaiwildlifereserve.atlassian.net/browse/CIAM-280
-      // if (!passwordPattern(password)) {
-      //   throw new Error(JSON.stringify(CommonErrors.PasswordRequireChange(lang)));
-      // }
-
-      try {
-        await cognitoService.cognitoAdminSetUserPassword(userInfo.username, password);
-        const hashPassword = await passwordService.hashPassword(password);
-        await userCredentialModel.updateByUserEmail(userInfo.username, {
-          password_hash: hashPassword,
-          salt: null
-        });
-      } catch (error) {
-        loggerService.error(
-          {
-            user: {
-              action: "proceedSetPassword",
-              email: userInfo.username,
-              layer: "userLoginServices.proceedSetPassword",
-              error: new Error(error),
-            },
-          },
-          {},
-          "[CIAM] Proceed Set Password - Failed"
-        );
-      }
     }
   }
 }
