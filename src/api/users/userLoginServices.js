@@ -8,6 +8,8 @@ const CommonErrors = require("../../config/https/errors/commonErrors");
 const passwordService = require("./userPasswordService");
 // const { passwordPattern } = require("../../utils/common");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
+const switchService = require("../../services/switchService");
+const nopCommerceLoginService = require("../components/nopCommerce/services/nopCommerceLoginService");
 
 class UserLoginService {
   async login(req) {
@@ -171,7 +173,7 @@ class UserLoginService {
     }
   }
 
-  async proceedSetPassword(userInfo, password, lang = 'en') {
+  async proceedSetPassword(userInfo, password) {
     //if user first login is empty - do nothing
     if (!userInfo || !userInfo.password_hash || !userInfo.password_salt) {
       return;
@@ -182,9 +184,7 @@ class UserLoginService {
       return;
     }
 
-    //this is step for set password with user migration
-    const passwordHashed = passwordService.createPassword(password, userInfo.password_salt);
-    const isMatchedPassword = passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
+    const isMatchedPassword = await this.proceedVerifyPassword(userInfo, password);
 
     if (isMatchedPassword) {
       //https://mandaiwildlifereserve.atlassian.net/browse/CIAM-280
@@ -214,6 +214,17 @@ class UserLoginService {
         );
       }
     }
+  }
+
+  async proceedVerifyPassword(userInfo, password) {
+    const passwordVerificationSwitch = await switchService.findByName('password_verification_nopCommerce');
+    if (passwordVerificationSwitch.switch === 1) {
+      const loginResult = await nopCommerceLoginService.loginNopCommerce(userInfo.username, password);
+      return !!(loginResult.MembershipLoginResult && loginResult.MembershipLoginResult.Message === '3420|Login Success');
+    }
+
+    const passwordHashed = passwordService.createPassword(password, userInfo.password_salt);
+    return passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
   }
 }
 

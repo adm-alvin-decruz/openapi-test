@@ -72,6 +72,7 @@ const appConfig = {
   NOP_COMMERCE_URL_PROD: 'https://www.mandaiapi.com/store',
   NOP_COMMERCE_ACCESS_TOKEN_PATH: '/GenerateMembershipToken',
   NOP_COMMERCE_GET_MEMBERSHIP_PATH: '/MembershipGetPictureFile',
+  NOP_COMMERCE_LOGIN_PATH: '/MembershipLogin',
 
   // NopCommerce APP ID Service Hub
   PRIVATE_APP_ID_DEV:'["nopComm.Dev.servicehub.mandaipvtapi.ciam"]',

@@ -29,6 +29,16 @@ class ApiUtils {
     if ((response.status >= 200 && response.status < 300) || response.statusCode === 200 ) {
       return response.data;
     } else {
+      //catching token expire with login - apply for NC
+      if (
+        response &&
+        response.MembershipLoginResult?.Message &&
+        response?.MembershipLoginResult?.Message === "5320|Token Expired"
+      ) {
+        return {
+          message: 'Token Expired!'
+        };
+      }
       return new Error(`API request failed: ${response.status}`);
     }
   }
