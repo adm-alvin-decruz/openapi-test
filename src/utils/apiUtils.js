@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require("axios");
 
 class ApiUtils {
   static async makeRequest(url, method, headers, data) {
@@ -26,21 +26,24 @@ class ApiUtils {
   }
 
   static handleResponse(response) {
-    if ((response.status >= 200 && response.status < 300) || response.statusCode === 200 ) {
-      return response.data;
-    } else {
-      //catching token expire with login - apply for NC
-      if (
+    //handle token expire separately
+    if (
         response &&
-        response.MembershipLoginResult?.Message &&
-        response?.MembershipLoginResult?.Message === "5320|Token Expired"
-      ) {
-        return {
-          message: 'Token Expired!'
-        };
-      }
-      return new Error(`API request failed: ${response.status}`);
+        response.status === 200 &&
+        response.data.MembershipLoginResult &&
+        response.data.MembershipLoginResult.Message &&
+        response.data.MembershipLoginResult.Message === "5320|Token Expired"
+    ) {
+      return {
+        message: "Token Expired!",
+      };
     }
+
+    if ((response.status >= 200 && response.status < 300) || response.statusCode === 200) {
+      return response.data;
+    }
+
+    return new Error(`API request failed: ${response.status}`);
   }
 
   static handleError(error) {

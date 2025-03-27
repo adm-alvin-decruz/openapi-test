@@ -34,7 +34,7 @@ function generateBodyRequest(email, password, accessToken, storeId) {
  * }>}
  */
 async function loginNopCommerce(email, password) {
-  let accessTokenInfo = await getAccessToken();
+  const accessTokenInfo = await getAccessToken();
   let body = generateBodyRequest(
     email,
     password,
@@ -42,7 +42,7 @@ async function loginNopCommerce(email, password) {
     accessTokenInfo.storeId
   );
   const dataLogger = {
-    accessToken: maskKeyRandomly(accessTokenInfo.accessToken),
+    token: maskKeyRandomly(accessTokenInfo.accessToken),
     storeId: accessTokenInfo.storeId,
     email: email,
     password: maskKeyRandomly(password),
@@ -55,27 +55,29 @@ async function loginNopCommerce(email, password) {
       {},
       body
     );
-    let rsHandler = ApiUtils.handleResponse(response);
 
     //retry one time when token is expired
-    if (rsHandler && rsHandler.message === "Token Expired!") {
-      accessTokenInfo = await getAccessToken(true);
-      body.accessToken = accessTokenInfo.accessToken;
+    if (response && response.message === "Token Expired!") {
+      const newAccessToken = await getAccessToken(true);
+      body.token = newAccessToken.accessToken;
+      dataLogger.token = newAccessToken.accessToken;
       const requestAgain = await ApiUtils.makeRequest(
         nopCommerceLoginUrl,
         "post",
         {},
         body
       );
-      rsHandler = ApiUtils.handleResponse(requestAgain);
-    } else {
-      rsHandler = response;
+      loggerHandler("End loginNopCommerce Service - Success", {
+        ...dataLogger,
+        response: JSON.stringify(requestAgain.MembershipLoginResult),
+      });
+      return requestAgain;
     }
     loggerHandler("End loginNopCommerce Service - Success", {
       ...dataLogger,
-      response: rsHandler,
+      response: JSON.stringify(response),
     });
-    return rsHandler;
+    return response;
   } catch (error) {
     loggerHandler(
       "End loginNopCommerce Service - Failed",
@@ -95,7 +97,7 @@ function loggerHandler(action, info, type = "log") {
       path: nopCommerceLoginUrl,
       layer: "nopCommerceService.loginNopCommerce",
       data: {
-        accessToken: maskKeyRandomly(info.accessToken) || undefined,
+        token: maskKeyRandomly(info.token) || undefined,
         storeId: info.storeId,
         email: info.email,
         password: maskKeyRandomly(info.password),
