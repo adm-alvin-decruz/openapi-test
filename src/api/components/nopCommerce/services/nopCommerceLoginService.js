@@ -9,6 +9,29 @@ const nopCommerceLoginUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
 }${appConfig.NOP_COMMERCE_LOGIN_PATH}`;
 
+function loggerHandler(action, info, type = "log", ) {
+  const loggerObj = {
+    nopCommerceService: {
+      path: nopCommerceLoginUrl,
+      layer: "nopCommerceService.loginNopCommerce",
+      data: {
+        accessToken: maskKeyRandomly(info.accessToken) || undefined,
+        storeId: info.storeId,
+        email: info.email,
+        password: maskKeyRandomly(info.password),
+      },
+    },
+  };
+  if (info.error) {
+    loggerObj.nopCommerceService.error = info.error;
+  }
+  if (info.response) {
+    loggerObj.nopCommerceService.response = info.response;
+  }
+
+  return loggerService[`${type}`](loggerObj, info.error ? {} : '', action);
+}
+
 function generateBodyRequest(email, password, accessToken, storeId) {
   return {
     token: accessToken,
@@ -41,23 +64,14 @@ async function loginNopCommerce(email, password) {
     accessTokenInfo.accessToken,
     accessTokenInfo.storeId
   );
+  const dataLogger = {
+    accessToken: maskKeyRandomly(accessTokenInfo.accessToken),
+    storeId: accessTokenInfo.storeId,
+    email: email,
+    password: maskKeyRandomly(password),
+  }
   try {
-    loggerService.log(
-      {
-        nopCommerceService: {
-          path: nopCommerceLoginUrl,
-          layer: "nopCommerceService.loginNopCommerce",
-          data: {
-            token: maskKeyRandomly(accessTokenInfo.accessToken),
-            storeId: accessTokenInfo.storeId,
-            email: email,
-            password: maskKeyRandomly(password),
-          },
-        },
-      },
-      "Start loginNopCommerce - Start"
-    );
-
+    loggerHandler("Start loginNopCommerce - Start", dataLogger);
     const response = await ApiUtils.makeRequest(
       nopCommerceLoginUrl,
       "post",
@@ -67,7 +81,7 @@ async function loginNopCommerce(email, password) {
     let rsHandler = ApiUtils.handleResponse(response);
 
     //retry one time when token is expired
-    if (rsHandler && rsHandler.message === 'Token Expired!') {
+    if (rsHandler && rsHandler.message === "Token Expired!") {
       accessTokenInfo = await getAccessToken(true);
       body.accessToken = accessTokenInfo.accessToken;
       const requestAgain = await ApiUtils.makeRequest(
@@ -80,36 +94,16 @@ async function loginNopCommerce(email, password) {
     } else {
       rsHandler = response;
     }
-    loggerService.log(
-      {
-        passkitComponent: {
-          action: "retrievePasskit",
-          layer: "passkitCommonService.retrievePasskit",
-          response: JSON.stringify(response),
-        },
-      },
-      "End loginNopCommerce Service - Success"
-    );
-
+    loggerHandler("End loginNopCommerce Service - Success", {
+      ...dataLogger,
+      response: rsHandler
+    });
     return rsHandler;
   } catch (error) {
-    loggerService.error(
-      {
-        nopCommerceService: {
-          path: nopCommerceLoginUrl,
-          layer: "nopCommerceService.retrieveMembershipPhoto",
-          data: {
-            token: maskKeyRandomly(accessTokenInfo.accessToken) || undefined,
-            storeId: accessTokenInfo.storeId,
-            email: email,
-            password: maskKeyRandomly(password),
-          },
-          error: new Error(error),
-        },
-      },
-      {},
-      "End loginNopCommerce Service - Failed"
-    );
+    loggerHandler("End loginNopCommerce Service - Failed", {
+      ...dataLogger,
+      error
+    }, 'error');
     return undefined;
   }
 }
