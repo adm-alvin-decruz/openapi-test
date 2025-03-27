@@ -27,7 +27,7 @@ const appConfig = {
   // Passkit URL
   PASSKIT_URL_DEV:'https://dev-services.mandaiapi.com',
   PASSKIT_URL_UAT:'https://uat-services.mandaiapi.com',
-  PASSKIT_URL_PROD:'https://prod-services.mandaiapi.com',
+  PASSKIT_URL_PROD:'https://services.mandaiapi.com',
   PASSKIT_GET_SIGNED_URL_PATH:'/v1/passkit/all/get',
 
   // user signup generate passkit for send in the email
@@ -72,6 +72,7 @@ const appConfig = {
   NOP_COMMERCE_URL_PROD: 'https://www.mandaiapi.com/store',
   NOP_COMMERCE_ACCESS_TOKEN_PATH: '/GenerateMembershipToken',
   NOP_COMMERCE_GET_MEMBERSHIP_PATH: '/MembershipGetPictureFile',
+  NOP_COMMERCE_LOGIN_PATH: '/MembershipLogin',
 
   // NopCommerce APP ID Service Hub
   PRIVATE_APP_ID_DEV:'["nopComm.Dev.servicehub.mandaipvtapi.ciam"]',

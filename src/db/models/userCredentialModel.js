@@ -103,10 +103,29 @@ class UserCredential {
       username,
     ];
 
+    loggerService.log(
+      {
+        userCredentialModel: {
+          email: username,
+          sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          layer: "userCredentialModel.updateByUserEmail",
+        },
+      },
+      "[CIAM] updateByUserEmail DB - Start"
+    );
+
     // Execute the query
     try {
       const result = await pool.execute(sql, params);
-
+      loggerService.log(
+        {
+          userCredentialModel: {
+            email: username,
+            layer: "userCredentialModel.updateByUserEmail",
+          },
+        },
+        "[CIAM] updateByUserEmail DB - Success"
+      );
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         user_id: result.changedRows,
@@ -116,7 +135,7 @@ class UserCredential {
       loggerService.error(
         {
           userCredentialModel: {
-            userId: userId,
+            email: username,
             data: data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
             layer: "userCredentialModel.updateByUserEmail",
