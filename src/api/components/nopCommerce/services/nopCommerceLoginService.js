@@ -9,29 +9,6 @@ const nopCommerceLoginUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
 }${appConfig.NOP_COMMERCE_LOGIN_PATH}`;
 
-function loggerHandler(action, info, type = "log", ) {
-  const loggerObj = {
-    nopCommerceService: {
-      path: nopCommerceLoginUrl,
-      layer: "nopCommerceService.loginNopCommerce",
-      data: {
-        accessToken: maskKeyRandomly(info.accessToken) || undefined,
-        storeId: info.storeId,
-        email: info.email,
-        password: maskKeyRandomly(info.password),
-      },
-    },
-  };
-  if (info.error) {
-    loggerObj.nopCommerceService.error = info.error;
-  }
-  if (info.response) {
-    loggerObj.nopCommerceService.response = info.response;
-  }
-
-  return loggerService[`${type}`](loggerObj, info.error ? {} : '', action);
-}
-
 function generateBodyRequest(email, password, accessToken, storeId) {
   return {
     token: accessToken,
@@ -69,7 +46,7 @@ async function loginNopCommerce(email, password) {
     storeId: accessTokenInfo.storeId,
     email: email,
     password: maskKeyRandomly(password),
-  }
+  };
   try {
     loggerHandler("Start loginNopCommerce - Start", dataLogger);
     const response = await ApiUtils.makeRequest(
@@ -96,16 +73,49 @@ async function loginNopCommerce(email, password) {
     }
     loggerHandler("End loginNopCommerce Service - Success", {
       ...dataLogger,
-      response: rsHandler
+      response: rsHandler,
     });
     return rsHandler;
   } catch (error) {
-    loggerHandler("End loginNopCommerce Service - Failed", {
-      ...dataLogger,
-      error
-    }, 'error');
+    loggerHandler(
+      "End loginNopCommerce Service - Failed",
+      {
+        ...dataLogger,
+        error,
+      },
+      "error"
+    );
     return undefined;
   }
+}
+
+function loggerHandler(action, info, type = "log") {
+  const loggerObj = {
+    nopCommerceService: {
+      path: nopCommerceLoginUrl,
+      layer: "nopCommerceService.loginNopCommerce",
+      data: {
+        accessToken: maskKeyRandomly(info.accessToken) || undefined,
+        storeId: info.storeId,
+        email: info.email,
+        password: maskKeyRandomly(info.password),
+      },
+    },
+  };
+  if (info.error) {
+    loggerObj.nopCommerceService.error = info.error;
+  }
+  if (info.response) {
+    loggerObj.nopCommerceService.response = info.response;
+  }
+
+  return info.error
+    ? loggerService[`${type}`](
+        loggerObj,
+        { apiPath: nopCommerceLoginUrl },
+        action
+      )
+    : loggerService[`${type}`](loggerObj, action);
 }
 
 module.exports = {

@@ -26,23 +26,16 @@ async function getAccessToken(isRefreshToken = false) {
     };
   }
 
-  try {
-    loggerService.log(
-      {
-        nopCommerceService: {
-          path: nopCommerceAccessTokenUrl,
-          layer: "nopCommerceService.getAccessToken",
-          data: {
-            membershipSecretKey: maskKeyRandomly(
-              appToken.credentials.client_secret
-            ),
-            storeId: appToken.configuration.storeId,
-          },
-        },
-      },
-      "Proceed getAccessToken from NopCommerce"
-    );
+  const dataLogger = {
+    membershipSecretKey: appToken.credentials.client_secret,
+    storeId: appToken.configuration.storeId,
+  };
 
+  try {
+    loggerHandler(
+      "Proceed getAccessToken from NopCommerce - Start",
+      dataLogger
+    );
     const response = await ApiUtils.makeRequest(
       nopCommerceAccessTokenUrl,
       "post",
@@ -60,24 +53,13 @@ async function getAccessToken(isRefreshToken = false) {
       !response.GenerateMembershipTokenResult ||
       !response.GenerateMembershipTokenResult.Message
     ) {
-      loggerService.error(
+      loggerHandler(
+        "Proceed getAccessToken - Failed",
         {
-          nopCommerceService: {
-            path: nopCommerceAccessTokenUrl,
-            layer: "nopCommerceService.getAccessToken",
-            data: {
-              membershipSecretKey: maskKeyRandomly(
-                appToken.credentials.client_secret
-              ),
-              storeId: appToken.configuration.storeId,
-            },
-            error: `Incorrect response format! ${JSON.stringify(response)}`,
-          },
+          ...dataLogger,
+          error: `Incorrect response format! ${JSON.stringify(response)}`,
         },
-        {
-          apiPath: nopCommerceAccessTokenUrl,
-        },
-        "Proceed getAccessToken - Failed"
+        "error"
       );
       await Promise.reject(
         JSON.stringify({
@@ -91,42 +73,52 @@ async function getAccessToken(isRefreshToken = false) {
     await appTokenModel.updateTokenByClient("nopCommerce", {
       accessToken: response.GenerateMembershipTokenResult.Message,
     });
-
-    loggerService.log(
-      {
-        nopCommerceService: {
-          path: nopCommerceAccessTokenUrl,
-          layer: "nopCommerceService.getAccessToken",
-        },
-      },
-      "Proceed getAccessToken from NopCommerce - Success"
-    );
+    loggerHandler("Proceed getAccessToken from NopCommerce - Success", {
+      ...dataLogger,
+      response: JSON.stringify(response),
+    });
     return {
       accessToken: response.GenerateMembershipTokenResult.Message || "",
       storeId: appToken.configuration.storeId,
     };
   } catch (error) {
-    loggerService.error(
+    loggerHandler(
+      "End getAccessToken - Failed",
       {
-        nopCommerceService: {
-          path: nopCommerceAccessTokenUrl,
-          layer: "nopCommerceService.getAccessToken",
-          data: {
-            membershipSecretKey: maskKeyRandomly(
-              appToken.credentials.client_secret
-            ),
-            storeId: appToken.configuration.storeId,
-          },
-          error: new Error(error),
-        },
+        ...dataLogger,
+        error: new Error(error),
       },
-      {
-        apiPath: nopCommerceAccessTokenUrl,
-      },
-      "End getAccessToken - Failed"
+      "error"
     );
     return undefined;
   }
+}
+
+function loggerHandler(action, info, type = "log") {
+  const loggerObj = {
+    nopCommerceService: {
+      path: nopCommerceAccessTokenUrl,
+      layer: "nopCommerceService.getAccessToken",
+      data: {
+        membershipSecretKey: maskKeyRandomly(info.membershipSecretKey),
+        storeId: info.storeId,
+      },
+    },
+  };
+  if (info.error) {
+    loggerObj.nopCommerceService.error = info.error;
+  }
+  if (info.response) {
+    loggerObj.nopCommerceService.response = info.response;
+  }
+
+  return info.error
+    ? loggerService[`${type}`](
+        loggerObj,
+        { apiPath: nopCommerceAccessTokenUrl },
+        action
+      )
+    : loggerService[`${type}`](loggerObj, action);
 }
 
 module.exports = {
