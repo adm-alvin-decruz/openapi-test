@@ -681,7 +681,7 @@ async function adminUpdateMPUser(body) {
       }
     }
 
-    const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
+    const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.data.newEmail : body.email;
     let newPassword = undefined;
     let hashPassword = undefined;
     //1st updatePassword -> if failed the process update user will stop
@@ -766,7 +766,7 @@ async function adminUpdateMPUser(body) {
       {},
       "[CIAM] End Update User FOs Service - Failed"
     );
-    const errorMessage = error && typeof error.message === 'object' ? JSON.parse(error.message) : "";
+    const errorMessage = error && error.message ? JSON.parse(error.message) : "";
 
     const errorData =
       errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
