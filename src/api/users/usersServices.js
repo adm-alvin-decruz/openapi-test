@@ -52,11 +52,11 @@ const {
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
 const {
-  verifyEmailAndNewEmail,
-  getUserInfo,
-  processUpdateUserAtCognito,
-  processUpdateUserAtDB
-} = require("./helpers/userUpdateMPHelp");
+  verifyCurrentAndNewEmail,
+  getUserFromDBCognito,
+  updateCognitoUserPassword,
+  updateDBUserInfo
+} = require("./helpers/userUpdateMembershipPassesHelper");
 
 /**
  * Function User signup service
@@ -520,11 +520,11 @@ async function adminUpdateMPUser(body) {
 
   // start update process
   try {
-    const userOriginalInfo = await getUserInfo(email);
-    const userNewEmailInfo = await getUserInfo(newEmail);
+    const userOriginalInfo = await getUserFromDBCognito(email);
+    const userNewEmailInfo = await getUserFromDBCognito(newEmail);
 
     //check email and new email is existed -> throw error if possible to stop update process
-    await verifyEmailAndNewEmail({
+    await verifyCurrentAndNewEmail({
       originalEmail: email,
       userInfoOriginal: userOriginalInfo,
       newEmail: newEmail,
@@ -533,7 +533,7 @@ async function adminUpdateMPUser(body) {
     });
 
     //1st proceed update user in cognito
-    await processUpdateUserAtCognito({
+    await updateCognitoUserPassword({
       email: email,
       newEmail: newEmail,
       data: dataRequestUpdate,
@@ -543,7 +543,7 @@ async function adminUpdateMPUser(body) {
     });
 
     //2nd proceed update user in DB
-    await processUpdateUserAtDB({
+    await updateDBUserInfo({
       email: email,
       newEmail: newEmail,
       data: dataRequestUpdate,

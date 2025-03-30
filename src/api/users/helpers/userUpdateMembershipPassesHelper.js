@@ -52,7 +52,7 @@ function parseCognitoAttributeObject(userCognito) {
   return { ...attributes };
 }
 
-async function getUserInfo(email) {
+async function getUserFromDBCognito(email) {
   const userInfo = {
     db: null,
     cognito: null,
@@ -80,7 +80,7 @@ function isUserExisted(userInfo) {
   return userInfo && userInfo.db && userInfo.cognito;
 }
 
-async function verifyEmailAndNewEmail({
+async function verifyCurrentAndNewEmail({
   originalEmail,
   userInfoOriginal,
   newEmail,
@@ -108,13 +108,63 @@ async function verifyEmailAndNewEmail({
   }
 }
 
-async function updateUserInfoCognito(
-  data,
-  userCognito,
+async function updateCognitoUserPassword({
   email,
   newEmail,
-  language
-) {
+  data,
+  userInfo,
+  ncRequest,
+  language,
+}) {
+  const password = manipulatePassword(
+    ncRequest,
+    data.password,
+    data.newPassword
+  );
+
+  try {
+    //1st updatePassword with original email -> if failed the process update will stop
+    if (password) {
+      try {
+        await cognitoService.cognitoAdminSetUserPassword(email, password);
+        loggerWrapper(
+          "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+          {
+            userEmail: email,
+            layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
+          }
+        );
+      } catch (error) {
+        loggerWrapper(
+          "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+          {
+            userEmail: email,
+            layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
+            error: new Error(error),
+          },
+          "error"
+        );
+        //throw error moving to top try catch block
+        await errorWrapper(UpdateUserErrors.ciamUpdateUserErr(language));
+      }
+    }
+
+    //2nd update other information for user
+    await updateCognitoUserInfo(data, userInfo, email, newEmail, language);
+  } catch (error) {
+    //throw error for service handle
+    throw new Error(error);
+  }
+}
+
+function manipulatePassword(ncRequest, passwordFromNC = undefined, passwordFromRequest = undefined) {
+  if (ncRequest && passwordFromNC) {
+    return passwordFromNC;
+  }
+  return passwordFromRequest;
+}
+
+async function updateCognitoUserInfo(data, userCognito, email, newEmail, language) {
   /*
     prepare replace user's name at Cognito
      handle replace username at cognito by firstName + lastName
@@ -192,7 +242,7 @@ async function updateUserInfoCognito(
     }
     loggerWrapper("[CIAM-MAIN] Process Update User At Cognito - Start", {
       userEmail: email,
-      layer: "userUpdateMPHelper.processUpdateUserAtCognito",
+      layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
       cognitoUpdateParams: JSON.stringify(cognitoUpdateParams),
     });
     await cognitoService.cognitoAdminUpdateNewUser(cognitoUpdateParams, email);
@@ -200,7 +250,7 @@ async function updateUserInfoCognito(
       "[CIAM-MAIN] Process Update User At Cognito - Start - Success",
       {
         userEmail: email,
-        layer: "userUpdateMPHelper.processUpdateUserAtCognito",
+        layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
       }
     );
   } catch (error) {
@@ -208,7 +258,7 @@ async function updateUserInfoCognito(
       "[CIAM-MAIN] Process Update User At Cognito - Start - Failed",
       {
         userEmail: email,
-        layer: "userUpdateMPHelper.processUpdateUserAtCognito",
+        layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
         error: new Error(error),
       },
       "error"
@@ -217,61 +267,37 @@ async function updateUserInfoCognito(
   }
 }
 
-function manipulatePassword(
-  ncRequest,
-  passwordFromNC = undefined,
-  passwordFromRequest = undefined
-) {
-  if (ncRequest && passwordFromNC) {
-    return passwordFromNC;
-  }
-  return passwordFromRequest;
-}
-
-async function processUpdateUserAtCognito({
+async function updateDBUserInfo({
   email,
   newEmail,
   data,
-  userInfo,
+  userId,
   ncRequest,
   language,
 }) {
+  const latestEmail = newEmail ? newEmail : email;
   const password = manipulatePassword(
     ncRequest,
     data.password,
     data.newPassword
   );
-
+  console.log('uyser iudidididid', userId)
   try {
-    //1st updatePassword with original email -> if failed the process update will stop
-    if (password) {
-      try {
-        await cognitoService.cognitoAdminSetUserPassword(email, password);
-        loggerWrapper(
-          "[CIAM-MAIN] userUpdateMPHelper.processUpdateUserAtCognito Update Password Success",
-          {
-            userEmail: email,
-            layer: "userUpdateMPHelper.processUpdateUserAtCognito",
-          }
-        );
-      } catch (error) {
-        loggerWrapper(
-          "[CIAM-MAIN] userUpdateMPHelper.processUpdateUserAtCognito Update Password Success",
-          {
-            userEmail: email,
-            layer: "userUpdateMPHelper.processUpdateUserAtCognito",
-            error: new Error(error),
-          },
-          "error"
-        );
-        //throw error moving to top try catch block
-        await errorWrapper(UpdateUserErrors.ciamUpdateUserErr(language));
-      }
-    }
-
-    //2nd update other information for user
-    await updateUserInfoCognito(data, userInfo, email, newEmail, language);
+    loggerWrapper("[CIAM-MAIN] Process update user at DB - Start", {
+      userEmail: email,
+      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+    });
+    await updateDB(data, userId, latestEmail, password, language);
+    loggerWrapper("[CIAM-MAIN] Process update user at DB - Success", {
+      userEmail: email,
+      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+    });
   } catch (error) {
+    loggerWrapper("[CIAM-MAIN] Process update user at DB - Failed", {
+      userEmail: email,
+      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+      error: new Error(error),
+    });
     //throw error for service handle
     throw new Error(error);
   }
@@ -283,7 +309,7 @@ async function updateDB(data, userId, email, password, language = "en") {
   try {
     loggerWrapper("[CIAM-MAIN] Update User table", {
       userEmail: email,
-      layer: "userUpdateMPHelper.updateDB",
+      layer: "userUpdateMembershipPassesHelper.updateDB",
       data: JSON.stringify({
         given_name: data.firstName,
         family_name: data.lastName,
@@ -303,7 +329,7 @@ async function updateDB(data, userId, email, password, language = "en") {
     ) : undefined;
     loggerWrapper("[CIAM-MAIN] Update User Credentials table", {
       userEmail: email,
-      layer: "userUpdateMPHelper.updateDB",
+      layer: "userUpdateMembershipPassesHelper.updateDB",
       data: JSON.stringify({
         password_hash: hashPassword,
         username: email,
@@ -317,7 +343,7 @@ async function updateDB(data, userId, email, password, language = "en") {
     if (data.newsletter && data.newsletter.name) {
       loggerWrapper("[CIAM-MAIN] Update User Newsletter table", {
         userEmail: email,
-        layer: "userUpdateMPHelper.updateDB",
+        layer: "userUpdateMembershipPassesHelper.updateDB",
         data: JSON.stringify({
           userId: userId,
           newsletter: data.newsletter,
@@ -331,7 +357,7 @@ async function updateDB(data, userId, email, password, language = "en") {
     if (data.phoneNumber || data.address || data.country) {
       loggerWrapper("[CIAM-MAIN] Update User Details table", {
         userEmail: email,
-        layer: "userUpdateMPHelper.updateDB",
+        layer: "userUpdateMembershipPassesHelper.updateDB",
         data: JSON.stringify({
           userId: userId,
           phone_number: data.phoneNumber ? data.phoneNumber : undefined,
@@ -351,45 +377,9 @@ async function updateDB(data, userId, email, password, language = "en") {
   }
 }
 
-async function processUpdateUserAtDB({
-  email,
-  newEmail,
-  data,
-  userId,
-  ncRequest,
-  language,
-}) {
-  const latestEmail = newEmail ? newEmail : email;
-  const password = manipulatePassword(
-    ncRequest,
-    data.password,
-    data.newPassword
-  );
-  console.log('uyser iudidididid', userId)
-  try {
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Start", {
-      userEmail: email,
-      layer: "userUpdateMPHelper.processUpdateUserAtDB",
-    });
-    await updateDB(data, userId, latestEmail, password, language);
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Success", {
-      userEmail: email,
-      layer: "userUpdateMPHelper.processUpdateUserAtDB",
-    });
-  } catch (error) {
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Failed", {
-      userEmail: email,
-      layer: "userUpdateMPHelper.processUpdateUserAtDB",
-      error: new Error(error),
-    });
-    //throw error for service handle
-    throw new Error(error);
-  }
-}
-
 module.exports = {
-  verifyEmailAndNewEmail,
-  getUserInfo,
-  processUpdateUserAtCognito,
-  processUpdateUserAtDB,
+  verifyCurrentAndNewEmail,
+  getUserFromDBCognito,
+  updateCognitoUserPassword,
+  updateDBUserInfo,
 };
