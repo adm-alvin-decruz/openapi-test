@@ -40,8 +40,6 @@ const userUpdateHelper = require("./usersUpdateHelpers");
 const userDeleteHelper = require("./usersDeleteHelpers");
 const galaxyWPService = require("../components/galaxy/services/galaxyWPService");
 const switchService = require("../../services/switchService");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
 const { GROUP } = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
@@ -55,7 +53,9 @@ const {
   verifyCurrentAndNewEmail,
   getUserFromDBCognito,
   updateCognitoUserPassword,
-  updateDBUserInfo
+  updateDBUserInfo,
+  manipulatePassword,
+  updateCognitoUserInfo,
 } = require("./helpers/userUpdateMembershipPassesHelper");
 
 /**
@@ -512,11 +512,13 @@ async function adminUpdateMPUser(body) {
   const ncRequest = !!body.ncRequest;
   const dataRequestUpdate = body.data;
   const email = body.email;
-  const newEmail = body.data.newEmail || '';
-  const language = body.language || 'en';
+  const newEmail = body.data.newEmail || "";
+  const language = body.language || "en";
 
   //clean and format phoneNumber
-  dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
+  dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(
+    body.data.phoneNumber
+  );
 
   // start update process
   try {
@@ -529,28 +531,43 @@ async function adminUpdateMPUser(body) {
       userInfoOriginal: userOriginalInfo,
       newEmail: newEmail,
       userInfoNewEmail: userNewEmailInfo,
-      language: language
+      language: language,
     });
 
-    //1st proceed update user in cognito
-    await updateCognitoUserPassword({
-      email: email,
-      newEmail: newEmail,
+    const password = await manipulatePassword(
+      ncRequest,
+      body.data.password,
+      body.data.newPassword
+    );
+
+    //1st proceed update user password in cognito if password request change
+    if (password.cognito) {
+      await updateCognitoUserPassword({
+        email: email,
+        password,
+        language: language,
+      });
+    }
+
+    //2nd proceed update user information
+    await updateCognitoUserInfo({
       data: dataRequestUpdate,
       userInfo: userOriginalInfo.cognito,
-      ncRequest: ncRequest,
-      language: language
+      email: email,
+      newEmail: newEmail,
+      language: language,
     });
 
-    //2nd proceed update user in DB
+    //3rd proceed update user in DB
     await updateDBUserInfo({
       email: email,
       newEmail: newEmail,
       data: dataRequestUpdate,
       userId: userOriginalInfo.db.id,
       ncRequest: ncRequest,
-      language: language
-    })
+      password,
+      language: language,
+    });
 
     return {
       membership: {

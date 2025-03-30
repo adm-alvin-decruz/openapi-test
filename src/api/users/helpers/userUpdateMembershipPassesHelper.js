@@ -63,11 +63,12 @@ async function getUserFromDBCognito(email) {
 
   try {
     const userDB = await userModel.findByEmail(email);
+
     const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
-    if (userDB.id) {
+    if (userDB && userDB.id) {
       userInfo.db = userDB;
     }
-    if (getOrCheck(userCognito, "email")) {
+    if (userCognito && getOrCheck(userCognito, "email")) {
       userInfo.cognito = parseCognitoAttributeObject(userCognito);
     }
     return userInfo;
@@ -77,7 +78,7 @@ async function getUserFromDBCognito(email) {
 }
 
 function isUserExisted(userInfo) {
-  return userInfo && userInfo.db && userInfo.cognito;
+  return userInfo && (userInfo.db || userInfo.cognito);
 }
 
 async function verifyCurrentAndNewEmail({
@@ -108,70 +109,73 @@ async function verifyCurrentAndNewEmail({
   }
 }
 
-async function updateCognitoUserPassword({
-  email,
-  newEmail,
-  data,
-  userInfo,
-  ncRequest,
-  language,
-}) {
-  const password = manipulatePassword(
-    ncRequest,
-    data.password,
-    data.newPassword
-  );
-
+async function updateCognitoUserPassword({ email, password, language }) {
+  //1st updatePassword with original email -> if failed the process update will stop
   try {
-    //1st updatePassword with original email -> if failed the process update will stop
-    if (password) {
-      try {
-        await cognitoService.cognitoAdminSetUserPassword(email, password);
-        loggerWrapper(
-          "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
-          {
-            userEmail: email,
-            layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
-          }
-        );
-      } catch (error) {
-        loggerWrapper(
-          "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
-          {
-            userEmail: email,
-            layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
-            error: new Error(error),
-          },
-          "error"
-        );
-        //throw error moving to top try catch block
-        await errorWrapper(UpdateUserErrors.ciamUpdateUserErr(language));
+    await cognitoService.cognitoAdminSetUserPassword(email, password.cognito);
+    loggerWrapper(
+      "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+      {
+        userEmail: email,
+        layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
       }
-    }
-
-    //2nd update other information for user
-    await updateCognitoUserInfo(data, userInfo, email, newEmail, language);
+    );
   } catch (error) {
-    //throw error for service handle
-    throw new Error(error);
+    loggerWrapper(
+      "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+      {
+        userEmail: email,
+        layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
+        error: new Error(error),
+      },
+      "error"
+    );
+    //throw error moving to top try catch block
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
   }
 }
 
-function manipulatePassword(ncRequest, passwordFromNC = undefined, passwordFromRequest = undefined) {
+async function manipulatePassword(
+  ncRequest,
+  passwordFromNC = undefined,
+  passwordFromRequest = undefined
+) {
+  let passwordHash = undefined;
+
   if (ncRequest && passwordFromNC) {
-    return passwordFromNC;
+    passwordHash = await passwordService.hashPassword(
+        passwordFromNC.toString()
+    );
+    return {
+      db: passwordHash,
+      cognito: passwordFromNC,
+    };
   }
-  return passwordFromRequest;
+
+  if (passwordFromRequest) {
+    passwordHash = await passwordService.hashPassword(
+        passwordFromRequest.toString()
+    );
+    return {
+      db: passwordHash,
+      cognito: passwordFromRequest,
+    };
+  }
+
+  return {
+    db: passwordHash,
+    cognito: undefined
+  }
 }
 
-async function updateCognitoUserInfo(data, userCognito, email, newEmail, language) {
+async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language }) {
   /*
     prepare replace user's name at Cognito
      handle replace username at cognito by firstName + lastName
    */
-  let userName = userCognito.name || "";
-  const userFirstName = userCognito.given_name || "";
-  const userLastName = userCognito.family_name || "";
+  let userName = userInfo.name;
+  const userFirstName = userInfo.given_name;
+  const userLastName = userInfo.family_name;
   const emailReplicate = newEmail ? newEmail : email;
 
   if (data.firstName && userFirstName) {
@@ -263,7 +267,7 @@ async function updateCognitoUserInfo(data, userCognito, email, newEmail, languag
       },
       "error"
     );
-    await errorWrapper(UpdateUserErrors.ciamUpdateUserErr(language));
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)))
   }
 }
 
@@ -272,16 +276,11 @@ async function updateDBUserInfo({
   newEmail,
   data,
   userId,
-  ncRequest,
+  password,
   language,
 }) {
-  const latestEmail = newEmail ? newEmail : email;
-  const password = manipulatePassword(
-    ncRequest,
-    data.password,
-    data.newPassword
-  );
-  console.log('uyser iudidididid', userId)
+  const latestEmail = newEmail || email;
+
   try {
     loggerWrapper("[CIAM-MAIN] Process update user at DB - Start", {
       userEmail: email,
@@ -324,22 +323,21 @@ async function updateDB(data, userId, email, password, language = "en") {
       data.dob,
       email
     );
-    const hashPassword = password ? await passwordService.hashPassword(
-        password.toString()
-    ) : undefined;
+
     loggerWrapper("[CIAM-MAIN] Update User Credentials table", {
       userEmail: email,
       layer: "userUpdateMembershipPassesHelper.updateDB",
       data: JSON.stringify({
-        password_hash: hashPassword,
+        password_hash: password.db,
         username: email,
       }),
     });
     await userCredentialModel.updateByUserId(userId, {
-      password_hash: hashPassword,
+      password_hash: password.db,
       username: email,
       salt: null,
     });
+
     if (data.newsletter && data.newsletter.name) {
       loggerWrapper("[CIAM-MAIN] Update User Newsletter table", {
         userEmail: email,
@@ -382,4 +380,6 @@ module.exports = {
   getUserFromDBCognito,
   updateCognitoUserPassword,
   updateDBUserInfo,
+  manipulatePassword,
+  updateCognitoUserInfo,
 };
