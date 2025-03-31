@@ -40,19 +40,23 @@ const userUpdateHelper = require("./usersUpdateHelpers");
 const userDeleteHelper = require("./usersDeleteHelpers");
 const galaxyWPService = require("../components/galaxy/services/galaxyWPService");
 const switchService = require("../../services/switchService");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const { getOrCheck } = require("../../utils/cognitoAttributes");
-const UpdateUserErrors = require("../../config/https/errors/updateUserErrors");
-const { COGNITO_ATTRIBUTES, GROUP } = require("../../utils/constants");
+const { GROUP } = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
-const userCredentialModel = require("../../db/models/userCredentialModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
 const {
   formatDateToMySQLDateTime,
   convertDateFromMySQLToSlash,
   convertDateToMySQLFormat,
 } = require("../../utils/dateUtils");
+const {
+  verifyCurrentAndNewEmail,
+  getUserFromDBCognito,
+  updateCognitoUserPassword,
+  updateDBUserInfo,
+  manipulatePassword,
+  updateCognitoUserInfo,
+} = require("./helpers/userUpdateMembershipPassesHelper");
 
 /**
  * Function User signup service
@@ -504,247 +508,67 @@ async function adminUpdateUser(
   }
 }
 
-async function updateDB(body, userId, latestEmail) {
-  if (!userId) {
-    throw new Error(
-      JSON.stringify(
-        UpdateUserErrors.ciamEmailNotExists(body.email, body.language)
-      )
-    );
-  }
-  //enhance it should apply rollback when some executions got failed
-  //or saving to failed_job
-  try {
-    const bodyData = body.data;
-    if (
-      bodyData.firstName ||
-      bodyData.lastName ||
-      bodyData.dob ||
-      bodyData.newEmail
-    ) {
-      await userDBService.userModelExecuteUpdate(
-        userId,
-        bodyData.firstName,
-        bodyData.lastName,
-        bodyData.dob,
-        latestEmail
-      );
-    }
-    if (bodyData.newsletter && bodyData.newsletter.name) {
-      await userDBService.userNewsletterModelExecuteUpdate(
-        userId,
-        bodyData.newsletter
-      );
-    }
-    if (bodyData.phoneNumber || bodyData.address || bodyData.country) {
-      await userDBService.userDetailsModelExecuteUpdate(
-        userId,
-        bodyData.phoneNumber,
-        bodyData.address,
-        bodyData.country
-      );
-    }
-  } catch (error) {
-    loggerService.error(
-      {
-        user: {
-          email: body.data.email,
-          userId: userId,
-          body: body.data,
-          layer: "usersService.updateDB",
-          error: `${error}`,
-        },
-      },
-      {},
-      "[CIAM] Update DB Service - Failed"
-    );
-    throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
-  }
-}
-
-async function updateUserCognito(body, userCognito) {
-  /*
-    prepare replace user's name at Cognito
-     handle replace username at cognito by firstName + lastName
-   */
-  let userName = getOrCheck(userCognito, "name");
-  const userFirstName = getOrCheck(userCognito, "given_name");
-  const userLastName = getOrCheck(userCognito, "family_name");
-  if (body.data.firstName && userFirstName) {
-    userName = userName.replace(userFirstName.toString(), body.data.firstName);
-  }
-  if (body.data.lastName && userLastName) {
-    userName = userName.replace(userLastName.toString(), body.data.lastName);
-  }
-
-  //prepare params attributes for Cognito
-  //filter attributes that support from our Cognito schemas only
-  const cognitoParams = Object.keys(body.data)
-    .map((key) => {
-      //ignore params which not being used for update data
-      if (
-        [
-          "uuid",
-          "newPassword",
-          "confirmPassword",
-          "oldPassword",
-          "group",
-        ].includes(key)
-      ) {
-        return;
-      }
-      if (key === "newsletter") {
-        return {
-          Name: COGNITO_ATTRIBUTES[key],
-          Value: JSON.stringify(body.data.newsletter),
-        };
-      }
-      if (key === "phoneNumber") {
-        return {
-          Name: COGNITO_ATTRIBUTES[key],
-          Value: body.data.phoneNumber,
-        };
-      }
-
-      return {
-        Name: COGNITO_ATTRIBUTES[key],
-        Value: body.data[key],
-      };
-    })
-    .filter((ele) => !!ele && !!ele.Name);
-
-  try {
-    let cognitoUpdateParams = [...cognitoParams,
-              {Name: "name", Value: userName},
-              {Name: "email", Value: !!body.data.newEmail ? body.data.newEmail : body.email}
-            ];
-    if (body.data.phoneNumber === null || body.data.phoneNumber === undefined || body.data.phoneNumber.trim() === '') {
-      // find the index of the phone_number parameter
-      const phoneIndex = cognitoUpdateParams.findIndex(cognitoUpdateParams =>
-        cognitoUpdateParams.Name === 'phone_number'
-      );
-      // rmove the phone_number parameter if found
-      if (phoneIndex !== -1) {
-        cognitoUpdateParams.splice(phoneIndex, 1);
-      }
-    }
-
-    //cognito update user
-    await cognitoService.cognitoAdminUpdateNewUser(cognitoUpdateParams, body.email);
-  } catch (error) {
-    throw new Error(
-      JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(body.language))
-    );
-  }
-}
-
 async function adminUpdateMPUser(body) {
   const ncRequest = !!body.ncRequest;
-  // logger
-  loggerService.log(
-    {
-      user: {
-        userEmail: body.email,
-        layer: "usersService.adminUpdateMPUser",
-        body: JSON.stringify(body),
-        ncRequest
-      },
-    },
-    "[CIAM] Start Update User FOs Service"
+  const dataRequestUpdate = body.data;
+  const email = body.email;
+  const newEmail = body.data.newEmail || "";
+  const language = body.language || "en";
+
+  //clean and format phoneNumber
+  dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(
+    body.data.phoneNumber
   );
+
   // start update process
   try {
-    // clean up phone number
-    body.data.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
-    //get user from db
-    const userDB = await userModel.findByEmail(body.email);
+    const userOriginalInfo = await getUserFromDBCognito(email);
+    const userNewEmailInfo = await getUserFromDBCognito(newEmail);
 
-    //get user from cognito
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(body.email)
-    const email = getOrCheck(userCognito, "email");
-
-    // check if email exist or not
-    if (email !== body.email || userDB.email !== body.email) {
-      return UpdateUserErrors.ciamEmailNotExists(body.data.newEmail, body.language);
-    }
-
-    // process if update email address (new email)
-    let isNewEmailExisted = false;
-
-    if (body.data && body.data.newEmail) {
-      isNewEmailExisted = await checkNewEmailExisted(body.data.newEmail);
-      if (isNewEmailExisted) {
-        return UpdateUserErrors.ciamNewEmailBeingUsedErr(
-          body.data.newEmail,
-          body.language
-        );
-      }
-    }
-
-    const latestEmail = !isNewEmailExisted && body.data.newEmail ? body.newEmail : body.email;
-    let newPassword = undefined;
-    let hashPassword = undefined;
-    //1st updatePassword -> if failed the process update user will stop
-    //ad-hook - switch update password by private_mode
-    if ((body.data && body.data.newPassword) || body.data.password) {
-      // prepare hash password
-      try {
-        newPassword = body.data.newPassword || undefined;
-        if (ncRequest) {
-          newPassword = body.data.password;
-        }
-        hashPassword = await passwordService.hashPassword(newPassword.toString());
-        //update password into cognito with current email - avoid new email cause it still not yet into CIAM system
-        await cognitoService.cognitoAdminSetUserPassword(body.email, newPassword);
-      } catch (error) {
-        loggerService.error(
-            {
-              user: {
-                userEmail: body.email,
-                layer: "usersService.adminUpdateMPUser",
-                error: new Error(error),
-              },
-            },
-            {},
-            "[CIAM-MAIN] usersServices.adminUpdateMPUser Update Password Error"
-        );
-        //should stop update process?
-      }
-    }
-
-    //update password hash and new email if possible into DB - prepare for login session
-    await userCredentialModel.updateByUserId(userDB.id, {
-      password_hash: hashPassword,
-      username: latestEmail,
-      salt: null
+    //check email and new email is existed -> throw error if possible to stop update process
+    await verifyCurrentAndNewEmail({
+      originalEmail: email,
+      userInfoOriginal: userOriginalInfo,
+      newEmail: newEmail,
+      userInfoNewEmail: userNewEmailInfo,
+      language: language,
     });
 
-    //2nd update Cognito
-    await updateUserCognito(body, userCognito);
-    //3rd update DB
-    await updateDB(
-      body,
-      userDB.id ,
-      latestEmail
+    const password = await manipulatePassword(
+      ncRequest,
+      body.data.password,
+      body.data.newPassword
     );
-    let membership =
-      JSON.stringify(
-        {code: 200,mwgCode: "MWG_CIAM_USER_UPDATE_SUCCESS",message: messageLang("update_success", body.language)}
-    );
-    loggerService.log(
-      {
-        user: {
-          userEmail: body.email,
-          layer: "usersService.adminUpdateMPUser",
-          response: {
-            membership: membership,
-            status: "success",
-            statusCode: 200,
-          },
-        },
-      },
-      "[CIAM] End Update User FOs Service - Success"
-    );
+
+    //1st proceed update user password in cognito if password request change
+    if (password.cognito) {
+      await updateCognitoUserPassword({
+        email: email,
+        password,
+        language: language,
+      });
+    }
+
+    //2nd proceed update user information
+    await updateCognitoUserInfo({
+      data: dataRequestUpdate,
+      userInfo: userOriginalInfo.cognito,
+      email: email,
+      newEmail: newEmail,
+      language: language,
+    });
+
+    //3rd proceed update user in DB
+    await updateDBUserInfo({
+      email: email,
+      newEmail: newEmail,
+      data: dataRequestUpdate,
+      userId: userOriginalInfo.db.id,
+      ncRequest: ncRequest,
+      password,
+      language: language,
+    });
+
     return {
       membership: {
         code: 200,
@@ -755,72 +579,8 @@ async function adminUpdateMPUser(body) {
       statusCode: 200,
     };
   } catch (error) {
-    loggerService.error(
-      {
-        user: {
-          userEmail: body.email,
-          layer: "usersService.adminUpdateMPUser",
-          error: `${error}`,
-        },
-      },
-      {},
-      "[CIAM] End Update User FOs Service - Failed"
-    );
-    const errorMessage = error && typeof error.message === 'object' ? JSON.parse(error.message) : "";
-
-    const errorData =
-      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      throw new Error(
-        JSON.stringify(
-          UpdateUserErrors.ciamEmailNotExists(body.email, body.language)
-        )
-      );
-    }
-    if (errorData.name && errorData.name === "NotAuthorizedException") {
-      throw new Error(
-        JSON.stringify(CommonErrors.UnauthorizedException(body.language))
-      );
-    }
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      throw new Error(
-        JSON.stringify(
-          UpdateUserErrors.ciamEmailNotExists(body.email, body.language)
-        )
-      );
-    }
-    if (
-      errorMessage &&
-      errorMessage.rawError &&
-      errorMessage.rawError.includes("Invalid phone number format.")
-    ) {
-      throw new Error(
-        JSON.stringify(
-          CommonErrors.BadRequest(
-            "phoneNumber",
-            "phoneNumber_invalid",
-            body.language
-          )
-        )
-      );
-    }
-    throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
-  }
-}
-
-async function checkNewEmailExisted(email) {
-  try {
-    const userDB = await userModel.findByEmail(email);
-    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
-    const emailCognito = getOrCheck(userCognito, "email");
-    return !!userDB.email || !!emailCognito;
-  } catch (error) {
-    const errorMessage = error.message ? JSON.parse(error.message) : "";
-    const errorData =
-      errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
-    if (errorData.name && errorData.name === "UserNotFoundException") {
-      return false;
-    }
+    const errorMessage = error && error.message ? JSON.parse(error.message) : "";
+    throw new Error(JSON.stringify(errorMessage));
   }
 }
 //#endregion

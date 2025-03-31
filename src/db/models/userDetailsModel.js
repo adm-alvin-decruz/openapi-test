@@ -130,7 +130,7 @@ class UserDetail {
             data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
             layer: "userDetailsModel.updateByUserId",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
