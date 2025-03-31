@@ -15,40 +15,19 @@ async function errorWrapper(errObj) {
 
 function loggerWrapper(action, loggerObj, type = "logInfo") {
   if (type === "error") {
-    return loggerService.error(
-      {
-        userUpdateHelper: {
-          ...loggerObj,
-        },
-      },
-      {},
-      action
-    );
+    return loggerService.error({ userUpdateHelper: { ...loggerObj } }, {}, action);
   }
 
-  return loggerService.log(
-    {
-      userUpdateHelper: {
-        ...loggerObj,
-      },
-    },
-    action
-  );
+  return loggerService.log({ userUpdateHelper: { ...loggerObj } }, action);
 }
 
 function parseCognitoAttributeObject(userCognito) {
-  if (
-    !userCognito ||
-    !userCognito.UserAttributes ||
-    userCognito.UserAttributes.length <= 0
-  ) {
+  if (!userCognito || !userCognito.UserAttributes || userCognito.UserAttributes.length <= 0) {
     return null;
   }
 
   const attributes = {};
-  userCognito.UserAttributes.forEach((attr) => {
-    attributes[attr.Name] = attr.Value;
-  });
+  userCognito.UserAttributes.forEach((attr) => { attributes[attr.Name] = attr.Value });
   return { ...attributes };
 }
 
@@ -81,13 +60,7 @@ function isUserExisted(userInfo) {
   return userInfo && (userInfo.db || userInfo.cognito);
 }
 
-async function verifyCurrentAndNewEmail({
-  originalEmail,
-  userInfoOriginal,
-  newEmail,
-  userInfoNewEmail,
-  language,
-}) {
+async function verifyCurrentAndNewEmail({ originalEmail, userInfoOriginal, newEmail, userInfoNewEmail, language }) {
   try {
     // If original email not existed - throw error record not found
     if (!isUserExisted(userInfoOriginal)) {
@@ -110,7 +83,6 @@ async function verifyCurrentAndNewEmail({
 }
 
 async function updateCognitoUserPassword({ email, password, language }) {
-  //1st updatePassword with original email -> if failed the process update will stop
   try {
     await cognitoService.cognitoAdminSetUserPassword(email, password.cognito);
     loggerWrapper(
@@ -176,7 +148,7 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
   let userName = userInfo.name;
   const userFirstName = userInfo.given_name;
   const userLastName = userInfo.family_name;
-  const emailReplicate = newEmail ? newEmail : email;
+  const emailReplicate = newEmail || email;
 
   if (data.firstName && userFirstName) {
     userName = userName.replace(userFirstName.toString(), data.firstName);
@@ -271,76 +243,48 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
   }
 }
 
-async function updateDBUserInfo({
-  email,
-  newEmail,
-  data,
-  userId,
-  password,
-  language,
-}) {
+async function updateDBUserInfo({ email, newEmail, data, userId, password, language }) {
   const latestEmail = newEmail || email;
 
   try {
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Start", {
-      userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
-    });
-    await updateDB(data, userId, latestEmail, password, language);
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Success", {
-      userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
-    });
-  } catch (error) {
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Failed", {
-      userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
-      error: new Error(error),
-    });
-    //throw error for service handle
-    throw new Error(error);
-  }
-}
-
-async function updateDB(data, userId, email, password, language = "en") {
-  //enhance it should apply rollback when some executions got failed
-  //or saving to failed_job
-  try {
     loggerWrapper("[CIAM-MAIN] Update User table", {
-      userEmail: email,
+      userEmail: latestEmail,
       layer: "userUpdateMembershipPassesHelper.updateDB",
       data: JSON.stringify({
         given_name: data.firstName,
         family_name: data.lastName,
         birthdate: data.dob ? convertDateToMySQLFormat(data.dob) : undefined,
-        email: email,
+        email: latestEmail,
       }),
     });
+    //1st - Update user table - step is always proceed
     await userDBService.userModelExecuteUpdate(
-      userId,
-      data.firstName,
-      data.lastName,
-      data.dob,
-      email
+        userId,
+        data.firstName,
+        data.lastName,
+        data.dob,
+        latestEmail
     );
 
     loggerWrapper("[CIAM-MAIN] Update User Credentials table", {
-      userEmail: email,
+      userEmail: latestEmail,
       layer: "userUpdateMembershipPassesHelper.updateDB",
       data: JSON.stringify({
         password_hash: password.db,
-        username: email,
+        username: latestEmail,
       }),
     });
+    //2nd - Update user credentials table - step is always proceed
     await userCredentialModel.updateByUserId(userId, {
       password_hash: password.db,
-      username: email,
+      username: latestEmail,
       salt: null,
     });
 
+    //3rd - Update user newsletter table - step is need condition newsletter available
     if (data.newsletter && data.newsletter.name) {
       loggerWrapper("[CIAM-MAIN] Update User Newsletter table", {
-        userEmail: email,
+        userEmail: latestEmail,
         layer: "userUpdateMembershipPassesHelper.updateDB",
         data: JSON.stringify({
           userId: userId,
@@ -348,10 +292,12 @@ async function updateDB(data, userId, email, password, language = "en") {
         }),
       });
       await userDBService.userNewsletterModelExecuteUpdate(
-        userId,
-        data.newsletter
+          userId,
+          data.newsletter
       );
     }
+
+    //4th - Update user details table - step is need condition phoneNumber/address/country available
     if (data.phoneNumber || data.address || data.country) {
       loggerWrapper("[CIAM-MAIN] Update User Details table", {
         userEmail: email,
@@ -364,14 +310,25 @@ async function updateDB(data, userId, email, password, language = "en") {
         }),
       });
       await userDBService.userDetailsModelExecuteUpdate(
-        userId,
-        data.phoneNumber,
-        data.address,
-        data.country
+          userId,
+          data.phoneNumber,
+          data.address,
+          data.country
       );
     }
+    // await updateDB(data, userId, latestEmail, password, language);
+    loggerWrapper("[CIAM-MAIN] Process update user at DB - Success", {
+      userEmail: email,
+      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+    });
   } catch (error) {
-    await errorWrapper(UpdateUserErrors.ciamUpdateUserErr(language));
+    loggerWrapper("[CIAM-MAIN] Process update user at DB - Failed", {
+      userEmail: email,
+      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+      error: new Error(error),
+    });
+    //throw error for service handle
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
   }
 }
 
