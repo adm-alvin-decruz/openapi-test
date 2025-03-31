@@ -75,43 +75,6 @@ async function validateEmailDisposable(req, res, next) {
   next();
 }
 
-function transformObject(obj) {
-  const keysAcceptedLower = ["passType"];
-  const keysAcceptedTrim = ["mandaiId", "visualId", "firstName", "lastName"];
-  const keysAcceptedTrimAndLower = ["email", "newEmail"];
-
-  if (typeof obj !== "object" || obj === null) return obj; // Skip non-objects
-
-  return Object.entries(obj).reduce((rs, [key, value]) => {
-    if (keysAcceptedLower.includes(key) && value && typeof value === "string") {
-      rs[key] = value.toLowerCase();
-      return rs;
-    }
-
-    if (keysAcceptedTrim.includes(key) && value && typeof value === "string") {
-      rs[key] = value.trim();
-      return rs;
-    }
-
-    if (
-      keysAcceptedTrimAndLower.includes(key) &&
-      value &&
-      typeof value === "string"
-    ) {
-      rs[key] = value.toLowerCase().trim();
-      return rs;
-    }
-
-    if (typeof value === "object" && value !== null) {
-      rs[key] = transformObject(value);
-      return rs;
-    }
-
-    rs[key] = value;
-    return rs;
-  }, {});
-}
-
 //only use it when combine with emptyRequest middleware
 async function lowercaseTrimKeyValueString(req, res, next) {
   req.body = transformObject(req.body);
@@ -295,6 +258,56 @@ async function validateAPIKey(req, res, next) {
     return next();
   }
   return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+}
+
+/**
+ * Transform request body based on keys identify.
+ * @function
+ * @param {Object} reqBodyObj - The user information associated with the original email.
+ */
+function transformObject(reqBodyObj) {
+  const keysAcceptedLower = ["passType"];
+  const keysAcceptedTrim = ["mandaiId", "visualId", "firstName", "lastName", "first_name", "last_name", "member"];
+  const keysAcceptedTrimAndLower = ["email", "newEmail"];
+  const transformArrayException = ["coMembers"];
+
+  if (typeof reqBodyObj !== "object" || reqBodyObj === null) return reqBodyObj; // Skip non-objects
+
+  return Object.entries(reqBodyObj).reduce((rs, [key, value]) => {
+    if (keysAcceptedLower.includes(key) && value && typeof value === "string") {
+      rs[key] = value.toLowerCase();
+      return rs;
+    }
+
+    if (keysAcceptedTrim.includes(key) && value && typeof value === "string") {
+      rs[key] = value.trim();
+      return rs;
+    }
+
+    if (
+      keysAcceptedTrimAndLower.includes(key) &&
+      value &&
+      typeof value === "string"
+    ) {
+      rs[key] = value.toLowerCase().trim();
+      return rs;
+    }
+
+    if (transformArrayException.includes(key) && Array.isArray(value)) {
+      rs[key] = value.map(ele => {
+        return transformObject(ele)
+      });
+      return rs;
+    }
+
+    if (typeof value === "object" && value !== null) {
+      rs[key] = transformObject(value);
+      return rs;
+    }
+
+    rs[key] = value;
+    return rs;
+  }, {});
 }
 
 module.exports = {
