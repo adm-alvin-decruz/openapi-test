@@ -75,21 +75,24 @@ async function validateEmailDisposable(req, res, next) {
   next();
 }
 
-//only use it when combine with emptyRequest middleware
-async function lowercaseTrimKeyValueString(req, res, next) {
+function transformObject(obj) {
   const keysAcceptedLower = ["passType"];
   const keysAcceptedTrim = ["mandaiId", "visualId", "firstName", "lastName"];
-  const keysAcceptedTrimAndLower = ["email"];
-  const keysRequest = Object.entries(req.body);
-  req.body = keysRequest.reduce((rs, [key, value]) => {
+  const keysAcceptedTrimAndLower = ["email", "newEmail"];
+
+  if (typeof obj !== "object" || obj === null) return obj; // Skip non-objects
+
+  return Object.entries(obj).reduce((rs, [key, value]) => {
     if (keysAcceptedLower.includes(key) && value && typeof value === "string") {
       rs[key] = value.toLowerCase();
       return rs;
     }
+
     if (keysAcceptedTrim.includes(key) && value && typeof value === "string") {
       rs[key] = value.trim();
       return rs;
     }
+
     if (
       keysAcceptedTrimAndLower.includes(key) &&
       value &&
@@ -98,9 +101,20 @@ async function lowercaseTrimKeyValueString(req, res, next) {
       rs[key] = value.toLowerCase().trim();
       return rs;
     }
+
+    if (typeof value === "object" && value !== null) {
+      rs[key] = transformObject(value);
+      return rs;
+    }
+
     rs[key] = value;
     return rs;
   }, {});
+}
+
+//only use it when combine with emptyRequest middleware
+async function lowercaseTrimKeyValueString(req, res, next) {
+  req.body = transformObject(req.body);
   next();
 }
 
