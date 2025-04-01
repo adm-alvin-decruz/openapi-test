@@ -213,20 +213,20 @@ class UserMembershipPassValidation {
       ));
     }
 
-    if (req.body.parking && req.body.parking === "yes") {
-      if (!req.body.iu || !req.body.iu.trim().length) {
-        return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "iu",
-          req.body.language
-        ));
-      }
-      if (!req.body.carPlate || !req.body.carPlate.trim().length) {
-        return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "carPlate",
-          req.body.language
-        ));
-      }
-    }
+    // if (req.body.parking && req.body.parking === "yes") {
+    //   if (!req.body.iu || !req.body.iu.trim().length) {
+    //     return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //       "iu",
+    //       req.body.language
+    //     ));
+    //   }
+    //   if (!req.body.carPlate || !req.body.carPlate.trim().length) {
+    //     return (this.error = MembershipPassErrors.membershipPassParamsError(
+    //       "carPlate",
+    //       req.body.language
+    //     ));
+    //   }
+    // }
 
     if (
       req.body.member &&
