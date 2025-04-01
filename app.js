@@ -6,6 +6,7 @@ const galaxyRoutes = require('./src/api/components/galaxy/galaxyRoutes');
 const supportRoutes = require('./src/api/supports/supportRoutes')
 const userPrivateRoutes = require('./src/api/users/userPrivateRoutes');
 const errorHandler = require('./src/utils/errorHandler');
+const helmetMiddleware = require('./src/config/helmetConfig');
 const app = express();
 const serverless = require('serverless-http');
 
@@ -13,6 +14,7 @@ app.use(cors())
 app.use(express.json({ limit: "10mb" }));
 // fix Express.js Stack Trace Disclosure in Error Response. VAPT
 app.use(errorHandler);
+app.use(helmetMiddleware);
 // use routes
 app.use('/v1/ciam/', membershipRoutes);
 app.use('/v1/ciam/', userRoutes);
