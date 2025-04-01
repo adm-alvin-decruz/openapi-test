@@ -60,6 +60,18 @@ function isUserExisted(userInfo) {
   return userInfo && (userInfo.db || userInfo.cognito);
 }
 
+/**
+ * Verifies the current and new email addresses of a user.
+ *
+ * @async
+ * @function
+ * @param {string} originalEmail - The original email address of the user.
+ * @param {Object} userInfoOriginal - The user information associated with the original email.
+ * @param {string} newEmail - The new email address to be verified.
+ * @param {Object} userInfoNewEmail - The user information associated with the new email.
+ * @param {string} language - The language preference for verification messages.
+ * @returns {Promise<boolean>} - A promise that resolves to `true` if verification is successful, otherwise `false`.
+ */
 async function verifyCurrentAndNewEmail({ originalEmail, userInfoOriginal, newEmail, userInfoNewEmail, language }) {
   try {
     // If original email not existed - throw error record not found
@@ -82,6 +94,15 @@ async function verifyCurrentAndNewEmail({ originalEmail, userInfoOriginal, newEm
   }
 }
 
+/**
+ * Update user password at Cognito.
+ *
+ * @async
+ * @function
+ * @param {string} email - The email address to be verified.
+ * @param {Object} password - The password information associated ncRequest or normal flow.
+ * @param {string} language - The language preference for verification messages.
+ */
 async function updateCognitoUserPassword({ email, password, language }) {
   try {
     await cognitoService.cognitoAdminSetUserPassword(email, password.cognito);
@@ -140,6 +161,17 @@ async function manipulatePassword(
   }
 }
 
+/**
+ * Update user information at Cognito.
+ *
+ * @async
+ * @function
+ * @param {Object} data - The data request updated.
+ * @param {Object} userInfo - The user information associated with email.
+ * @param {string} email - The email string verify.
+ * @param {string} newEmail - The new email updated.
+ * @param {string} language - The language preference for verification messages.
+ */
 async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language }) {
   /*
     prepare replace user's name at Cognito
@@ -243,6 +275,18 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
   }
 }
 
+/**
+ * Update user information at Cognito.
+ *
+ * @async
+ * @function
+ * @param {string} email - The email string verify.
+ * @param {string} newEmail - The new email updated.
+ * @param {Object} data - The data request updated.
+ * @param {string} userId - The userId from DB.
+ * @param {Object} password - password information after manipulated
+ * @param {string} language - The language preference for verification messages.
+ */
 async function updateDBUserInfo({ email, newEmail, data, userId, password, language }) {
   const latestEmail = newEmail || email;
 
