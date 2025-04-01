@@ -351,6 +351,7 @@ router.post(
   "/users/reset-password",
   isEmptyRequest,
   validateEmail,
+  lowercaseTrimKeyValueString,
   async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
