@@ -34,7 +34,7 @@ class UserMembershipPassService {
           action: `userCreateMembershipPass - migration flow: ${!!req.body
             .migrations}`,
           layer: "userMembershipPassService.create",
-          api_body: req.body,
+          api_body: JSON.stringify(req.body),
         },
       },
       "Start userCreateMembershipPass Service"
@@ -238,7 +238,7 @@ class UserMembershipPassService {
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
             layer: "userMembershipPassService.update",
-            data: req.body,
+            data: JSON.stringify(req.body),
           },
         },
         "Start userUpdateMembershipPass Service"
