@@ -190,7 +190,7 @@ class UserCredential {
             data: data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
             layer: "userCredentialModel.updateByUserId",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},

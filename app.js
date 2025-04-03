@@ -8,11 +8,16 @@ const userPrivateRoutes = require('./src/api/users/userPrivateRoutes');
 const errorHandler = require('./src/utils/errorHandler');
 const app = express();
 const serverless = require('serverless-http');
+const helmetMiddleware = require('./src/config/helmetConfig');
+const permissionsPolicyMiddleware = require('./src/config/permission-policy');
 
 app.use(cors())
 app.use(express.json({ limit: "10mb" }));
 // fix Express.js Stack Trace Disclosure in Error Response. VAPT
 app.use(errorHandler);
+app.use(helmetMiddleware);
+//permission policy
+app.use(permissionsPolicyMiddleware)
 // use routes
 app.use('/v1/ciam/', membershipRoutes);
 app.use('/v1/ciam/', userRoutes);
