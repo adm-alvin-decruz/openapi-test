@@ -36,6 +36,19 @@ class MembershipErrors {
       statusCode: 200,
     };
   }
+  static ciamMembershipRequestAccountInvalid(email, lang) {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: "MWG_CIAM_WILDPASS_RESET_PASSWORD_ERR",
+        message: messageLang("membership_email_invalid", lang),
+        email: email,
+      },
+      status: "failed",
+      statusCode: 400,
+    };
+  }
+
 }
 
 module.exports = MembershipErrors;

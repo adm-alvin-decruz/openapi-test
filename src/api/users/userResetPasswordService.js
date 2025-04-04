@@ -1,7 +1,7 @@
 require("dotenv").config();
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
-const { generateRandomToken, generateSaltHash } = require("../../utils/common");
+const { generateRandomToken, generateSaltHash, maskKeyRandomly } = require("../../utils/common");
 const MembershipErrors = require("../../config/https/errors/membershipErrors");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const {
@@ -17,15 +17,28 @@ const userDBService = require("../users/usersDBService");
 class UserResetPasswordService {
   async execute(req) {
     // check if wildpass, disallow to reset password
-    const userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
+    let reqBody = req.body;
+    const userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
     if (userExistedInCognito) {
-      const cognitoGroups = await cognitoService.checkUserBelongWildPass(req.body.email, userExistedInCognito);
-      console.log("AAA", cognitoGroups);return;
-
-      // TODO: return error if wildpass group
+      const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
+      if (isUserBelongWildPass) {
+        loggerService.error(
+            {
+              user: {
+                email: reqBody.email,
+                error: 'User belong wildpass can not reset password'
+              }
+            },
+            {},
+            '[CIAM-MAIN] Reset Password Service - Failed'
+        );
+        await Promise.reject(MembershipErrors.ciamMembershipRequestAccountInvalid(
+            reqBody.email,
+            reqBody.language
+        ))
+      }
     }
 
-    let reqBody = req.body;
     const resetToken = generateRandomToken(16);
     console.log("reset token", resetToken);
     const saltKey = generateSaltHash(resetToken);
@@ -44,17 +57,10 @@ class UserResetPasswordService {
       try {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
-        loggerService.error(
-          `Error preparing reset password email: ${emailError}`
-        );
-        throw new Error(
-          JSON.stringify(
-            MembershipErrors.ciamMembershipUserNotFound(
-              reqBody.email,
-              reqBody.language
-            )
-          )
-        );
+        await Promise.reject(MembershipErrors.ciamMembershipUserNotFound(
+            reqBody.email,
+            reqBody.language
+        ))
       }
 
       const userInfo = await userCredentialModel.findByUserEmail(email);
@@ -77,7 +83,17 @@ class UserResetPasswordService {
     } catch (error) {
       //TODO: handle error saving to trail_table
       loggerService.error(
-        `Error userResetPasswordService.execute Error: ${error}`
+          {
+            user: {
+              resetToken: maskKeyRandomly(resetToken),
+              saltKey: maskKeyRandomly(saltKey),
+              passwordHash: maskKeyRandomly(passwordHash),
+              email: reqBody.email,
+              error: new Error(error)
+            }
+          },
+          {},
+          '[CIAM-MAIN] Reset Password Service - Failed'
       );
       const errorMessage = error.message ? JSON.parse(error.message) : "";
       const errorData =
