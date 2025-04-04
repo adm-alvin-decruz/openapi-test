@@ -16,6 +16,15 @@ const userDBService = require("../users/usersDBService");
 
 class UserResetPasswordService {
   async execute(req) {
+    // check if wildpass, disallow to reset password
+    const userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
+    if (userExistedInCognito) {
+      const cognitoGroups = await cognitoService.checkUserBelongWildPass(req.body.email, userExistedInCognito);
+      console.log("AAA", cognitoGroups);return;
+
+      // TODO: return error if wildpass group
+    }
+
     let reqBody = req.body;
     const resetToken = generateRandomToken(16);
     console.log("reset token", resetToken);
