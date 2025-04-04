@@ -41,6 +41,14 @@ async function validateEmail(req, res, next) {
     return resStatusFormatter(res, 400, msg);
   }
 
+  //ignore validate email or mandaiId if existed
+  const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
+      req.body.email || "",
+      req.body.mandaiId || ""
+  );
+  if (userCredentials && userCredentials.username) {
+    return next();
+  }
   return await validateEmailDisposable(req, res, next);
 }
 
