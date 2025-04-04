@@ -25,6 +25,7 @@ jobs:
 
           if [[ "$BRANCH_NAME" == pr/releases/* ]]; then
             BASE_VERSION="${BRANCH_NAME#pr/releases/}"
+
             EXISTING_TAGS=$(git tag -l "v${BASE_VERSION}-rc.*" | sort -V)
             LAST_RC=0
             for tag in $EXISTING_TAGS; do
@@ -33,6 +34,7 @@ jobs:
             done
             NEXT_RC=$((LAST_RC + 1))
             NEW_VERSION="v${BASE_VERSION}-rc.${NEXT_RC}"
+
             echo "PRERELEASE=true" >> $GITHUB_ENV
             echo "DRAFT=true" >> $GITHUB_ENV
 
@@ -43,19 +45,33 @@ jobs:
             if [[ "$BASE_VERSION" == *"-"* ]]; then
               echo "PRERELEASE=true" >> $GITHUB_ENV
               echo "DRAFT=true" >> $GITHUB_ENV
+              echo "USE_RC_NOTES=false" >> $GITHUB_ENV
             else
+              # ✅ Safe check for matching RC tag
               MATCHING_RC=$(git tag -l "v${BASE_VERSION}-rc.*" | sort -V | tail -n1)
-              RC_COMMIT=$(git rev-list -n 1 "$MATCHING_RC")
-              CURRENT_COMMIT=$(git rev-parse HEAD)
 
-              if [[ "$RC_COMMIT" == "$CURRENT_COMMIT" ]]; then
-                echo "USE_RC_NOTES=true" >> $GITHUB_ENV
-                echo "PROMOTE_RC_TAG=$MATCHING_RC" >> $GITHUB_ENV
+              if [[ -n "$MATCHING_RC" ]]; then
+                echo "Found matching RC tag: $MATCHING_RC"
+
+                RC_COMMIT=$(git rev-list -n 1 "$MATCHING_RC")
+                CURRENT_COMMIT=$(git rev-parse HEAD)
+
+                echo "RC commit: $RC_COMMIT"
+                echo "Current commit: $CURRENT_COMMIT"
+
+                if [[ "$RC_COMMIT" == "$CURRENT_COMMIT" ]]; then
+                  echo "USE_RC_NOTES=true" >> $GITHUB_ENV
+                  echo "PROMOTE_RC_TAG=$MATCHING_RC" >> $GITHUB_ENV
+                else
+                  echo "USE_RC_NOTES=false" >> $GITHUB_ENV
+                fi
               else
+                echo "No matching RC tag found for $BASE_VERSION"
                 echo "USE_RC_NOTES=false" >> $GITHUB_ENV
               fi
+
               echo "PRERELEASE=false" >> $GITHUB_ENV
-              echo "DRAFT=true" >> $GITHUB_ENV
+              echo "DRAFT=false" >> $GITHUB_ENV
             fi
           fi
 
@@ -139,13 +155,13 @@ jobs:
           cat CHANGELOG.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-#      - name: Commit & Push CHANGELOG.md to Repo
-#        run: |
-#          git config user.name "github-actions[bot]"
-#          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-#          git add CHANGELOG.md
-#          git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
-#          git push origin ${{ github.ref_name }}
+      #- name: Commit & Push CHANGELOG.md to Repo
+      #  run: |
+      #    git config user.name "github-actions[bot]"
+      #    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add CHANGELOG.md
+      #    git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
+      #    git push origin ${{ github.ref_name }}
 
       - name: Create GitHub Release with Changelog
         uses: softprops/action-gh-release@v2
