@@ -1,0 +1,162 @@
+name: Auto Tag and Release
+
+on:
+  push:
+    branches:
+      - "releases/*"
+      - "pr/releases/*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version, Tag, and Flags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          GITHUB_REPO=${{ github.repository }}
+
+          if [[ "$BRANCH_NAME" == pr/releases/* ]]; then
+            BASE_VERSION="${BRANCH_NAME#pr/releases/}"
+            EXISTING_TAGS=$(git tag -l "v${BASE_VERSION}-rc.*" | sort -V)
+            LAST_RC=0
+            for tag in $EXISTING_TAGS; do
+              NUM=${tag##*-rc.}
+              [[ $NUM =~ ^[0-9]+$ ]] && LAST_RC=$NUM
+            done
+            NEXT_RC=$((LAST_RC + 1))
+            NEW_VERSION="v${BASE_VERSION}-rc.${NEXT_RC}"
+            echo "PRERELEASE=true" >> $GITHUB_ENV
+            echo "DRAFT=true" >> $GITHUB_ENV
+
+          elif [[ "$BRANCH_NAME" == releases/* ]]; then
+            BASE_VERSION="${BRANCH_NAME#releases/}"
+            NEW_VERSION="v${BASE_VERSION}"
+
+            if [[ "$BASE_VERSION" == *"-"* ]]; then
+              echo "PRERELEASE=true" >> $GITHUB_ENV
+              echo "DRAFT=true" >> $GITHUB_ENV
+            else
+              MATCHING_RC=$(git tag -l "v${BASE_VERSION}-rc.*" | sort -V | tail -n1)
+              RC_COMMIT=$(git rev-list -n 1 "$MATCHING_RC")
+              CURRENT_COMMIT=$(git rev-parse HEAD)
+
+              if [[ "$RC_COMMIT" == "$CURRENT_COMMIT" ]]; then
+                echo "USE_RC_NOTES=true" >> $GITHUB_ENV
+                echo "PROMOTE_RC_TAG=$MATCHING_RC" >> $GITHUB_ENV
+              else
+                echo "USE_RC_NOTES=false" >> $GITHUB_ENV
+              fi
+              echo "PRERELEASE=false" >> $GITHUB_ENV
+              echo "DRAFT=true" >> $GITHUB_ENV
+            fi
+          fi
+
+          echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Create Git Tag
+        run: |
+          git tag "$NEW_VERSION"
+          git push origin "$NEW_VERSION"
+
+      - name: Generate Enhanced CHANGELOG.md with PRs, Labels & Collapsible Commits
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          GITHUB_REPO=${{ github.repository }}
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          VERSION_LINK="[${NEW_VERSION}](https://github.com/$GITHUB_REPO/releases/tag/${NEW_VERSION})"
+          HEADER="# $VERSION_LINK – $CURRENT_DATE"
+
+          echo "Fetching merged PRs..."
+          MERGED_PRS=$(gh pr list --state merged --base "${GITHUB_REF_NAME}" --json number,title,author,commits,mergeCommit --jq '.')
+
+          FEATURES="" && FIXES="" && OTHERS=""
+
+          for row in $(echo "${MERGED_PRS}" | jq -c '.[]'); do
+            PR_NUMBER=$(echo "$row" | jq -r '.number')
+            PR_TITLE=$(echo "$row" | jq -r '.title')
+            PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
+            PR_COMMITS=$(echo "$row" | jq -c '.commits')
+            PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
+            PR_URL="https://github.com/$GITHUB_REPO/pull/$PR_NUMBER"
+
+            LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
+
+            if [[ "$PR_TITLE" =~ ^feat ]]; then
+              CATEGORY="FEATURES"
+              ICON="🚀"
+            elif [[ "$PR_TITLE" =~ ^fix ]]; then
+              CATEGORY="FIXES"
+              ICON="🐛"
+            else
+              CATEGORY="OTHERS"
+              ICON="📝"
+            fi
+
+            ENTRY="- $ICON $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
+            [[ -n "$LABELS" ]] && ENTRY+=" $LABELS"
+            ENTRY+="\n"
+
+            if (( PR_COMMIT_COUNT > 5 )); then
+              ENTRY+="\n<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
+            else
+              ENTRY+="\n  Commits:\n"
+            fi
+
+            for commit in $(echo "$PR_COMMITS" | jq -c '.[]'); do
+              COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
+              COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
+              COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$COMMIT_SHA"
+              COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
+              COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
+              ENTRY+="- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)\n"
+            done
+
+            (( PR_COMMIT_COUNT > 5 )) && ENTRY+="</details>\n"
+
+            eval "$CATEGORY+=\$ENTRY"
+          done
+
+          {
+            echo "$HEADER"
+            echo
+            [[ -n "$FEATURES" ]] && echo -e "## 🚀 Features\n$FEATURES"
+            [[ -n "$FIXES" ]] && echo -e "## 🐛 Fixes\n$FIXES"
+            [[ -n "$OTHERS" ]] && echo -e "## 📝 Others\n$OTHERS"
+            [[ "$USE_RC_NOTES" == "true" ]] && echo -e "\n_Promoted from [$PROMOTE_RC_TAG](https://github.com/$GITHUB_REPO/releases/tag/$PROMOTE_RC_TAG)_"
+          } > CHANGELOG.md
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat CHANGELOG.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+#      - name: Commit & Push CHANGELOG.md to Repo
+#        run: |
+#          git config user.name "github-actions[bot]"
+#          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+#          git add CHANGELOG.md
+#          git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
+#          git push origin ${{ github.ref_name }}
+
+      - name: Create GitHub Release with Changelog
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.NEW_VERSION }}
+          name: "Release ${{ env.NEW_VERSION }}"
+          body: |
+            ${{ env.RELEASE_NOTES }}
+          draft: ${{ env.DRAFT }}
+          prerelease: ${{ env.PRERELEASE }}
+          files: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
