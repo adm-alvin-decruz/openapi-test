@@ -1,8 +1,8 @@
 name: Auto Tag and Release
 
 on:
-  push:
-    workflow_dispatch:
+  workflow_dispatch:
+    branches:
       - "releases/*"
       - "pr/releases/*"
 
