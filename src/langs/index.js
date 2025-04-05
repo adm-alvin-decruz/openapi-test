@@ -86,6 +86,7 @@ module.exports = {
     update_success: "User info updated successfully.",
     update_user_error: "User info update error.",
     visualId_invalid: "Visual id is invalid",
+    wildpass_account_request_invalid: "Requested account is invalid."
   },
   zh: {
     address_invalid: "地址無效。",
@@ -166,6 +167,7 @@ module.exports = {
     update_success: "用户信息已成功更新。",
     update_user_error: "用户信息更新错误。",
     visualId_invalid: "可视 ID 无效",
+    wildpass_account_request_invalid: "请求的账户无效。"
   },
   kr: {
     address_invalid: "주소가 유효하지 않습니다.",
@@ -258,6 +260,7 @@ module.exports = {
     update_success: "사용자 정보가 성공적으로 업데이트되었습니다.",
     update_user_error: "사용자 정보 업데이트 오류.",
     visualId_invalid: "시각 ID가 유효하지 않습니다",
+    wildpass_account_request_invalid: "요청한 계정이 유효하지 않습니다."
   },
   ja: {
     address_invalid: "住所が無効です。",
@@ -347,5 +350,6 @@ module.exports = {
     update_success: "ユーザー情報が正常に更新されました。",
     update_user_error: "ユーザー情報の更新エラー。",
     visualId_invalid: "ビジュアルIDが無効です",
+    wildpass_account_request_invalid: "要求されたアカウントは無効です。"
   },
 };

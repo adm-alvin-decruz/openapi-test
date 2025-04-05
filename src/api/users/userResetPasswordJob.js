@@ -20,7 +20,7 @@ class UserResetPasswordJob {
       const rs = await UserResetPasswordService.execute(req);
       return this.success(rs.email, req.body.language);
     } catch (error) {
-      const errorMessage = JSON.parse(error.message);
+      const errorMessage = error && error.message ? JSON.parse(error.message) : error;
       throw new Error(JSON.stringify(errorMessage));
     }
   }

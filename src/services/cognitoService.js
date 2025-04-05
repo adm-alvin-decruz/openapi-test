@@ -17,6 +17,8 @@ const loggerService = require("../logs/logger");
 const { maskKeyRandomly } = require("../utils/common");
 const crypto = require("crypto");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
+const cognitoAttribute = require("../utils/cognitoAttributes");
+const { GROUP } = require("../utils/constants");
 
 class Cognito {
   static async cognitoAdminUpdateUser(req, ciamComparedParams) {
@@ -725,6 +727,34 @@ class Cognito {
         })
       );
     }
+  }
+
+  /**
+   * Check if user belong to wild pass group
+   * Centralize this function
+   * @param {string} userEmail
+   * @param {JSON} userCognito
+   * @returns
+   */
+  static async checkUserBelongWildPass(userEmail, userCognito) {
+    if (!userCognito) return false;
+
+    const membershipBelongWildPass = JSON.stringify(
+      cognitoAttribute.getOrCheck(userCognito, "custom:membership")
+    ).includes(GROUP.WILD_PASS);
+
+    const userGroupsAtCognito =
+      await this.cognitoAdminListGroupsForUser(userEmail);
+
+    const groups =
+      userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
+        ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
+        : [];
+
+    return (
+      (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
+      !groups.includes(GROUP.MEMBERSHIP_PASSES)
+    );
   }
 }
 

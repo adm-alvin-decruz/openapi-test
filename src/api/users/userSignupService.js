@@ -20,7 +20,6 @@ const failedJobsModel = require("../../db/models/failedJobsModel");
 const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
-const { GROUP } = require("../../utils/constants");
 const switchService = require("../../services/switchService");
 const userSignupHelper = require("./usersSignupHelper");
 
@@ -325,28 +324,6 @@ class UserSignupService {
     };
   }
 
-  //https://mandaiwildlifereserve.atlassian.net/browse/CIAM-181
-  async checkUserBelongWildPass(userEmail, userCognito) {
-    if (!userCognito) return false;
-
-    const membershipBelongWildPass = JSON.stringify(
-      getOrCheck(userCognito, "custom:membership")
-    ).includes(GROUP.WILD_PASS);
-
-    const userGroupsAtCognito =
-      await cognitoService.cognitoAdminListGroupsForUser(userEmail);
-
-    const groups =
-      userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
-        ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
-        : [];
-
-    return (
-      (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
-      !groups.includes(GROUP.MEMBERSHIP_PASSES)
-    );
-  }
-
   /**
    * Signup user to MP account for an existing wildpass
    * it can happen with normal signup flow + migration flow
@@ -517,8 +494,8 @@ class UserSignupService {
 
     // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
-      // check is user email existed at wildpass group
-      const userBelongWildpassGroup = await this.checkUserBelongWildPass(req.body.email, userExistedInCognito);
+      // check is user email existed at wildpass userCognito
+      const userBelongWildpassGroup = await cognitoService.checkUserBelongWildPass(req.body.email, userExistedInCognito);
 
       const userInfo = await userModel.findByEmail(req.body.email);
       if (userInfo && userInfo.email && userBelongWildpassGroup) {
