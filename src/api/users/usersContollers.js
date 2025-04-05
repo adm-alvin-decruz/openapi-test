@@ -565,7 +565,7 @@ async function userResetPassword(req) {
       {
         user: {
           email: req.body.email,
-          layer: "controller.userLogout",
+          layer: "controller.userResetPassword",
         },
       },
       "[CIAM] Start userResetPassword Request"
@@ -576,8 +576,8 @@ async function userResetPassword(req) {
       {
         user: {
           email: req.body.email,
-          layer: "controller.userLogout",
-          error: `${error}`,
+          layer: "controller.userResetPassword",
+          error: new Error(error),
         },
       },
       "[CIAM] End userResetPassword Request - Failed"
