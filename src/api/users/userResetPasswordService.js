@@ -18,7 +18,16 @@ class UserResetPasswordService {
   async execute(req) {
     // check if wildpass, disallow to reset password
     let reqBody = req.body;
-    const userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    let userExistedInCognito = null;
+    try {
+      userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    } catch (error) {
+      await Promise.reject(MembershipErrors.ciamMembershipEmailInvalid(
+          reqBody.email,
+          reqBody.language
+      ))
+    }
+
     if (userExistedInCognito) {
       const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
       if (isUserBelongWildPass) {
@@ -32,7 +41,7 @@ class UserResetPasswordService {
             {},
             '[CIAM-MAIN] Reset Password Service - Failed'
         );
-        await Promise.reject(MembershipErrors.ciamMembershipRequestAccountInvalid(
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
             reqBody.email,
             reqBody.language
         ))
@@ -57,7 +66,7 @@ class UserResetPasswordService {
       try {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
-        await Promise.reject(MembershipErrors.ciamMembershipUserNotFound(
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
             reqBody.email,
             reqBody.language
         ))
@@ -101,7 +110,7 @@ class UserResetPasswordService {
       if (errorData.name && errorData.name === "UserNotFoundException") {
         throw new Error(
           JSON.stringify(
-            MembershipErrors.ciamMembershipUserNotFound(
+            MembershipErrors.ciamMembershipRequestNoMPAccount(
               reqBody.email,
               reqBody.language
             )
