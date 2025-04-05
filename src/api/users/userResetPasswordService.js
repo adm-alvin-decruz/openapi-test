@@ -22,7 +22,7 @@ class UserResetPasswordService {
     try {
       userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
     } catch (error) {
-      await Promise.reject(MembershipErrors.ciamMembershipEmailInvalid(
+      await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
           reqBody.email,
           reqBody.language
       ))
