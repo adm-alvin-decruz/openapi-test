@@ -41,7 +41,7 @@ class MembershipErrors {
       membership: {
         code: 400,
         mwgCode: "MWG_CIAM_WILDPASS_RESET_PASSWORD_ERR",
-        message: messageLang("membership_email_invalid", lang),
+        message: messageLang("wildpass_account_request_invalid", lang),
         email: email,
       },
       status: "failed",
