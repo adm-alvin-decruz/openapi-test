@@ -109,6 +109,17 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
   }
 }
 
+function parseCognitoAttributeObject(userCognito) {
+  if (!userCognito || !userCognito.UserAttributes || userCognito.UserAttributes.length <= 0) {
+    return null;
+  }
+
+  const attributes = {};
+  userCognito.UserAttributes.forEach((attr) => { attributes[attr.Name] = attr.Value });
+  return { ...attributes };
+}
+
 module.exports = {
-  updateMembershipInCognito
+  updateMembershipInCognito,
+  parseCognitoAttributeObject
 };

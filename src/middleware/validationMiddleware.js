@@ -11,6 +11,7 @@ const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
+const userModel = require("../db/models/userModel");
 
 /**
  * Validate empty request
@@ -41,14 +42,6 @@ async function validateEmail(req, res, next) {
     return resStatusFormatter(res, 400, msg);
   }
 
-  //ignore validate email or mandaiId if existed
-  const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
-      req.body.email || "",
-      req.body.mandaiId || ""
-  );
-  if (userCredentials && userCredentials.username) {
-    return next();
-  }
   return await validateEmailDisposable(req, res, next);
 }
 
@@ -59,6 +52,12 @@ async function validateEmailDisposable(req, res, next) {
 
   // Convert email to lowercase
   const normalizedEmail = req.body.email.trim().toLowerCase();
+
+  //ignore validate email disposable if existed
+  const ignoreValidate = await shouldIgnoreEmailDisposable(normalizedEmail);
+  if (ignoreValidate) {
+    return next();
+  }
 
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
@@ -316,6 +315,26 @@ function transformObject(reqBodyObj) {
     rs[key] = value;
     return rs;
   }, {});
+}
+
+/**
+ * Should Ignore Email Disposable validation
+ * @async
+ * @param {string} email
+ * @returns {Promise<boolean>} - identify ignore or not
+ */
+async function shouldIgnoreEmailDisposable(email) {
+  try {
+    //1st - Check from cognito if pass no need to inquiry into DB
+    const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
+    if (userCognito && userCognito.$metadata.httpStatusCode === 200) {
+      return true;
+    }
+  } catch (error) {
+    //2nd priority - Check from DB if cognito failed
+    const userDB = await userModel.findByEmail(email);
+    return userDB && userDB.email;
+  }
 }
 
 module.exports = {
