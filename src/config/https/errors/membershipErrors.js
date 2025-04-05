@@ -45,7 +45,26 @@ class MembershipErrors {
         email: email,
       },
       status: "failed",
-      statusCode: 400,
+      statusCode: 200,
+    };
+  }
+  /**
+   * For reset password when account not found
+   *
+   * @param {string} email
+   * @param {string} lang
+   * @returns
+   */
+  static ciamMembershipRequestNoMPAccount(email, lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL_ERR",
+        message: messageLang("wildpass_not_having_membership_account_error", lang),
+        email: email,
+      },
+      status: "failed",
+      statusCode: 200,
     };
   }
 

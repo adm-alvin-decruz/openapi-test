@@ -32,7 +32,7 @@ class UserResetPasswordService {
             {},
             '[CIAM-MAIN] Reset Password Service - Failed'
         );
-        await Promise.reject(MembershipErrors.ciamMembershipRequestAccountInvalid(
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
             reqBody.email,
             reqBody.language
         ))
@@ -57,7 +57,7 @@ class UserResetPasswordService {
       try {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
-        await Promise.reject(MembershipErrors.ciamMembershipUserNotFound(
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
             reqBody.email,
             reqBody.language
         ))
@@ -101,7 +101,7 @@ class UserResetPasswordService {
       if (errorData.name && errorData.name === "UserNotFoundException") {
         throw new Error(
           JSON.stringify(
-            MembershipErrors.ciamMembershipUserNotFound(
+            MembershipErrors.ciamMembershipRequestNoMPAccount(
               reqBody.email,
               reqBody.language
             )
