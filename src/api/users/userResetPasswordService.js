@@ -18,7 +18,16 @@ class UserResetPasswordService {
   async execute(req) {
     // check if wildpass, disallow to reset password
     let reqBody = req.body;
-    const userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    let userExistedInCognito = null;
+    try {
+      userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+    } catch (error) {
+      await Promise.reject(MembershipErrors.ciamMembershipEmailInvalid(
+          reqBody.email,
+          reqBody.language
+      ))
+    }
+
     if (userExistedInCognito) {
       const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
       if (isUserBelongWildPass) {
