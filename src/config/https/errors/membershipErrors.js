@@ -39,7 +39,7 @@ class MembershipErrors {
   static ciamMembershipRequestAccountInvalid(email, lang) {
     return {
       membership: {
-        code: 400,
+        code: 200,
         mwgCode: "MWG_CIAM_WILDPASS_RESET_PASSWORD_ERR",
         message: messageLang("wildpass_account_request_invalid", lang),
         email: email,
