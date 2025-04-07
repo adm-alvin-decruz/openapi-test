@@ -118,6 +118,7 @@ jobs:
 
             # Fetch PR labels
             LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
+            echo "Fetched Labels for PR  #$PR_NUMBER..."
 
             # Fetch commits separately (GraphQL-safe)
             PR_COMMITS_JSON=$(gh pr view "$PR_NUMBER" --json commits 2>/dev/null || echo "")
@@ -126,6 +127,8 @@ jobs:
               echo "⚠️ Skipping PR #$PR_NUMBER: No commits found or failed to fetch"
               continue
             fi
+    
+            echo "Fetched Commits for PR  #$PR_NUMBER..."
 
             PR_COMMITS=$(echo "$PR_COMMITS_JSON" | jq '.commits')
             PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
