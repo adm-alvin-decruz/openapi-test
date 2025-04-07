@@ -109,6 +109,17 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
   }
 }
 
+/**
+ * Mapping user cognito attributes information to object {key:value}
+ * @param userCognito - user cognito information
+ * @return {<Object>} {
+ *         "custom:mandai_id": string,
+ *         "custom:visual_id": string,
+ *         "emai": string,
+ *         "give_name": string,
+ *         "family_name": string
+ * }
+ */
 function parseCognitoAttributeObject(userCognito) {
   if (!userCognito || !userCognito.UserAttributes || userCognito.UserAttributes.length <= 0) {
     return null;
