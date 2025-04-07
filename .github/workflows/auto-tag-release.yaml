@@ -169,7 +169,7 @@ jobs:
               ENTRY+="\n  Commits:\n"
             fi
 
-            for commit in $(echo "$PR_COMMITS" | jq -c '.[]'); do
+            echo "$PR_COMMITS" | jq -c '.[]'|while read -r commit; do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
               COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
