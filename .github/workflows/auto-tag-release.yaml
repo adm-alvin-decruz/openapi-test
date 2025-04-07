@@ -108,7 +108,7 @@ jobs:
 
           FEATURES="" && FIXES="" && OTHERS=""
 
-          for row in $(echo "$MERGED_PRS" | jq -c '.[]'); do
+          echo "$MERGED_PRS" | jq -c '.[]'|while read -r row; do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
             PR_TITLE=$(echo "$row" | jq -r '.title')
             PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
