@@ -11,6 +11,7 @@ const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
+const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers")
 
 /**
  * Validate empty request
@@ -51,6 +52,12 @@ async function validateEmailDisposable(req, res, next) {
 
   // Convert email to lowercase
   const normalizedEmail = req.body.email.trim().toLowerCase();
+
+  //ignore validate email disposable if existed
+  const ignoreValidate = await shouldIgnoreEmailDisposable(normalizedEmail);
+  if (ignoreValidate) {
+    return next();
+  }
 
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
