@@ -90,6 +90,7 @@ jobs:
           HEADER="# $VERSION_LINK – $CURRENT_DATE"
 
           echo "📦 Fetching merged PRs targeting base: ${GITHUB_REF_NAME}"
+          gh pr list --state merged --search "base:${GITHUB_REF_NAME}" --limit 100 --json number,title,author,commits,mergeCommit
           MERGED_PRS=$(gh pr list \
             --state merged \
             --search "base:${GITHUB_REF_NAME}" \
