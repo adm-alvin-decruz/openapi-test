@@ -78,7 +78,7 @@ jobs:
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Generate Enhanced CHANGELOG.md with PRs, Labels & Reachability Filter
+      - name: Generate CHANGELOG.md (GraphQL-safe)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -89,17 +89,14 @@ jobs:
           VERSION_LINK="[${NEW_VERSION}](https://github.com/$GITHUB_REPO/releases/tag/${NEW_VERSION})"
           HEADER="# $VERSION_LINK – $CURRENT_DATE"
 
-          echo "📦 Fetching merged PRs targeting base: ${GITHUB_REF_NAME}"
-          gh pr list --state merged --search "base:${GITHUB_REF_NAME}" --limit 100 --json number,title,author,commits,mergeCommit
+          echo "📦 Fetching merged PRs"
           MERGED_PRS=$(gh pr list \
             --state merged \
-            --search "base:${GITHUB_REF_NAME}" \
             --limit 100 \
-            --json number,title,author,commits,mergeCommit \
-            2>/dev/null)
+            --json number,title,author,mergeCommit \
+            2>/dev/null || echo "[]")
 
           if [[ -z "$MERGED_PRS" || "$MERGED_PRS" == "[]" ]]; then
-            echo "⚠️ No merged PRs found for base '${GITHUB_REF_NAME}'"
             echo "$HEADER" > CHANGELOG.md
             echo -e "\n_No pull requests merged to this branch._" >> CHANGELOG.md
             echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
@@ -110,25 +107,31 @@ jobs:
 
           FEATURES="" && FIXES="" && OTHERS=""
 
-          for row in $(echo "${MERGED_PRS}" | jq -c '.[]'); do
+          for row in $(echo "$MERGED_PRS" | jq -c '.[]'); do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
             PR_TITLE=$(echo "$row" | jq -r '.title')
             PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
-            PR_COMMITS=$(echo "$row" | jq -c '.commits')
-            PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
             PR_URL="https://github.com/$GITHUB_REPO/pull/$PR_NUMBER"
             MERGE_SHA=$(echo "$row" | jq -r '.mergeCommit.oid')
 
-            # ✅ Skip PRs whose merge commit isn't reachable from HEAD
-            if ! git merge-base --is-ancestor "$MERGE_SHA" HEAD; then
-              echo "⏭️ Skipping PR #$PR_NUMBER (merge commit $MERGE_SHA not in HEAD)"
-              continue
-            fi
-
-            # Get PR labels
+            # Fetch labels
             LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
 
-            # Determine category
+            # Fetch commits (now separately, GraphQL-safe)
+            PR_COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '.commits')
+            PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
+
+            # Check reachability of any commit
+            REACHABLE=false
+            for commit in $(echo "$PR_COMMITS" | jq -r '.[].oid'); do
+              if git merge-base --is-ancestor "$commit" HEAD; then
+                REACHABLE=true
+                break
+              fi
+            done
+
+            [[ "$REACHABLE" != "true" ]] && echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD" && continue
+
             if [[ "$PR_TITLE" =~ ^feat ]]; then
               CATEGORY="FEATURES"
               ICON="🚀"
@@ -140,12 +143,10 @@ jobs:
               ICON="📝"
             fi
 
-            # PR Entry
             ENTRY="- $ICON $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
             [[ -n "$LABELS" ]] && ENTRY+=" $LABELS"
             ENTRY+="\n"
 
-            # Collapsible or plain commit list
             if (( PR_COMMIT_COUNT > 5 )); then
               ENTRY+="\n<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
             else
@@ -155,12 +156,10 @@ jobs:
             for commit in $(echo "$PR_COMMITS" | jq -c '.[]'); do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
-
               COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
               COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$COMMIT_SHA"
               COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
               COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
-
               ENTRY+="- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)\n"
             done
 
