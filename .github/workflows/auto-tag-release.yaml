@@ -71,7 +71,7 @@ jobs:
               fi
 
               echo "PRERELEASE=false" >> $GITHUB_ENV
-              echo "DRAFT=false" >> $GITHUB_ENV
+              echo "DRAFT=true" >> $GITHUB_ENV
             fi
           fi
 
