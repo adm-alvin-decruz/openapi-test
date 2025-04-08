@@ -161,22 +161,22 @@ jobs:
             echo >> "$TEMP_CHANGELOG"
           done <<< "$(echo "$MERGED_PRS" | jq -c '.[]')"
   
-          ## ➕ Include direct commits not part of PRs
-          #git rev-list HEAD > all_branch_commits.txt
-          #grep -oP '(?<=\[)[a-f0-9]{7,40}(?=\])' "$TEMP_CHANGELOG" | sort -u > pr_commits.txt
-          #grep -vxFf pr_commits.txt all_branch_commits.txt > direct_commits.txt
+          # ➕ Include direct commits not part of PRs
+          git log --pretty=format:'%H' origin/main..HEAD > all_commits.txt
+          grep -oP '(?<=\[)[a-f0-9]{7,40}(?=\])' "$TEMP_CHANGELOG" | sort -u > pr_commits.txt
+          grep -vxFf pr_commits.txt all_commits.txt > direct_commits.txt
 
-          #if [[ -s direct_commits.txt ]]; then
-          #  echo -e "- **Direct Commits:**" >> "$TEMP_CHANGELOG"
-          #  while read -r commit; do
-          #    COMMIT_MSG=$(git show -s --format='%s' "$commit")
-          #    COMMIT_AUTHOR=$(git show -s --format='%an' "$commit")
-          #    COMMIT_DATE=$(git show -s --format='%ad' --date=short "$commit")
-          #    COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$commit"
-          #    echo -e "\t- [$commit]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)" >> "$TEMP_CHANGELOG"
-          #  done < direct_commits.txt
-          #  echo >> "$TEMP_CHANGELOG"
-          #fi
+          if [[ -s direct_commits.txt ]]; then
+            echo -e "- **Direct Commits:**" >> "$TEMP_CHANGELOG"
+            while read -r commit; do
+              COMMIT_MSG=$(git show -s --format='%s' "$commit")
+              COMMIT_AUTHOR=$(git show -s --format='%an' "$commit")
+              COMMIT_DATE=$(git show -s --format='%ad' --date=short "$commit")
+              COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$commit"
+              echo -e "\t- [$commit]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)" >> "$TEMP_CHANGELOG"
+            done < direct_commits.txt
+            echo >> "$TEMP_CHANGELOG"
+          fi
 
           {
             echo "$HEADER"
