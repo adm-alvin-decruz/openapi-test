@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     branches:
       - "releases/*"
+      - "pr/releases/*"
 
 jobs:
   release:
