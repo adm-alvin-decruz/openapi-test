@@ -78,7 +78,7 @@ jobs:
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Generate CHANGELOG.md (temp file, flat list, no categories)
+      - name: Generate CHANGELOG.md (safe loops, flat PR list)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -108,7 +108,7 @@ jobs:
             exit 0
           fi
 
-          echo "$MERGED_PRS" | jq -c '.[]' | while read -r row; do
+          while read -r row; do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
             PR_TITLE=$(echo "$row" | jq -r '.title' | tr '\n' ' ')
             PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
@@ -128,12 +128,12 @@ jobs:
             PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
 
             REACHABLE=false
-            echo "$PR_COMMITS" | jq -r '.[].oid' | while read -r commit; do
+            while read -r commit; do
               if git merge-base --is-ancestor "$commit" HEAD; then
                 REACHABLE=true
                 break
               fi
-            done
+            done <<< "$(echo "$PR_COMMITS" | jq -r '.[].oid')"
 
             [[ "$REACHABLE" != "true" ]] && echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD" && continue
 
@@ -146,7 +146,7 @@ jobs:
               echo "  Commits:" >> "$TEMP_CHANGELOG"
             fi
 
-            echo "$PR_COMMITS" | jq -c '.[]' | while read -r commit; do
+            while read -r commit; do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
               COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
@@ -154,11 +154,11 @@ jobs:
               COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
               COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
               echo "- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)" >> "$TEMP_CHANGELOG"
-            done
+            done <<< "$(echo "$PR_COMMITS" | jq -c '.[]')"
 
             (( PR_COMMIT_COUNT > 5 )) && echo "</details>" >> "$TEMP_CHANGELOG"
             echo >> "$TEMP_CHANGELOG"
-          done
+          done <<< "$(echo "$MERGED_PRS" | jq -c '.[]')"
 
           {
             echo "$HEADER"
