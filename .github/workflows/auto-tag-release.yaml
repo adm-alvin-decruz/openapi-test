@@ -142,13 +142,21 @@ jobs:
 
             # Format entry
             ENTRY="- $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
+            echo "step1"
+            echo "${ENTRY}"
             [[ -n "$LABELS" ]] && ENTRY+=" $LABELS"
             ENTRY+="\n"
+            echo "step2"
+            echo "${ENTRY}"
 
             if (( PR_COMMIT_COUNT > 5 )); then
               ENTRY+="<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
+              echo "step3"
+              echo "${ENTRY}"
             else
               ENTRY+="  Commits:\n"
+              echo "step3"
+              echo "${ENTRY}"
             fi
 
               echo "$PR_COMMITS" | jq -c '.[]' | while read -r commit; do
@@ -159,15 +167,21 @@ jobs:
               COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
               COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
               ENTRY+="- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)\n"
+              echo "step4"
+              echo "${ENTRY}"
             done
 
             (( PR_COMMIT_COUNT > 5 )) && ENTRY+="</details>\n"
+            echo "step5"
+            echo "${ENTRY}"
 
             CHANGELOG_BODY="${CHANGELOG_BODY}${ENTRY}\n"
+            echo "step6"
+            echo $CHANGELOG_BODY
           done
 
           {
-            echo "$HEADER"
+            echo "Header: $HEADER"
             echo
             if [[ -n "$CHANGELOG_BODY" ]]; then
               echo -e "$CHANGELOG_BODY"
