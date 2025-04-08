@@ -179,9 +179,11 @@ jobs:
             echo "step6"
             echo $CHANGELOG_BODY
           done
+          echo "step7"
+          echo $CHANGELOG_BODY
 
           {
-            echo "Header: $HEADER"
+            echo "$HEADER"
             echo
             if [[ -n "$CHANGELOG_BODY" ]]; then
               echo -e "$CHANGELOG_BODY"
