@@ -78,7 +78,7 @@ jobs:
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Generate CHANGELOG.md (with search base)
+      - name: Generate CHANGELOG.md (flat list, no categorization)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -106,74 +106,52 @@ jobs:
             exit 0
           fi
 
-          FEATURES="" && FIXES="" && OTHERS=""
+          CHANGELOG_BODY=""
 
-          echo "$MERGED_PRS" | jq -c '.[]'|while read -r row; do
+          echo "$MERGED_PRS" | jq -c '.[]' | while read -r row; do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
-            PR_TITLE=$(echo "$row" | jq -r '.title')
+            PR_TITLE=$(echo "$row" | jq -r '.title' | tr '\n' ' ')
             PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
             PR_URL="https://github.com/$GITHUB_REPO/pull/$PR_NUMBER"
 
             echo "🔍 Processing PR #$PR_NUMBER..."
 
-            # Fetch PR labels
+            # Labels
             LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
-            echo "Fetched Labels for PR  #$PR_NUMBER..."
 
-            # Fetch commits separately (GraphQL-safe)
+            # Commits
             PR_COMMITS_JSON=$(gh pr view "$PR_NUMBER" --json commits 2>/dev/null || echo "")
-
             if [[ -z "$PR_COMMITS_JSON" || "$PR_COMMITS_JSON" == "[]" ]]; then
               echo "⚠️ Skipping PR #$PR_NUMBER: No commits found or failed to fetch"
               continue
             fi
-    
 
             PR_COMMITS=$(echo "$PR_COMMITS_JSON" | jq '.commits')
             PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
-           
-            echo "Fetched Commits for PR  #$PR_NUMBER..."
-            echo "PR COMMIT COUNT = $PR_COMMIT_COUNT"
-            echo "Commits: \n$PR_COMMITS" 
 
-            # Check if any PR commit is part of HEAD history
+            # Reachability check
             REACHABLE=false
             for commit in $(echo "$PR_COMMITS" | jq -r '.[].oid'); do
               if git merge-base --is-ancestor "$commit" HEAD; then
                 REACHABLE=true
-                echo "COMMIT is in the head"
                 break
               fi
             done
 
-            if [[ "$REACHABLE" != "true" ]]; then
-              echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD"
-              continue
-            fi
+            [[ "$REACHABLE" != "true" ]] && echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD" && continue
 
-            # Categorize
-            if [[ "$PR_TITLE" =~ ^feat ]]; then
-              CATEGORY="FEATURES"
-              ICON="🚀"
-            elif [[ "$PR_TITLE" =~ ^fix ]]; then
-              CATEGORY="FIXES"
-              ICON="🐛"
-            else
-              CATEGORY="OTHERS"
-              ICON="📝"
-            fi
-
-            ENTRY="- $ICON $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
+            # Format entry
+            ENTRY="- $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
             [[ -n "$LABELS" ]] && ENTRY+=" $LABELS"
             ENTRY+="\n"
 
             if (( PR_COMMIT_COUNT > 5 )); then
-              ENTRY+="\n<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
+              ENTRY+="<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
             else
-              ENTRY+="\n  Commits:\n"
+              ENTRY+="  Commits:\n"
             fi
 
-            echo "$PR_COMMITS" | jq -c '.[]'|while read -r commit; do
+            for commit in $(echo "$PR_COMMITS" | jq -c '.[]'); do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
               COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
@@ -185,15 +163,17 @@ jobs:
 
             (( PR_COMMIT_COUNT > 5 )) && ENTRY+="</details>\n"
 
-            eval "$CATEGORY+=\$ENTRY"
+            CHANGELOG_BODY="${CHANGELOG_BODY}${ENTRY}\n"
           done
 
           {
             echo "$HEADER"
             echo
-            [[ -n "$FEATURES" ]] && echo -e "## 🚀 Features\n$FEATURES"
-            [[ -n "$FIXES" ]] && echo -e "## 🐛 Fixes\n$FIXES"
-            [[ -n "$OTHERS" ]] && echo -e "## 📝 Others\n$OTHERS"
+            if [[ -n "$CHANGELOG_BODY" ]]; then
+              echo -e "$CHANGELOG_BODY"
+            else
+              echo "_No qualifying pull requests found in this release._"
+            fi
             [[ "$USE_RC_NOTES" == "true" ]] && echo -e "\n_Promoted from [$PROMOTE_RC_TAG](https://github.com/$GITHUB_REPO/releases/tag/$PROMOTE_RC_TAG)_"
           } > CHANGELOG.md
 
