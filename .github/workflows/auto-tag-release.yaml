@@ -137,7 +137,9 @@ jobs:
 
             [[ "$REACHABLE" != "true" ]] && echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD" && continue
 
-            echo "- **PR:** $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR) $LABELS" >> "$TEMP_CHANGELOG"
+            PR_LINE="- **PR:** $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
+            [[ -n "$LABELS" ]] && PR_LINE+=" $LABELS"
+            echo "$PR_LINE" >> "$TEMP_CHANGELOG"
 
             if (( PR_COMMIT_COUNT > 5 )); then
               echo "<details><summary>Commits ($PR_COMMIT_COUNT)</summary>" >> "$TEMP_CHANGELOG"
@@ -149,7 +151,7 @@ jobs:
             while read -r commit; do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
-              COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
+              COMMIT_MSG=$(git show -s --format='%s' "$COMMIT_SHA")
               COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$COMMIT_SHA"
               COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
               COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
