@@ -128,16 +128,20 @@ jobs:
               continue
             fi
     
-            echo "Fetched Commits for PR  #$PR_NUMBER..."
 
             PR_COMMITS=$(echo "$PR_COMMITS_JSON" | jq '.commits')
             PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
+           
+            echo "Fetched Commits for PR  #$PR_NUMBER...
+            echo "PR COMMIT COUNT = $PR_COMMIT_COUNT"
+            echo "Commits: \n$PR_COMMITS" 
 
             # Check if any PR commit is part of HEAD history
             REACHABLE=false
             for commit in $(echo "$PR_COMMITS" | jq -r '.[].oid'); do
               if git merge-base --is-ancestor "$commit" HEAD; then
                 REACHABLE=true
+                echo "COMMIT is in the head"
                 break
               fi
             done
