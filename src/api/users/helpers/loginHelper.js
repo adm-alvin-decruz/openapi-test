@@ -28,7 +28,6 @@ async function proceedVerifyPassword(userInfo, password) {
 }
 
 async function proceedSetPassword(userInfo, password) {
-  const salt = await passwordService.createSaltKey('5');
   //if user first login is empty - do nothing
   if (!userInfo || !userInfo.password_hash || !userInfo.password_salt) {
     return;

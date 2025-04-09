@@ -49,7 +49,6 @@ class UserLoginService {
 
   async getUser(req) {
     try {
-      await cognitoService.checkCaseSensitivity();
       const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
         req.body.email
       );
@@ -156,7 +155,7 @@ class UserLoginService {
         email: userInfo.email,
       };
     } catch (error) {
-      loggerService.log(
+      loggerService.error(
         {
           user: {
             email: req.body.email,

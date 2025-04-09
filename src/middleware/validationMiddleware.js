@@ -11,6 +11,8 @@ const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
+const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
+const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 
 /**
  * Validate empty request
@@ -49,28 +51,40 @@ async function validateEmailDisposable(req, res, next) {
     return next();
   }
 
-  // Convert email to lowercase
-  const normalizedEmail = req.body.email.trim().toLowerCase();
+  const email = await emailSensitiveHelper.findEmailInCognito(req.body.email);
+
+  //ignore validate email disposable if existed
+  const ignoreValidate = await shouldIgnoreEmailDisposable(email);
+  if (ignoreValidate) {
+    req.body.email = email;
+    return next();
+  }
 
   // optional: You can add more robust email validation here
-  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
-    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
+  if (!(await EmailDomainService.emailFormatTest(email))) {
+    loggerService.error(
+        {
+          email: req.body.email,
+          error: 'Invalid Email - Domain Service has blocked',
+          layer: 'validationMiddleware.validateEmailDisposable'
+        },
+        {},
+        "ValidateEmailDisposable - Failed"
+    );
     return resStatusFormatter(res, 400, "The email is invalid");
   }
 
   // if check domain switch turned on ( 1 )
   if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
     // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(
-      normalizedEmail
-    );
+    const validDomain = await EmailDomainService.validateEmailDomain(email);
     if (!validDomain) {
       return resStatusFormatterCustom(req, res, 400, "The email is invalid");
     }
   }
 
   // update the email in the request body with the normalized version
-  req.body.email = normalizedEmail;
+  req.body.email = email;
 
   next();
 }
@@ -188,7 +202,7 @@ async function AccessTokenAuthGuard(req, res, next) {
     loggerService.error(
       {
         body: req.body,
-        error: `${error}`,
+        error: new Error(error),
       },
       {},
       "AccessTokenAuthGuard Middleware Failed"

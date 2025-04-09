@@ -103,6 +103,14 @@ const maskKeyRandomly = (str) => {
   return firstPart + "*****" + lastPart;
 };
 
+const existsCapitalizePattern = (keyword) => {
+  const regexEmailValid = new RegExp(
+      "\\b\\w*[A-Z]\\w*\\b",
+      "g"
+  );
+  return regexEmailValid.test(keyword.toString());
+};
+
 module.exports = {
   messageLang,
   getSource,
@@ -115,4 +123,5 @@ module.exports = {
   omit,
   maskKeyRandomly,
   emailPattern,
+  existsCapitalizePattern
 };

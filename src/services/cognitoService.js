@@ -756,15 +756,6 @@ class Cognito {
       !groups.includes(GROUP.MEMBERSHIP_PASSES)
     );
   }
-
-  static async checkCaseSensitivity() {
-    const command = new DescribeUserPoolCommand({
-      UserPoolId: process.env.USER_POOL_ID
-    });
-
-    const response = await client.send(command);
-    console.log('aaaaaaaa*******', response)
-  }
 }
 
 module.exports = Cognito;
