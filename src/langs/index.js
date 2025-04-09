@@ -87,7 +87,7 @@ module.exports = {
     update_user_error: "User info update error.",
     visualId_invalid: "Visual id is invalid",
     wildpass_account_request_invalid: "Requested account is invalid.",
-    wildpass_not_having_membership_account_error: "You do not have a membership account."
+    wildpass_not_having_membership_account_error: "You do not have a paid membership account."
   },
   zh: {
     address_invalid: "地址無效。",
@@ -169,7 +169,7 @@ module.exports = {
     update_user_error: "用户信息更新错误。",
     visualId_invalid: "可视 ID 无效",
     wildpass_account_request_invalid: "请求的账户无效。",
-    wildpass_not_having_membership_account_error: "您还没有会员账户。"
+    wildpass_not_having_membership_account_error: "您没有付费会员帐户。"
   },
   kr: {
     address_invalid: "주소가 유효하지 않습니다.",
@@ -263,7 +263,7 @@ module.exports = {
     update_user_error: "사용자 정보 업데이트 오류.",
     visualId_invalid: "시각 ID가 유효하지 않습니다",
     wildpass_account_request_invalid: "요청한 계정이 유효하지 않습니다.",
-    wildpass_not_having_membership_account_error: "회원 계정이 없습니다."
+    wildpass_not_having_membership_account_error: "유료 멤버십 계정이 없습니다."
   },
   ja: {
     address_invalid: "住所が無効です。",
@@ -354,6 +354,6 @@ module.exports = {
     update_user_error: "ユーザー情報の更新エラー。",
     visualId_invalid: "ビジュアルIDが無効です",
     wildpass_account_request_invalid: "要求されたアカウントは無効です。",
-    wildpass_not_having_membership_account_error: "会員アカウントがありません。"
+    wildpass_not_having_membership_account_error: "有料会員アカウントをお持ちではありません。"
   },
 };
