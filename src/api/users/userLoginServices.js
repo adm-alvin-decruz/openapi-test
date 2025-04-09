@@ -49,6 +49,7 @@ class UserLoginService {
 
   async getUser(req) {
     try {
+      await cognitoService.checkCaseSensitivity();
       const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
         req.body.email
       );
@@ -117,6 +118,7 @@ class UserLoginService {
   }
 
   async execute(req) {
+
     const userInfo = await this.getUser(req);
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
       throw new Error(

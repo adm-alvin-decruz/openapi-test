@@ -6,6 +6,34 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
 
 class UserVerifyTokenService {
+  /**
+   * Verify Matched User Information with Cognito
+   * Can apply this method cause Cognito can not be empty in this time
+   * @param {Object} body - email || mandaiId
+   * @param {string} emailFromCognito - Email from Cognito
+   * @param {string} mandaiIdFromCognito - MandaiId from Cognito
+   * @returns {boolean} - Check is matched or not
+   */
+  userVerifyMatchedInfo(body, emailFromCognito, mandaiIdFromCognito) {
+    const email = body.email ? body.email.trim().toLowerCase() : '';
+    const mandaiId = body.mandaiId ? body.mandaiId.trim() : '';
+    const cognitoEmail = emailFromCognito ? emailFromCognito.trim().toLowerCase() : '';
+
+    if (body.email && body.mandaiId) {
+      return cognitoEmail === email && mandaiId === mandaiIdFromCognito
+    }
+
+    if (body.email) {
+      return cognitoEmail === email
+    }
+
+    if (body.mandaiId) {
+      return mandaiId === mandaiIdFromCognito
+    }
+
+    return false;
+  }
+
   async verifyToken(accessToken, body) {
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(
@@ -13,54 +41,9 @@ class UserVerifyTokenService {
       );
       const cognitoUserEmail = getOrCheck(userCognito, "email");
       const cognitoMandaiId = getOrCheck(userCognito, "custom:mandai_id");
-      if (
-        body.email &&
-        body.mandaiId &&
-        body.email.trim().length > 0 &&
-        body.mandaiId.trim().length > 0 &&
-        (cognitoUserEmail !== body.email || cognitoMandaiId !== body.mandaiId)
-      ) {
-        return {
-          membership: {
-            code: 200,
-            valid: false,
-            expired_at: null,
-          },
-          status: "failed",
-          statusCode: 200,
-        };
-      }
-      if (!body.email && !body.mandaiId) {
-        return {
-          membership: {
-            code: 200,
-            valid: false,
-            expired_at: null,
-          },
-          status: "failed",
-          statusCode: 200,
-        };
-      }
-      if (
-        body.email &&
-        body.email.trim().length > 0 &&
-        cognitoUserEmail !== body.email
-      ) {
-        return {
-          membership: {
-            code: 200,
-            valid: false,
-            expired_at: null,
-          },
-          status: "failed",
-          statusCode: 200,
-        };
-      }
-      if (
-        body.mandaiId &&
-        body.mandaiId.trim().length > 0 &&
-        cognitoMandaiId !== body.mandaiId
-      ) {
+      const isMatchedInfo = this.userVerifyMatchedInfo(body, cognitoUserEmail, cognitoMandaiId);
+
+      if (!isMatchedInfo) {
         return {
           membership: {
             code: 200,
@@ -95,7 +78,19 @@ class UserVerifyTokenService {
         statusCode: 200,
       };
     } catch (error) {
-      loggerService.error(`Error UserVerifyTokenService.verifyToken Error: ${error}`, body);
+      loggerService.error(
+        {
+          userVerifyToken: {
+            email: body.email,
+            mandaiId: body.mandaiId || '',
+            action: "verifyToken",
+            layer: "userVerifyTokenService.verifyToken",
+            error: new Error(error),
+          },
+        },
+        {},
+        "End Verify Token Service - Failed"
+      );
       throw new Error(
         JSON.stringify({
           membership: {

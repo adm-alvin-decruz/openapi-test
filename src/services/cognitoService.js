@@ -10,7 +10,7 @@ const {
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
   AdminListGroupsForUserCommand,
-  AdminAddUserToGroupCommand,
+  AdminAddUserToGroupCommand, DescribeUserPoolCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -755,6 +755,15 @@ class Cognito {
       (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
       !groups.includes(GROUP.MEMBERSHIP_PASSES)
     );
+  }
+
+  static async checkCaseSensitivity() {
+    const command = new DescribeUserPoolCommand({
+      UserPoolId: process.env.USER_POOL_ID
+    });
+
+    const response = await client.send(command);
+    console.log('aaaaaaaa*******', response)
   }
 }
 
