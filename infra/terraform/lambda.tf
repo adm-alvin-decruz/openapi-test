@@ -59,6 +59,7 @@ module "lambda_function_ciam_membership" {
   create_package      = false
   ignore_source_code_hash = false
   cloudwatch_logs_retention_in_days = var.cloudwatch_logs_retention_in_days
+  publish = true # Enables Lambda versioning
   s3_existing_package = {
     bucket         = aws_s3_object.ciam.bucket
     key            = aws_s3_object.ciam.key
@@ -122,3 +123,10 @@ module "lambda_function_ciam_membership" {
   attach_network_policy = true
 }
 
+# Lambda Alias for Version Control
+resource "aws_lambda_alias" "lambda_latest" {
+  name             = "latest"
+  description      = "Alias for traffic shifting between versions"
+  function_name    = module.lambda_function_ciam_membership.lambda_function_name
+  function_version = module.lambda_function_ciam_membership.lambda_function_version
+}
