@@ -53,6 +53,11 @@ async function validateEmailDisposable(req, res, next) {
 
   const email = await emailSensitiveHelper.findEmailInCognito(req.body.email);
 
+  //handle adhook for newEmail property - If newEmail is existed in request payload
+  if (req.body.data && req.body.data.newEmail) {
+    req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(req.body.data.newEmail);
+  }
+
   //ignore validate email disposable if existed
   const ignoreValidate = await shouldIgnoreEmailDisposable(email);
   if (ignoreValidate) {
