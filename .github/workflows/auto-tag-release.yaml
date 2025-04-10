@@ -71,14 +71,14 @@ jobs:
               fi
 
               echo "PRERELEASE=false" >> $GITHUB_ENV
-              echo "DRAFT=false" >> $GITHUB_ENV
+              echo "DRAFT=true" >> $GITHUB_ENV
             fi
           fi
 
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Generate Enhanced CHANGELOG.md with PRs, Labels & Reachability Filter
+      - name: Generate CHANGELOG.md (safe loops, flat PR list)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -88,92 +88,104 @@ jobs:
           CURRENT_DATE=$(date +'%Y-%m-%d')
           VERSION_LINK="[${NEW_VERSION}](https://github.com/$GITHUB_REPO/releases/tag/${NEW_VERSION})"
           HEADER="# $VERSION_LINK – $CURRENT_DATE"
+          TEMP_CHANGELOG="changelog_body.tmp"
+          > "$TEMP_CHANGELOG"
 
           echo "📦 Fetching merged PRs targeting base: ${GITHUB_REF_NAME}"
           MERGED_PRS=$(gh pr list \
             --state merged \
             --search "base:${GITHUB_REF_NAME}" \
             --limit 100 \
-            --json number,title,author,commits,mergeCommit \
-            2>/dev/null)
+            --json number,title,author,mergeCommit \
+            2>/dev/null || echo "[]")
 
           if [[ -z "$MERGED_PRS" || "$MERGED_PRS" == "[]" ]]; then
-            echo "⚠️ No merged PRs found for base '${GITHUB_REF_NAME}'"
             echo "$HEADER" > CHANGELOG.md
-            echo -e "\n_No pull requests merged to this branch._" >> CHANGELOG.md
-            echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-            cat CHANGELOG.md >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-            exit 0
-          fi
+            echo -e "\n_No pull requests merged to this branch. Checking Direct Commits"
+          else
 
-          FEATURES="" && FIXES="" && OTHERS=""
-
-          for row in $(echo "${MERGED_PRS}" | jq -c '.[]'); do
+          while read -r row; do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
-            PR_TITLE=$(echo "$row" | jq -r '.title')
+            PR_TITLE=$(echo "$row" | jq -r '.title' | tr '\n' ' ')
             PR_AUTHOR=$(echo "$row" | jq -r '.author.login')
-            PR_COMMITS=$(echo "$row" | jq -c '.commits')
-            PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
             PR_URL="https://github.com/$GITHUB_REPO/pull/$PR_NUMBER"
-            MERGE_SHA=$(echo "$row" | jq -r '.mergeCommit.oid')
 
-            # ✅ Skip PRs whose merge commit isn't reachable from HEAD
-            if ! git merge-base --is-ancestor "$MERGE_SHA" HEAD; then
-              echo "⏭️ Skipping PR #$PR_NUMBER (merge commit $MERGE_SHA not in HEAD)"
+            echo "🔍 Processing PR #$PR_NUMBER..."
+
+            LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
+
+            PR_COMMITS_JSON=$(gh pr view "$PR_NUMBER" --json commits 2>/dev/null || echo "")
+            if [[ -z "$PR_COMMITS_JSON" || "$PR_COMMITS_JSON" == "[]" ]]; then
+              echo "⚠️ Skipping PR #$PR_NUMBER: No commits found or failed to fetch"
               continue
             fi
 
-            # Get PR labels
-            LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | xargs -n1 | sed 's/^/`/' | sed 's/$/`/' | paste -sd' ' -)
+            PR_COMMITS=$(echo "$PR_COMMITS_JSON" | jq '.commits')
+            PR_COMMIT_COUNT=$(echo "$PR_COMMITS" | jq length)
 
-            # Determine category
-            if [[ "$PR_TITLE" =~ ^feat ]]; then
-              CATEGORY="FEATURES"
-              ICON="🚀"
-            elif [[ "$PR_TITLE" =~ ^fix ]]; then
-              CATEGORY="FIXES"
-              ICON="🐛"
-            else
-              CATEGORY="OTHERS"
-              ICON="📝"
-            fi
+            REACHABLE=false
+            while read -r commit; do
+              if git merge-base --is-ancestor "$commit" HEAD; then
+                REACHABLE=true
+                break
+              fi
+            done <<< "$(echo "$PR_COMMITS" | jq -r '.[].oid')"
 
-            # PR Entry
-            ENTRY="- $ICON $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
-            [[ -n "$LABELS" ]] && ENTRY+=" $LABELS"
-            ENTRY+="\n"
+            [[ "$REACHABLE" != "true" ]] && echo "⏭️ Skipping PR #$PR_NUMBER — not in HEAD" && continue
 
-            # Collapsible or plain commit list
+            PR_LINE="- **PR:** $PR_TITLE ([#${PR_NUMBER}]($PR_URL) by @$PR_AUTHOR)"
+            [[ -n "$LABELS" ]] && PR_LINE+=" $LABELS"
+            echo "$PR_LINE" >> "$TEMP_CHANGELOG"
+
             if (( PR_COMMIT_COUNT > 5 )); then
-              ENTRY+="\n<details>\n<summary>Commits ($PR_COMMIT_COUNT)</summary>\n\n"
+              echo "<details><summary>Commits ($PR_COMMIT_COUNT)</summary>" >> "$TEMP_CHANGELOG"
+              echo >> "$TEMP_CHANGELOG"
             else
-              ENTRY+="\n  Commits:\n"
+              echo -e "  Commits:" >> "$TEMP_CHANGELOG"
             fi
 
-            for commit in $(echo "$PR_COMMITS" | jq -c '.[]'); do
+            while read -r commit; do
               COMMIT_SHA=$(echo "$commit" | jq -r '.oid')
               [[ -z "$COMMIT_SHA" ]] && continue
-
-              COMMIT_MSG=$(echo "$commit" | jq -r '.message' | head -n 1)
+              COMMIT_MSG=$(git show -s --format='%s' "$COMMIT_SHA")
               COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$COMMIT_SHA"
               COMMIT_AUTHOR=$(git show -s --format='%an' "$COMMIT_SHA")
               COMMIT_DATE=$(git show -s --format='%ad' --date=short "$COMMIT_SHA")
+              echo -e "\t- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)" >> "$TEMP_CHANGELOG"
+            done <<< "$(echo "$PR_COMMITS" | jq -c '.[]')"
 
-              ENTRY+="- [$COMMIT_SHA]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)\n"
-            done
+            (( PR_COMMIT_COUNT > 5 )) && echo "</details>" >> "$TEMP_CHANGELOG"
+            echo >> "$TEMP_CHANGELOG"
+          done <<< "$(echo "$MERGED_PRS" | jq -c '.[]')"
+          fi
 
-            (( PR_COMMIT_COUNT > 5 )) && ENTRY+="</details>\n"
+          # ➕ Include direct commits not part of PRs
+          git log --pretty=format:'%H' origin/main..HEAD > all_commits.txt
+          cat all_commits.txt
+          grep -oP '(?<=\[)[a-f0-9]{7,40}(?=\])' "$TEMP_CHANGELOG" | sort -u > pr_commits.txt
+          cat pr_commits.txt
+          grep -vxFf pr_commits.txt all_commits.txt > direct_commits.txt
 
-            eval "$CATEGORY+=\$ENTRY"
-          done
-
+          if [[ -s direct_commits.txt ]]; then
+            echo -e "- **Direct Commits:**" >> "$TEMP_CHANGELOG"
+            while read -r commit; do
+              COMMIT_MSG=$(git show -s --format='%s' "$commit")
+              COMMIT_AUTHOR=$(git show -s --format='%an' "$commit")
+              COMMIT_DATE=$(git show -s --format='%ad' --date=short "$commit")
+              COMMIT_URL="https://github.com/$GITHUB_REPO/commit/$commit"
+              echo -e "\t- [$commit]($COMMIT_URL) $COMMIT_MSG ($COMMIT_AUTHOR, $COMMIT_DATE)" >> "$TEMP_CHANGELOG"
+            done < direct_commits.txt
+            echo >> "$TEMP_CHANGELOG"
+          fi
+  
           {
             echo "$HEADER"
             echo
-            [[ -n "$FEATURES" ]] && echo -e "## 🚀 Features\n$FEATURES"
-            [[ -n "$FIXES" ]] && echo -e "## 🐛 Fixes\n$FIXES"
-            [[ -n "$OTHERS" ]] && echo -e "## 📝 Others\n$OTHERS"
+            if [[ -s "$TEMP_CHANGELOG" ]]; then
+              cat "$TEMP_CHANGELOG"
+            else
+              echo "_No qualifying pull requests and Direct commits found in this release._"
+            fi
             [[ "$USE_RC_NOTES" == "true" ]] && echo -e "\n_Promoted from [$PROMOTE_RC_TAG](https://github.com/$GITHUB_REPO/releases/tag/$PROMOTE_RC_TAG)_"
           } > CHANGELOG.md
 
@@ -186,13 +198,14 @@ jobs:
           git tag "$NEW_VERSION"
           git push origin "$NEW_VERSION"
 
-      #- name: Commit & Push CHANGELOG.md to Repo
-      #  run: |
-      #    git config user.name "github-actions[bot]"
-      #    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add CHANGELOG.md
-      #    git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
-      #    git push origin ${{ github.ref_name }}
+#      - name: Commit & Push CHANGELOG.md to Repo
+#        run: |
+#          cat CHANGELOG.md
+#          git config user.name "github-actions[bot]"
+#          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+#          git add CHANGELOG.md
+#          git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
+#          git push origin ${{ github.ref_name }}
 
       - name: Create GitHub Release with Changelog
         uses: softprops/action-gh-release@v2
