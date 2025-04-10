@@ -2,38 +2,28 @@ const { existsCapitalizePattern } = require("../utils/common");
 const cognitoService = require("../services/cognitoService");
 const { parseCognitoAttributeObject } = require("./cognitoHelpers");
 const loggerService = require("../logs/logger");
+const userModel = require("../db/models/userModel");
 
 class EmailSensitiveHelper {
   constructor() {
     this.email = null;
   }
 
-  static async findEmailInCognito(email) {
+  static async findEmailInCognito(email, newEmailFlag = false) {
     //1. check email with exists capitalize
     if (existsCapitalizePattern(email)) {
-      loggerService.log(
-        {
-          user: {
-            email: email,
-            action: "findEmailInCognito",
-            layer: "helpers.emailSensitiveHelper",
-          },
-        },
-        "[CIAM-MAIN] Start Handler Email Sensitive - Start"
-      );
+      this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Start", {
+        email: email,
+        layer: "EmailSensitiveHelper.findEmailInCognito",
+        newEmailFlag
+      });
       //1. Pretend this queries an email case-insensitive
-      const user = await this.processCaseSensitiveInputEmail(email);
-
-      loggerService.log(
-        {
-          user: {
-            user: JSON.stringify(user),
-            action: "findEmailInCognito",
-            layer: "helpers.emailSensitiveHelper",
-          },
-        },
-        "[CIAM-MAIN] Start Handler Email Sensitive - Success"
-      );
+      const user = await this.processCaseSensitiveInputEmail(email, newEmailFlag);
+      this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Start", {
+        user: JSON.stringify(user),
+        layer: "EmailSensitiveHelper.findEmailInCognito",
+        newEmailFlag
+      });
       if (user) {
         return (this.email = user.email.trim().toLowerCase());
       }
@@ -42,26 +32,25 @@ class EmailSensitiveHelper {
     return (this.email = email.trim().toLowerCase());
   }
 
-  static async processCaseSensitiveInputEmail(email) {
+  static async processCaseSensitiveInputEmail(email, newEmailFlag) {
+    //If newEmail existed payload - always checking from DB
+    let userDB = null;
+    if (newEmailFlag) {
+      userDB = await userModel.findByEmail(email)
+    }
+
     const userCognito = await this.queryCognitoCaseSensitiveEmailWithRetry(
       email
     );
 
-    //try to update cognito email if applicable
-    if (
-      userCognito &&
-      userCognito.email &&
-      existsCapitalizePattern(userCognito.email)
-    ) {
-      loggerService.log(
+    //try to update cognito email if email exists capitalize and userDB have not found
+    if (userCognito && userCognito.email && existsCapitalizePattern(userCognito.email) && !userDB) {
+      this.loggerWrapper(
+        "[CIAM-MAIN] Start Process Update Email Sensitive - Start",
         {
-          user: {
-            cognitoEmail: userCognito.email,
-            action: "processCaseSensitiveInputEmail",
-            layer: "helpers.emailSensitiveHelper",
-          },
-        },
-        "[CIAM-MAIN] Start Process Update Email Sensitive - Start"
+          cognitoEmail: userCognito.email,
+          layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
+        }
       );
       await cognitoService.cognitoAdminUpdateNewUser(
         [
@@ -70,15 +59,14 @@ class EmailSensitiveHelper {
         ],
         userCognito.email
       );
-      loggerService.log(
+
+      //update credentials information
+      this.loggerWrapper(
+        "[CIAM-MAIN] Start Process Update Email Sensitive - Success",
         {
-          user: {
-            cognito: JSON.stringify(userCognito),
-            action: "processCaseSensitiveInputEmail",
-            layer: "helpers.emailSensitiveHelper",
-          },
-        },
-        "[CIAM-MAIN] Start Process Update Email Sensitive - Success"
+          cognitoUserInfo: JSON.stringify(userCognito),
+          layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
+        }
       );
     }
     return userCognito;
@@ -93,35 +81,41 @@ class EmailSensitiveHelper {
 
     do {
       try {
-        loggerService.log(
+        this.loggerWrapper(
+          "[CIAM-MAIN] Start Query Cognito Email Sensitive With Retry - Start",
           {
-            user: {
-              email: emailRequest,
-              retryTimes: attempts,
-              action: "queryCognitoCaseSensitiveEmailWithRetry",
-              layer: "helpers.emailSensitiveHelper",
-            },
-          },
-          "[CIAM-MAIN] Start Query Cognito Email Sensitive With Retry - Start"
+            email: emailRequest,
+            retryTimes: attempts,
+            layer:
+              "EmailSensitiveHelper.queryCognitoCaseSensitiveEmailWithRetry",
+          }
         );
         //1. using AdminGetUserCommand with email user input
         response = await cognitoService.cognitoAdminGetUserByEmail(
           emailRequest
         );
         success = true;
-        loggerService.log(
+        this.loggerWrapper(
+          "[CIAM-MAIN] Start Query Cognito Email Sensitive With Retry - Success",
           {
-            user: {
-              email: emailRequest,
-              retryTimes: attempts,
-              action: "queryCognitoCaseSensitiveEmailWithRetry",
-              layer: "helpers.emailSensitiveHelper",
-            },
-          },
-          "[CIAM-MAIN] Start Query Cognito Email Sensitive With Retry - Success"
+            email: emailRequest,
+            retryTimes: attempts,
+            layer:
+              "EmailSensitiveHelper.queryCognitoCaseSensitiveEmailWithRetry",
+          }
         );
         return parseCognitoAttributeObject(response);
       } catch (err) {
+        this.loggerWrapper(
+          "[CIAM-MAIN] Start Query Cognito Email Sensitive With Retry - Failed",
+          {
+            email: emailRequest,
+            retryTimes: attempts,
+            layer:
+              "EmailSensitiveHelper.queryCognitoCaseSensitiveEmailWithRetry",
+          },
+          "error"
+        );
         attempts++;
         emailRequest = email.trim().toLowerCase();
         if (attempts > maxAttempts) {
@@ -129,6 +123,21 @@ class EmailSensitiveHelper {
         }
       }
     } while (!success);
+  }
+
+  static loggerWrapper(action, loggerObj, type = "logInfo") {
+    if (type === "error") {
+      return loggerService.error(
+        { emailSensitiveHelper: { ...loggerObj } },
+        {},
+        action
+      );
+    }
+
+    return loggerService.log(
+      { emailSensitiveHelper: { ...loggerObj } },
+      action
+    );
   }
 }
 

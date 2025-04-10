@@ -10,7 +10,7 @@ const {
   AdminSetUserPasswordCommand,
   ChangePasswordCommand,
   AdminListGroupsForUserCommand,
-  AdminAddUserToGroupCommand, DescribeUserPoolCommand,
+  AdminAddUserToGroupCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -158,9 +158,12 @@ class Cognito {
         {},
         "[CIAM] End cognitoUserLogout Service - Failed"
       );
-      return {
-        message: JSON.stringify(error),
-      };
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
+      );
     }
   }
 
@@ -204,7 +207,7 @@ class Cognito {
             CognitoGetUserResult: getUserCommand,
             action: "cognitoAdminGetUserByEmail",
             layer: "services.cognitoService",
-            error: new Error("cognitoAdminGetUserByEmail error: ", error),
+            error: new Error(error.message),
           },
         },
         {},

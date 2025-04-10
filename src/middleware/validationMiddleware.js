@@ -42,7 +42,11 @@ async function validateEmail(req, res, next) {
   if (!email) {
     return resStatusFormatter(res, 400, msg);
   }
-
+  await emailSensitiveHelper.findEmailInCognito(email);
+  //handle adhook for newEmail property - If newEmail is existed in request payload
+  if (req.body.data && req.body.data.newEmail) {
+    req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(req.body.data.newEmail, true);
+  }
   return await validateEmailDisposable(req, res, next);
 }
 
@@ -51,45 +55,37 @@ async function validateEmailDisposable(req, res, next) {
     return next();
   }
 
-  const email = await emailSensitiveHelper.findEmailInCognito(req.body.email);
-
-  //handle adhook for newEmail property - If newEmail is existed in request payload
-  if (req.body.data && req.body.data.newEmail) {
-    req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(req.body.data.newEmail);
-  }
+  // Convert email to lowercase
+  const normalizedEmail = req.body.email.trim().toLowerCase();
 
   //ignore validate email disposable if existed
-  const ignoreValidate = await shouldIgnoreEmailDisposable(email);
+  const ignoreValidate = await shouldIgnoreEmailDisposable(normalizedEmail);
   if (ignoreValidate) {
-    req.body.email = email;
+    req.body.email = normalizedEmail;
     return next();
   }
 
   // optional: You can add more robust email validation here
-  if (!(await EmailDomainService.emailFormatTest(email))) {
-    loggerService.error(
-        {
-          email: req.body.email,
-          error: 'Invalid Email - Domain Service has blocked',
-          layer: 'validationMiddleware.validateEmailDisposable'
-        },
-        {},
-        "ValidateEmailDisposable - Failed"
-    );
+  if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
+    loggerWrapper("ValidateEmailDisposable - Failed", {
+      email: req.body.email,
+      error: "Invalid Email - Domain Service has blocked",
+      layer: "validationMiddleware.validateEmailDisposable"
+    }, "error");
     return resStatusFormatter(res, 400, "The email is invalid");
   }
 
   // if check domain switch turned on ( 1 )
   if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
     // validate email domain to DB
-    const validDomain = await EmailDomainService.validateEmailDomain(email);
+    const validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
     if (!validDomain) {
       return resStatusFormatterCustom(req, res, 400, "The email is invalid");
     }
   }
 
   // update the email in the request body with the normalized version
-  req.body.email = email;
+  req.body.email = normalizedEmail;
 
   next();
 }
@@ -173,6 +169,11 @@ async function AccessTokenAuthGuard(req, res, next) {
     !userCredentials.tokens.refreshToken ||
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email,
+      error: 'Token Credentials Information can not found!',
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
@@ -204,14 +205,11 @@ async function AccessTokenAuthGuard(req, res, next) {
       }
     }
 
-    loggerService.error(
-      {
-        body: req.body,
-        error: new Error(error),
-      },
-      {},
-      "AccessTokenAuthGuard Middleware Failed"
-    );
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email,
+      error: new Error(error),
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
@@ -253,18 +251,13 @@ async function validateAPIKey(req, res, next) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  loggerService.log(
-      {
-        middleware: {
-          layer: "middleware.validateAPIKey",
-          validationSwitch: JSON.stringify(validationSwitch),
-          mwgAppID: maskKeyRandomly(mwgAppID),
-          expectedApiKey: maskKeyRandomly(validateData.apiKey),
-          incomingApiKey: maskKeyRandomly(apiKey)
-        },
-      },
-      "[CIAM] Validate Api Key Middleware - Process"
-  );
+  loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+    layer: "middleware.validateAPIKey",
+    validationSwitch: JSON.stringify(validationSwitch),
+    mwgAppID: maskKeyRandomly(mwgAppID),
+    expectedApiKey: maskKeyRandomly(validateData.apiKey),
+    incomingApiKey: maskKeyRandomly(apiKey)
+  });
   if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
@@ -327,6 +320,14 @@ function transformObject(reqBodyObj) {
     rs[key] = value;
     return rs;
   }, {});
+}
+
+function loggerWrapper(action, loggerObj, type = "logInfo") {
+  if (type === "error") {
+    return loggerService.error({ middlewareValidation: { ...loggerObj } }, {}, action);
+  }
+
+  return loggerService.log({ middlewareValidation: { ...loggerObj } }, action);
 }
 
 module.exports = {

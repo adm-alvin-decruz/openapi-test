@@ -6,34 +6,6 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
 
 class UserVerifyTokenService {
-  /**
-   * Verify Matched User Information with Cognito
-   * Can apply this method cause Cognito can not be empty in this time
-   * @param {Object} body - email || mandaiId
-   * @param {string} emailFromCognito - Email from Cognito
-   * @param {string} mandaiIdFromCognito - MandaiId from Cognito
-   * @returns {boolean} - Check is matched or not
-   */
-  userVerifyMatchedInfo(body, emailFromCognito, mandaiIdFromCognito) {
-    const email = body.email ? body.email.trim().toLowerCase() : '';
-    const mandaiId = body.mandaiId ? body.mandaiId.trim() : '';
-    const cognitoEmail = emailFromCognito ? emailFromCognito.trim().toLowerCase() : '';
-
-    if (body.email && body.mandaiId) {
-      return cognitoEmail === email && mandaiId === mandaiIdFromCognito
-    }
-
-    if (body.email) {
-      return cognitoEmail === email
-    }
-
-    if (body.mandaiId) {
-      return mandaiId === mandaiIdFromCognito
-    }
-
-    return false;
-  }
-
   async verifyToken(accessToken, body) {
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(
@@ -103,6 +75,34 @@ class UserVerifyTokenService {
         })
       );
     }
+  }
+
+  /**
+   * Verify Matched User Information with Cognito
+   * Can apply this method cause Cognito can not be empty in this time
+   * @param {Object} body - email || mandaiId
+   * @param {string} emailFromCognito - Email from Cognito
+   * @param {string} mandaiIdFromCognito - MandaiId from Cognito
+   * @returns {boolean} - Check is matched or not
+   */
+  userVerifyMatchedInfo(body, emailFromCognito, mandaiIdFromCognito) {
+    const email = body.email ? body.email.trim().toLowerCase() : '';
+    const mandaiId = body.mandaiId ? body.mandaiId.trim() : '';
+    const cognitoEmail = emailFromCognito ? emailFromCognito.trim().toLowerCase() : '';
+
+    if (body.email && body.mandaiId) {
+      return cognitoEmail === email && mandaiId === mandaiIdFromCognito
+    }
+
+    if (body.email) {
+      return cognitoEmail === email
+    }
+
+    if (body.mandaiId) {
+      return mandaiId === mandaiIdFromCognito
+    }
+
+    return false;
   }
 }
 
