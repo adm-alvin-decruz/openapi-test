@@ -2,6 +2,7 @@ const { existsCapitalizePattern } = require("../utils/common");
 const cognitoService = require("../services/cognitoService");
 const { parseCognitoAttributeObject } = require("./cognitoHelpers");
 const loggerService = require("../logs/logger");
+const userCredentialModel = require("../db/models/userCredentialModel");
 const userModel = require("../db/models/userModel");
 
 class EmailSensitiveHelper {
@@ -9,67 +10,88 @@ class EmailSensitiveHelper {
     this.email = null;
   }
 
-  static async findEmailInCognito(email, newEmailFlag = false) {
+  static async findEmailInCognito(email) {
     //1. check email with exists capitalize
-    if (existsCapitalizePattern(email)) {
-      this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Start", {
-        email: email,
-        layer: "EmailSensitiveHelper.findEmailInCognito",
-        newEmailFlag
-      });
-      //1. Pretend this queries an email case-insensitive
-      const user = await this.processCaseSensitiveInputEmail(email, newEmailFlag);
-      this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Start", {
-        user: JSON.stringify(user),
-        layer: "EmailSensitiveHelper.findEmailInCognito",
-        newEmailFlag
-      });
-      if (user) {
-        return (this.email = user.email.trim().toLowerCase());
+    this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Start", {
+      email: email,
+      layer: "EmailSensitiveHelper.findEmailInCognito",
+    });
+    //1. Pretend this queries an email case-insensitive
+    const user = await this.processCaseSensitiveInputEmail(
+      email,
+    );
+    this.loggerWrapper("[CIAM-MAIN] Start Handler Email Sensitive - Success", {
+      user: JSON.stringify(user),
+      layer: "EmailSensitiveHelper.findEmailInCognito",
+    });
+    return (this.email = user && user.email ? user.email.trim().toLowerCase() : email.trim().toLowerCase());
+  }
+
+  static async processCaseSensitiveInputEmail(email) {
+    //get user from DB if possible
+    const userDB = await userCredentialModel.findByUserEmailOrMandaiId(email, '');
+    const normalizedEmail = email.trim().toLowerCase();
+
+    //If user from DB active = 1 & subId is available -> return email lowercase directly
+    if (userDB && userDB.user_sub_id) {
+      return {
+        email: email.trim().toLowerCase()
       }
     }
 
-    return (this.email = email.trim().toLowerCase());
-  }
-
-  static async processCaseSensitiveInputEmail(email, newEmailFlag) {
-    //If newEmail existed payload - always checking from DB
-    let userDB = null;
-    if (newEmailFlag) {
-      userDB = await userModel.findByEmail(email)
+    //If user has not found at DB - return email lowercase directly - cover for case newEmail
+    if (!userDB || !userDB.email) {
+      return {
+        email: email.trim().toLowerCase()
+      }
     }
 
-    const userCognito = await this.queryCognitoCaseSensitiveEmailWithRetry(
-      email
-    );
+    const userCognito = await this.queryCognitoCaseSensitiveEmailWithRetry(userDB.email);
+    const userSubId = userCognito && userCognito.sub ? userCognito.sub : null;
 
-    //try to update cognito email if email exists capitalize and userDB have not found
-    if (userCognito && userCognito.email && existsCapitalizePattern(userCognito.email) && !userDB) {
-      this.loggerWrapper(
-        "[CIAM-MAIN] Start Process Update Email Sensitive - Start",
-        {
-          cognitoEmail: userCognito.email,
-          layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
-        }
-      );
-      await cognitoService.cognitoAdminUpdateNewUser(
-        [
-          { Name: "email", Value: email.trim().toLowerCase() },
-          { Name: "preferred_username", Value: email.trim().toLowerCase() },
-        ],
-        userCognito.email
-      );
-
-      //update credentials information
-      this.loggerWrapper(
-        "[CIAM-MAIN] Start Process Update Email Sensitive - Success",
-        {
-          cognitoUserInfo: JSON.stringify(userCognito),
-          layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
-        }
-      );
+    //cover for cases cognito not response userSubID for first time access system
+    if (userSubId) {
+      await userCredentialModel.updateByUserEmail(userDB.email, {
+        user_sub_id: userSubId,
+        username: normalizedEmail
+      });
     }
-    return userCognito;
+
+    //try to update cognito/db for email should lowercase if email exists capitalize
+    if (userDB && userDB.email && existsCapitalizePattern(userDB.email)) {
+      try {
+        this.loggerWrapper(
+          "[CIAM-MAIN] Start Process Update Email Sensitive - Start",
+          {
+            email: userDB.email,
+            layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
+          }
+        );
+        await userModel.update(userDB.id, {
+          email: normalizedEmail
+        });
+        await cognitoService.cognitoAdminUpdateNewUser(
+          [
+            { Name: "email", Value: normalizedEmail },
+            { Name: "preferred_username", Value: normalizedEmail },
+          ],
+          userDB.email
+        );
+        this.loggerWrapper(
+          "[CIAM-MAIN] Start Process Update Email Sensitive - Success",
+          {
+            cognitoUser: JSON.stringify(userCognito),
+            userSubId,
+            email: normalizedEmail,
+            layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
+          }
+        );
+        return userCognito;
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
   }
 
   static async queryCognitoCaseSensitiveEmailWithRetry(email, retryTimes = 1) {

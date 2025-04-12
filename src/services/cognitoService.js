@@ -432,7 +432,7 @@ class Cognito {
             email,
             action: "cognitoAdminSetUserPassword",
             layer: "services.cognitoService",
-            response: `${rs}`,
+            response: JSON.stringify(rs),
           },
         },
         "[CIAM] End cognitoAdminSetUserPassword Service - Success"
@@ -641,7 +641,7 @@ class Cognito {
       loggerService.log(
         {
           cognitoService: {
-            response: `${rs}`,
+            response: JSON.stringify(rs),
             action: "cognitoAdminAddUserToGroup",
             layer: "services.cognitoService",
           },

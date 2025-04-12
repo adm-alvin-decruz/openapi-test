@@ -234,7 +234,7 @@ async function adminUpdateUser(req, listedParams) {
         // prepare logs
         let logObj = loggerService.build(
           "user",
-          "usersControllers.adminCreateUser",
+          "usersControllers.adminUpdateUser",
           req,
           "MWG_CIAM_PARAMS_ERR",
           {},
@@ -243,7 +243,7 @@ async function adminUpdateUser(req, listedParams) {
         // prepare error params response
         req.apiTimer.end("usersController.adminUpdateUser"); // log end time
         return responseHelper.craftUsersApiResponse(
-          "usersControllers.adminCreateUser",
+          "usersControllers.adminUpdateUser",
           errorConfig,
           "MWG_CIAM_PARAMS_ERR",
           "USERS_UPDATE",
@@ -258,7 +258,7 @@ async function adminUpdateUser(req, listedParams) {
       // prepare logs
       let logObj = loggerService.build(
         "user",
-        "usersControllers.adminCreateUser",
+        "usersControllers.adminUpdateUser",
         req,
         "MWG_CIAM_PARAMS_ERR",
         {},
@@ -267,10 +267,10 @@ async function adminUpdateUser(req, listedParams) {
       // prepare error params response
       req.apiTimer.end("usersController.adminUpdateUser"); // log end time
       return responseHelper.craftUsersApiResponse(
-        "usersControllers.adminCreateUser",
+        "usersControllers.adminUpdateUser",
         errorConfig,
         "MWG_CIAM_PARAMS_ERR",
-        "USERS_SIGNUP",
+        "USERS_UPDATE",
         logObj
       );
     }
