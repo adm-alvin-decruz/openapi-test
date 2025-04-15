@@ -55,6 +55,9 @@ class EmailSensitiveHelper {
         user_sub_id: userSubId,
         username: normalizedEmail
       });
+      await userModel.update(userDB.id, {
+        email: normalizedEmail
+      });
     }
 
     //try to update cognito/db for email should lowercase if email exists capitalize
@@ -67,9 +70,6 @@ class EmailSensitiveHelper {
             layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
           }
         );
-        await userModel.update(userDB.id, {
-          email: normalizedEmail
-        });
         await cognitoService.cognitoAdminUpdateNewUser(
           [
             { Name: "email", Value: normalizedEmail },
