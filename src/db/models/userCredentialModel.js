@@ -218,6 +218,80 @@ class UserCredential {
       throw error;
     }
   }
+
+  static async updateByUserIdAndEmail(email, userId, data) {
+    const now = getCurrentUTCTimestamp();
+
+    // Filter out undefined values and create SET clauses
+    const updateFields = Object.entries(data)
+        .filter(([key, value]) => value !== undefined)
+        .map(([key, value]) => `${key} = ?`);
+
+    // Add updated_at to the SET clauses
+    updateFields.push("updated_at = ?");
+
+    // Construct the SQL query
+    const sql = `
+      UPDATE user_credentials
+      SET ${updateFields.join(", ")}
+      WHERE username = ? AND user_id = ?
+    `;
+
+    // Prepare the params array
+    const params = [
+      ...Object.values(data).filter((value) => value !== undefined),
+      now,
+      email,
+      userId
+    ];
+
+    loggerService.log(
+        {
+          userCredentialModel: {
+            email,
+            userId,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            layer: "userCredentialModel.updateByUserIdAndEmail",
+          },
+        },
+        "[CIAM] updateByUserIdAndEmail DB - Start"
+    );
+
+    // Execute the query
+    try {
+      const result = await pool.execute(sql, params);
+      loggerService.log(
+          {
+            userCredentialModel: {
+              email,
+              userId,
+              layer: "userCredentialModel.updateByUserIdAndEmail",
+            },
+          },
+          "[CIAM] updateByUserIdAndEmail DB - Success"
+      );
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        user_id: result.changedRows,
+        success: true
+      };
+    } catch (error) {
+      loggerService.error(
+          {
+            userCredentialModel: {
+              email,
+              userId,
+              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+              layer: "userCredentialModel.updateByUserIdAndEmail",
+              error: new Error(error),
+            },
+          },
+          {},
+          "[CIAM] updateByUserIdAndEmail DB - Failed"
+      );
+      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+    }
+  }
 }
 
 module.exports = UserCredential;

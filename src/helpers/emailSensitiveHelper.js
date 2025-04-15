@@ -51,11 +51,11 @@ class EmailSensitiveHelper {
 
     //cover for cases cognito not response userSubID for first time access system
     if (userSubId) {
-      await userCredentialModel.updateByUserEmail(userCredentialsInfo.email, {
+      await userCredentialModel.updateByUserIdAndEmail(userCredentialsInfo.email, userCredentialsInfo.user_id, {
         user_sub_id: userSubId,
         username: normalizedEmail
       });
-      await userModel.update(userCredentialsInfo.user_id, {
+      await userModel.updateByUserIdAndEmail(userCredentialsInfo.email, userCredentialsInfo.user_id, {
         email: normalizedEmail
       });
     }
