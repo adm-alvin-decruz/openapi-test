@@ -7,7 +7,8 @@ const commonService = require("../../services/commonService");
 const {
   isEmptyRequest,
   validateEmail,
-  validateAPIKey,lowercaseTrimKeyValueString
+  validateAPIKey,
+  lowercaseTrimKeyValueString
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");

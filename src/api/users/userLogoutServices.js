@@ -2,7 +2,6 @@ const cognitoService = require("../../services/cognitoService");
 const userCredentialModel = require("../../db/models/userCredentialModel");
 const loggerService = require("../../logs/logger");
 const LogoutErrors = require("../../config/https/errors/logoutErrors");
-const CommonErrors = require("../../config/https/errors/commonErrors");
 const { maskKeyRandomly } = require("../../utils/common");
 
 class UserLogoutService {
@@ -25,18 +24,14 @@ class UserLogoutService {
         {},
         "[CIAM] Get User For Logout Request - Failed"
       );
-      throw new Error(
-        JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(body.language))
-      );
+      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(body.language)));
     }
   }
 
   async execute(token, body) {
     const userInfo = await this.getUser(token, body);
     if (!userInfo.userId) {
-      throw new Error(
-        JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(body.language))
-      );
+      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(body.language)));
     }
 
     try {
@@ -45,7 +40,7 @@ class UserLogoutService {
         tokens: null,
       });
     } catch (error) {
-      throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
+      throw new Error(JSON.stringify(LogoutErrors.ciamLogoutUserNotFound(body.language)));
     }
   }
 }

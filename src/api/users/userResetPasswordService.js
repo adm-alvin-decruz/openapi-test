@@ -53,10 +53,7 @@ class UserResetPasswordService {
     const saltKey = generateSaltHash(resetToken);
     const passwordHash = generateSaltHash(resetToken, saltKey);
     try {
-      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-        reqBody.email
-      );
-      const email = getOrCheck(userCognito, "email");
+      const email = getOrCheck(userExistedInCognito, "email");
 
       // trigger lambda function send email with resetToken
       req.body.expiredAt = convertDateFormat(

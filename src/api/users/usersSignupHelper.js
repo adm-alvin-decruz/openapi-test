@@ -119,7 +119,7 @@ function generateVisualID(reqBody) {
   return `${year}${sources[source]}${groups[group]}${month}${numbers}`;
 }
 
-async function createUserSignupDB(req, membershipData){
+async function createUserSignupDB(req, membershipData, userSubIdFromCognito){
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersSignupHelper.createUserSignupDB starts'); // log process time
   // insert to user table
@@ -133,7 +133,7 @@ async function createUserSignupDB(req, membershipData){
     // upsert to newsletter table
     let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id, userExisted);
     // insert to credential table - if membership-passes ignore update user credential
-    let newUserCredentialResult = !userExisted ? await insertUserCredential(req, newUserResult.user_id) : {};
+    let newUserCredentialResult = !userExisted ? await insertUserCredential(req, newUserResult.user_id, userSubIdFromCognito) : {};
     // upsert to detail table
     let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
 
@@ -301,9 +301,10 @@ async function insertUserNewletter(req, dbUserID, userExisted){
  *
  * @param {json} req
  * @param {str} dbUserID
+ * @param {str} userSubIdFromCognito
  * @returns
  */
-async function insertUserCredential(req, dbUserID){
+async function insertUserCredential(req, dbUserID, userSubIdFromCognito){
   // process credential data
 
   try {
@@ -313,13 +314,14 @@ async function insertUserCredential(req, dbUserID){
       username: req.body.email, // cognito username is email
       password_hash: req.body.password,
       tokens: null,
-      last_login: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      last_login: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      user_sub_id: userSubIdFromCognito
     });
 
     return result;
 
   } catch (error) {
-    let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
+    let catchError = new Error(`userSignupHelper.insertUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
   }

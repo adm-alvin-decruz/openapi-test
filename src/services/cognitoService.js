@@ -158,9 +158,12 @@ class Cognito {
         {},
         "[CIAM] End cognitoUserLogout Service - Failed"
       );
-      return {
-        message: JSON.stringify(error),
-      };
+      throw new Error(
+          JSON.stringify({
+            status: "failed",
+            data: error,
+          })
+      );
     }
   }
 
@@ -204,7 +207,7 @@ class Cognito {
             CognitoGetUserResult: getUserCommand,
             action: "cognitoAdminGetUserByEmail",
             layer: "services.cognitoService",
-            error: new Error("cognitoAdminGetUserByEmail error: ", error),
+            error: new Error(error.message),
           },
         },
         {},
@@ -429,7 +432,7 @@ class Cognito {
             email,
             action: "cognitoAdminSetUserPassword",
             layer: "services.cognitoService",
-            response: `${rs}`,
+            response: JSON.stringify(rs),
           },
         },
         "[CIAM] End cognitoAdminSetUserPassword Service - Success"
@@ -638,7 +641,7 @@ class Cognito {
       loggerService.log(
         {
           cognitoService: {
-            response: `${rs}`,
+            response: JSON.stringify(rs),
             action: "cognitoAdminAddUserToGroup",
             layer: "services.cognitoService",
           },
