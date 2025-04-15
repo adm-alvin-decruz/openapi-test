@@ -29,44 +29,44 @@ class EmailSensitiveHelper {
 
   static async processCaseSensitiveInputEmail(email) {
     //get user from DB if possible
-    const userDB = await userCredentialModel.findByUserEmailOrMandaiId(email, '');
+    const userCredentialsInfo = await userCredentialModel.findByUserEmailOrMandaiId(email, '');
     const normalizedEmail = email.trim().toLowerCase();
 
     //If user from DB active = 1 & subId is available -> return email lowercase directly
-    if (userDB && userDB.user_sub_id) {
+    if (userCredentialsInfo && userCredentialsInfo.user_sub_id) {
       return {
         email: email.trim().toLowerCase()
       }
     }
 
     //If user has not found at DB - return email lowercase directly - cover for case newEmail
-    if (!userDB || !userDB.email) {
+    if (!userCredentialsInfo || !userCredentialsInfo.email) {
       return {
         email: email.trim().toLowerCase()
       }
     }
 
-    const userCognito = await this.queryCognitoCaseSensitiveEmailWithRetry(userDB.email);
+    const userCognito = await this.queryCognitoCaseSensitiveEmailWithRetry(userCredentialsInfo.email);
     const userSubId = userCognito && userCognito.sub ? userCognito.sub : null;
 
     //cover for cases cognito not response userSubID for first time access system
     if (userSubId) {
-      await userCredentialModel.updateByUserEmail(userDB.email, {
+      await userCredentialModel.updateByUserEmail(userCredentialsInfo.email, {
         user_sub_id: userSubId,
         username: normalizedEmail
       });
-      await userModel.update(userDB.id, {
+      await userModel.update(userCredentialsInfo.user_id, {
         email: normalizedEmail
       });
     }
 
     //try to update cognito/db for email should lowercase if email exists capitalize
-    if (userDB && userDB.email && existsCapitalizePattern(userDB.email)) {
+    if (userCredentialsInfo && userCredentialsInfo.email && existsCapitalizePattern(userCredentialsInfo.email)) {
       try {
         this.loggerWrapper(
           "[CIAM-MAIN] Start Process Update Email Sensitive - Start",
           {
-            email: userDB.email,
+            email: userCredentialsInfo.email,
             layer: "EmailSensitiveHelper.processCaseSensitiveInputEmail",
           }
         );
@@ -75,7 +75,7 @@ class EmailSensitiveHelper {
             { Name: "email", Value: normalizedEmail },
             { Name: "preferred_username", Value: normalizedEmail },
           ],
-          userDB.email
+            userCredentialsInfo.email
         );
         this.loggerWrapper(
           "[CIAM-MAIN] Start Process Update Email Sensitive - Success",
