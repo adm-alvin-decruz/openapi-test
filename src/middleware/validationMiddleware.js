@@ -11,7 +11,8 @@ const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
-const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers")
+const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
+const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 
 /**
  * Validate empty request
@@ -41,7 +42,12 @@ async function validateEmail(req, res, next) {
   if (!email) {
     return resStatusFormatter(res, 400, msg);
   }
-
+  await emailSensitiveHelper.findEmailInCognito(email);
+  //handle adhook for newEmail property - If newEmail is existed in request payload
+  const newEmail = req.body.data && req.body.data.newEmail ? req.body.data.newEmail : '';
+  if (newEmail) {
+    req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(newEmail);
+  }
   return await validateEmailDisposable(req, res, next);
 }
 
@@ -56,21 +62,24 @@ async function validateEmailDisposable(req, res, next) {
   //ignore validate email disposable if existed
   const ignoreValidate = await shouldIgnoreEmailDisposable(normalizedEmail);
   if (ignoreValidate) {
+    req.body.email = normalizedEmail;
     return next();
   }
 
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
-    loggerService.error(`Invalid email format ${normalizedEmail}`, req.body);
+    loggerWrapper("ValidateEmailDisposable - Failed", {
+      email: req.body.email,
+      error: "Invalid Email - Domain Service has blocked",
+      layer: "validationMiddleware.validateEmailDisposable"
+    }, "error");
     return resStatusFormatter(res, 400, "The email is invalid");
   }
 
   // if check domain switch turned on ( 1 )
   if ((await EmailDomainService.getCheckDomainSwitch()) === true) {
     // validate email domain to DB
-    let validDomain = await EmailDomainService.validateEmailDomain(
-      normalizedEmail
-    );
+    const validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
     if (!validDomain) {
       return resStatusFormatterCustom(req, res, 400, "The email is invalid");
     }
@@ -161,6 +170,11 @@ async function AccessTokenAuthGuard(req, res, next) {
     !userCredentials.tokens.refreshToken ||
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email,
+      error: 'Token Credentials Information can not found!',
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
@@ -192,14 +206,11 @@ async function AccessTokenAuthGuard(req, res, next) {
       }
     }
 
-    loggerService.error(
-      {
-        body: req.body,
-        error: `${error}`,
-      },
-      {},
-      "AccessTokenAuthGuard Middleware Failed"
-    );
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email,
+      error: new Error(error),
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
     return res
       .status(401)
       .json(CommonErrors.UnauthorizedException(req.body.language));
@@ -241,18 +252,13 @@ async function validateAPIKey(req, res, next) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  loggerService.log(
-      {
-        middleware: {
-          layer: "middleware.validateAPIKey",
-          validationSwitch: JSON.stringify(validationSwitch),
-          mwgAppID: maskKeyRandomly(mwgAppID),
-          expectedApiKey: maskKeyRandomly(validateData.apiKey),
-          incomingApiKey: maskKeyRandomly(apiKey)
-        },
-      },
-      "[CIAM] Validate Api Key Middleware - Process"
-  );
+  loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+    layer: "middleware.validateAPIKey",
+    validationSwitch: JSON.stringify(validationSwitch),
+    mwgAppID: maskKeyRandomly(mwgAppID),
+    expectedApiKey: maskKeyRandomly(validateData.apiKey),
+    incomingApiKey: maskKeyRandomly(apiKey)
+  });
   if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
@@ -315,6 +321,14 @@ function transformObject(reqBodyObj) {
     rs[key] = value;
     return rs;
   }, {});
+}
+
+function loggerWrapper(action, loggerObj, type = "logInfo") {
+  if (type === "error") {
+    return loggerService.error({ middlewareValidation: { ...loggerObj } }, {}, action);
+  }
+
+  return loggerService.log({ middlewareValidation: { ...loggerObj } }, action);
 }
 
 module.exports = {

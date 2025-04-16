@@ -117,6 +117,7 @@ class UserLoginService {
   }
 
   async execute(req) {
+
     const userInfo = await this.getUser(req);
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
       throw new Error(
@@ -154,7 +155,7 @@ class UserLoginService {
         email: userInfo.email,
       };
     } catch (error) {
-      loggerService.log(
+      loggerService.error(
         {
           user: {
             email: req.body.email,

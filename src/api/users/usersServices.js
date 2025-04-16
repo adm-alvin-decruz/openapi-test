@@ -257,8 +257,10 @@ async function cognitoCreateUser(req, membershipData) {
     req.body.password = await passwordService.hashPassword(
       newUserArray.TemporaryPassword
     );
+
+    const userSubIdFromCognito = cognitoResponse && cognitoResponse.User && cognitoResponse.User.Username ? cognitoResponse.User.Username : '';
     const dbResponse = await retryOperation(async () => {
-      return usersSignupHelper.createUserSignupDB(req, membershipData);
+      return usersSignupHelper.createUserSignupDB(req, membershipData, userSubIdFromCognito);
     });
 
     // push to queue for Galaxy Import Pass

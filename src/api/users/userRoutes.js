@@ -12,7 +12,6 @@ const {
   validateEmail,
   AccessTokenAuthGuard,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
-  validateEmailDisposable,
   lowercaseTrimKeyValueString,
   validateAPIKey,
 } = require("../../middleware/validationMiddleware");
@@ -311,7 +310,7 @@ router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) =
 router.delete("/users/sessions",
   isEmptyRequest,
   AccessTokenAuthGuard,
-  validateEmailDisposable,
+  validateEmail,
   async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
