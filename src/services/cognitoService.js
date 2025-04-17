@@ -740,24 +740,35 @@ class Cognito {
    * @returns
    */
   static async checkUserBelongWildPass(userEmail, userCognito) {
-    if (!userCognito) return false;
-
-    const membershipBelongWildPass = JSON.stringify(
-      cognitoAttribute.getOrCheck(userCognito, "custom:membership")
-    ).includes(GROUP.WILD_PASS);
-
-    const userGroupsAtCognito =
-      await this.cognitoAdminListGroupsForUser(userEmail);
+    //1st. Check from group at cognito if possible
+    const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
 
     const groups =
-      userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length > 0
-        ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
-        : [];
+        userGroupsAtCognito &&
+        userGroupsAtCognito.Groups &&
+        userGroupsAtCognito.Groups.length
+            ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
+            : [];
 
-    return (
-      (groups.includes(GROUP.WILD_PASS) || membershipBelongWildPass) &&
-      !groups.includes(GROUP.MEMBERSHIP_PASSES)
-    );
+    if (groups.length) {
+      return groups.length === 1 && groups.includes(GROUP.WILD_PASS)
+    }
+
+    //2nd. Check from custom:membership attributes
+    const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
+    const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
+
+    //new format when membership-passes group exists
+    if (Array.isArray(passes)) {
+      return passes.every(pass => pass === "wildpass")
+    }
+
+    //current format with WP old user
+    if (typeof passes === "object") {
+      return passes.name === "wildpass"
+    }
+
+    return false;
   }
 }
 
