@@ -19,6 +19,7 @@ const crypto = require("crypto");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const cognitoAttribute = require("../utils/cognitoAttributes");
 const { GROUP } = require("../utils/constants");
+const MembershipErrors = require("../config/https/errors/membershipErrors");
 
 class Cognito {
   static async cognitoAdminUpdateUser(req, ciamComparedParams) {
@@ -741,8 +742,10 @@ class Cognito {
    */
   static async checkUserBelongWildPass(userEmail, userCognito) {
     try {
-      //1st. Check from group at cognito if possible
+      let checkingGroup = null;
       const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
+      const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
+      const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
 
       const groups =
           userGroupsAtCognito &&
@@ -751,25 +754,49 @@ class Cognito {
               ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
               : [];
 
-      if (groups.length) {
-        return groups.length === 1 && groups.includes(GROUP.WILD_PASS)
+      if (groups.length && groups.length > 1) {
+        return false;
       }
 
-      //2nd. Check from custom:membership attributes
-      const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
-      const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
+      if (groups.length && groups.length === 1 && groups.includes(GROUP.WILD_PASS)) {
+        if (!passes) {
+          checkingGroup = true;
+        }
 
-      //new format when membership-passes group exists
-      if (Array.isArray(passes)) {
-        return passes.every(pass => pass === "wildpass")
+        //new format when membership-passes group exists
+        if (Array.isArray(passes)) {
+          checkingGroup = passes.every(pass => pass === "wildpass")
+        }
+
+        //current format with WP old user
+        if (typeof passes === "object" && passes.name) {
+          checkingGroup = passes.name === "wildpass"
+        }
       }
 
-      //current format with WP old user
-      if (typeof passes === "object") {
-        return passes.name === "wildpass"
+      //cover for case length of group is empty - checking custom:membership
+      if (groups.length === 0) {
+        //have not any clue to determine user belong which group
+        if (!passes) {
+          checkingGroup = null;
+        }
+
+        //new format when membership-passes group exists
+        if (Array.isArray(passes)) {
+          checkingGroup = passes.every(pass => pass === "wildpass")
+        }
+
+        //current format with WP old user
+        if (typeof passes === "object" && passes.name) {
+          checkingGroup = passes.name === "wildpass"
+        }
       }
 
-      return false;
+      if (checkingGroup === null) {
+        await Promise.reject('User does not have wildpass or membership-passes group.');
+      }
+
+      return checkingGroup;
     } catch (error) {
       throw new Error('User does not have wildpass or membership-passes group.')
     }
