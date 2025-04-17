@@ -771,7 +771,7 @@ class Cognito {
 
       return false;
     } catch (error) {
-      throw new Error('User configuration is wrong!')
+      throw new Error('User does not have wildpass or membership-passes group.')
     }
   }
 }
