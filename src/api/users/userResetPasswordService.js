@@ -29,18 +29,25 @@ class UserResetPasswordService {
     }
 
     if (userExistedInCognito) {
-      const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
-      if (isUserBelongWildPass) {
-        loggerService.error(
-            {
-              user: {
-                email: reqBody.email,
-                error: 'User belong wildpass can not reset password'
-              }
-            },
-            {},
-            '[CIAM-MAIN] Reset Password Service - Failed'
-        );
+      try {
+        const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
+        if (isUserBelongWildPass) {
+          loggerService.error(
+              {
+                user: {
+                  email: reqBody.email,
+                  error: 'User belong wildpass can not reset password'
+                }
+              },
+              {},
+              '[CIAM-MAIN] Reset Password Service - Failed'
+          );
+          await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
+              reqBody.email,
+              reqBody.language
+          ))
+        }
+      } catch (error) {
         await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
             reqBody.email,
             reqBody.language

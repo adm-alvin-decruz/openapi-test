@@ -740,35 +740,39 @@ class Cognito {
    * @returns
    */
   static async checkUserBelongWildPass(userEmail, userCognito) {
-    //1st. Check from group at cognito if possible
-    const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
+    try {
+      //1st. Check from group at cognito if possible
+      const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
 
-    const groups =
-        userGroupsAtCognito &&
-        userGroupsAtCognito.Groups &&
-        userGroupsAtCognito.Groups.length
-            ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
-            : [];
+      const groups =
+          userGroupsAtCognito &&
+          userGroupsAtCognito.Groups &&
+          userGroupsAtCognito.Groups.length
+              ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
+              : [];
 
-    if (groups.length) {
-      return groups.length === 1 && groups.includes(GROUP.WILD_PASS)
+      if (groups.length) {
+        return groups.length === 1 && groups.includes(GROUP.WILD_PASS)
+      }
+
+      //2nd. Check from custom:membership attributes
+      const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
+      const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
+
+      //new format when membership-passes group exists
+      if (Array.isArray(passes)) {
+        return passes.every(pass => pass === "wildpass")
+      }
+
+      //current format with WP old user
+      if (typeof passes === "object") {
+        return passes.name === "wildpass"
+      }
+
+      return false;
+    } catch (error) {
+      throw new Error('User configuration is wrong!')
     }
-
-    //2nd. Check from custom:membership attributes
-    const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
-    const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
-
-    //new format when membership-passes group exists
-    if (Array.isArray(passes)) {
-      return passes.every(pass => pass === "wildpass")
-    }
-
-    //current format with WP old user
-    if (typeof passes === "object") {
-      return passes.name === "wildpass"
-    }
-
-    return false;
   }
 }
 
