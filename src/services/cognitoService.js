@@ -741,6 +741,8 @@ class Cognito {
    */
   static async checkUserBelongWildPass(userEmail, userCognito) {
     try {
+      let wildpassGroupChecking = false;
+      let wildpassMembershipChecking = false;
       //1st. Check from group at cognito if possible
       const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
 
@@ -752,7 +754,7 @@ class Cognito {
               : [];
 
       if (groups.length) {
-        return groups.length === 1 && groups.includes(GROUP.WILD_PASS)
+        wildpassGroupChecking = groups.length === 1 && groups.includes(GROUP.WILD_PASS)
       }
 
       //2nd. Check from custom:membership attributes
@@ -761,15 +763,15 @@ class Cognito {
 
       //new format when membership-passes group exists
       if (Array.isArray(passes)) {
-        return passes.every(pass => pass === "wildpass")
+        wildpassMembershipChecking = passes.every(pass => pass === "wildpass")
       }
 
       //current format with WP old user
       if (typeof passes === "object") {
-        return passes.name === "wildpass"
+        wildpassMembershipChecking = passes.name === "wildpass"
       }
 
-      return false;
+      return wildpassGroupChecking || wildpassMembershipChecking;
     } catch (error) {
       throw new Error('User configuration is wrong!')
     }
