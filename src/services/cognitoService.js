@@ -758,11 +758,10 @@ class Cognito {
         return false;
       }
 
-      if (groups.length && groups.length === 1 && groups.includes(GROUP.WILD_PASS)) {
+      if (groups.length && groups.length === 1) {
         if (!passes) {
           checkingGroup = true;
         }
-
         //new format when membership-passes group exists
         if (Array.isArray(passes)) {
           checkingGroup = passes.every(pass => pass === "wildpass")
@@ -771,6 +770,11 @@ class Cognito {
         //current format with WP old user
         if (typeof passes === "object" && passes.name) {
           checkingGroup = passes.name === "wildpass"
+        }
+
+        //if one group and it membership-passes - return false
+        if (!groups.includes(GROUP.WILD_PASS)) {
+          checkingGroup = false;
         }
       }
 
