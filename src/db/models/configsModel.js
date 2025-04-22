@@ -4,9 +4,10 @@ const commonService = require("../../services/commonService");
 
 class Configs {
   static async findByConfigKey(config, key) {
+    const params = [config, key];
     const sql = "SELECT * FROM configs WHERE config = ? AND `key` = ?";
     try {
-      const [rows] = await pool.query(sql, [config, key]);
+      const [rows] = await pool.query(sql, params);
       return rows;
     } catch (error) {
       loggerService.error(
@@ -14,12 +15,12 @@ class Configs {
           configModel: {
             config,
             key,
-            error: `${error}`,
-            sql_statement: commonService.replaceSqlPlaceholders(sql, email),
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
         },
         {},
-        "[CIAM] userModel.findWPFullData - Failed"
+        "[CIAM-MAIN] configsModel.findByConfigKey - Failed"
       );
     }
   }
