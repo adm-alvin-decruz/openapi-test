@@ -21,6 +21,7 @@ const crypto = require("crypto");
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/commonErrors");
+const loggerService = require("../../logs/logger");
 
 const pong = { pong: "pang" };
 
@@ -545,7 +546,7 @@ router.post(
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const accessToken = req.headers.authorization.toString();
     try {
-      const data = await userController.userRefreshAccessToken(accessToken, req.body);
+      const data = await userController.userRefreshAccessToken(accessToken, req);
       if (res.newAccessToken) {
         data.token.accessToken = res.newAccessToken;
       }

@@ -171,7 +171,8 @@ async function AccessTokenAuthGuard(req, res, next) {
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
     loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
-      email: req.body.email,
+      email: req.body.email || "",
+      mandaiId: req.body.mandaiId || "",
       error: 'Token Credentials Information can not found!',
       layer: 'validationMiddleware.AccessTokenAuthGuard'
     }, 'error');
