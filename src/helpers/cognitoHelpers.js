@@ -30,9 +30,8 @@ async function updateMembershipInCognito(data) {
           userEmail: data.email,
           existingMemberships: JSON.stringify(existingMemberships),
           updatedMemberships: JSON.stringify(updatedMemberships),
-          params: updateParams,
+          params: JSON.stringify(updateParams),
           layer: "userMembershipPassService.updateMembershipInCognito",
-          data: JSON.stringify(data),
         },
       },
       "Start updateMembershipInCognito"

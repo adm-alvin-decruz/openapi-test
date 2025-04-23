@@ -7,6 +7,7 @@ const { getSignedUrl } = "";
 require("dotenv").config();
 
 const loggerService = require("../logs/logger");
+const { maskKeyRandomly } = require("../utils/common");
 
 const uploadThumbnailToS3 = async (req) => {
   const s3Client = new S3Client({});
@@ -19,7 +20,7 @@ const uploadThumbnailToS3 = async (req) => {
         visualId: req.body.visualId,
         mandaiId: req.body.mandaiId,
         layer: "service.uploadThumbnailToS3",
-        data: req.body.membershipPhoto.bytes,
+        data: maskKeyRandomly(req.body.membershipPhoto.bytes),
       },
     },
     "Start uploadThumbnailToS3"
@@ -59,8 +60,8 @@ const uploadThumbnailToS3 = async (req) => {
           visualId: req.body.visualId,
           mandaiId: req.body.mandaiId,
           layer: "service.uploadThumbnailToS3",
-          data: req.body.membershipPhoto.bytes,
-          error: new Error("uploadThumbnailToS3 error: ", error),
+          data: maskKeyRandomly(req.body.membershipPhoto.bytes),
+          error: new Error(`uploadThumbnailToS3 error: ${error}`),
         },
       },
       {},

@@ -1,6 +1,5 @@
 const UserRefreshTokenService = require("./userRefreshTokenService");
 const appConfig = require("../../config/appConfig");
-const loggerService = require("../../logs/logger");
 
 class UserRefreshAccessTokenJob {
   constructor() {
@@ -39,16 +38,6 @@ class UserRefreshAccessTokenJob {
   async perform(accessToken, body) {
     try {
       const rs = await UserRefreshTokenService.execute(accessToken, body);
-      loggerService.log(
-        {
-          user: {
-            action: "userRefreshAccessToken",
-            layer: "UserRefreshAccessTokenJob.perform",
-            response: JSON.stringify(rs),
-          },
-        },
-        "[CIAM] userRefreshAccessToken Success"
-      );
       return this.success(rs, body);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
