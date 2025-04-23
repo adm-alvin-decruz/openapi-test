@@ -858,10 +858,32 @@ async function userUpdateMembershipPass(req, res) {
   }
 }
 
-async function userRefreshAccessToken(accessToken, body) {
+async function userRefreshAccessToken(accessToken, req) {
   try {
-    return await UserResetAccessTokenJob.perform(accessToken, body);
+    loggerService.log(
+      {
+        user: {
+          action: "userRefreshAccessToken",
+          layer: "controller.userRefreshAccessToken",
+          api_header: req.headers,
+          api_body: req.body,
+        },
+      },
+      "[CIAM] userRefreshAccessToken Start Request"
+    );
+    return await UserResetAccessTokenJob.perform(accessToken, req.body);
   } catch (error) {
+    loggerService.error(
+        {
+          user: {
+            action: "userRefreshAccessToken",
+            layer: "controller.userRefreshAccessToken",
+            response_to_client: new Error(error),
+          },
+        },
+        {url: "/token/refresh"},
+        "[CIAM] userRefreshAccessToken End Request - Failed"
+    );
     const errorMessage =
         error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
