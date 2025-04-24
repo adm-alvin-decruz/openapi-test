@@ -22,6 +22,7 @@ const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
+const { maskKeyRandomly } = require("../../utils/common");
 
 const pong = { pong: "pang" };
 
@@ -546,12 +547,49 @@ router.post(
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const accessToken = req.headers.authorization.toString();
     try {
+      loggerService.log(
+        {
+          user: {
+            action: "Router",
+            url: "/token/refresh",
+            api_header: {
+                ...req.headers,
+                authorization: maskKeyRandomly(req.headers.authorization)
+            },
+            api_body: req.body,
+          },
+        },
+        "[CIAM] userRefreshAccessToken Start Request"
+      );
       const data = await userController.userRefreshAccessToken(accessToken, req);
+      const loggerData = {...data};
       if (res.newAccessToken) {
-        data.token.accessToken = res.newAccessToken;
+         data.token.accessToken = res.newAccessToken;
+         Object.assign(loggerData, { token: { ...data.token, accessToken: maskKeyRandomly(res.newAccessToken) }})
       }
+      loggerService.log(
+        {
+          user: {
+            action: "Router",
+            url: "/token/refresh",
+            response_to_client: JSON.stringify(loggerData),
+          },
+        },
+        "[CIAM-MAIN] userRefreshAccessToken Success"
+      );
       return res.status(data.statusCode).json(data);
     } catch (error) {
+       loggerService.error(
+        {
+            user: {
+                action: "Router",
+                url: "/token/refresh",
+                response_to_client: new Error(error),
+            },
+        },
+        {url: "/token/refresh"},
+        "[CIAM] userRefreshAccessToken End Request - Failed"
+      );
       const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
