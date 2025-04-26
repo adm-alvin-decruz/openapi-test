@@ -545,7 +545,7 @@ router.post(
   async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const accessToken = req.headers.authorization.toString();
+    const accessToken = res.newAccessToken ? res.newAccessToken : req.headers.authorization.toString();
     try {
       loggerService.log(
         {
@@ -564,8 +564,8 @@ router.post(
       const data = await userController.userRefreshAccessToken(accessToken, req);
       const loggerData = {...data};
       if (res.newAccessToken) {
-         data.token.accessToken = res.newAccessToken;
-         Object.assign(loggerData, { token: { ...data.token, accessToken: maskKeyRandomly(res.newAccessToken) }})
+        data.token.accessToken = res.newAccessToken;
+        Object.assign(loggerData, { token: { ...data.token, accessToken: maskKeyRandomly(res.newAccessToken) }})
       }
       loggerService.log(
         {

@@ -236,13 +236,17 @@ async function validateAPIKey(req, res, next) {
 
   //add more data for dynamic checking
   const apiKeyMappings = {
-    //key will be match with request header - value will be from env
+    //key eg: nopComm or mfaMobile is first pattern from request header - value will be from env
     nopComm: {
       apiKey: process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY,
       appId: JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`])
     },
     mfaMobile: {
       apiKey: process.env.MFA_MOBILE_REQ_PUBLIC_API_KEY,
+      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
+    },
+    aem: {
+      apiKey: process.env.AEM_REQ_PUBLIC_API_KEY,
       appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
     },
   };
