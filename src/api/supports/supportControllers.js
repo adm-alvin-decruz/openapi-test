@@ -1,5 +1,6 @@
 const SupportUserServices = require('./supportUserServices');
 const SupportSwitchesServices = require('./supportSwitchesServices');
+const SupportConfigsServices = require('./supportConfigsServices');
 const SupportTokenServices = require('./supportTokenServices');
 const SupportFailedJobsServices = require('./supportFailedJobsService');
 const SupportGalaxyServices = require('./supportGalaxyServices');
@@ -120,6 +121,19 @@ class SupportController{
     else{
       return res.status(401).send({ error: 'Unauthorized' });
     }
+  }
+
+  static async getAllConfigs(config) {
+    return SupportConfigsServices.getAllConfigs(config);
+  }
+  static async createConfig(body) {
+    return SupportConfigsServices.createConfig(body);
+  }
+  static async deleteConfigById(id) {
+    return SupportConfigsServices.deleteConfigById(id);
+  }
+  static async updateConfigById(id, body) {
+    return SupportConfigsServices.updateConfigById(id, body);
   }
 }
 
