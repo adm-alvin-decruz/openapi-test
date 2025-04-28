@@ -32,8 +32,8 @@ class EmailSensitiveHelper {
     const userCredentialsInfo = await userCredentialModel.findByUserEmailOrMandaiId(email, '');
     const normalizedEmail = email.trim().toLowerCase();
 
-    //If user from DB active = 1 & subId is available -> return email lowercase directly
-    if (userCredentialsInfo && userCredentialsInfo.user_sub_id) {
+    //If user from DB active = 1 & email from credential all lowercase -> return email lowercase directly
+    if (userCredentialsInfo && userCredentialsInfo.email && !existsCapitalizePattern(userCredentialsInfo.email)) {
       return {
         email: email.trim().toLowerCase()
       }
