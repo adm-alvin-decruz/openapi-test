@@ -4,9 +4,9 @@ const loggerService = require("../logs/logger");
 const CommonErrors = require("../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
+const configsModel = require("../db/models/configsModel");
 const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
-const appConfig = require("../config/appConfig");
 const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
@@ -231,51 +231,85 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 async function validateAPIKey(req, res, next) {
   const validationSwitch = await switchService.findByName("api_key_validation");
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  const apiKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
-  const appId = mwgAppID.split('.')[0];
+  const apiKeyIncoming = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
 
-  //add more data for dynamic checking
-  const apiKeyMappings = {
-    //key eg: nopComm or mfaMobile is first pattern from request header - value will be from env
-    nopComm: {
-      apiKey: process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY,
-      appId: JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`])
-    },
-    mfaMobile: {
-      apiKey: process.env.MFA_MOBILE_REQ_PUBLIC_API_KEY,
-      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
-    },
-    aem: {
-      apiKey: process.env.AEM_REQ_PUBLIC_API_KEY,
-      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
-    },
-  };
+  try {
+    loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+      layer: "middleware.validateAPIKey",
+      validationSwitch: JSON.stringify(validationSwitch),
+      mwgAppID: maskKeyRandomly(mwgAppID),
+      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+    });
 
-  const validateData = appId ? apiKeyMappings[appId] : null;
+    const getConfigAppId = await configsModel.findByConfigKey(mwgAppID, mwgAppID);
+    if (!getConfigAppId || !getConfigAppId.key) {
+      loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+        layer: "middleware.validateAPIKey",
+        validationSwitch: JSON.stringify(validationSwitch),
+        mwgAppID: maskKeyRandomly(mwgAppID),
+        appIdConfiguration: undefined,
+        incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+      });
+      return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+    }
 
-  if (!validateData) {
-    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
-  }
+    loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+      layer: "middleware.validateAPIKey",
+      validationSwitch: JSON.stringify(validationSwitch),
+      mwgAppID: maskKeyRandomly(mwgAppID),
+      appIdConfiguration: JSON.stringify(getConfigAppId),
+      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+    });
+    if (validationSwitch.switch === 1) {
+      if (!getConfigAppId || !getConfigAppId.value) {
+        loggerWrapper("CIAM] Validate Api Key Middleware - Failed validation", {
+          layer: "middleware.validateAPIKey",
+          validationSwitch: JSON.stringify(validationSwitch),
+          mwgAppID: maskKeyRandomly(mwgAppID),
+          appIdConfiguration: JSON.stringify(getConfigAppId),
+          incomingApiKey: maskKeyRandomly(apiKeyIncoming),
+          error: "configuration app id not found!"
+        });
+        return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+      }
 
-  loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
-    layer: "middleware.validateAPIKey",
-    validationSwitch: JSON.stringify(validationSwitch),
-    mwgAppID: maskKeyRandomly(mwgAppID),
-    expectedApiKey: maskKeyRandomly(validateData.apiKey),
-    incomingApiKey: maskKeyRandomly(apiKey)
-  });
-  if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
-    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
-  }
-  if (validationSwitch.switch === 1) {
-    if (apiKey && apiKey === validateData.apiKey) {
+      const apiKeyConfig = getConfigAppId.value.lambda_api_key;
+      const bindingChecking = getConfigAppId.value.binding;
+      const apiKeyEnv = process.env[`${apiKeyConfig}`];
+
+      if (bindingChecking && apiKeyEnv && apiKeyEnv === apiKeyIncoming) {
+        loggerWrapper("CIAM] Validate Api Key Middleware - Completed validation", {
+          layer: "middleware.validateAPIKey",
+          validationSwitch: JSON.stringify(validationSwitch),
+          mwgAppID: maskKeyRandomly(mwgAppID),
+          appIdConfiguration: JSON.stringify(getConfigAppId),
+          incomingApiKey: maskKeyRandomly(apiKeyIncoming),
+          error: "configuration app id not found!"
+        });
+        return next();
+      }
+    }
+    if (validationSwitch.switch === 0) {
       return next();
     }
+    loggerWrapper("CIAM] Validate Api Key Middleware - Finished validation", {
+      layer: "middleware.validateAPIKey",
+      validationSwitch: JSON.stringify(validationSwitch),
+      mwgAppID: maskKeyRandomly(mwgAppID),
+      appIdConfiguration: JSON.stringify(getConfigAppId),
+      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+    });
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  } catch (error) {
+    loggerWrapper("CIAM] Validate Api Key Middleware - Failed Exception", {
+      layer: "middleware.validateAPIKey",
+      validationSwitch: JSON.stringify(validationSwitch),
+      mwgAppID: maskKeyRandomly(mwgAppID),
+      error: new Error(error),
+      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+    });
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  if (validationSwitch.switch === 0) {
-    return next();
-  }
-  return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
 }
 
 /**

@@ -111,6 +111,11 @@ const existsCapitalizePattern = (keyword) => {
   return regexEmailValid.test(keyword.toString());
 };
 
+const capitalizedFirstChar = (keyword) => {
+  if (!keyword) return '';
+  return keyword.replace(/^./, c => c.toUpperCase());
+}
+
 module.exports = {
   messageLang,
   getSource,
@@ -123,5 +128,6 @@ module.exports = {
   omit,
   maskKeyRandomly,
   emailPattern,
-  existsCapitalizePattern
+  existsCapitalizePattern,
+  capitalizedFirstChar
 };
