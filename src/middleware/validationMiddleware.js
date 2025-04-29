@@ -13,6 +13,7 @@ const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
+const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
 
 /**
  * Validate empty request
@@ -246,29 +247,32 @@ async function validateAPIKey(req, res, next) {
 
   try {
     // get App ID from db config table
-    const dbConfigAppId = await configsModel.findByConfigKey(mwgAppID, mwgAppID);
+    const dbConfigAppId = await configsModel.findByConfigKey("app_id_settings", "app_id_settings");
     if (!dbConfigAppId || !dbConfigAppId.key) {
       logObj.appIdConfiguration = undefined;
       loggerWrapper(action +" - Process", logObj);
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
-    logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
     loggerWrapper(action +" - Process", logObj);
-
     if (validateAPIKeySwitch.switch === 1) {
       logObj.error = "configuration app id not found!";
-      if (!dbConfigAppId || !dbConfigAppId.value) {
+      if (!dbConfigAppId.value || !dbConfigAppId.value.length) {
         loggerWrapper(action +"  - Failed validation", logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
-      const apiKeyConfig = dbConfigAppId.value.lambda_api_key;
-      const bindingCheck = dbConfigAppId.value.binding;
+      const appIdConfigFromDB = getAppIdConfiguration(dbConfigAppId.value, mwgAppID);
+      if (!appIdConfigFromDB) {
+        loggerWrapper(action +"  - Failed validation", logObj);
+        return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+      }
+
+      const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
+      const bindingCheck = appIdConfigFromDB.binding;
       const apiKeyEnv = process.env[`${apiKeyConfig}`];
-
       if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
-
+        logObj.error = "";
         loggerWrapper(action +" - Completed validation", logObj);
         return next();
       }
