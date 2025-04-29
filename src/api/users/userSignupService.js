@@ -447,7 +447,7 @@ class UserSignupService {
     // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
       // check is user email existed at wildpass userCognito
-      const userBelongWildpassGroup = await cognitoService.checkUserBelongWildPass(req.body.email, userExistedInCognito);
+      const userBelongWildpassGroup = await cognitoService.checkUserBelongOnlyWildpass(req.body.email, userExistedInCognito);
 
       const userInfo = await userModel.findByEmail(req.body.email);
       if (userInfo && userInfo.email && userBelongWildpassGroup) {

@@ -2,14 +2,12 @@ const cognitoService = require("../../../services/cognitoService");
 const passwordService = require("../userPasswordService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const loggerService = require("../../../logs/logger");
-const switchService = require("../../../services/switchService");
 const nopCommerceLoginService = require("../../components/nopCommerce/services/nopCommerceLoginService");
+const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 
 async function proceedVerifyPassword(userInfo, password) {
-  const passwordVerificationSwitch = await switchService.findByName(
-    "password_verification_nopCommerce"
-  );
-  if (passwordVerificationSwitch.switch === 1) {
+  const enableVerificationByNC = await switchIsTurnOn("password_verification_nopCommerce");
+  if (enableVerificationByNC) {
     const loginResult = await nopCommerceLoginService.loginNopCommerce(
       userInfo.username,
       password
