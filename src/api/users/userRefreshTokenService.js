@@ -11,10 +11,10 @@ class UserRefreshTokenService {
       tokenUse: "access",
       clientId: process.env.USER_POOL_CLIENT_ID,
     });
-    let email = "";
+    let email = body.email ? body.email : "";
     if (body.includeEmail) {
       const userInfo = await userModel.findByEmailOrMandaiId(
-        null,
+        email,
         body.mandaiId
       );
       email = userInfo.email;
@@ -31,6 +31,7 @@ class UserRefreshTokenService {
     } catch (error) {
       loggerService.error(
         {
+          email: email,
           mandaiId: body.mandaiId,
           error: new Error(error),
           layer: "UserRefreshTokenService.execute",
