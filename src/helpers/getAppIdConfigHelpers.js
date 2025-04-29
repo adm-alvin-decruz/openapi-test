@@ -4,7 +4,7 @@
  *     { 'mfaMobile.Dev.service.mandaiapi.ciam': { "lambda_api_key": "mfa.mobile"} },
  *     { 'nopComm.Dev.servicehub.mandaipvtapi.ciam': { "lambda_api_key": "nopCommerce.private"} }
  *   ]
- * @param appId - key need to get config. Eg: nopComm.Dev.servicehub.mandaipvtapi.ciam
+ * @param appId - appId need to get config. Eg: nopComm.Dev.servicehub.mandaipvtapi.ciam
  * @return {Object} - Eg: { "lambda_api_key": "nopCommerce.private"}
  */
 function getAppIdConfiguration(data, appId) {

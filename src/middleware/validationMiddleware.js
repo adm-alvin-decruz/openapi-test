@@ -254,6 +254,7 @@ async function validateAPIKey(req, res, next) {
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
+    logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
     loggerWrapper(action +" - Process", logObj);
     if (validateAPIKeySwitch.switch === 1) {
       logObj.error = "configuration app id not found!";
