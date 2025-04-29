@@ -46,7 +46,7 @@ class Configs {
     }
   }
 
-  static async findAllByConfig(config) {
+  static async findByConfig(config) {
     const sql = 'SELECT * FROM configs where config = ?';
 
     try {
@@ -60,7 +60,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.findAllByConfig - Failed"
+        "[CIAM-MAIN] ConfigsModel.findByConfig - Failed"
       );
       throw new Error(`Error reading all configs: ${error}`);
     }
@@ -70,7 +70,7 @@ class Configs {
     const sql = 'DELETE FROM configs WHERE id = ?';
 
     try {
-      await pool.query(sql, [id]);
+      await pool.execute(sql, [id]);
       return {
         message: "delete config successfully!"
       };
