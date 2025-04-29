@@ -229,51 +229,51 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 }
 
 async function validateAPIKey(req, res, next) {
-  const validationSwitch = await switchService.findByName("api_key_validation");
+  const validateAPIKeySwitch = await switchService.findByName("api_key_validation");
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  const apiKeyIncoming = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
+  const reqHeaderAPIKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
 
   // log variables
   let action = "CIAM] Validate Api Key Middleware";
   let logObj = {
-                layer: "middleware.validateAPIKey",
-                validationSwitch: JSON.stringify(validationSwitch),
-                mwgAppID: maskKeyRandomly(mwgAppID),
-                incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-              }
+    layer: "middleware.validateAPIKey",
+    validateAPIKeySwitch: JSON.stringify(validateAPIKeySwitch),
+    mwgAppID: maskKeyRandomly(mwgAppID),
+    incomingApiKey: maskKeyRandomly(reqHeaderAPIKey)
+  }
 
+  loggerWrapper(action +" - Process", logObj);
 
   try {
-    loggerWrapper(action +" - Process", logObj);
-
-    const getConfigAppId = await configsModel.findByConfigKey(mwgAppID, mwgAppID);
-    if (!getConfigAppId || !getConfigAppId.key) {
+    // get App ID from db config table
+    const dbConfigAppId = await configsModel.findByConfigKey(mwgAppID, mwgAppID);
+    if (!dbConfigAppId || !dbConfigAppId.key) {
       logObj.appIdConfiguration = undefined;
       loggerWrapper(action +" - Process", logObj);
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
-    logObj.appIdConfiguration = JSON.stringify(getConfigAppId);
+    logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
     loggerWrapper(action +" - Process", logObj);
 
-    if (validationSwitch.switch === 1) {
+    if (validateAPIKeySwitch.switch === 1) {
       logObj.error = "configuration app id not found!";
-      if (!getConfigAppId || !getConfigAppId.value) {
+      if (!dbConfigAppId || !dbConfigAppId.value) {
         loggerWrapper(action +"  - Failed validation", logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
-      const apiKeyConfig = getConfigAppId.value.lambda_api_key;
-      const bindingChecking = getConfigAppId.value.binding;
+      const apiKeyConfig = dbConfigAppId.value.lambda_api_key;
+      const bindingCheck = dbConfigAppId.value.binding;
       const apiKeyEnv = process.env[`${apiKeyConfig}`];
 
-      if (bindingChecking && apiKeyEnv && apiKeyEnv === apiKeyIncoming) {
+      if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
 
         loggerWrapper(action +" - Completed validation", logObj);
         return next();
       }
     }
-    if (validationSwitch.switch === 0) {
+    if (validateAPIKeySwitch.switch === 0) {
       return next();
     }
 
