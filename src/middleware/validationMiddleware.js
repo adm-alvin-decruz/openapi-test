@@ -233,43 +233,33 @@ async function validateAPIKey(req, res, next) {
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   const apiKeyIncoming = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
 
+  // log variables
+  let action = "CIAM] Validate Api Key Middleware";
+  let logObj = {
+                layer: "middleware.validateAPIKey",
+                validationSwitch: JSON.stringify(validationSwitch),
+                mwgAppID: maskKeyRandomly(mwgAppID),
+                incomingApiKey: maskKeyRandomly(apiKeyIncoming)
+              }
+
+
   try {
-    loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
-      layer: "middleware.validateAPIKey",
-      validationSwitch: JSON.stringify(validationSwitch),
-      mwgAppID: maskKeyRandomly(mwgAppID),
-      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-    });
+    loggerWrapper(action +" - Process", logObj);
 
     const getConfigAppId = await configsModel.findByConfigKey(mwgAppID, mwgAppID);
     if (!getConfigAppId || !getConfigAppId.key) {
-      loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
-        layer: "middleware.validateAPIKey",
-        validationSwitch: JSON.stringify(validationSwitch),
-        mwgAppID: maskKeyRandomly(mwgAppID),
-        appIdConfiguration: undefined,
-        incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-      });
+      logObj.appIdConfiguration = undefined;
+      loggerWrapper(action +" - Process", logObj);
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
-    loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
-      layer: "middleware.validateAPIKey",
-      validationSwitch: JSON.stringify(validationSwitch),
-      mwgAppID: maskKeyRandomly(mwgAppID),
-      appIdConfiguration: JSON.stringify(getConfigAppId),
-      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-    });
+    logObj.appIdConfiguration = JSON.stringify(getConfigAppId);
+    loggerWrapper(action +" - Process", logObj);
+
     if (validationSwitch.switch === 1) {
+      logObj.error = "configuration app id not found!";
       if (!getConfigAppId || !getConfigAppId.value) {
-        loggerWrapper("CIAM] Validate Api Key Middleware - Failed validation", {
-          layer: "middleware.validateAPIKey",
-          validationSwitch: JSON.stringify(validationSwitch),
-          mwgAppID: maskKeyRandomly(mwgAppID),
-          appIdConfiguration: JSON.stringify(getConfigAppId),
-          incomingApiKey: maskKeyRandomly(apiKeyIncoming),
-          error: "configuration app id not found!"
-        });
+        loggerWrapper(action +"  - Failed validation", logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
@@ -278,36 +268,22 @@ async function validateAPIKey(req, res, next) {
       const apiKeyEnv = process.env[`${apiKeyConfig}`];
 
       if (bindingChecking && apiKeyEnv && apiKeyEnv === apiKeyIncoming) {
-        loggerWrapper("CIAM] Validate Api Key Middleware - Completed validation", {
-          layer: "middleware.validateAPIKey",
-          validationSwitch: JSON.stringify(validationSwitch),
-          mwgAppID: maskKeyRandomly(mwgAppID),
-          appIdConfiguration: JSON.stringify(getConfigAppId),
-          incomingApiKey: maskKeyRandomly(apiKeyIncoming),
-          error: "configuration app id not found!"
-        });
+
+        loggerWrapper(action +" - Completed validation", logObj);
         return next();
       }
     }
     if (validationSwitch.switch === 0) {
       return next();
     }
-    loggerWrapper("CIAM] Validate Api Key Middleware - Finished validation", {
-      layer: "middleware.validateAPIKey",
-      validationSwitch: JSON.stringify(validationSwitch),
-      mwgAppID: maskKeyRandomly(mwgAppID),
-      appIdConfiguration: JSON.stringify(getConfigAppId),
-      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-    });
+
+    loggerWrapper(action +" - Finished validation", logObj);
+
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   } catch (error) {
-    loggerWrapper("CIAM] Validate Api Key Middleware - Failed Exception", {
-      layer: "middleware.validateAPIKey",
-      validationSwitch: JSON.stringify(validationSwitch),
-      mwgAppID: maskKeyRandomly(mwgAppID),
-      error: new Error(error),
-      incomingApiKey: maskKeyRandomly(apiKeyIncoming)
-    });
+    logObj.error = new Error(error);
+    loggerWrapper(action +" - Failed Exception", logObj);
+
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 }
