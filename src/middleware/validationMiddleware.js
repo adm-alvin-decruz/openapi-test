@@ -247,7 +247,7 @@ async function validateAPIKey(req, res, next) {
 
   try {
     // get App ID from db config table
-    const dbConfigAppId = await configsModel.findByConfigKey("app_id_settings", "app_id_settings");
+    const dbConfigAppId = await configsModel.findByConfigKey("app_id", "app_id_key_binding");
     if (!dbConfigAppId || !dbConfigAppId.key) {
       logObj.appIdConfiguration = undefined;
       loggerWrapper(action +" - Process", logObj);
