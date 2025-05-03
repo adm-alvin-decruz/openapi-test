@@ -2,7 +2,7 @@ const ConfigsModel = require('../../db/models/configsModel');
 
 class SupportConfigsServices {
 
-  static async getAllConfigs(config) {
+  static async getByConfigs(config) {
     return config ? await ConfigsModel.findByConfig(config) : await ConfigsModel.findAll();
   }
   static async createConfig(body) {

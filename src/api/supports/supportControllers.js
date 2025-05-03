@@ -123,8 +123,8 @@ class SupportController{
     }
   }
 
-  static async getAllConfigs(config) {
-    return SupportConfigsServices.getAllConfigs(config);
+  static async getByConfigs(config) {
+    return SupportConfigsServices.getByConfigs(config);
   }
   static async createConfig(body) {
     return SupportConfigsServices.createConfig(body);
