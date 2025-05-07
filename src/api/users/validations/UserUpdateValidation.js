@@ -4,7 +4,9 @@ const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const passwordService = require("../userPasswordService");
+const UserPasswordVersionService = require("../userPasswordVersionService");
 const argon2 = require("argon2");
+const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 
 class UserUpdateValidation {
   constructor() {
@@ -16,10 +18,9 @@ class UserUpdateValidation {
   }
 
   //return true/false
-  static async verifyPassword(email, password) {
-    const userCredential = await userCredentialModel.findByUserEmail(email);
+  static async verifyPassword(userCredential, password) {
     //check by password salt - from migration always have salt
-    if (userCredential && userCredential.salt) {
+    if (userCredential && userCredential.salt && !userCredential.password_hash.startsWith("$argon2")) {
       return passwordService
           .createPassword(password, userCredential.salt)
           .toUpperCase() === userCredential.password_hash.toUpperCase()
@@ -129,8 +130,10 @@ class UserUpdateValidation {
 
       //verify old password is not match
       let oldPasswordIsSame = false;
+      const userCredential = await userCredentialModel.findByUserEmail(req.email);
+
       if (bodyData.oldPassword) {
-        oldPasswordIsSame = await this.verifyPassword(req.email, bodyData.oldPassword)
+        oldPasswordIsSame = await this.verifyPassword(userCredential, bodyData.oldPassword)
       }
       if (!oldPasswordIsSame) {
         return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
@@ -139,6 +142,16 @@ class UserUpdateValidation {
       //verify new password is same with old password
       if (bodyData.oldPassword && bodyData.oldPassword === bodyData.newPassword) {
         return (this.error = CommonErrors.sameOldPasswordException(req.language));
+      }
+
+      //verify with password version
+      const enablePasswordVersionChecking =  await switchIsTurnOn("password_version_checking");
+      if (enablePasswordVersionChecking) {
+        const newPasswordHadMarkedVersion =
+          await UserPasswordVersionService.passwordValidProcessing(userCredential.user_id, bodyData.newPassword);
+        if (newPasswordHadMarkedVersion) {
+          return (this.error = CommonErrors.sameOldPasswordException(req.language));
+        }
       }
     }
     return (this.error = null);

@@ -1,5 +1,7 @@
 const CommonErrors = require("../../../config/https/errors/commonErrors");
 const { passwordPattern } = require("../../../utils/common");
+const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
+const UserPasswordVersionService = require("../userPasswordVersionService");
 
 class UserConfirmResetPasswordValidation {
   constructor() {
