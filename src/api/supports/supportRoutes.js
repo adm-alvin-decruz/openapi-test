@@ -162,7 +162,7 @@ router.get('/support/configs', async (req, res) => {
 
   if(valAppID === true) {
     try {
-      const configs = await supportController.getAllConfigs(req.query.config);
+      const configs = await supportController.getByConfigs(req.query.config);
       return res.status(200).json(configs);
     } catch {
       return res.status(500).send(CommonErrors.InternalServerError());
