@@ -165,7 +165,7 @@ router.get('/support/configs', async (req, res) => {
       const configs = await supportController.getByConfigs(req.query.config);
       return res.status(200).json(configs);
     } catch {
-      return res.status(500).send(CommonErrors.InternalServerError());
+      return res.status(400).send({ message: 'Config is not found' });
     }
   }
   else{
@@ -181,7 +181,7 @@ router.post('/support/configs', async (req, res) => {
       const config = await supportController.createConfig(req.body);
       return res.status(200).json(config);
     } catch {
-      return res.status(500).send(CommonErrors.InternalServerError());
+      return res.status(400).send({ message: 'Config is duplicated' });
     }
   }
   else{
@@ -197,7 +197,7 @@ router.delete('/support/configs', async (req, res) => {
       const config = await supportController.deleteConfigById(req.query.id);
       return res.status(200).json(config);
     } catch {
-      return res.status(500).send(CommonErrors.InternalServerError());
+      return res.status(400).send({ message: `config id: ${req.query.id} is not found` });
     }
   }
   else{
@@ -213,7 +213,7 @@ router.patch('/support/configs', async (req, res) => {
       const config = await supportController.updateConfigById(req.query.id, req.body);
       return res.status(200).json(config);
     } catch {
-      return res.status(500).send(CommonErrors.InternalServerError());
+      return res.status(400).send({ message: `config id: ${req.query.id} is not found` });
     }
   }
   else{
