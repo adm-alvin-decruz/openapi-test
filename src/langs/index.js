@@ -4,6 +4,7 @@ module.exports = {
     cognito_user_not_exist: "This email address does not have a Cognito user.",
     confirmPassword_invalid: "Passwords do not match.",
     confirm_reset_password_success: "Password successfully reset.",
+    confirmPassword_required: "Confirm Passwords is required.",
     country_invalid: "Country is invalid.",
     db_email_not_exist: "This email address does not have a Mandai account.",
     db_membership_details_create_error: "Failed to create membership details.",
@@ -95,6 +96,7 @@ module.exports = {
     cognito_user_not_exist: "此电子邮件地址没有对应的 Cognito 用户。",
     confirmPassword_invalid: "密码不匹配。",
     confirm_reset_password_success: "密码已成功重置。",
+    confirmPassword_required: "需要确认密码。",
     country_invalid: "国家无效。",
     db_email_not_exist: "此电子邮件地址没有对应的 Mandai 账户。",
     db_membership_details_create_error: "创建会员详细信息失败。",
@@ -180,6 +182,7 @@ module.exports = {
     confirmPassword_invalid: "비밀번호가 일치하지 않습니다.",
     confirm_reset_password_success: "비밀번호가 성공적으로 재설정되었습니다.",
     country_invalid: "국가가 유효하지 않습니다.",
+    confirmPassword_required: "비밀번호 확인이 필요합니다.",
     db_email_not_exist: "이 이메일 주소에 해당하는 Mandai 계정이 없습니다.",
     db_membership_details_create_error: "멤버십 세부정보 생성에 실패했습니다.",
     db_membership_details_update_error:
@@ -274,6 +277,7 @@ module.exports = {
       "このメールアドレスには Cognito ユーザーが存在しません。",
     confirmPassword_invalid: "パスワードが一致しません。",
     confirm_reset_password_success: "パスワードが正常にリセットされました。",
+    confirmPassword_required: "パスワードの確認が必要です。",
     country_invalid: "国が無効です。",
     db_email_not_exist:
       "このメールアドレスには Mandai アカウントが存在しません。",

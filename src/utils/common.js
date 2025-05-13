@@ -41,7 +41,7 @@ const passwordPattern = (password) => {
 };
 
 const passwordPatternComplexity = (password) => {
-  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\\\$%^&*_+=\\\\[\\\\]<>]).{10,}$", "g");
+  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\$%^&*_+=\\[\\]<>]).{10,}$", "g");;
   return regexPasswordValid.test(password.toString());
 };
 

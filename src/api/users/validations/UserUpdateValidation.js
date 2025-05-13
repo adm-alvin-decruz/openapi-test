@@ -4,7 +4,6 @@ const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const passwordService = require("../userPasswordService");
-const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const argon2 = require("argon2");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 
@@ -116,11 +115,27 @@ class UserUpdateValidation {
         req.language
       ));
     }
-    if (bodyData.newPassword) {
+    if (bodyData.newPassword || bodyData.confirmPassword || bodyData.oldPassword) {
       if (!bodyData.oldPassword && !privateMode) {
         return (this.error = CommonErrors.BadRequest(
           "oldPassword",
           "oldPassword_required",
+          req.language
+        ));
+      }
+
+      if (!bodyData.newPassword) {
+        return (this.error = CommonErrors.BadRequest(
+          "newPassword",
+          "newPassword_required",
+          req.language
+        ));
+      }
+
+      if (!bodyData.confirmPassword && !privateMode) {
+        return (this.error = CommonErrors.BadRequest(
+          "confirmPassword",
+          "confirmPassword_required",
           req.language
         ));
       }
