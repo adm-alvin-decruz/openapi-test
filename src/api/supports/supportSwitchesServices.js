@@ -14,6 +14,10 @@ class SupportSwitchesServices {
   static async updateSwitchesService (req) {
     return await SwitchesModel.updateMultiple(req.body);
   }
+
+  static async createSwitch(body) {
+    return await SwitchesModel.create(body);
+  }
 }
 
 module.exports = SupportSwitchesServices;

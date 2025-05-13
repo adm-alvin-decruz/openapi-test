@@ -612,7 +612,7 @@ async function userValidateResetPassword(passwordToken, lang) {
 }
 
 async function userConfirmResetPassword(body) {
-  const message = UserConfirmResetPasswordValidation.execute(body);
+  const message = await UserConfirmResetPasswordValidation.execute(body);
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }

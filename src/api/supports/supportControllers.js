@@ -30,6 +30,10 @@ class SupportController{
     return SupportSwitchesServices.updateSwitchesService(req);
   }
 
+  static async createSwitches (body) {
+    return SupportSwitchesServices.createSwitch(body);
+  }
+
   static async getUsersPaginationCustom(req){
     return SupportUserServices.getUsersPaginationCustomService(req);
   }

@@ -1,5 +1,4 @@
 const pool = require('../../connections/mysqlConn');
-const { getCurrentUTCTimestamp } = require('../../../utils/dateUtils');
 const commonService = require('../../../services/commonService');
 const loggerService = require('../../../logs/logger');
 
@@ -15,13 +14,13 @@ class Switch {
     const params = [data.name, data.switch, data.description];
 
     try {
-      const result = await pool.execute(sql, params);
+      await pool.execute(sql, params);
       return {
-        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        newsletter_id: result.insertId
+        message: `create switches ${data.name} success`,
       };
     } catch (error) {
       console.error(`Error creating switch: ${commonService.replaceSqlPlaceholders(sql, params)}`);
+      throw new Error(`Error insert switches: ${error}`);
     }
   }
 
