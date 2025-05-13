@@ -611,13 +611,13 @@ async function userValidateResetPassword(passwordToken, lang) {
   }
 }
 
-async function userConfirmResetPassword(body) {
-  const message = UserConfirmResetPasswordValidation.execute(body);
+async function userConfirmResetPassword(reqBody) {
+  const message = UserConfirmResetPasswordValidation.execute(reqBody);
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    return await UserConfirmResetPasswordJob.perform(body);
+    return await UserConfirmResetPasswordJob.perform(reqBody);
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";

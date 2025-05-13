@@ -1,11 +1,7 @@
 const passwordService = require("../userPasswordService");
 const passwordVersionModel = require("../../../db/models/passwordVersionModel");
 
-async function isPasswordVersionExisted(
-  passwordInput,
-  listPasswordsByVersion,
-  versionCounting
-) {
+async function isPasswordVersionExisted(passwordInput, listPasswordsByVersion, versionCounting) {
   if (!listPasswordsByVersion || !listPasswordsByVersion.length) {
     return false;
   }
@@ -15,10 +11,7 @@ async function isPasswordVersionExisted(
 
   //2. check listPasswordsByVersion input is existed in list password or not - if existed return false
   for (const pass of listPasswordsByVersion) {
-    const isPasswordExisted = await passwordService.comparePassword(
-      passwordInput,
-      pass.password_hash
-    );
+    const isPasswordExisted = await passwordService.comparePassword(passwordInput, pass.password_hash);
 
     if (isPasswordExisted) {
       return true;
@@ -27,13 +20,7 @@ async function isPasswordVersionExisted(
   return false;
 }
 
-async function updatePasswordVersionAccordingly(
-  userId,
-  passwordHashed,
-  versionCounting,
-  passwordsByConfigVersion,
-  passwordsMaster
-) {
+async function newPasswordVersion(userId, passwordHashed, versionCounting, passwordsByConfigVersion, passwordsMaster) {
   //  3.a create new record with version === config version number
   await passwordVersionModel.create(userId, passwordHashed, versionCounting);
 
@@ -66,5 +53,5 @@ async function updatePasswordVersionAccordingly(
 }
 module.exports = {
   isPasswordVersionExisted,
-  updatePasswordVersionAccordingly,
+  newPasswordVersion,
 };

@@ -8,14 +8,14 @@ class UserConfirmResetPasswordValidation {
     this.error = null;
   }
 
-  static execute(data) {
+  static execute(reqBody) {
     //validate missing required params
     const paramsShouldNotEmpty = [
       "newPassword",
       "confirmPassword",
       "passwordToken",
     ];
-    const listKeys = Object.keys(data);
+    const listKeys = Object.keys(reqBody);
 
     const paramsMissing = paramsShouldNotEmpty.filter(
       (key) => !listKeys.includes(key)
@@ -24,29 +24,29 @@ class UserConfirmResetPasswordValidation {
       return (this.error = CommonErrors.BadRequest(
         paramsMissing[0],
         `${paramsMissing[0]}_required`,
-        data.language
+        reqBody.language
       ));
     }
 
     //if parameters have some empty string
     const paramsInvalid = paramsShouldNotEmpty
       .filter((key) => listKeys.includes(key))
-      .filter((ele) => data[`${ele}`].trim() === "");
+      .filter((ele) => reqBody[`${ele}`].trim() === "");
 
     if (paramsInvalid.length) {
       return (this.error = CommonErrors.BadRequest(
         paramsInvalid[0],
         `${paramsInvalid[0]}_invalid`,
-        data.language
+        reqBody.language
       ));
     }
 
-    if (data.newPassword && !passwordPattern(data.newPassword)) {
-      return (this.error = CommonErrors.PasswordErr(data.language));
+    if (reqBody.newPassword && !passwordPattern(reqBody.newPassword)) {
+      return (this.error = CommonErrors.PasswordErr(reqBody.language));
     }
 
-    if (data.newPassword !== data.confirmPassword) {
-      return (this.error = CommonErrors.PasswordNotMatch(data.language));
+    if (reqBody.newPassword !== reqBody.confirmPassword) {
+      return (this.error = CommonErrors.PasswordNotMatch(reqBody.language));
     }
 
     return (this.error = null);
