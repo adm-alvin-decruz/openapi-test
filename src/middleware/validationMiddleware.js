@@ -272,9 +272,13 @@ async function validateAPIKey(req, res, next) {
       const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
       const bindingCheck = appIdConfigFromDB.binding;
       const apiKeyEnv = process.env[`${apiKeyConfig}`];
+      if (!bindingCheck) {
+        loggerWrapper(action +" - Completed validation - binding is false", logObj);
+        return next();
+      }
       if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
         logObj.error = "";
-        loggerWrapper(action +" - Completed validation", logObj);
+        loggerWrapper(action +" - Completed validation - binding is true", logObj);
         return next();
       }
     }
