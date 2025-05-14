@@ -78,14 +78,15 @@ class UserSignupService {
   userCredentialModelExecution(credentialData) {
     const sql = `
       INSERT INTO user_credentials
-      (user_id, username, password_hash, salt, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      (user_id, username, password_hash, salt, user_sub_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       credentialData.user_id,
       credentialData.username,
       credentialData.password_hash,
       credentialData.salt,
+      credentialData.user_sub_id,
       getCurrentUTCTimestamp(),
       getCurrentUTCTimestamp(),
     ];
@@ -130,7 +131,7 @@ class UserSignupService {
     return commonService.replaceSqlPlaceholders(sql, params);
   }
 
-  importUserInformation(userDB, req, hashPassword, salt, phoneNumber) {
+  importUserInformation(userDB, req, hashPassword, salt, phoneNumber, userSubId) {
     return [
       req.body.newsletter && req.body.newsletter.name
         ? this.userNewsletterModelExecution({
@@ -145,6 +146,7 @@ class UserSignupService {
         username: req.body.email,
         password_hash: hashPassword,
         salt: salt,
+        user_sub_id: userSubId
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
@@ -159,21 +161,7 @@ class UserSignupService {
     ].filter((work) => !!work);
   }
 
-  async saveUserDB({ req, phoneNumber, mandaiId, hashPassword, saltPassword }) {
-    loggerService.log(
-      {
-        user: {
-          action: "saveUserDB",
-          phoneNumber: phoneNumber,
-          mandaiId: mandaiId,
-          hashPassword: maskKeyRandomly(hashPassword),
-          saltPassword: maskKeyRandomly(saltPassword),
-          body: req.body,
-          layer: "userSignupService.saveUserDB",
-        },
-      },
-      "[CIAM] Start saveUserDB at Signup Service"
-    );
+  async saveUserDB({ req, phoneNumber, mandaiId, hashPassword, saltPassword, userSubId }) {
     const source = getSource(req.headers["mwg-app-id"]);
 
     let userDB = null;
@@ -220,36 +208,27 @@ class UserSignupService {
             req,
             hashPassword,
             saltPassword,
-            phoneNumber
+            phoneNumber,
+            userSubId
           )
         );
-        loggerService.log(
-          {
-            user: {
-              action: "saveUserDB",
-              phoneNumber,
-              mandaiId,
-              layer: "userSignupService.saveUserDB",
-            },
-          },
-          "[CIAM] End saveUserDB at Signup Service - Success"
-        );
+        this.loggerWrapper("[CIAM] End saveUserDB at Signup Service - Success", {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser.saveUserDB",
+          phoneNumber,
+          mandaiId,
+        });
       } catch (error) {
-        loggerService.error(
-          {
-            user: {
-              action: "saveUserDB",
-              phoneNumber,
-              mandaiId,
-              hashPassword: maskKeyRandomly(hashPassword),
-              saltPassword: maskKeyRandomly(saltPassword),
-              body: req.body,
-              layer: "userSignupService.saveUserDB",
-              error: `${error}`,
-            },
-          },
-          "[CIAM] End saveUserDB at Signup Service - Failed"
-        );
+        this.loggerWrapper("[CIAM] End saveUserDB at Signup Service - Failed", {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser.saveUserDB",
+          email: req.body.email,
+          error: new Error(error),
+          phoneNumber,
+          mandaiId,
+          hashPassword: maskKeyRandomly(hashPassword),
+          saltPassword: maskKeyRandomly(saltPassword),
+        }, "error");
         await failedJobsModel.create({
           uuid: crypto.randomUUID(),
           name: "failedCreateNewUserInformation",
@@ -335,27 +314,12 @@ class UserSignupService {
    * @returns
    */
   async handleUpdateUserBelongWildPass(req, userCognito, userDB, passwordCredential) {
-    // logger
-    loggerService.log(
-      {
-        user: {
-          membership: req.body.group,
-          action: "handleUpdateUserBelongWildPass",
-          body: req.body,
-          userCognito: userCognito,
-          userDB: userDB,
-          layer: "userSignupService.handleUpdateUserBelongWildPass",
-        },
-      },
-      "[CIAM] Start handleUpdateUserBelongWildPass Service"
-    );
-
     try {
       await cognitoService.cognitoAdminSetUserPassword(
         req.body.email,
         passwordCredential.cognito.hashPassword
       );
-      
+
       await userSignupHelper.updatePasswordCredential(req.body.email, passwordCredential);
 
       await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group);
@@ -412,44 +376,31 @@ class UserSignupService {
         );
       }
 
+      const mandaiId = getOrCheck(userCognito, "custom:mandai_id");
       !!req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 1,
         }));
-      loggerService.log(
-        {
-          user: {
-            membership: req.body.group,
-            action: "handleUpdateUserBelongWildPass",
-            userCognito: userCognito,
-            layer: "userSignupService.handleUpdateUserBelongWildPass",
-          },
-        },
-        "[CIAM] End handleUpdateUserBelongWildPass Service - Success"
-      );
-      return {
-        mandaiId: getOrCheck(userCognito, "custom:mandai_id"),
-      };
+      this.loggerWrapper("[CIAM] End handleUpdateUserBelongWildPass Service - Success", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser.handleUpdateUserBelongWildPass",
+        email: req.body.email,
+        mandaiId
+      });
+      return { mandaiId }
     } catch (error) {
+      this.loggerWrapper("[CIAM] End handleUpdateUserBelongWildPass Service - Failed", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser.handleUpdateUserBelongWildPass",
+        email: req.body.email,
+        userCognito: userCognito,
+        userDB: userDB,
+        error: new Error(`User is signup failed with case existed at Cognito! - ${error}`)
+      }, "error");
       req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 3,
         }));
-      loggerService.error(
-        {
-          user: {
-            membership: req.body.group,
-            action: "handleUpdateUserBelongWildPass",
-            body: req.body,
-            userCognito: userCognito,
-            userDB: userDB,
-            error: `${error}`,
-            layer: "userSignupService.handleUpdateUserBelongWildPass",
-          },
-        },
-        {},
-        "[CIAM] End handleUpdateUserBelongWildPass Service - Failed"
-      );
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
@@ -483,7 +434,8 @@ class UserSignupService {
     const passwordCredential = await this.preparePassword(req);
 
     //check user exists
-    const userExistedInCognito = await this.isUserExistedInCognito(req.body.email);
+    const userInfo = await userModel.findByEmail(req.body.email);
+    const userExistedInCognito = await this.isUserExistedInCognito(req.body.email, userInfo);
 
     // generate phoneNumber dynamic by migrations flag
     const phoneNumber = commonService.cleanPhoneNumber(req.body.phoneNumber);
@@ -495,7 +447,7 @@ class UserSignupService {
     // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
       // check is user email existed at wildpass userCognito
-      const userBelongWildpassGroup = await cognitoService.checkUserBelongWildPass(req.body.email, userExistedInCognito);
+      const userBelongWildpassGroup = await cognitoService.checkUserBelongOnlyWildpass(req.body.email, userExistedInCognito);
 
       const userInfo = await userModel.findByEmail(req.body.email);
       if (userInfo && userInfo.email && userBelongWildpassGroup) {
@@ -518,9 +470,27 @@ class UserSignupService {
         // perform update migration user membership account if migrations exist
         await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 3,});
       }
-
+      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser",
+        email: userInfo.email,
+        error: "User is signup failed with email case sensitive existed at Cognito!"
+      }, "error");
       throw new Error(
         JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
+      );
+    }
+
+    //cover for case email sensitive at Cognito have chance that email capitalize
+    if (userInfo && userInfo.email) {
+      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser",
+        email: userInfo.email,
+        error: "User is already exists at DB!"
+      }, "error");
+      throw new Error(
+          JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
       );
     }
 
@@ -546,7 +516,7 @@ class UserSignupService {
       if (phoneNumber !== null && phoneNumber !== undefined && phoneNumber.trim() !== '') {
         cognitoData.phoneNumber = phoneNumber;
       }
-      await cognitoService.cognitoAdminCreateUser(cognitoData);
+      const cognitoInfo = await cognitoService.cognitoAdminCreateUser(cognitoData);
 
       // set user password in cognito
       await cognitoService.cognitoAdminSetUserPassword(
@@ -571,38 +541,25 @@ class UserSignupService {
         mandaiId: mandaiId || "",
         hashPassword: passwordCredential.db.hashPassword || "",
         saltPassword: passwordCredential.db.salt || "",
+        userSubId: cognitoInfo.User.Username ? cognitoInfo.User.Username : null
       });
-      loggerService.log(
-        {
-          user: {
-            membership: req.body.group,
-            cognitoData: cognitoData,
-            action: "adminCreateNewUser",
-            layer: "userSignupService.signup",
-            mandaiId,
-          },
-        },
-        "[CIAM] End Signup with FOs Service - Success"
-      );
+      this.loggerWrapper("[CIAM] End Signup with FOs Service - Success", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser",
+        cognitoCreated: JSON.stringify(cognitoInfo),
+        mandaiId
+      })
       return {
         mandaiId,
       };
     } catch (error) {
-      loggerService.error(
-        {
-          user: {
-            membership: req.body.group,
-            action: "adminCreateNewUser",
-            api_header: req.headers,
-            api_body: req.body,
-            layer: "userSignupService.signup",
-            error: `${error}`,
-            errorTrace: new Error("userSignupService.signup error", error),
-          },
-        },
-        {},
-        "[CIAM] End Signup with FOs Service - Failed"
-      );
+      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
+        layer: "userSignupService.signup",
+        action: "adminCreateMPUser",
+        error: new Error(error),
+        membership: req.body.group,
+        body: JSON.stringify(req.body)
+      }, "error")
       req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 2,
@@ -631,6 +588,14 @@ class UserSignupService {
       }
       throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }
+  }
+
+  loggerWrapper(action, loggerObj, type = "logInfo") {
+    if (type === "error") {
+      return loggerService.error({ userSignupService: { ...loggerObj } }, {}, action);
+    }
+
+    return loggerService.log({ userSignupService: { ...loggerObj } }, action);
   }
 }
 

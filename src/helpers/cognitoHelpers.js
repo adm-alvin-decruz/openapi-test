@@ -30,9 +30,8 @@ async function updateMembershipInCognito(data) {
           userEmail: data.email,
           existingMemberships: JSON.stringify(existingMemberships),
           updatedMemberships: JSON.stringify(updatedMemberships),
-          params: updateParams,
+          params: JSON.stringify(updateParams),
           layer: "userMembershipPassService.updateMembershipInCognito",
-          data: JSON.stringify(data),
         },
       },
       "Start updateMembershipInCognito"
@@ -109,6 +108,28 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
   }
 }
 
+/**
+ * Mapping user cognito attributes information to object {key:value}
+ * @param userCognito - user cognito information
+ * @return {<Object>} {
+ *         "custom:mandai_id": string,
+ *         "custom:visual_id": string,
+ *         "emai": string,
+ *         "give_name": string,
+ *         "family_name": string
+ * }
+ */
+function parseCognitoAttributeObject(userCognito) {
+  if (!userCognito || !userCognito.UserAttributes || userCognito.UserAttributes.length <= 0) {
+    return null;
+  }
+
+  const attributes = {};
+  userCognito.UserAttributes.forEach((attr) => { attributes[attr.Name] = attr.Value });
+  return { ...attributes };
+}
+
 module.exports = {
-  updateMembershipInCognito
+  updateMembershipInCognito,
+  parseCognitoAttributeObject
 };

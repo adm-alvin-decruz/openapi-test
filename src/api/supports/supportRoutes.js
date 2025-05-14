@@ -8,6 +8,7 @@ const supportController = require("./supportControllers" );
 const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const processTimer = require('../../utils/processTimer');
+const CommonErrors = require("../../config/https/errors/commonErrors");
 
 router.use(express.json());
 
@@ -152,6 +153,72 @@ router.post('/support/failed-jobs/retrigger',isEmptyRequest, async (req, res) =>
 router.post('/support/user/galaxy/import',isEmptyRequest, async (req, res) => {
   req.apiPath = '/support/user/galaxy/import';
   return await supportController.triggerGalaxyWPImportCtrl(req, res);
+});
+
+/** configs */
+router.get('/support/configs', async (req, res) => {
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true) {
+    try {
+      const configs = await supportController.getByConfigs(req.query.config);
+      return res.status(200).json(configs);
+    } catch {
+      return res.status(400).send({ message: 'Config is not found' });
+    }
+  }
+  else{
+    return res.status(401).send(CommonErrors.UnauthorizedException());
+  }
+});
+router.post('/support/configs', async (req, res) => {
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true) {
+    try {
+      const config = await supportController.createConfig(req.body);
+      return res.status(200).json(config);
+    } catch {
+      return res.status(400).send({ message: 'Config is duplicated' });
+    }
+  }
+  else{
+    return res.status(401).send(CommonErrors.UnauthorizedException());
+  }
+});
+router.delete('/support/configs', async (req, res) => {
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true) {
+    try {
+      const config = await supportController.deleteConfigById(req.query.id);
+      return res.status(200).json(config);
+    } catch {
+      return res.status(400).send({ message: `config id: ${req.query.id} is not found` });
+    }
+  }
+  else{
+    return res.status(401).send(CommonErrors.UnauthorizedException());
+  }
+});
+router.patch('/support/configs', async (req, res) => {
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true) {
+    try {
+      const config = await supportController.updateConfigById(req.query.id, req.body);
+      return res.status(200).json(config);
+    } catch {
+      return res.status(400).send({ message: `config id: ${req.query.id} is not found` });
+    }
+  }
+  else{
+    return res.status(401).send(CommonErrors.UnauthorizedException());
+  }
 });
 
 module.exports = router;

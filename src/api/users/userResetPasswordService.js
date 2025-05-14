@@ -9,42 +9,43 @@ const {
   currentDateAddHours,
   convertDateFormat,
 } = require("../../utils/dateUtils");
-const { EXPIRE_TIME_HOURS } = require("../../utils/constants");
+const { EXPIRE_TIME_HOURS, GROUP } = require("../../utils/constants");
 const loggerService = require("../../logs/logger");
 const emailService = require("../users/usersEmailService");
 const userDBService = require("../users/usersDBService");
+const { switchIsTurnOn } = require("../../helpers/dbSwitchesHelpers");
+const { checkUserBelongSpecificGroup } = require("./helpers/checkMembershipGroups");
 
 class UserResetPasswordService {
   async execute(req) {
     // check if wildpass, disallow to reset password
-    let reqBody = req.body;
+    const email = req.body.email;
+    const language = req.body.language || 'en';
     let userExistedInCognito = null;
     try {
-      userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(reqBody.email);
+      userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
     } catch (error) {
-      await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
-          reqBody.email,
-          reqBody.language
-      ))
+      await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(email, language))
     }
 
-    if (userExistedInCognito) {
-      const isUserBelongWildPass = await cognitoService.checkUserBelongWildPass(reqBody.email, userExistedInCognito);
-      if (isUserBelongWildPass) {
+    const disableWPResetPassword = await switchIsTurnOn("disable_wp_reset_password");
+    if (disableWPResetPassword) {
+      //should inquiry user belong only wild pass when switch is turn on - reduce call APIs time to time
+      try {
+        const isUserBelongWildPass = await checkUserBelongSpecificGroup(email, GROUP.WILD_PASS, userExistedInCognito);
         loggerService.error(
             {
               user: {
-                email: reqBody.email,
+                email,
                 error: 'User belong wildpass can not reset password'
               }
             },
             {},
             '[CIAM-MAIN] Reset Password Service - Failed'
         );
-        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
-            reqBody.email,
-            reqBody.language
-        ))
+        isUserBelongWildPass && await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(email, language));
+      } catch (error) {
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(email, language))
       }
     }
 
@@ -53,10 +54,7 @@ class UserResetPasswordService {
     const saltKey = generateSaltHash(resetToken);
     const passwordHash = generateSaltHash(resetToken, saltKey);
     try {
-      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-        reqBody.email
-      );
-      const email = getOrCheck(userCognito, "email");
+      const email = getOrCheck(userExistedInCognito, "email");
 
       // trigger lambda function send email with resetToken
       req.body.expiredAt = convertDateFormat(
@@ -66,10 +64,7 @@ class UserResetPasswordService {
       try {
         await this.prepareResetPasswordEmail(req);
       } catch (emailError) {
-        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(
-            reqBody.email,
-            reqBody.language
-        ))
+        await Promise.reject(MembershipErrors.ciamMembershipRequestNoMPAccount(email, language))
       }
 
       const userInfo = await userCredentialModel.findByUserEmail(email);
@@ -97,7 +92,7 @@ class UserResetPasswordService {
               resetToken: maskKeyRandomly(resetToken),
               saltKey: maskKeyRandomly(saltKey),
               passwordHash: maskKeyRandomly(passwordHash),
-              email: reqBody.email,
+              email: email,
               error: new Error(error)
             }
           },
@@ -108,23 +103,9 @@ class UserResetPasswordService {
       const errorData =
         errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
       if (errorData.name && errorData.name === "UserNotFoundException") {
-        throw new Error(
-          JSON.stringify(
-            MembershipErrors.ciamMembershipRequestNoMPAccount(
-              reqBody.email,
-              reqBody.language
-            )
-          )
-        );
+        throw new Error(JSON.stringify(MembershipErrors.ciamMembershipRequestNoMPAccount(email, language)));
       }
-      throw new Error(
-        JSON.stringify(
-          MembershipErrors.ciamMembershipEmailInvalid(
-            reqBody.email,
-            reqBody.language
-          )
-        )
-      );
+      throw new Error(JSON.stringify(MembershipErrors.ciamMembershipEmailInvalid(email, language)));
     }
   }
 

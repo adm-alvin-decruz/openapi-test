@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     branches:
       - "releases/*"
+      - "pr/releases/*"
 
 jobs:
   release:
@@ -100,12 +101,8 @@ jobs:
 
           if [[ -z "$MERGED_PRS" || "$MERGED_PRS" == "[]" ]]; then
             echo "$HEADER" > CHANGELOG.md
-            echo -e "\n_No pull requests merged to this branch._" >> CHANGELOG.md
-            echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-            cat CHANGELOG.md >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-            exit 0
-          fi
+            echo -e "\n_No pull requests merged to this branch. Checking Direct Commits"
+          else
 
           while read -r row; do
             PR_NUMBER=$(echo "$row" | jq -r '.number')
@@ -160,10 +157,13 @@ jobs:
             (( PR_COMMIT_COUNT > 5 )) && echo "</details>" >> "$TEMP_CHANGELOG"
             echo >> "$TEMP_CHANGELOG"
           done <<< "$(echo "$MERGED_PRS" | jq -c '.[]')"
-  
+          fi
+
           # ➕ Include direct commits not part of PRs
           git log --pretty=format:'%H' origin/main..HEAD > all_commits.txt
+          cat all_commits.txt
           grep -oP '(?<=\[)[a-f0-9]{7,40}(?=\])' "$TEMP_CHANGELOG" | sort -u > pr_commits.txt
+          cat pr_commits.txt
           grep -vxFf pr_commits.txt all_commits.txt > direct_commits.txt
 
           if [[ -s direct_commits.txt ]]; then
@@ -177,14 +177,14 @@ jobs:
             done < direct_commits.txt
             echo >> "$TEMP_CHANGELOG"
           fi
-
+  
           {
             echo "$HEADER"
             echo
             if [[ -s "$TEMP_CHANGELOG" ]]; then
               cat "$TEMP_CHANGELOG"
             else
-              echo "_No qualifying pull requests found in this release._"
+              echo "_No qualifying pull requests and Direct commits found in this release._"
             fi
             [[ "$USE_RC_NOTES" == "true" ]] && echo -e "\n_Promoted from [$PROMOTE_RC_TAG](https://github.com/$GITHUB_REPO/releases/tag/$PROMOTE_RC_TAG)_"
           } > CHANGELOG.md
@@ -219,4 +219,3 @@ jobs:
           files: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

@@ -8,6 +8,7 @@ const {
   isEmptyRequest,
   validateEmail,
   validateAPIKey,
+  lowercaseTrimKeyValueString
 } = require("../../middleware/validationMiddleware");
 const userConfig = require("../../config/usersConfig");
 const processTimer = require("../../utils/processTimer");
@@ -27,12 +28,7 @@ router.get("/ping", async (req, res) => {
 /**
  * CIAM Update user info private endpoint
  */
-router.put(
-  "/v1/users",
-  isEmptyRequest,
-  validateEmail,
-  validateAPIKey,
-  async (req, res) => {
+router.put("/v1/users", isEmptyRequest, validateEmail, validateAPIKey, lowercaseTrimKeyValueString, async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     req.body.uuid = uuid;

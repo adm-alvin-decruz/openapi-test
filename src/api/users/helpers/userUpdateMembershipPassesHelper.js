@@ -8,6 +8,7 @@ const { COGNITO_ATTRIBUTES } = require("../../../utils/constants");
 const userDBService = require("../usersDBService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const { convertDateToMySQLFormat } = require("../../../utils/dateUtils");
+const { parseCognitoAttributeObject } = require("../../../helpers/cognitoHelpers");
 
 async function errorWrapper(errObj) {
   await Promise.reject(JSON.stringify(errObj));
@@ -19,16 +20,6 @@ function loggerWrapper(action, loggerObj, type = "logInfo") {
   }
 
   return loggerService.log({ userUpdateHelper: { ...loggerObj } }, action);
-}
-
-function parseCognitoAttributeObject(userCognito) {
-  if (!userCognito || !userCognito.UserAttributes || userCognito.UserAttributes.length <= 0) {
-    return null;
-  }
-
-  const attributes = {};
-  userCognito.UserAttributes.forEach((attr) => { attributes[attr.Name] = attr.Value });
-  return { ...attributes };
 }
 
 async function getUserFromDBCognito(email) {

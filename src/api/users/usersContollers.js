@@ -234,7 +234,7 @@ async function adminUpdateUser(req, listedParams) {
         // prepare logs
         let logObj = loggerService.build(
           "user",
-          "usersControllers.adminCreateUser",
+          "usersControllers.adminUpdateUser",
           req,
           "MWG_CIAM_PARAMS_ERR",
           {},
@@ -243,7 +243,7 @@ async function adminUpdateUser(req, listedParams) {
         // prepare error params response
         req.apiTimer.end("usersController.adminUpdateUser"); // log end time
         return responseHelper.craftUsersApiResponse(
-          "usersControllers.adminCreateUser",
+          "usersControllers.adminUpdateUser",
           errorConfig,
           "MWG_CIAM_PARAMS_ERR",
           "USERS_UPDATE",
@@ -258,7 +258,7 @@ async function adminUpdateUser(req, listedParams) {
       // prepare logs
       let logObj = loggerService.build(
         "user",
-        "usersControllers.adminCreateUser",
+        "usersControllers.adminUpdateUser",
         req,
         "MWG_CIAM_PARAMS_ERR",
         {},
@@ -267,10 +267,10 @@ async function adminUpdateUser(req, listedParams) {
       // prepare error params response
       req.apiTimer.end("usersController.adminUpdateUser"); // log end time
       return responseHelper.craftUsersApiResponse(
-        "usersControllers.adminCreateUser",
+        "usersControllers.adminUpdateUser",
         errorConfig,
         "MWG_CIAM_PARAMS_ERR",
-        "USERS_SIGNUP",
+        "USERS_UPDATE",
         logObj
       );
     }
@@ -694,13 +694,17 @@ async function userCreateMembershipPass(req, res) {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
+  const bodyLogger = {...req.body};
+  if (bodyLogger.membershipPhoto && bodyLogger.membershipPhoto.bytes) {
+    bodyLogger.membershipPhoto = JSON.stringify({ bytes: maskKeyRandomly(bodyLogger.membershipPhoto.bytes)})
+  }
   loggerService.log(
     {
       user: {
         membership: req.body.group,
         action: "userCreateMembershipPass",
         api_header: req.headers,
-        api_body: JSON.stringify(req.body),
+        api_body: bodyLogger,
         layer: "controller.userCreateMembershipPass",
       },
     },
@@ -778,13 +782,17 @@ async function userUpdateMembershipPass(req, res) {
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
 
+  const bodyLogger = {...req.body};
+  if (bodyLogger.membershipPhoto && bodyLogger.membershipPhoto.bytes) {
+    bodyLogger.membershipPhoto.bytes = maskKeyRandomly(bodyLogger.membershipPhoto.bytes)
+  }
   loggerService.log(
     {
       user: {
         membership: req.body.group,
         action: "userUpdateMembershipPass",
         api_header: req.headers,
-        api_body: req.body,
+        api_body: bodyLogger,
         layer: "controller.userUpdateMembershipPass",
       },
     },
@@ -858,10 +866,32 @@ async function userUpdateMembershipPass(req, res) {
   }
 }
 
-async function userRefreshAccessToken(accessToken, body) {
+async function userRefreshAccessToken(accessToken, req) {
   try {
-    return await UserResetAccessTokenJob.perform(accessToken, body);
+    loggerService.log(
+      {
+        user: {
+          action: "userRefreshAccessToken",
+          layer: "controller.userRefreshAccessToken",
+          api_header: req.headers,
+          api_body: req.body,
+        },
+      },
+      "[CIAM] userRefreshAccessToken Start Request"
+    );
+    return await UserResetAccessTokenJob.perform(accessToken, req.body);
   } catch (error) {
+    loggerService.error(
+        {
+          user: {
+            action: "userRefreshAccessToken",
+            layer: "controller.userRefreshAccessToken",
+            response_to_client: new Error(error),
+          },
+        },
+        {url: "/token/refresh"},
+        "[CIAM] userRefreshAccessToken End Request - Failed"
+    );
     const errorMessage =
         error && error.message ? JSON.parse(error.message) : "";
     if (!!errorMessage) {
