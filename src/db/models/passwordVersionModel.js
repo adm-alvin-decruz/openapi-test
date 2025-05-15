@@ -1,8 +1,5 @@
 const pool = require("../connections/mysqlConn");
-const {
-  getCurrentUTCTimestamp,
-  convertDateToMySQLFormat,
-} = require("../../utils/dateUtils");
+const {getCurrentUTCTimestamp, convertDateToMySQLFormat} = require("../../utils/dateUtils");
 const commonService = require("../../services/commonService");
 const loggerService = require("../../logs/logger");
 
