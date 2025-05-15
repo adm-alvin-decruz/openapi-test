@@ -1,4 +1,4 @@
-CREATE TABLE `password_version` (
+CREATE TABLE `password_versions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` varchar(11) COLLATE utf8mb4_unicode_ci NOT NULL,
   `version` varchar(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
