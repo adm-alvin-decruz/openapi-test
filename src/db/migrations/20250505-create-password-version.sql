@@ -8,3 +8,9 @@ CREATE TABLE `password_versions` (
   PRIMARY KEY (`id`),
   FOREIGN KEY (`user_id`) REFERENCES users(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- switch seed
+INSERT INTO `switches` (`name`, `switch`, `description`, `created_at`, `updated_at`)
+VALUES
+	('password_version_checking', '0', 'Password versioning feature switch', now(), now());
