@@ -89,13 +89,11 @@ jobs:
           VERSION_LINK="[${NEW_VERSION}](https://github.com/$GITHUB_REPO/releases/tag/${NEW_VERSION})"
           HEADER="# $VERSION_LINK – $CURRENT_DATE"
 
-          echo "📦 Fetching merged PRs targeting base: ${GITHUB_REF_NAME}"
+          echo "📦 Fetching merged PRs"
           MERGED_PRS=$(gh pr list \
             --state merged \
-            --search "base:${GITHUB_REF_NAME}" \
             --limit 100 \
-            --json number,title,author,commits,mergeCommit \
-            2>/dev/null)
+            --json number,title,author,commits,mergeCommit 2>/dev/null || echo "[]")
 
           if [[ -z "$MERGED_PRS" || "$MERGED_PRS" == "[]" ]]; then
             echo "⚠️ No merged PRs found for base '${GITHUB_REF_NAME}'"
