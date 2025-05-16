@@ -224,6 +224,29 @@ class UserMembership {
       );
     }
   }
+
+  static async queryUserPassType(email) {
+    const sql = `SELECT u.id AS userId, u.email, u.mandai_id AS mandaiId, JSON_ARRAYAGG(um.name) AS passType
+                    FROM users u
+                    LEFT JOIN user_memberships um ON um.user_id = u.id
+                    WHERE u.email = ?
+                    GROUP BY u.id, u.email, u.mandai_id`
+    try {
+      const rows = await pool.query(sql, [email]);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+          {
+            UserMembershipModel: {
+              error: new Error(error),
+              sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
+            },
+          },
+          {},
+          "[CIAM-MAIN] UserMembershipModel.queryUserPassType - Failed"
+      );
+    }
+  }
 }
 
 module.exports = UserMembership;

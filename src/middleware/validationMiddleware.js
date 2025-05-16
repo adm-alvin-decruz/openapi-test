@@ -4,15 +4,16 @@ const loggerService = require("../logs/logger");
 const CommonErrors = require("../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const userCredentialModel = require("../db/models/userCredentialModel");
+const configsModel = require("../db/models/configsModel");
 const cognitoService = require("../services/cognitoService");
 const { GROUP } = require("../utils/constants");
-const appConfig = require("../config/appConfig");
 const switchService = require("../services/switchService");
 const { maskKeyRandomly } = require("../utils/common");
 const commonService = require("../services/commonService");
 const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
+const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
 
 /**
  * Validate empty request
@@ -171,7 +172,8 @@ async function AccessTokenAuthGuard(req, res, next) {
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
     loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
-      email: req.body.email,
+      email: req.body.email || "",
+      mandaiId: req.body.mandaiId || "",
       error: 'Token Credentials Information can not found!',
       layer: 'validationMiddleware.AccessTokenAuthGuard'
     }, 'error');
@@ -228,49 +230,71 @@ async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
 }
 
 async function validateAPIKey(req, res, next) {
-  const validationSwitch = await switchService.findByName("api_key_validation");
+  const validateAPIKeySwitch = await switchService.findByName("api_key_validation");
   const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  const apiKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
-  const appId = mwgAppID.split('.')[0];
+  const reqHeaderAPIKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
 
-  //add more data for dynamic checking
-  const apiKeyMappings = {
-    //key will be match with request header - value will be from env
-    nopComm: {
-      apiKey: process.env.NOPCOMMERCE_REQ_PRIVATE_API_KEY,
-      appId: JSON.parse(appConfig[`PRIVATE_APP_ID_${process.env.APP_ENV.toUpperCase()}`])
-    },
-    mfaMobile: {
-      apiKey: process.env.MFA_MOBILE_REQ_PUBLIC_API_KEY,
-      appId: JSON.parse(appConfig[`APP_ID_${process.env.APP_ENV.toUpperCase()}`])
-    },
-  };
-
-  const validateData = appId ? apiKeyMappings[appId] : null;
-
-  if (!validateData) {
-    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
-  }
-
-  loggerWrapper("CIAM] Validate Api Key Middleware - Process", {
+  // log variables
+  let action = "CIAM] Validate Api Key Middleware";
+  let logObj = {
     layer: "middleware.validateAPIKey",
-    validationSwitch: JSON.stringify(validationSwitch),
+    validateAPIKeySwitch: JSON.stringify(validateAPIKeySwitch),
     mwgAppID: maskKeyRandomly(mwgAppID),
-    expectedApiKey: maskKeyRandomly(validateData.apiKey),
-    incomingApiKey: maskKeyRandomly(apiKey)
-  });
-  if (!mwgAppID || !validateData.appId.includes(mwgAppID)) {
-    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+    incomingApiKey: maskKeyRandomly(reqHeaderAPIKey)
   }
-  if (validationSwitch.switch === 1) {
-    if (apiKey && apiKey === validateData.apiKey) {
+
+  loggerWrapper(action +" - Process", logObj);
+
+  try {
+    // get App ID from db config table
+    const dbConfigAppId = await configsModel.findByConfigKey("app_id", "app_id_key_binding");
+    if (!dbConfigAppId || !dbConfigAppId.key) {
+      logObj.appIdConfiguration = undefined;
+      loggerWrapper(action +" - Process", logObj);
+      return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+    }
+
+    logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
+    loggerWrapper(action +" - Process", logObj);
+    if (validateAPIKeySwitch.switch === 1) {
+      logObj.error = "configuration app id not found!";
+      if (!dbConfigAppId.value || !dbConfigAppId.value.length) {
+        loggerWrapper(action +"  - Failed validation", logObj);
+        return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+      }
+
+      const appIdConfigFromDB = getAppIdConfiguration(dbConfigAppId.value, mwgAppID);
+      if (!appIdConfigFromDB) {
+        loggerWrapper(action +"  - Failed validation", logObj);
+        return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+      }
+
+      const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
+      const bindingCheck = appIdConfigFromDB.binding;
+      const apiKeyEnv = process.env[`${apiKeyConfig}`];
+      if (!bindingCheck) {
+        loggerWrapper(action +" - Completed validation - binding is false", logObj);
+        return next();
+      }
+      if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
+        logObj.error = "";
+        loggerWrapper(action +" - Completed validation - binding is true", logObj);
+        return next();
+      }
+    }
+    if (validateAPIKeySwitch.switch === 0) {
       return next();
     }
+
+    loggerWrapper(action +" - Finished validation", logObj);
+
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  } catch (error) {
+    logObj.error = new Error(error);
+    loggerWrapper(action +" - Failed Exception", logObj);
+
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  if (validationSwitch.switch === 0) {
-    return next();
-  }
-  return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
 }
 
 /**
