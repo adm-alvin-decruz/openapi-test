@@ -10,17 +10,8 @@ const app = express();
 const serverless = require('serverless-http');
 const helmetMiddleware = require('./src/config/helmetConfig');
 const permissionsPolicyMiddleware = require('./src/config/permission-policy');
-const RateLimit = require('express-rate-limit');
 
-const limiter = RateLimit({
-  windowMs: 1000, // 1 second
-  max: 10, // Limit each IP to 10 requests per 1 second
-  message: 'Too many requests - try again in a second.',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false,  // Disable the `X-RateLimit-*` headers
-});
 app.use(cors());
-app.use(limiter);
 app.use(express.json({ limit: "10mb" }));
 // fix Express.js Stack Trace Disclosure in Error Response. VAPT
 app.use(errorHandler);
