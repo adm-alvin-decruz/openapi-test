@@ -25,6 +25,7 @@ const CommonErrors = require("../../config/https/errors/commonErrors");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
+const UserVerifyTokenValidation = require("./validations/UserVerifyTokenValidation");
 const UserResetAccessTokenJob = require("./userRefreshAccessTokenJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
 const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
@@ -678,12 +679,28 @@ async function userGetMembershipPasses(body) {
 }
 
 async function userVerifyToken(accessToken, body) {
+  const message = UserVerifyTokenValidation.execute(body);
+  if (message) {
+    loggerService.error(
+      {
+        user: {
+          action: "userVerifyToken",
+          api_body: body,
+          error: new Error(message),
+          layer: "controller.userGetMembershipPasses",
+        },
+      },
+      {},
+      "[CIAM] End userVerifyToken Request - Failed"
+    );
+    throw new Error(JSON.stringify(message));
+  }
   try {
     return await userVerifyTokenService.verifyToken(accessToken, body);
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
