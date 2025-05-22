@@ -145,7 +145,7 @@ class UserUpdateValidation {
       }
 
       //verify with password version
-      const enablePasswordVersionChecking =  await switchIsTurnOn("password_version_checking");
+      const enablePasswordVersionChecking =  await switchIsTurnOn("enable_password_versioning");
       if (enablePasswordVersionChecking) {
         const newPasswordHadMarkedVersion =
           await UserPasswordVersionService.passwordValidProcessing(userCredential.user_id, bodyData.newPassword);

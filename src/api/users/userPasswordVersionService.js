@@ -8,8 +8,8 @@ class UserPasswordVersionService {
   async passwordValidProcessing(userId, password) {
     const passwordInfo = await passwordVersionModel.findByUserId(userId);
     const passHashed = await passwordService.hashPassword(password);
-    const config = await configsModel.findByConfigKey("password_version", "version");
-    const versionCounting = config && config.value ? config.value : 0;
+    const passwordVersionConfig = await configsModel.findByConfigKey("password_versioning_conf", "version");
+    const versionCounting = passwordVersionConfig && passwordVersionConfig.value ? passwordVersionConfig.value : 8;
     //1. get list listPasswordsByVersion to check by config number
     const listPasswordsByConfigVersion = passwordInfo.slice(0, versionCounting);
 

@@ -5,7 +5,7 @@ const loggerService = require("../../logs/logger");
 
 class PasswordVersionModel {
   static async findByUserId(userId) {
-    const sql = "SELECT * FROM password_version WHERE user_id = ? ORDER BY created_at DESC";
+    const sql = "SELECT * FROM password_versions WHERE user_id = ? ORDER BY created_at DESC";
     const params = [userId];
     try {
       return await pool.query(sql, params);
@@ -25,7 +25,7 @@ class PasswordVersionModel {
   }
 
   static async updateVersion(userId, id, version) {
-    const sql = `UPDATE password_version SET version = ?, updated_at = ? WHERE user_id = ? AND id = ?`;
+    const sql = `UPDATE password_versions SET version = ?, updated_at = ? WHERE user_id = ? AND id = ?`;
     const params = [
       version,
       getCurrentUTCTimestamp(),
@@ -63,7 +63,7 @@ class PasswordVersionModel {
   }
 
   static async deleteVersionNegativeByUserID(userId) {
-    const sql = "DELETE FROM password_version WHERE user_id = ? AND version <= 0";
+    const sql = "DELETE FROM password_versions WHERE user_id = ? AND version <= 0";
     const params = [userId];
     try {
       await pool.execute(sql, params);
@@ -88,7 +88,7 @@ class PasswordVersionModel {
   }
 
   static async create(userId, password, version) {
-    const sql = `INSERT INTO password_version (user_id, version, password_hash) VALUES (?, ?, ?)`;
+    const sql = `INSERT INTO password_versions (user_id, version, password_hash) VALUES (?, ?, ?)`;
     const params = [userId, version, password];
     try {
       const rows = await pool.query(sql, params);

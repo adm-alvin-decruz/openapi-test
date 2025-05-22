@@ -19,7 +19,7 @@ class UserConfirmResetPasswordService {
         body.language
       );
 
-      const enablePasswordVersionChecking =  await switchIsTurnOn("password_version_checking");
+      const enablePasswordVersionChecking =  await switchIsTurnOn("enable_password_versioning");
       if (enablePasswordVersionChecking) {
         const newPasswordHadMarkedVersion =
           await UserPasswordVersionService.passwordValidProcessing(rs.userId, body.newPassword);
