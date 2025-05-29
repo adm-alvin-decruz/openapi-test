@@ -57,6 +57,7 @@ const {
   manipulatePassword,
   updateCognitoUserInfo,
 } = require("./helpers/userUpdateMembershipPassesHelper");
+const userEventAuditTrailService = require("./userEventAuditTrailService");
 
 /**
  * Function User signup service
@@ -139,6 +140,14 @@ async function handleMPAccountSignupWP(req, membershipData) {
         await userDBService.updateUserMigration(reqBasedOnMembership, "signup", "signupSQS");
       }
     }
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "success",
+      "signup",
+      req.body,
+      1,
+      membershipData.userId
+    );
     return {
       membership: {
         code: 200,
@@ -308,6 +317,16 @@ async function cognitoCreateUser(req, membershipData) {
       "MWG_CIAM_USER_SIGNUP_ERR",
       newUserArray,
       error
+    );
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "failed",
+      "signup",
+      {
+        ...req.body,
+        error: JSON.stringify(error)
+      },
+      1
     );
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse(
@@ -483,10 +502,23 @@ async function adminUpdateUser(
       "USERS_UPDATE",
       logObj
     );
-
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "success",
+      "update",
+      req.body,
+      1
+    );
     req.apiTimer.end("adminUpdateUser"); // log end time
     return responseToClient;
   } catch (error) {
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "failed",
+      "update",
+      req.body,
+      1
+    );
     // prepare logs
     let logObj = loggerService.build(
       "user",
@@ -570,7 +602,14 @@ async function adminUpdateMPUser(body) {
       password,
       language: language,
     });
-
+    await userEventAuditTrailService.createEvent(
+      email,
+      "success",
+      "update",
+      body,
+      ncRequest ? 2 : 1,
+      userOriginalInfo.db.id
+    );
     return {
       membership: {
         code: 200,
@@ -581,6 +620,16 @@ async function adminUpdateMPUser(body) {
       statusCode: 200,
     };
   } catch (error) {
+    await userEventAuditTrailService.createEvent(
+      body.email,
+      "failed",
+      "update",
+      {
+        ...body,
+        error: JSON.stringify(error)
+      },
+      ncRequest ? 2 : 1
+    );
     const errorMessage = error && error.message ? JSON.parse(error.message) : "";
     throw new Error(JSON.stringify(errorMessage));
   }
