@@ -40,6 +40,11 @@ const passwordPattern = (password) => {
   return regexPasswordValid.test(password.toString());
 };
 
+const passwordPatternComplexity = (password) => {
+  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\$%^&*_+=\\[\\]<>]).{10,}$", "g");;
+  return regexPasswordValid.test(password.toString());
+};
+
 const emailPattern = (email) => {
   const regexEmailValid = new RegExp(
     "^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$",
@@ -123,5 +128,6 @@ module.exports = {
   omit,
   maskKeyRandomly,
   emailPattern,
-  existsCapitalizePattern
+  existsCapitalizePattern,
+  passwordPatternComplexity
 };

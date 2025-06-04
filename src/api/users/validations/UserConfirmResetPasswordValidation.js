@@ -1,12 +1,13 @@
 const CommonErrors = require("../../../config/https/errors/commonErrors");
 const { passwordPattern } = require("../../../utils/common");
+const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 
 class UserConfirmResetPasswordValidation {
   constructor() {
     this.error = null;
   }
 
-  static execute(data) {
+  static async execute(data) {
     //validate missing required params
     const paramsShouldNotEmpty = [
       "newPassword",
@@ -39,8 +40,11 @@ class UserConfirmResetPasswordValidation {
       ));
     }
 
-    if (data.newPassword && !passwordPattern(data.newPassword)) {
-      return (this.error = CommonErrors.PasswordErr(data.language));
+    if (data.newPassword) {
+      const passwordCorrectFormat = await checkPasswordHasValidPattern(data.newPassword);
+      if (!passwordCorrectFormat) {
+        return (this.error = CommonErrors.PasswordErr(data.language));
+      }
     }
 
     if (data.newPassword !== data.confirmPassword) {
