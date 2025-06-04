@@ -6,7 +6,9 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const { proceedSetPassword } = require('./helpers/loginHelper')
+const { proceedSetPassword } = require('./helpers/loginHelper');
+const UserCredentialEventService = require("./userCredentialEventService");
+const { EVENTS } = require("../../utils/constants");
 
 class UserLoginService {
   async login(req) {
@@ -35,7 +37,7 @@ class UserLoginService {
             action: "login",
             body: req.body,
             layer: "userLoginServices.login",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
@@ -66,7 +68,7 @@ class UserLoginService {
             action: "login",
             body: req.body,
             layer: "userLoginServices.getUser",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
@@ -106,7 +108,7 @@ class UserLoginService {
             userId: id,
             action: "login",
             layer: "userLoginServices.getUser",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
@@ -139,6 +141,13 @@ class UserLoginService {
       );
       const loginSession = await this.login(req);
       await this.updateUser(userInfo.userId, loginSession);
+      //insert events
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.LOGIN,
+        data: req.body.email,
+        source: 1,
+        status: 1
+      }, userInfo.userId);
       loggerService.log(
         {
           user: {
@@ -155,13 +164,19 @@ class UserLoginService {
         email: userInfo.email,
       };
     } catch (error) {
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.LOGIN,
+        data: req.body.email,
+        source: 1,
+        status: 0
+      }, null, req.body.email);
       loggerService.error(
         {
           user: {
             email: req.body.email,
             action: "login",
             layer: "userLoginServices.execute",
-            error: `${error}`,
+            error: new Error(error),
           },
         },
         {},
