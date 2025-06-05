@@ -2,6 +2,7 @@ module.exports = {
   en: {
     address_invalid: "Address is invalid.",
     cognito_user_not_exist: "This email address does not have a Cognito user.",
+    confirmPassword_required: "Confirm Passwords is required.",
     confirmPassword_invalid: "Passwords do not match.",
     confirm_reset_password_success: "Password successfully reset.",
     country_invalid: "Country is invalid.",
@@ -92,6 +93,7 @@ module.exports = {
   zh: {
     address_invalid: "地址無效。",
     cognito_user_not_exist: "此电子邮件地址没有对应的 Cognito 用户。",
+    confirmPassword_required: "密码不匹配。",
     confirmPassword_invalid: "密码不匹配。",
     confirm_reset_password_success: "密码已成功重置。",
     country_invalid: "国家无效。",
@@ -175,6 +177,7 @@ module.exports = {
     address_invalid: "주소가 유효하지 않습니다.",
     cognito_user_not_exist:
       "이 이메일 주소에 해당하는 Cognito 사용자가 없습니다.",
+    confirmPassword_required: "비밀번호가 일치하지 않습니다.",
     confirmPassword_invalid: "비밀번호가 일치하지 않습니다.",
     confirm_reset_password_success: "비밀번호가 성공적으로 재설정되었습니다.",
     country_invalid: "국가가 유효하지 않습니다.",
@@ -269,6 +272,7 @@ module.exports = {
     address_invalid: "住所が無効です。",
     cognito_user_not_exist:
       "このメールアドレスには Cognito ユーザーが存在しません。",
+    confirmPassword_required: "パスワードが一致しません。",
     confirmPassword_invalid: "パスワードが一致しません。",
     confirm_reset_password_success: "パスワードが正常にリセットされました。",
     country_invalid: "国が無効です。",
