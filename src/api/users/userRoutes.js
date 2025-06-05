@@ -311,8 +311,8 @@ router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) =
  */
 router.delete("/users/sessions",
   isEmptyRequest,
-  AccessTokenAuthGuard,
   validateEmail,
+  AccessTokenAuthGuard,
   async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations

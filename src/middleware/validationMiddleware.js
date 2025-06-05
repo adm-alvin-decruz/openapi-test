@@ -14,6 +14,7 @@ const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
+const MembershipErrors = require("../config/https/errors/membershipErrors");
 
 /**
  * Validate empty request
@@ -164,8 +165,20 @@ async function AccessTokenAuthGuard(req, res, next) {
     req.body.mandaiId || ""
   );
 
+  if(!userCredentials) {
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email || "",
+      mandaiId: req.body.mandaiId || "",
+      error: 'No user record found!',
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
+    return res.status(200).json(MembershipErrors.ciamMembershipUserNotFound(
+      req.body.email || "",
+      req.body.language
+    ))
+  }
+
   if (
-    !userCredentials ||
     !userCredentials.tokens ||
     !userCredentials.tokens.accessToken ||
     !userCredentials.tokens.refreshToken ||
