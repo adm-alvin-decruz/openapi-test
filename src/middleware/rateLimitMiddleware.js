@@ -16,7 +16,7 @@ async function initRateLimiter() {
   limiter = RateLimit({
     windowMs: windowMs,
     max: maxRequest,
-    message: "Too many requests - try again in a second.",
+    message: "Too many requests - try again in a minute.",
     standardHeaders: true,
     legacyHeaders: false,
   });
