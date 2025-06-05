@@ -14,6 +14,7 @@ const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
+const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
 
 /**
  * Validate empty request
@@ -164,8 +165,19 @@ async function AccessTokenAuthGuard(req, res, next) {
     req.body.mandaiId || ""
   );
 
+  if (!userCredentials) {
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email || "",
+      mandaiId: req.body.mandaiId || "",
+      error: 'Account has no record!',
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
+    return res
+      .status(400)
+      .json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
+  }
+
   if (
-    !userCredentials ||
     !userCredentials.tokens ||
     !userCredentials.tokens.accessToken ||
     !userCredentials.tokens.refreshToken ||
