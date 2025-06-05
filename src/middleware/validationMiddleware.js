@@ -30,7 +30,8 @@ function isEmptyRequest(req, res, next) {
     req.method === "PATCH" ||
     req.method === "DELETE"
   ) {
-    if (Object.keys(req.body).length === 0) {
+    if (Object.keys(req.body).length === 0 ||
+        (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === 'language')) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
   }
