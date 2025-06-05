@@ -9,6 +9,9 @@ const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
 const { messageLang } = require("../../utils/common");
 const loggerService = require("../../logs/logger");
 const { EVENTS } = require("../../utils/constants");
+const { switchIsTurnOn } = require("../../helpers/dbSwitchesHelpers");
+const UserPasswordVersionService = require("./userPasswordVersionService");
+const CommonErrors = require("../../config/https/errors/commonErrors");
 
 class UserConfirmResetPasswordService {
   async execute(body) {
@@ -20,6 +23,15 @@ class UserConfirmResetPasswordService {
       );
 
       userId = rs.userId;
+
+      const enablePasswordVersionChecking =  await switchIsTurnOn("enable_password_versioning");
+      if (enablePasswordVersionChecking) {
+        const newPasswordHadMarkedVersion =
+          await UserPasswordVersionService.passwordValidProcessing(rs.userId, body.newPassword);
+        if (newPasswordHadMarkedVersion) {
+          await Promise.reject(new Error(JSON.stringify(CommonErrors.sameOldPasswordException(body.language))));
+        }
+      }
 
       const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
         rs.email

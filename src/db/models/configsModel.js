@@ -103,7 +103,7 @@ class Configs {
         {
           configModel: {
             error: new Error(error),
-            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, JSON.stringify(params)),
           },
         },
         {},
