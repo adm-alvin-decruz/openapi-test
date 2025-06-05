@@ -315,8 +315,8 @@ router.post("/users/sessions", RateLimitMiddleware, isEmptyRequest, validateEmai
 router.delete("/users/sessions",
   RateLimitMiddleware,
   isEmptyRequest,
-  AccessTokenAuthGuard,
   validateEmail,
+  AccessTokenAuthGuard,
   async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations

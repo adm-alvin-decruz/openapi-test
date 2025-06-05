@@ -3,6 +3,8 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
 const userModel = require("../../db/models/userModel");
 const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
+const UserCredentialEventService = require("./userCredentialEventService");
+const { EVENTS } = require("../../utils/constants");
 
 class UserRefreshTokenService {
   async execute(accessToken, body) {
@@ -21,6 +23,12 @@ class UserRefreshTokenService {
     }
     try {
       const payloadAccessToken = await verifierAccessToken.verify(accessToken);
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.REFRESH_TOKEN,
+        data: body,
+        source: 1,
+        status: 1
+      }, null, body.email || '', body.mandaiId || '');
       return {
         expired_at:
           formatDateToMySQLDateTime(new Date(payloadAccessToken.exp * 1000)) ||
@@ -50,6 +58,15 @@ class UserRefreshTokenService {
           email,
         };
       }
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.REFRESH_TOKEN,
+        data: {
+          ...body,
+          error: JSON.stringify(error)
+        },
+        source: 1,
+        status: 0
+      }, null, body.email || '', body.mandaiId || '');
       return {
         expired_at: null,
         valid: false,
