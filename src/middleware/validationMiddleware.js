@@ -166,17 +166,16 @@ async function AccessTokenAuthGuard(req, res, next) {
     req.body.mandaiId || ""
   );
 
-  if(!userCredentials) {
+  if (!userCredentials) {
     loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
       email: req.body.email || "",
       mandaiId: req.body.mandaiId || "",
-      error: 'No user record found!',
+      error: 'Account has no record!',
       layer: 'validationMiddleware.AccessTokenAuthGuard'
     }, 'error');
-    return res.status(200).json(MembershipErrors.ciamMembershipUserNotFound(
-      req.body.email || "",
-      req.body.language
-    ))
+    return res
+      .status(400)
+      .json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
   }
 
   if (
