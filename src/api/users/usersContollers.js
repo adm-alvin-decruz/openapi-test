@@ -679,21 +679,21 @@ async function userGetMembershipPasses(body) {
 }
 
 async function userVerifyToken(accessToken, body) {
-  const message = UserVerifyTokenValidation.execute(body);
-  if (message) {
+  const valError = UserVerifyTokenValidation.execute(body);
+  if (valError) {
     loggerService.error(
       {
         user: {
           action: "userVerifyToken",
           api_body: body,
-          error: new Error(message),
+          error: new Error(valError),
           layer: "controller.userGetMembershipPasses",
         },
       },
       {},
       "[CIAM] End userVerifyToken Request - Failed"
     );
-    throw new Error(JSON.stringify(message));
+    throw new Error(JSON.stringify(valError));
   }
   try {
     return await userVerifyTokenService.verifyToken(accessToken, body);

@@ -5,6 +5,21 @@ class UserVerifyTokenValidation {
     this.error = null;
   }
 
+  /**
+   * Function Execute
+   * @param {json} body
+   * @returns
+   */
+  static execute(body) {
+    return this.validateRequest(body, body.language);
+  }
+
+  /**
+   * Fucntion validate request
+   * @param {json} body
+   * @param {en} lang
+   * @returns
+   */
   static validateRequest(body, lang) {
     const keys = Object.keys(body);
     const filterKeys = keys.filter(key => key !== "language");
@@ -23,10 +38,6 @@ class UserVerifyTokenValidation {
       ));
     }
     return (this.error = null);
-  }
-
-  static execute(body) {
-    return this.validateRequest(body, body.language);
   }
 }
 
