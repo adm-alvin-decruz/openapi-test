@@ -1,8 +1,7 @@
 require("dotenv").config();
 const userEventAuditTrailModel = require("../../db/models/userEventAuditTrailModel");
-const userModel = require("../../db/models/userModel");
 
-class UserCredentialEventService {
+class UserEventAuditTrailService {
   generateEventModel(status, eventType, eventData, source) {
     if (status === "success") {
       return {
@@ -29,4 +28,4 @@ class UserCredentialEventService {
   }
 }
 
-module.exports = new UserCredentialEventService();
+module.exports = new UserEventAuditTrailService();
