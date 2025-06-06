@@ -6,7 +6,7 @@ const loggerService = require("../../logs/logger");
 class UserEvenAuditTrailModel {
   static async create(email, userId, eventData) {
     const sql = `
-      INSERT INTO users_event_audit_trail
+      INSERT INTO user_event_audit_trail
       (email, user_id, event_type, data, source, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
