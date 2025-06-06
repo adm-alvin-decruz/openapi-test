@@ -23,6 +23,20 @@ class UserSignupValidation {
       (key) => !listKeys.includes(key)
     );
     if (paramsMissing.length) {
+      if (paramsMissing.includes("password")) {
+        return (this.error = CommonErrors.BadRequest(
+          "password",
+          "newPassword_required",
+          reqBody.language
+        ))
+      }
+      if (paramsMissing.includes("confirmPassword")) {
+        return (this.error = CommonErrors.BadRequest(
+          "confirmPassword",
+          "confirmPassword_required",
+          reqBody.language
+        ))
+      }
       return (this.error = CommonErrors.BadRequest(
         paramsMissing[0],
         `${paramsMissing[0]}_invalid`,

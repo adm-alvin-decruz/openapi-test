@@ -1,5 +1,6 @@
 const CommonErrors = require("../../../config/https/errors/commonErrors");
 const { passwordPattern } = require("../../../utils/common");
+const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const UserPasswordVersionService = require("../userPasswordVersionService");
 
@@ -8,7 +9,7 @@ class UserConfirmResetPasswordValidation {
     this.error = null;
   }
 
-  static execute(reqBody) {
+  static async execute(reqBody) {
     //validate missing required params
     const paramsShouldNotEmpty = [
       "newPassword",
@@ -41,8 +42,11 @@ class UserConfirmResetPasswordValidation {
       ));
     }
 
-    if (reqBody.newPassword && !passwordPattern(reqBody.newPassword)) {
-      return (this.error = CommonErrors.PasswordErr(reqBody.language));
+    if (reqBody.newPassword) {
+      const passwordCorrectFormat = await checkPasswordHasValidPattern(reqBody.newPassword);
+      if (!passwordCorrectFormat) {
+        return (this.error = CommonErrors.PasswordErr(reqBody.language));
+      }
     }
 
     if (reqBody.newPassword !== reqBody.confirmPassword) {

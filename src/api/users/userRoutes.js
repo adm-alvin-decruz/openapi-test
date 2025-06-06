@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const upload = multer({ limits: { fileSize: 1024 * 1024 * 1 } });
 
 const userController = require("./usersContollers");
 const commonService = require("../../services/commonService");
@@ -23,6 +22,7 @@ const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
 const { maskKeyRandomly } = require("../../utils/common");
+const { RateLimitMiddleware } = require("../../middleware/rateLimitMiddleware");
 
 const pong = { pong: "pang" };
 
@@ -35,7 +35,7 @@ router.get("/ping", async (req, res) => {
 /**
  * User signup, create new CIAM user
  */
-router.post("/users", isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
+router.post("/users", RateLimitMiddleware, isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -103,6 +103,7 @@ router.post("/users", isEmptyRequest, validateEmail, lowercaseTrimKeyValueString
  * Handling most HTTP validation here
  */
 router.put("/users",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
@@ -181,6 +182,7 @@ router.put("/users",
  */
 router.post(
   "/users/memberships/resend",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   async (req, res) => {
@@ -216,6 +218,7 @@ router.post(
  */
 router.post(
   "/users/delete",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   async (req, res) => {
@@ -254,7 +257,7 @@ router.post(
  */
 router.get(
   "/users",
-  upload.none(),
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   async (req, res) => {
@@ -283,7 +286,7 @@ router.get(
 /**
  * User Login API (Method POST)
  */
-router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) => {
+router.post("/users/sessions", RateLimitMiddleware, isEmptyRequest, validateEmail, async (req, res) => {
     req["processTimer"] = processTimer;
     req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
@@ -310,9 +313,10 @@ router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) =
  * User Logout API (Method DELETE)
  */
 router.delete("/users/sessions",
+  RateLimitMiddleware,
   isEmptyRequest,
-  AccessTokenAuthGuard,
   validateEmail,
+  AccessTokenAuthGuard,
   async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
@@ -350,6 +354,7 @@ router.delete("/users/sessions",
  */
 router.post(
   "/users/reset-password",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   lowercaseTrimKeyValueString,
@@ -443,6 +448,7 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
  */
 router.post(
   "/users/membership-passes",
+  RateLimitMiddleware,
   isEmptyRequest,
   AccessTokenAuthGuard,
   lowercaseTrimKeyValueString,
@@ -478,7 +484,7 @@ router.post(
 /**
  * User Verify Access Token API (Method POST)
  */
-router.post("/token/verify", isEmptyRequest, async (req, res) => {
+router.post("/token/verify", RateLimitMiddleware, isEmptyRequest, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -528,6 +534,7 @@ router.post(
  */
 router.put(
   "/users/my-membership",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   lowercaseTrimKeyValueString,
@@ -539,6 +546,7 @@ router.put(
  */
 router.post(
   "/token/refresh",
+  RateLimitMiddleware,
   isEmptyRequest,
   validateAPIKey,
   AccessTokenAuthGuard,

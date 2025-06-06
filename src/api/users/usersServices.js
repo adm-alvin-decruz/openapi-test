@@ -40,7 +40,7 @@ const userUpdateHelper = require("./usersUpdateHelpers");
 const userDeleteHelper = require("./usersDeleteHelpers");
 const galaxyWPService = require("../components/galaxy/services/galaxyWPService");
 const switchService = require("../../services/switchService");
-const { GROUP } = require("../../utils/constants");
+const { GROUP, EVENTS } = require("../../utils/constants");
 const { messageLang } = require("../../utils/common");
 const userModel = require("../../db/models/userModel");
 const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
@@ -581,6 +581,14 @@ async function adminUpdateMPUser(body) {
         password,
         language: language,
       });
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.PASSWORD_CHANGE,
+        data: {
+          from: "user_update_api"
+        },
+        source: 1,
+        status: 1
+      }, null, email)
     }
 
     //2nd proceed update user information
