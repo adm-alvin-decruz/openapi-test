@@ -21,6 +21,7 @@ const userMigrationsModel = require("../../db/models/userMigrationsModel");
 const loggerService = require("../../logs/logger");
 const empMembershipUserAccountsModel = require("../../db/models/empMembershipUserAccountsModel");
 const switchService = require("../../services/switchService");
+const userEventAuditTrailService = require("./userEventAuditTrailService");
 const userSignupHelper = require("./usersSignupHelper");
 
 class UserSignupService {
@@ -533,7 +534,7 @@ class UserSignupService {
       //update picked = 1 in emp_membership+user_accounts tbl
       !!req.body &&
         !!req.body.migrations &&
-        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1}));
 
       await this.saveUserDB({
         req,
@@ -548,7 +549,15 @@ class UserSignupService {
         action: "adminCreateMPUser",
         cognitoCreated: JSON.stringify(cognitoInfo),
         mandaiId
-      })
+      });
+      await userEventAuditTrailService.createEvent(
+        req.body.email,
+        "success",
+        "signup",
+        req.body,
+        1,
+        mandaiId
+      );
       return {
         mandaiId,
       };
@@ -559,7 +568,17 @@ class UserSignupService {
         error: new Error(error),
         membership: req.body.group,
         body: JSON.stringify(req.body)
-      }, "error")
+      }, "error");
+      await userEventAuditTrailService.createEvent(
+        req.body.email,
+        "failed",
+        "signup",
+        {
+          ...req.body,
+          error: JSON.stringify(error)
+        },
+        1
+      );
       req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 2,

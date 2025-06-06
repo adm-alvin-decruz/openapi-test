@@ -11,6 +11,7 @@ const { getCurrentUTCTimestamp, convertDateToMySQLFormat} = require('../../utils
 const commonService = require("../../services/commonService");
 const loggerService = require("../../logs/logger");
 const cognitoService = require("../../services/cognitoService");
+const userEventAuditTrailService = require("./userEventAuditTrailService");
 
 /**
  * Generate mandaiID
@@ -248,6 +249,16 @@ async function insertUserMembership(req, dbUserID){
     return result;
 
   } catch (error) {
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "failed",
+      "signup",
+      {
+        ...req.body,
+        error: JSON.stringify(error)
+      },
+      1
+    );
     let catchError = new Error(`userSignupHelper.insertUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
@@ -291,6 +302,16 @@ async function insertUserNewletter(req, dbUserID, userExisted){
     return result;
 
   } catch (error) {
+    await userEventAuditTrailService.createEvent(
+      req.body.email,
+      "failed",
+      "signup",
+      {
+        ...req.body,
+        error: JSON.stringify(error)
+      },
+      1
+    );
     let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
     console.log(catchError);
     return catchError;
