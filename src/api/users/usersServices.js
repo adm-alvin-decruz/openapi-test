@@ -58,6 +58,7 @@ const {
   updateCognitoUserInfo,
 } = require("./helpers/userUpdateMembershipPassesHelper");
 const userEventAuditTrailService = require("./userEventAuditTrailService");
+const userCredentialEventService = require("./userCredentialEventService");
 
 /**
  * Function User signup service
@@ -581,7 +582,7 @@ async function adminUpdateMPUser(body) {
         password,
         language: language,
       });
-      await UserCredentialEventService.createEvent({
+      await userCredentialEventService.createEvent({
         eventType: EVENTS.PASSWORD_CHANGE,
         data: {
           from: "user_update_api"
