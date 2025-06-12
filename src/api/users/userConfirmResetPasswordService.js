@@ -12,6 +12,7 @@ const { EVENTS } = require("../../utils/constants");
 const { switchIsTurnOn } = require("../../helpers/dbSwitchesHelpers");
 const UserPasswordVersionService = require("./userPasswordVersionService");
 const CommonErrors = require("../../config/https/errors/commonErrors");
+const passwordService = require("./userPasswordService");
 
 class UserConfirmResetPasswordService {
   async execute(body) {
@@ -43,7 +44,10 @@ class UserConfirmResetPasswordService {
         body.newPassword
       );
       //save db
+      const password_hash = await passwordService.hashPassword(body.newPassword);
       const dataUpdate = {
+        salt: null,
+        password_hash,
         tokens: {
           ...rs.tokens,
           reset_token: {
