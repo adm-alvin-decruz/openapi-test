@@ -85,10 +85,10 @@ class UserGetMembershipPassesService {
           body: body,
           action: `retrieveSinglePassURL`,
           layer: "userGetMembershipPassesService.retrieveSinglePassURL",
-          passUrl: passUrl,
+          passUrl: JSON.stringify(passUrl),
         },
       },
-      "End getMembershipPasses Service - Failed"
+      "End getMembershipPasses Service - Success"
     );
 
     return passUrl;
