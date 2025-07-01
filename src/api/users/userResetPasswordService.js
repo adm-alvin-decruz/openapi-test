@@ -15,6 +15,8 @@ const emailService = require("../users/usersEmailService");
 const userDBService = require("../users/usersDBService");
 const { switchIsTurnOn } = require("../../helpers/dbSwitchesHelpers");
 const { checkUserBelongSpecificGroup } = require("./helpers/checkMembershipGroups");
+const UserCredentialEventService = require("./userCredentialEventService");
+const { EVENTS } = require("../../utils/constants");
 
 class UserResetPasswordService {
   async execute(req) {
@@ -22,6 +24,7 @@ class UserResetPasswordService {
     const email = req.body.email;
     const language = req.body.language || 'en';
     let userExistedInCognito = null;
+    let resetToken = "";
     try {
       userExistedInCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
     } catch (error) {
@@ -49,8 +52,7 @@ class UserResetPasswordService {
       }
     }
 
-    const resetToken = generateRandomToken(16);
-    console.log("reset token", resetToken);
+    resetToken = generateRandomToken(16);
     const saltKey = generateSaltHash(resetToken);
     const passwordHash = generateSaltHash(resetToken, saltKey);
     try {
@@ -69,7 +71,7 @@ class UserResetPasswordService {
 
       const userInfo = await userCredentialModel.findByUserEmail(email);
       //save db
-      await userCredentialModel.updateByUserEmail(email, {
+      const dataUpdate = {
         password_hash: passwordHash,
         salt: saltKey,
         tokens: {
@@ -80,12 +82,32 @@ class UserResetPasswordService {
             reset_at: null,
           },
         },
-      });
+      }
+      await userCredentialModel.updateByUserEmail(email, dataUpdate);
+      //insert events
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.PASSWORD_RESET,
+        data: {
+          ...dataUpdate,
+          resetToken
+        },
+        source: 1,
+        status: 1
+      }, null, email);
       return {
         email,
       };
     } catch (error) {
-      //TODO: handle error saving to trail_table
+      await UserCredentialEventService.createEvent({
+        eventType: EVENTS.PASSWORD_RESET,
+        data: {
+          ...req.body,
+          resetToken,
+          error: JSON.stringify(error)
+        },
+        source: 1,
+        status: 0
+      }, null, email);
       loggerService.error(
           {
             user: {

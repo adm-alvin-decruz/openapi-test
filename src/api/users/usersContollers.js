@@ -25,6 +25,7 @@ const CommonErrors = require("../../config/https/errors/commonErrors");
 const UserConfirmResetPasswordValidation = require("./validations/UserConfirmResetPasswordValidation");
 const UserValidateResetPasswordValidation = require("./validations/UserValidateResetPasswordValidation");
 const UserGetMembershipPassesValidation = require("./validations/UserGetMembershipPassesValidation");
+const UserVerifyTokenValidation = require("./validations/UserVerifyTokenValidation");
 const UserResetAccessTokenJob = require("./userRefreshAccessTokenJob");
 const userVerifyTokenService = require("./userVerifyTokenService");
 const UserGetMembershipPassesJob = require("./userGetMembershipPassesJob");
@@ -611,13 +612,13 @@ async function userValidateResetPassword(passwordToken, lang) {
   }
 }
 
-async function userConfirmResetPassword(body) {
-  const message = UserConfirmResetPasswordValidation.execute(body);
+async function userConfirmResetPassword(reqBody) {
+  const message = await UserConfirmResetPasswordValidation.execute(reqBody);
   if (!!message) {
     throw new Error(JSON.stringify(message));
   }
   try {
-    return await UserConfirmResetPasswordJob.perform(body);
+    return await UserConfirmResetPasswordJob.perform(reqBody);
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
@@ -678,12 +679,28 @@ async function userGetMembershipPasses(body) {
 }
 
 async function userVerifyToken(accessToken, body) {
+  const valError = UserVerifyTokenValidation.execute(body);
+  if (valError) {
+    loggerService.error(
+      {
+        user: {
+          action: "userVerifyToken",
+          api_body: body,
+          error: new Error(valError),
+          layer: "controller.userGetMembershipPasses",
+        },
+      },
+      {},
+      "[CIAM] End userVerifyToken Request - Failed"
+    );
+    throw new Error(JSON.stringify(valError));
+  }
   try {
     return await userVerifyTokenService.verifyToken(accessToken, body);
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));

@@ -29,10 +29,18 @@ const COGNITO_ATTRIBUTES = {
 
 const EXPIRE_TIME_HOURS = 1; //hour unit
 
+const EVENTS = {
+  LOGIN: "login",
+  LOGOUT: "logout",
+  PASSWORD_RESET: "password_reset",
+  PASSWORD_CHANGE: "password_change",
+  REFRESH_TOKEN: "refresh_token",
+}
 module.exports = {
   GROUP,
   LANGUAGE_CODE,
   GROUPS_SUPPORTS,
   COGNITO_ATTRIBUTES,
-  EXPIRE_TIME_HOURS
+  EXPIRE_TIME_HOURS,
+  EVENTS
 };

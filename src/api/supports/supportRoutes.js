@@ -9,6 +9,7 @@ const validationService = require('../../services/validationService');
 const { isEmptyRequest, validateEmail } = require('../../middleware/validationMiddleware');
 const processTimer = require('../../utils/processTimer');
 const CommonErrors = require("../../config/https/errors/commonErrors");
+const { RateLimitMiddleware } = require("../../middleware/rateLimitMiddleware");
 
 router.use(express.json());
 
@@ -42,8 +43,19 @@ router.get('/support/switches', upload.none(), isEmptyRequest, async (req, res) 
 
 // create switches
 router.post('/support/switches', async (req, res) => {
-    // let membersetPassword = await userController.adminSetUserPassword();
-    return res.json({membersetPassword});
+  const valAppID = validationService.validateAppID(req.headers, 'support');
+
+  if(valAppID === true) {
+    try {
+      const config = await supportController.createSwitches(req.body);
+      return res.status(200).json(config);
+    } catch {
+      return res.status(400).send({ message: 'Switches is duplicated' });
+    }
+  }
+  else{
+    return res.status(401).send(CommonErrors.UnauthorizedException());
+  }
 })
 
 // update switches
@@ -156,7 +168,7 @@ router.post('/support/user/galaxy/import',isEmptyRequest, async (req, res) => {
 });
 
 /** configs */
-router.get('/support/configs', async (req, res) => {
+router.get('/support/configs', RateLimitMiddleware, async (req, res) => {
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers, 'support');
 

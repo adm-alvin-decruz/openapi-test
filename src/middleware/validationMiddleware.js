@@ -14,6 +14,8 @@ const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
+const MembershipErrors = require("../config/https/errors/membershipErrors");
+const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
 
 /**
  * Validate empty request
@@ -29,7 +31,7 @@ function isEmptyRequest(req, res, next) {
     req.method === "PATCH" ||
     req.method === "DELETE"
   ) {
-    if (Object.keys(req.body).length === 0) {
+    if (Object.keys(req.body).length === 0 || (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === 'language')) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
   }
@@ -164,8 +166,19 @@ async function AccessTokenAuthGuard(req, res, next) {
     req.body.mandaiId || ""
   );
 
+  if (!userCredentials) {
+    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
+      email: req.body.email || "",
+      mandaiId: req.body.mandaiId || "",
+      error: 'Account has no record!',
+      layer: 'validationMiddleware.AccessTokenAuthGuard'
+    }, 'error');
+    return res
+      .status(400)
+      .json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
+  }
+
   if (
-    !userCredentials ||
     !userCredentials.tokens ||
     !userCredentials.tokens.accessToken ||
     !userCredentials.tokens.refreshToken ||

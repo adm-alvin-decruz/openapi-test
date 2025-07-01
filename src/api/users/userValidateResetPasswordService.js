@@ -49,7 +49,9 @@ class UserValidateResetPasswordService {
     return {
       token,
       email: userInfo.username,
+      userId: userInfo.user_id,
       tokens: userInfo.tokens,
+      userId: userInfo.user_id
     };
   }
 }

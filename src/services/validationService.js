@@ -63,6 +63,15 @@ function validateParams(reqBody, configName) {
 }
 
 function validateDOB(birthdate) {
+  //validate input
+  if (birthdate.length !== 10) {
+    return false;
+  }
+
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(birthdate)) {
+    return false;
+  }
+
   // Parse the birthdate string
   const [day, month, year] = birthdate.split("/").map(Number);
 
