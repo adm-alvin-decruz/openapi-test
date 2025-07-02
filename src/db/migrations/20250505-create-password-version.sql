@@ -19,3 +19,7 @@ VALUES
 INSERT INTO `configs` (`config`, `key`, `value`, `created_at`, `updated_at`)
 VALUES
 	('password_versioning_conf', 'version', '6', now(), now());
+
+INSERT INTO `switches` (`name`, `switch`, `description`, `created_at`, `updated_at`)
+VALUES
+	('enable_check_password_complexity', '0', 'Enable check password complexity base on IT policy suggestion', '2025-07-01 15:19:39', '2025-07-01 15:19:39');
