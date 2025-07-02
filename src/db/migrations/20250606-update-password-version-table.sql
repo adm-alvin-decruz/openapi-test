@@ -1,5 +1,4 @@
 -- indexes for optimal query performance
-CREATE INDEX `idx_user_id` ON `password_versions` (`user_id`);
 CREATE INDEX `idx_user_version` ON `password_versions` (`user_id`, `version`);
 CREATE INDEX `idx_user_active` ON `password_versions` (`user_id`, `is_active`);
 CREATE INDEX `idx_created_at` ON `password_versions` (`created_at`);
