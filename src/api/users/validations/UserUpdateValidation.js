@@ -1,6 +1,5 @@
 const { validateDOB } = require("../../../services/validationService");
 const CommonErrors = require("../../../config/https/errors/commonErrors");
-const { passwordPattern } = require("../../../utils/common");
 const emailDomainService = require("../../../services/emailDomainsService");
 const userCredentialModel = require("../../../db/models/userCredentialModel");
 const passwordService = require("../userPasswordService");
@@ -8,6 +7,8 @@ const UserPasswordVersionService = require("../userPasswordVersionService");
 const argon2 = require("argon2");
 const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
+const cognitoService = require("../../../services/cognitoService");
+const crypto = require("crypto");
 
 
 class UserUpdateValidation {
@@ -22,7 +23,28 @@ class UserUpdateValidation {
   //return true/false
   static async verifyPassword(userCredential, password) {
     //check by password salt - from migration always have salt
+    let isSamePassword = false;
     if (userCredential && userCredential.salt && !userCredential.password_hash.startsWith("$argon2")) {
+      //cover for case hash_password salt generate by CIAM with old user
+      //more than 8 character is hash generate by CIAM - CIAM generate hash automatically
+      if (userCredential.password_hash.length > 8) {
+        //when update password success -> the password_hash will always $argon2 it mean this func will only run once.
+        try {
+          const loginSession = await cognitoService.cognitoUserLogin({
+            email: userCredential.username,
+            password: password
+          }, crypto
+            .createHmac("sha256", process.env.USER_POOL_CLIENT_SECRET)
+            .update(`${userCredential.username}${process.env.USER_POOL_CLIENT_ID}`)
+            .digest("base64"));
+          isSamePassword = !!loginSession && !!loginSession.accessToken;
+        } catch {
+          isSamePassword = false
+        }
+      }
+      if (isSamePassword) {
+        return isSamePassword;
+      }
       return passwordService
           .createPassword(password, userCredential.salt)
           .toUpperCase() === userCredential.password_hash.toUpperCase()
