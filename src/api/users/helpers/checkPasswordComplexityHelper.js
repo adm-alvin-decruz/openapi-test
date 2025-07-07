@@ -4,8 +4,8 @@ const {
   passwordPatternComplexity,
 } = require("../../../utils/common");
 
-async function checkPasswordHasValidPattern(password) {
-  const enableCheckingPasswordComplexity = await switchIsTurnOn("enable_check_password_complexity");
+async function checkPasswordHasValidPattern(password, flag) {
+  const enableCheckingPasswordComplexity = await switchIsTurnOn(flag);
   return enableCheckingPasswordComplexity
     ? passwordPatternComplexity(password)
     : passwordPattern(password);
