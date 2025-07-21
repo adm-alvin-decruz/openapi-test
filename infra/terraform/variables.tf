@@ -160,3 +160,7 @@ variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
 variable "MFA_MOBILE_REQ_PUBLIC_API_KEY" {
   description = "API Key for MFA"
 }
+
+variable "CIAMSP_REQ_PRIVATE_API_KEY" {
+  description = "API Key for Service Portal"
+}
