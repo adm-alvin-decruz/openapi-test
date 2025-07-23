@@ -41,25 +41,24 @@ const passwordPattern = (password) => {
 };
 
 const passwordPatternComplexity = (password) => {
-  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\$%^&*_+=\\[\\]<>]).{10,}$", "g");;
+  const regexPasswordValid = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\$%^&*_+=\\[\\]<>]).{10,}$", "g");
   return regexPasswordValid.test(password.toString());
 };
 
 const emailPattern = (email) => {
-  const regexEmailValid = new RegExp(
-    "^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$",
-    "g"
-  );
+  const regexEmailValid = new RegExp("^(?=.{1,64}@)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$", "g");
   return regexEmailValid.test(email.toString());
 };
 
-const generateSecretHash = (keyword) => {
-  const clientId = process.env.USER_POOL_CLIENT_ID;
-  const clientSecret = process.env.USER_POOL_CLIENT_SECRET;
-  return crypto
-    .createHmac("sha256", clientSecret)
-    .update(`${keyword}${clientId}`)
-    .digest("base64");
+const generateSecretHash = async (keyword) => {
+  try {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const clientId = ciamSecrets.USER_POOL_CLIENT_ID;
+    const clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
+    return crypto.createHmac("sha256", clientSecret).update(`${keyword}${clientId}`).digest("base64");
+  } catch (error) {
+    throw new Error("generateSecretHash error: ", error);
+  }
 };
 
 //create random token key
@@ -77,9 +76,7 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 const omit = (obj, excludeKeys) => {
-  return Object.fromEntries(
-    Object.entries(obj).filter((e) => !excludeKeys.includes(e[0]))
-  );
+  return Object.fromEntries(Object.entries(obj).filter((e) => !excludeKeys.includes(e[0])));
 };
 
 const maskKeyRandomly = (str) => {
@@ -109,10 +106,7 @@ const maskKeyRandomly = (str) => {
 };
 
 const existsCapitalizePattern = (keyword) => {
-  const regexEmailValid = new RegExp(
-      "\\b\\w*[A-Z]\\w*\\b",
-      "g"
-  );
+  const regexEmailValid = new RegExp("\\b\\w*[A-Z]\\w*\\b", "g");
   return regexEmailValid.test(keyword.toString());
 };
 
@@ -129,5 +123,5 @@ module.exports = {
   maskKeyRandomly,
   emailPattern,
   existsCapitalizePattern,
-  passwordPatternComplexity
+  passwordPatternComplexity,
 };

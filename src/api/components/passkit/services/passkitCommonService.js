@@ -1,20 +1,26 @@
 require("dotenv").config();
 const appConfig = require("../../../../config/appConfig");
+const { default: secrets } = require("../../../../services/secretsService");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
 
 async function setPasskitReqHeader() {
-  return constructPasskitHeader();
+  return await constructPasskitHeader();
 }
 
-function constructPasskitHeader() {
-  return {
-    "mwg-app-id": appConfig[passkitAPIConfig],
-    "x-api-key": process.env.PASSKIT_API_KEY,
-    "Content-Type": "application/json",
-  };
+async function constructPasskitHeader() {
+  try {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    return {
+      "mwg-app-id": appConfig[passkitAPIConfig],
+      "x-api-key": ciamSecrets.PASSKIT_API_KEY,
+      "Content-Type": "application/json",
+    };
+  } catch (error) {
+    throw new Error("constructPasskitHeader error: ", error);
+  }
 }
 
 module.exports = {
-  setPasskitReqHeader
+  setPasskitReqHeader,
 };

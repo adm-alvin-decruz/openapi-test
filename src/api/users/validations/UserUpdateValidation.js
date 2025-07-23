@@ -9,11 +9,15 @@ const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 const cognitoService = require("../../../services/cognitoService");
 const crypto = require("crypto");
+const { default: secrets } = require("../../../services/secretsService");
 
+const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
 
 class UserUpdateValidation {
   constructor() {
     this.error = null;
+    this.clientId = ciamSecrets.USER_POOL_CLIENT_ID;
+    this.clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
   }
 
   static execute(req) {
@@ -30,24 +34,28 @@ class UserUpdateValidation {
       if (userCredential.password_hash.length > 8) {
         //when update password success -> the password_hash will always $argon2 it mean this func will only run once.
         try {
-          const loginSession = await cognitoService.cognitoUserLogin({
-            email: userCredential.username,
-            password: password
-          }, crypto
-            .createHmac("sha256", process.env.USER_POOL_CLIENT_SECRET)
-            .update(`${userCredential.username}${process.env.USER_POOL_CLIENT_ID}`)
-            .digest("base64"));
+          const loginSession = await cognitoService.cognitoUserLogin(
+            {
+              email: userCredential.username,
+              password: password,
+            },
+            crypto
+              .createHmac("sha256", this.clientSecret)
+              .update(`${userCredential.username}${this.clientId}`)
+              .digest("base64")
+          );
           isSamePassword = !!loginSession && !!loginSession.accessToken;
         } catch {
-          isSamePassword = false
+          isSamePassword = false;
         }
       }
       if (isSamePassword) {
         return isSamePassword;
       }
-      return passwordService
-          .createPassword(password, userCredential.salt)
-          .toUpperCase() === userCredential.password_hash.toUpperCase()
+      return (
+        passwordService.createPassword(password, userCredential.salt).toUpperCase() ===
+        userCredential.password_hash.toUpperCase()
+      );
     }
     //check by password argon2 with normal flow
     return await argon2.verify(userCredential.password_hash, password);
@@ -81,19 +89,11 @@ class UserUpdateValidation {
       .filter((ele) => bodyData[`${ele}`].trim() === "");
 
     if (paramsInvalid.length) {
-      return (this.error = CommonErrors.BadRequest(
-        paramsInvalid[0],
-        `${paramsInvalid[0]}_invalid`,
-        req.language
-      ));
+      return (this.error = CommonErrors.BadRequest(paramsInvalid[0], `${paramsInvalid[0]}_invalid`, req.language));
     }
 
     if (bodyData.newEmail && !emailDomainService.isValidEmailFormat(bodyData.newEmail)) {
-      return (this.error = CommonErrors.BadRequest(
-        "newEmail",
-        "newEmail_invalid",
-        req.language
-      ));
+      return (this.error = CommonErrors.BadRequest("newEmail", "newEmail_invalid", req.language));
     }
 
     // check email domain switch turned on ( 1 ) if email format is passed
@@ -102,11 +102,7 @@ class UserUpdateValidation {
         // validate email domain to DB
         let validDomain = await emailDomainService.validateEmailDomain(bodyData.newEmail);
         if (!validDomain) {
-          return (this.error = CommonErrors.BadRequest(
-              "newEmail",
-              "newEmail_invalid",
-              req.language
-          ));
+          return (this.error = CommonErrors.BadRequest("newEmail", "newEmail_invalid", req.language));
         }
       }
     }
@@ -114,50 +110,33 @@ class UserUpdateValidation {
     if (bodyData.dob || bodyData.dob === "") {
       const dob = validateDOB(bodyData.dob);
       if (!dob) {
-        return (this.error = CommonErrors.BadRequest(
-          "dob",
-          "dob_invalid",
-          req.language
-        ));
+        return (this.error = CommonErrors.BadRequest("dob", "dob_invalid", req.language));
       }
     }
     if (bodyData.country && bodyData.country.length !== 2) {
-      return (this.error = CommonErrors.BadRequest(
-        "country",
-        "country_invalid",
-        req.language
-      ));
+      return (this.error = CommonErrors.BadRequest("country", "country_invalid", req.language));
     }
     if (
       bodyData.newsletter &&
       bodyData.newsletter.name &&
       !["wildpass", "membership"].includes(bodyData.newsletter.name)
     ) {
-      return (this.error = CommonErrors.BadRequest(
-        "newsletter",
-        "newsletter_invalid",
-        req.language
-      ));
+      return (this.error = CommonErrors.BadRequest("newsletter", "newsletter_invalid", req.language));
     }
     if (bodyData.newPassword || bodyData.confirmPassword || bodyData.oldPassword || bodyData.password) {
       //checking with private endpoint
       if (privateMode) {
         if (bodyData.confirmPassword && !bodyData.password) {
-          return (this.error = CommonErrors.BadRequest(
-            "password",
-            "newPassword_required",
-            req.language
-          ));
+          return (this.error = CommonErrors.BadRequest("password", "newPassword_required", req.language));
         }
         if (bodyData.password && !bodyData.confirmPassword) {
-          return (this.error = CommonErrors.BadRequest(
-            "confirmPassword",
-            "confirmPassword_required",
-            req.language
-          ));
+          return (this.error = CommonErrors.BadRequest("confirmPassword", "confirmPassword_required", req.language));
         }
         if (bodyData.password) {
-          const passwordCorrectFormat = await checkPasswordHasValidPattern(bodyData.password, "enable_check_password_complexity_private_endpoint");
+          const passwordCorrectFormat = await checkPasswordHasValidPattern(
+            bodyData.password,
+            "enable_check_password_complexity_private_endpoint"
+          );
           if (!passwordCorrectFormat) {
             return (this.error = CommonErrors.PasswordErr(req.language));
           }
@@ -168,41 +147,34 @@ class UserUpdateValidation {
 
           const userCredential = await userCredentialModel.findByUserEmail(req.email);
           //verify with password version
-          const enablePasswordVersionChecking =  await switchIsTurnOn("enable_password_versioning_private_endpoint");
+          const enablePasswordVersionChecking = await switchIsTurnOn("enable_password_versioning_private_endpoint");
           if (enablePasswordVersionChecking) {
-            const newPasswordHadMarkedVersion =
-              await UserPasswordVersionService.passwordValidProcessing(userCredential.user_id, bodyData.password);
+            const newPasswordHadMarkedVersion = await UserPasswordVersionService.passwordValidProcessing(
+              userCredential.user_id,
+              bodyData.password
+            );
             if (newPasswordHadMarkedVersion) {
               return (this.error = CommonErrors.sameOldPasswordException(req.language));
             }
           }
         }
-        return this.error = null;
+        return (this.error = null);
       }
 
       if (!bodyData.oldPassword) {
-        return (this.error = CommonErrors.BadRequest(
-          "oldPassword",
-          "oldPassword_required",
-          req.language
-        ));
+        return (this.error = CommonErrors.BadRequest("oldPassword", "oldPassword_required", req.language));
       }
       if (!bodyData.newPassword) {
-        return (this.error = CommonErrors.BadRequest(
-          "newPassword",
-          "newPassword_required",
-          req.language
-        ));
+        return (this.error = CommonErrors.BadRequest("newPassword", "newPassword_required", req.language));
       }
       if (!bodyData.confirmPassword) {
-        return (this.error = CommonErrors.BadRequest(
-          "confirmPassword",
-          "confirmPassword_required",
-          req.language
-        ));
+        return (this.error = CommonErrors.BadRequest("confirmPassword", "confirmPassword_required", req.language));
       }
       if (bodyData.newPassword) {
-        const passwordCorrectFormat = await checkPasswordHasValidPattern(bodyData.newPassword, "enable_check_password_complexity");
+        const passwordCorrectFormat = await checkPasswordHasValidPattern(
+          bodyData.newPassword,
+          "enable_check_password_complexity"
+        );
         if (!passwordCorrectFormat) {
           return (this.error = CommonErrors.PasswordErr(req.language));
         }
@@ -216,7 +188,7 @@ class UserUpdateValidation {
         const userCredential = await userCredentialModel.findByUserEmail(req.email);
 
         if (bodyData.oldPassword) {
-          oldPasswordIsSame = await this.verifyPassword(userCredential, bodyData.oldPassword)
+          oldPasswordIsSame = await this.verifyPassword(userCredential, bodyData.oldPassword);
         }
         if (!oldPasswordIsSame) {
           return (this.error = CommonErrors.OldPasswordNotMatchErr(req.language));
@@ -228,10 +200,12 @@ class UserUpdateValidation {
         }
 
         //verify with password version
-        const enablePasswordVersionChecking =  await switchIsTurnOn("enable_password_versioning");
+        const enablePasswordVersionChecking = await switchIsTurnOn("enable_password_versioning");
         if (enablePasswordVersionChecking) {
-          const newPasswordHadMarkedVersion =
-            await UserPasswordVersionService.passwordValidProcessing(userCredential.user_id, bodyData.newPassword);
+          const newPasswordHadMarkedVersion = await UserPasswordVersionService.passwordValidProcessing(
+            userCredential.user_id,
+            bodyData.newPassword
+          );
           if (newPasswordHadMarkedVersion) {
             return (this.error = CommonErrors.sameOldPasswordException(req.language));
           }

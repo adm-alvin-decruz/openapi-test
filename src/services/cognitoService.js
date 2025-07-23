@@ -11,6 +11,8 @@ const {
   ChangePasswordCommand,
   AdminListGroupsForUserCommand,
   AdminAddUserToGroupCommand,
+  AdminDisableUserCommand,
+  AdminEnableUserCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const passwordService = require("../api/users/userPasswordService");
 const loggerService = require("../logs/logger");
@@ -19,10 +21,17 @@ const crypto = require("crypto");
 const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const cognitoAttribute = require("../utils/cognitoAttributes");
 const { GROUP } = require("../utils/constants");
-const MembershipErrors = require("../config/https/errors/membershipErrors");
 const configsModel = require("../db/models/configsModel");
+const { default: secrets } = require("./secretsService");
+
+const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
 
 class Cognito {
+  constructor() {
+    this.clientId = ciamSecrets.USER_POOL_CLIENT_ID;
+    this.clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
+  }
+
   static async cognitoAdminUpdateUser(req, ciamComparedParams) {
     req["apiTimer"] = req.processTimer.apiRequestTimer();
     req.apiTimer.log("cognitoAdminUpdateUser"); // log process time
@@ -34,14 +43,10 @@ class Cognito {
       UserAttributes: ciamComparedParams,
     };
     result["cognitoUpdateArr"] = JSON.stringify(updateUserArray);
-    const setUpdateParams = new AdminUpdateUserAttributesCommand(
-      updateUserArray
-    );
+    const setUpdateParams = new AdminUpdateUserAttributesCommand(updateUserArray);
 
     try {
-      result["cognitoUpdateResult"] = JSON.stringify(
-        client.send(setUpdateParams)
-      );
+      result["cognitoUpdateResult"] = JSON.stringify(client.send(setUpdateParams));
     } catch (error) {
       result["cognitoUpdateError"] = JSON.stringify(error);
     }
@@ -53,7 +58,7 @@ class Cognito {
     const userLoginParams = new AdminInitiateAuthCommand({
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: process.env.USER_POOL_ID,
-      ClientId: process.env.USER_POOL_CLIENT_ID,
+      ClientId: this.clientId,
       AuthParameters: {
         SECRET_HASH: hashSecret,
         USERNAME: email,
@@ -161,10 +166,10 @@ class Cognito {
         "[CIAM] End cognitoUserLogout Service - Failed"
       );
       throw new Error(
-          JSON.stringify({
-            status: "failed",
-            data: error,
-          })
+        JSON.stringify({
+          status: "failed",
+          data: error,
+        })
       );
     }
   }
@@ -329,7 +334,7 @@ class Cognito {
     }
   }
 
-  static async cognitoAdminCreateUser(data){
+  static async cognitoAdminCreateUser(data) {
     const newUserArray = {
       UserPoolId: process.env.USER_POOL_ID,
       Username: data.email,
@@ -345,7 +350,7 @@ class Cognito {
         { Name: "email", Value: data.email },
         { Name: "birthdate", Value: data.birthdate },
         { Name: "address", Value: data.address },
-        { Name: "phone_number", Value: data.phoneNumber || ""},
+        { Name: "phone_number", Value: data.phoneNumber || "" },
         { Name: "zoneinfo", Value: data.country },
         { Name: "custom:mandai_id", Value: data.mandaiId },
         { Name: "custom:newsletter", Value: JSON.stringify(data.newsletter) },
@@ -678,13 +683,13 @@ class Cognito {
     const command = new AdminInitiateAuthCommand({
       AuthFlow: "REFRESH_TOKEN_AUTH",
       UserPoolId: process.env.USER_POOL_ID,
-      ClientId: process.env.USER_POOL_CLIENT_ID,
+      ClientId: this.clientId,
       AuthParameters: {
         REFRESH_TOKEN: refreshToken,
         USERNAME: username,
         SECRET_HASH: crypto
-          .createHmac("sha256", process.env.USER_POOL_CLIENT_SECRET)
-          .update(`${username}${process.env.USER_POOL_CLIENT_ID}`)
+          .createHmac("sha256", this.clientSecret)
+          .update(`${username}${this.clientId}`)
           .digest("base64"),
       },
     });
@@ -749,11 +754,9 @@ class Cognito {
       const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
 
       const groups =
-          userGroupsAtCognito &&
-          userGroupsAtCognito.Groups &&
-          userGroupsAtCognito.Groups.length
-              ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
-              : [];
+        userGroupsAtCognito && userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length
+          ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
+          : [];
 
       if (groups.length && groups.length > 1) {
         return false;
@@ -773,22 +776,22 @@ class Cognito {
       }
 
       if (checkingGroup === null) {
-        await Promise.reject('User does not have wildpass or membership-passes group.');
+        await Promise.reject("User does not have wildpass or membership-passes group.");
       }
 
       return checkingGroup;
     } catch (error) {
       loggerService.error(
-          {
-            cognitoService: {
-              action: "checkUserBelongOnlyWildpass",
-              error: new Error(error),
-            },
+        {
+          cognitoService: {
+            action: "checkUserBelongOnlyWildpass",
+            error: new Error(error),
           },
-          {},
-          "[CIAM] End checkUserBelongOnlyWildpass - Failed"
+        },
+        {},
+        "[CIAM] End checkUserBelongOnlyWildpass - Failed"
       );
-      throw new Error('User does not have wildpass or membership-passes group.')
+      throw new Error("User does not have wildpass or membership-passes group.");
     }
   }
 
@@ -801,31 +804,29 @@ class Cognito {
    */
   static async checkUserBelongOnlyMembershipPasses(userEmail, userCognito) {
     try {
-      const passkitConfig = await configsModel.findByConfigKey("membership-passes","pass-type");
+      const passkitConfig = await configsModel.findByConfigKey("membership-passes", "pass-type");
       const passkitMembershipPasses = passkitConfig && passkitConfig.value.length ? passkitConfig.value : [];
       const userGroupsAtCognito = await this.cognitoAdminListGroupsForUser(userEmail);
       const membershipPasses = cognitoAttribute.getOrCheck(userCognito, "custom:membership");
       const passes = membershipPasses ? JSON.parse(membershipPasses) : null;
 
       const groups =
-          userGroupsAtCognito &&
-          userGroupsAtCognito.Groups &&
-          userGroupsAtCognito.Groups.length
-              ? userGroupsAtCognito.Groups.map(gr => gr.GroupName)
-              : [];
+        userGroupsAtCognito && userGroupsAtCognito.Groups && userGroupsAtCognito.Groups.length
+          ? userGroupsAtCognito.Groups.map((gr) => gr.GroupName)
+          : [];
 
       if (groups.length && groups.length >= 1) {
         if (passes) {
           return this.checkGroupByDifferentFormatMembership(passes, passkitMembershipPasses);
         }
-        return groups.every(gr => gr.includes(GROUP.MEMBERSHIP_PASSES))
+        return groups.every((gr) => gr.includes(GROUP.MEMBERSHIP_PASSES));
       }
 
       //cover for case length of group is empty - checking custom:membership
       if (groups.length === 0) {
         //have not any clue to determine user belong which group
         if (!passes) {
-          await Promise.reject('User does not have wildpass or membership-passes group.');
+          await Promise.reject("User does not have wildpass or membership-passes group.");
         }
         return this.checkGroupByDifferentFormatMembership(passes, passkitMembershipPasses);
       }
@@ -833,16 +834,16 @@ class Cognito {
       return false;
     } catch (error) {
       loggerService.error(
-          {
-            cognitoService: {
-              action: "checkUserBelongOnlyMembershipPasses",
-              error: new Error(error),
-            },
+        {
+          cognitoService: {
+            action: "checkUserBelongOnlyMembershipPasses",
+            error: new Error(error),
           },
-          {},
-          "[CIAM] End checkUserBelongOnlyMembershipPasses - Failed"
+        },
+        {},
+        "[CIAM] End checkUserBelongOnlyMembershipPasses - Failed"
       );
-      throw new Error('User does not have wildpass or membership-passes group.')
+      throw new Error("User does not have wildpass or membership-passes group.");
     }
   }
 
@@ -850,12 +851,12 @@ class Cognito {
     if (!passes) return null;
     //new format when membership-passes group exists
     if (Array.isArray(passes)) {
-      return passes.every(pass => passkitConfig.includes(pass.name))
+      return passes.every((pass) => passkitConfig.includes(pass.name));
     }
 
     //current format with WP old user
     if (typeof passes === "object" && passes && passes.name) {
-      return passkitConfig.includes(passes.name)
+      return passkitConfig.includes(passes.name);
     }
 
     return null;

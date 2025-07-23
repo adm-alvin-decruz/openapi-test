@@ -1,15 +1,17 @@
 const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
+const { default: secrets } = require("../../services/secretsService");
 dotenv.config();
 
 let cert = path.join(__dirname, "../certs/ap-southeast-1-bundle.pem");
+const ciamSecrets = await secrets.getSecrets(`ciam-${process.env.APP_ENV}-db-user1`);
 
 module.exports = {
   master: {
     host: process.env.MYSQL_MASTER_HOST,
-    user: process.env.MYSQL_MASTER_USERNAME,
-    password: process.env.MYSQL_MASTER_PASSWORD,
+    user: ciamSecrets.db_user,
+    password: ciamSecrets.db_password,
     database: process.env.MYSQL_MASTER_DATABASE,
     port: process.env.MYSQL_MASTER_PORT,
     waitForConnections: true,
@@ -23,8 +25,8 @@ module.exports = {
   },
   slave: {
     host: process.env.MYSQL_SLAVE_HOST,
-    user: process.env.MYSQL_SLAVE_USERNAME,
-    password: process.env.MYSQL_SLAVE_PASSWORD,
+    user: ciamSecrets.db_user,
+    password: ciamSecrets.db_password,
     database: process.env.MYSQL_SLAVE_DATABASE,
     port: process.env.MYSQL_SLAVE_PORT,
     waitForConnections: true,
