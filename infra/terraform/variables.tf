@@ -164,3 +164,45 @@ variable "MFA_MOBILE_REQ_PUBLIC_API_KEY" {
 variable "CIAMSP_REQ_PRIVATE_API_KEY" {
   description = "API Key for Service Portal"
 }
+
+variable "enable_parameters_secrets_extension" {
+  description = "Enable AWS Parameters and Secrets Lambda Extension"
+  type        = bool
+  default     = true
+}
+
+variable "parameters_secrets_extension_cache_enabled" {
+  description = "Enable cache for the extension"
+  type        = bool
+  default     = true
+}
+
+variable "parameters_secrets_extension_cache_size" {
+  description = "Maximum size of the cache in terms of number of items"
+  type        = number
+  default     = 1000
+}
+
+variable "ssm_parameter_store_ttl" {
+  description = "TTL in seconds for SSM Parameter Store cache (0-300)"
+  type        = number
+  default     = 300
+}
+
+variable "secrets_manager_ttl" {
+  description = "TTL in seconds for Secrets Manager cache (0-300)"
+  type        = number
+  default     = 300
+}
+
+variable "parameters_secrets_extension_log_level" {
+  description = "Log level for the extension (DEBUG, INFO, WARN, ERROR)"
+  type        = string
+  default     = "INFO"
+}
+
+# List of ARN to be found here https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
+variable "parameters_secrets_extension_arn" {
+  description = "ARN for using AWS Parameters and Secrets Lambda Extension"
+  default = "arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension:17"
+}
