@@ -74,7 +74,7 @@ jobs:
     - name: Terraform Plan
       working-directory: ./infra/terraform
       run: |
-        terraform force-unlock -force 979055b5-2765-5d72-b31f-c15f1c256a79
+        #terraform force-unlock -force 979055b5-2765-5d72-b31f-c15f1c256a79
         terraform plan -var-file ${{ github.event.inputs.app-environment }}.tfvars \
         -var role_arn=${{ secrets.role_arn}} \
         -var external_id=${{ secrets.external_id }} \
