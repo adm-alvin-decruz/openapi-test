@@ -65,7 +65,7 @@ jobs:
       run: terraform init
 
     # create or switch to environment workspace in terraform
-    - name: Terraform worspace
+    - name: Terraform workspace
       working-directory: ./infra/terraform
       run: |
         terraform workspace select ${{ github.event.inputs.app-environment }}||terraform workspace new ${{ github.event.inputs.app-environment }}

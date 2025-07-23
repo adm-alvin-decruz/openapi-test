@@ -93,10 +93,6 @@ variable "USER_POOL_ID" {
   default = ""
 }
 
-variable "USER_POOL_CLIENT_ID" {}
-
-variable "USER_POOL_CLIENT_SECRET" {}
-
 variable "GALAXY_URL" {
   description = "GALAXY_URL"
   default = ""
@@ -135,34 +131,6 @@ variable "SOURCE_DB_MAPPING" {
 
 variable "github_hash" {
   description = "github commit hash"
-}
-
-variable "PASSKIT_API_KEY" {
-  description = "PASSKIT API Key"
-}
-
-variable "EMAIL_SERVICE_API_KEY" {
-  description = "EMAIL SERVICE API KEY"
-}
-
-variable "AEM_REQ_API_KEY" {
-  description = "API Key for AEM"
-}
-
-variable "NOPCOMMERCE_REQ_API_KEY" {
-  description = "API Key for Nopcommerce Public endpoint"
-}
-
-variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
-  description = "API Key for Nopcommerce Private endpoint"
-}
-
-variable "MFA_MOBILE_REQ_PUBLIC_API_KEY" {
-  description = "API Key for MFA"
-}
-
-variable "CIAMSP_REQ_PRIVATE_API_KEY" {
-  description = "API Key for Service Portal"
 }
 
 variable "enable_parameters_secrets_extension" {
