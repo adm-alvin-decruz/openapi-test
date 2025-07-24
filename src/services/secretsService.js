@@ -1,7 +1,7 @@
 const axios = require("axios");
 const loggerService = require("../logs/logger");
 
-export class Secrets {
+class Secrets {
   constructor() {
     this.baseUrl = `http://localhost:${process.env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT || 2773}`;
     this.awsSessionToken = process.env.AWS_SESSION_TOKEN;
@@ -70,4 +70,4 @@ export class Secrets {
 }
 
 const secrets = new Secrets();
-export default secrets;
+module.exports = { secrets };
