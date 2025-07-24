@@ -1,6 +1,6 @@
 require("dotenv").config();
 const appConfig = require("../../../../config/appConfig");
-const { secrets } = require("../../../../services/secretsService");
+const { getCiamSecrets } = require("../../../../services/secretsService");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
 
@@ -10,7 +10,7 @@ async function setPasskitReqHeader() {
 
 async function constructPasskitHeader() {
   try {
-    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const ciamSecrets = getCiamSecrets();
     return {
       "mwg-app-id": appConfig[passkitAPIConfig],
       "x-api-key": ciamSecrets.PASSKIT_API_KEY,

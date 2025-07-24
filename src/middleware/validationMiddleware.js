@@ -19,7 +19,7 @@ const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
 const { query, validationResult } = require("express-validator");
 const validator = require("validator");
 const { jwtDecode } = require("jwt-decode");
-const { secrets } = require("../services/secretsService");
+const { getCiamSecrets } = require("../services/secretsService");
 
 /**
  * Validate empty request
@@ -201,7 +201,7 @@ async function AccessTokenAuthGuard(req, res, next) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+  const ciamSecrets = getCiamSecrets();
   const verifierAccessToken = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
     tokenUse: "access",
@@ -287,7 +287,7 @@ async function validateAPIKey(req, res, next) {
 
       const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
       const bindingCheck = appIdConfigFromDB.binding;
-      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+      const ciamSecrets = getCiamSecrets();
       const apiKeyEnv = ciamSecrets[`${apiKeyConfig}`];
       if (!bindingCheck) {
         loggerWrapper(action + " - Completed validation - binding is false", logObj);

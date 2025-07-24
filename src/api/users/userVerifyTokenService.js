@@ -4,13 +4,9 @@ const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
-const { secrets } = require("../../services/secretsService");
+const { getCiamSecrets } = require("../../services/secretsService");
 
-let ciamSecrets = null;
-
-(async () => {
-  ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
-})();
+const ciamSecrets = getCiamSecrets();
 
 class UserVerifyTokenService {
   constructor() {

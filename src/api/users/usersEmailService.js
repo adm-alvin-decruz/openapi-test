@@ -3,7 +3,7 @@ require("dotenv").config();
 const appConfig = require("../../config/appConfig");
 const ApiUtils = require("../../utils/apiUtils");
 const logger = require("../../logs/logger");
-const { secrets } = require("../../services/secretsService");
+const { getCiamSecrets } = require("../../services/secretsService");
 
 async function lambdaSendEmail(req) {
   req["apiTimer"] = req.processTimer.apiRequestTimer();
@@ -119,7 +119,7 @@ async function createEmailServiceHeader() {
   try {
     let appEnv = process.env.APP_ENV;
     let emailServiceConfig = "EMAIL_SERVICE_APP_ID_" + appEnv.toUpperCase();
-    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const ciamSecrets = getCiamSecrets();
     const headers = {
       "mwg-app-id": appConfig[emailServiceConfig],
       "x-api-key": ciamSecrets.EMAIL_SERVICE_API_KEY,

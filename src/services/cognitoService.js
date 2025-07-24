@@ -22,13 +22,9 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const cognitoAttribute = require("../utils/cognitoAttributes");
 const { GROUP } = require("../utils/constants");
 const configsModel = require("../db/models/configsModel");
-const { secrets } = require("./secretsService");
+const { getCiamSecrets } = require("./secretsService");
 
-let ciamSecrets = null;
-
-(async () => {
-  ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
-})();
+const ciamSecrets = getCiamSecrets();
 
 class Cognito {
   constructor() {

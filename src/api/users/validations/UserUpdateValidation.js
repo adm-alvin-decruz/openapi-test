@@ -9,13 +9,9 @@ const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 const cognitoService = require("../../../services/cognitoService");
 const crypto = require("crypto");
-const { secrets } = require("../../../services/secretsService");
+const { getCiamSecrets } = require("../../../services/secretsService");
 
-let ciamSecrets = null;
-
-(async () => {
-  ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
-})();
+const ciamSecrets = getCiamSecrets();
 
 class UserUpdateValidation {
   constructor() {
