@@ -11,12 +11,6 @@ const app = express();
 const serverless = require("serverless-http");
 const helmetMiddleware = require("./src/config/helmetConfig");
 const permissionsPolicyMiddleware = require("./src/config/permission-policy");
-const { initSecrets } = require("./services/secretsService");
-
-(async () => {
-  await initSecrets();
-  console.log("Secrets loaded");
-})();
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
