@@ -40,6 +40,8 @@ class Secrets {
     }
 
     try {
+      console.log(this.baseUrl);
+      console.log(this.awsSessionToken);
       const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
         params: { secretId: secretName },
         headers: {
@@ -47,6 +49,7 @@ class Secrets {
         },
       });
 
+      console.log(data);
       console.log("Retrieved secrets");
       return JSON.parse(data.SecretString);
     } catch (error) {
