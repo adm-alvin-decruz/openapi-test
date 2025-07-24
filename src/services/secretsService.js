@@ -1,5 +1,5 @@
-import axios from "axios";
-import loggerService from "../logs/logger";
+const axios = require("axios");
+const loggerService = require("../logs/logger");
 
 export class Secrets {
   constructor() {

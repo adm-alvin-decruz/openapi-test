@@ -5,7 +5,11 @@ const { default: secrets } = require("../../services/secretsService");
 dotenv.config();
 
 let cert = path.join(__dirname, "../certs/ap-southeast-1-bundle.pem");
-const ciamSecrets = await secrets.getSecrets(`ciam-${process.env.APP_ENV}-db-user1`);
+let ciamSecrets = null;
+
+(async () => {
+  ciamSecrets = await secrets.getSecrets(`ciam-${process.env.APP_ENV}-db-user1`);
+})();
 
 module.exports = {
   master: {

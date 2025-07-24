@@ -11,7 +11,11 @@ const cognitoService = require("../../../services/cognitoService");
 const crypto = require("crypto");
 const { default: secrets } = require("../../../services/secretsService");
 
-const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+let ciamSecrets = null;
+
+(async () => {
+  ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+})();
 
 class UserUpdateValidation {
   constructor() {

@@ -24,7 +24,11 @@ const { GROUP } = require("../utils/constants");
 const configsModel = require("../db/models/configsModel");
 const { default: secrets } = require("./secretsService");
 
-const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+let ciamSecrets = null;
+
+(async () => {
+  ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+})();
 
 class Cognito {
   constructor() {
