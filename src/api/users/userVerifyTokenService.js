@@ -4,21 +4,16 @@ const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
-const { getCiamSecrets } = require("../../services/secretsService");
-
-const ciamSecrets = getCiamSecrets();
+const { secrets } = require("../../services/secretsService");
 
 class UserVerifyTokenService {
-  constructor() {
-    this.cognitoClientId = ciamSecrets.USER_POOL_CLIENT_ID;
-  }
-
   async verifyToken(accessToken, body) {
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(accessToken);
       const cognitoUserEmail = getOrCheck(userCognito, "email");
       const cognitoMandaiId = getOrCheck(userCognito, "custom:mandai_id");
       const isMatchedInfo = this.userVerifyMatchedInfo(body, cognitoUserEmail, cognitoMandaiId);
+      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
 
       if (!isMatchedInfo) {
         return {
@@ -36,7 +31,7 @@ class UserVerifyTokenService {
       const verifier = CognitoJwtVerifier.create({
         userPoolId: process.env.USER_POOL_ID,
         tokenUse: "access",
-        clientId: this.cognitoClientId,
+        clientId: ciamSecrets.USER_POOL_CLIENT_ID,
       });
       const payload = await verifier.verify(accessToken);
       const exp = payload && payload.exp ? payload.exp : "";

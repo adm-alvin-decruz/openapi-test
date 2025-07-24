@@ -9,15 +9,11 @@ const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 const cognitoService = require("../../../services/cognitoService");
 const crypto = require("crypto");
-const { getCiamSecrets } = require("../../../services/secretsService");
-
-const ciamSecrets = getCiamSecrets();
+const { secrets } = require("../../../services/secretsService");
 
 class UserUpdateValidation {
   constructor() {
     this.error = null;
-    this.clientId = ciamSecrets.USER_POOL_CLIENT_ID;
-    this.clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
   }
 
   static execute(req) {
@@ -34,14 +30,15 @@ class UserUpdateValidation {
       if (userCredential.password_hash.length > 8) {
         //when update password success -> the password_hash will always $argon2 it mean this func will only run once.
         try {
+          const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
           const loginSession = await cognitoService.cognitoUserLogin(
             {
               email: userCredential.username,
               password: password,
             },
             crypto
-              .createHmac("sha256", this.clientSecret)
-              .update(`${userCredential.username}${this.clientId}`)
+              .createHmac("sha256", ciamSecrets.USER_POOL_CLIENT_SECRET)
+              .update(`${userCredential.username}${ciamSecrets.USER_POOL_CLIENT_ID}`)
               .digest("base64")
           );
           isSamePassword = !!loginSession && !!loginSession.accessToken;

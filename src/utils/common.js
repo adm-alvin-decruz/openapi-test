@@ -3,7 +3,7 @@ const messages = require("../langs");
 const userConfig = require("../config/usersConfig");
 const dbConfig = require("../config/dbConfig");
 const crypto = require("crypto");
-const { getCiamSecrets } = require("../services/secretsService");
+const { secrets } = require("../services/secretsService");
 
 const messageLang = (key, lang) => {
   const language = messages[lang] || messages["en"];
@@ -53,7 +53,7 @@ const emailPattern = (email) => {
 
 const generateSecretHash = async (keyword) => {
   try {
-    const ciamSecrets = getCiamSecrets();
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const clientId = ciamSecrets.USER_POOL_CLIENT_ID;
     const clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
     return crypto.createHmac("sha256", clientSecret).update(`${keyword}${clientId}`).digest("base64");

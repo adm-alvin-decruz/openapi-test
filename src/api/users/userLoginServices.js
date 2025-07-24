@@ -9,18 +9,16 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const { proceedSetPassword } = require("./helpers/loginHelper");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
-const { getCiamSecrets } = require("../../services/secretsService");
-
-const ciamSecrets = getCiamSecrets();
+const { secrets } = require("../../services/secretsService");
 
 class UserLoginService {
-  constructor() {
-    this.cognitoClientId = ciamSecrets.USER_POOL_CLIENT_ID;
-    this.cognitoClientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
-  }
-
   async login(req) {
-    const hashSecret = usersService.genSecretHash(req.body.email, this.cognitoClientId, this.cognitoClientSecret);
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const hashSecret = usersService.genSecretHash(
+      req.body.email,
+      ciamSecrets.USER_POOL_CLIENT_ID,
+      ciamSecrets.USER_POOL_CLIENT_SECRET
+    );
     const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(req.body.email);
 
     const loginData = {
@@ -77,11 +75,12 @@ class UserLoginService {
   }
 
   async updateUser(id, tokens) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     try {
       const verifierAccessToken = CognitoJwtVerifier.create({
         userPoolId: process.env.USER_POOL_ID,
         tokenUse: "access",
-        clientId: this.cognitoClientId,
+        clientId: ciamSecrets.USER_POOL_CLIENT_ID,
       });
 
       const payloadAccessToken = await verifierAccessToken.verify(tokens.accessToken);

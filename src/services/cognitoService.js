@@ -22,16 +22,9 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const cognitoAttribute = require("../utils/cognitoAttributes");
 const { GROUP } = require("../utils/constants");
 const configsModel = require("../db/models/configsModel");
-const { getCiamSecrets } = require("./secretsService");
-
-const ciamSecrets = getCiamSecrets();
+const { secrets } = require("./secretsService");
 
 class Cognito {
-  constructor() {
-    this.clientId = ciamSecrets.USER_POOL_CLIENT_ID;
-    this.clientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
-  }
-
   static async cognitoAdminUpdateUser(req, ciamComparedParams) {
     req["apiTimer"] = req.processTimer.apiRequestTimer();
     req.apiTimer.log("cognitoAdminUpdateUser"); // log process time
@@ -55,10 +48,11 @@ class Cognito {
   }
 
   static async cognitoUserLogin({ email, password }, hashSecret) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const userLoginParams = new AdminInitiateAuthCommand({
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: process.env.USER_POOL_ID,
-      ClientId: this.clientId,
+      ClientId: ciamSecrets.USER_POOL_CLIENT_ID,
       AuthParameters: {
         SECRET_HASH: hashSecret,
         USERNAME: email,
@@ -680,16 +674,17 @@ class Cognito {
   }
 
   static async cognitoRefreshToken(refreshToken, username) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const command = new AdminInitiateAuthCommand({
       AuthFlow: "REFRESH_TOKEN_AUTH",
       UserPoolId: process.env.USER_POOL_ID,
-      ClientId: this.clientId,
+      ClientId: ciamSecrets.USER_POOL_CLIENT_ID,
       AuthParameters: {
         REFRESH_TOKEN: refreshToken,
         USERNAME: username,
         SECRET_HASH: crypto
-          .createHmac("sha256", this.clientSecret)
-          .update(`${username}${this.clientId}`)
+          .createHmac("sha256", ciamSecrets.USER_POOL_CLIENT_SECRET)
+          .update(`${username}${ciamSecrets.USER_POOL_CLIENT_ID}`)
           .digest("base64"),
       },
     });

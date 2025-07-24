@@ -5,19 +5,15 @@ const userModel = require("../../db/models/userModel");
 const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
-const { getCiamSecrets } = require("../../services/secretsService");
-
-const ciamSecrets = getCiamSecrets();
+const { secrets } = require("../../services/secretsService");
 
 class UserRefreshTokenService {
-  constructor() {
-    this.cognitoClientId = ciamSecrets.USER_POOL_CLIENT_ID;
-  }
   async execute(accessToken, body) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const verifierAccessToken = CognitoJwtVerifier.create({
       userPoolId: process.env.USER_POOL_ID,
       tokenUse: "access",
-      clientId: this.cognitoClientId,
+      clientId: ciamSecrets.USER_POOL_CLIENT_ID,
     });
     let email = body.email ? body.email : "";
     if (body.includeEmail) {
