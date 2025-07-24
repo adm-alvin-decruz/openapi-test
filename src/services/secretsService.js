@@ -1,5 +1,6 @@
 const axios = require("axios");
 const loggerService = require("../logs/logger");
+require("dotenv").config();
 
 class Secrets {
   constructor() {
@@ -8,6 +9,7 @@ class Secrets {
   }
 
   async getSecrets(secretName) {
+    console.log("Getting secrets: ", secretName);
     loggerService.log(
       {
         secretsService: {
