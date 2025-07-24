@@ -4,7 +4,7 @@ const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const loggerService = require("../../logs/logger");
-const { default: secrets } = require("../../services/secretsService");
+const { secrets } = require("../../services/secretsService");
 
 let ciamSecrets = null;
 

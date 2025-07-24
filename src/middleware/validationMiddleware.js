@@ -19,7 +19,7 @@ const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
 const { query, validationResult } = require("express-validator");
 const validator = require("validator");
 const { jwtDecode } = require("jwt-decode");
-const { default: secrets } = require("../services/secretsService");
+const { secrets } = require("../services/secretsService");
 
 /**
  * Validate empty request

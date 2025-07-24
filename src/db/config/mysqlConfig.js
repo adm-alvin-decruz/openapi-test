@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
-const { default: secrets } = require("../../services/secretsService");
+const { secrets } = require("../../services/secretsService");
 dotenv.config();
 
 let cert = path.join(__dirname, "../certs/ap-southeast-1-bundle.pem");

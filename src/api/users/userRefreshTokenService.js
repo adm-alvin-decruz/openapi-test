@@ -5,7 +5,7 @@ const userModel = require("../../db/models/userModel");
 const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
-const { default: secrets } = require("../../services/secretsService");
+const { secrets } = require("../../services/secretsService");
 
 let ciamSecrets = null;
 

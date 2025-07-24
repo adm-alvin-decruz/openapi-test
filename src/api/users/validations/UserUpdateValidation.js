@@ -9,7 +9,7 @@ const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
 const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
 const cognitoService = require("../../../services/cognitoService");
 const crypto = require("crypto");
-const { default: secrets } = require("../../../services/secretsService");
+const { secrets } = require("../../../services/secretsService");
 
 let ciamSecrets = null;
 

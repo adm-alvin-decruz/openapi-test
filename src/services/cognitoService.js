@@ -22,7 +22,7 @@ const client = new CognitoIdentityProviderClient({ region: "ap-southeast-1" });
 const cognitoAttribute = require("../utils/cognitoAttributes");
 const { GROUP } = require("../utils/constants");
 const configsModel = require("../db/models/configsModel");
-const { default: secrets } = require("./secretsService");
+const { secrets } = require("./secretsService");
 
 let ciamSecrets = null;
 

@@ -9,7 +9,7 @@ const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const { proceedSetPassword } = require("./helpers/loginHelper");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
-const { default: secrets } = require("../../services/secretsService");
+const { secrets } = require("../../services/secretsService");
 
 let ciamSecrets = null;
 

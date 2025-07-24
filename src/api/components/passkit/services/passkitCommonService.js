@@ -1,6 +1,6 @@
 require("dotenv").config();
 const appConfig = require("../../../../config/appConfig");
-const { default: secrets } = require("../../../../services/secretsService");
+const { secrets } = require("../../../../services/secretsService");
 
 const passkitAPIConfig = `PASSKIT_APP_ID_${process.env.APP_ENV.toUpperCase()}`;
 
