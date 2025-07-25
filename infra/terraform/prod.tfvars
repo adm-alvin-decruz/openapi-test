@@ -14,16 +14,6 @@ APP_LOG_SWITCH = "true"
 
 #users
 USER_POOL_ID = "ap-southeast-1_b6cvfuMLk"
-USER_POOL_CLIENT_ID = "5vagpdvv3mdrldkaj745pqg9ne"
 
 #Galaxy
 GALAXY_URL = "https://connect.mandaiapi.com"
-
-#API Keys
-PASSKIT_API_KEY = ""
-EMAIL_SERVICE_API_KEY = ""
-AEM_REQ_API_KEY = ""
-NOPCOMMERCE_REQ_API_KEY = ""
-NOPCOMMERCE_REQ_PRIVATE_API_KEY = ""
-MFA_MOBILE_REQ_PUBLIC_API_KEY = ""
-CIAMSP_REQ_PRIVATE_API_KEY = ""
