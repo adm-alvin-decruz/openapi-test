@@ -125,19 +125,20 @@ class UserMembershipPassService {
 
         const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
         console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
-        if (supportedPasskitTypes.value.includes(req.body.passType))
+        if (supportedPasskitTypes.value.includes(req.body.passType)) {
           console.log("Calling SQS to generate passkit: ", req.body.passType);
-        await this.sendSQSMessage(
-          {
-            ...req,
-            body: {
-              ...req.body,
-              mandaiId: mandaiId,
-              passType: passTypeMapping.toLowerCase(),
+          await this.sendSQSMessage(
+            {
+              ...req,
+              body: {
+                ...req.body,
+                mandaiId: mandaiId,
+                passType: passTypeMapping.toLowerCase(),
+              },
             },
-          },
-          "createMembershipPass"
-        );
+            "createMembershipPass"
+          );
+        }
 
         return loggerService.log(
           {
@@ -229,18 +230,20 @@ class UserMembershipPassService {
       // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
       const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
       console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
-      if (supportedPasskitTypes.value.includes(req.body.passType))
+      if (supportedPasskitTypes.value.includes(req.body.passType)) {
         console.log("Calling SQS to generate passkit: ", req.body.passType);
-      await this.sendSQSMessage(
-        {
-          ...req,
-          body: {
-            ...req.body,
-            membershipId: updateMembershipRs.membershipId,
+        await this.sendSQSMessage(
+          {
+            ...req,
+            body: {
+              ...req.body,
+              mandaiId: mandaiId,
+              passType: passTypeMapping.toLowerCase(),
+            },
           },
-        },
-        "updateMembershipPass"
-      );
+          "createMembershipPass"
+        );
+      }
 
       loggerService.log(
         {
