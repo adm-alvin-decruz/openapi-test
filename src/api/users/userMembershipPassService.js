@@ -124,9 +124,7 @@ class UserMembershipPassService {
           }));
 
         const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
-        console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
         if (supportedPasskitTypes.value.includes(req.body.passType)) {
-          console.log("Calling SQS to generate passkit: ", req.body.passType);
           await this.sendSQSMessage(
             {
               ...req,
@@ -229,9 +227,7 @@ class UserMembershipPassService {
       // send message to SQS to re-generate passkit (Trigger whenever pass update)
       // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
       const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
-      console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
       if (supportedPasskitTypes.value.includes(req.body.passType)) {
-        console.log("Calling SQS to generate passkit: ", req.body.passType);
         await this.sendSQSMessage(
           {
             ...req,
