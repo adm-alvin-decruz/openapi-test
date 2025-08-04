@@ -123,17 +123,20 @@ class UserMembershipPassService {
             co_member_request: 1,
           }));
 
-        await this.sendSQSMessage(
-          {
-            ...req,
-            body: {
-              ...req.body,
-              mandaiId: mandaiId,
-              passType: passTypeMapping.toLowerCase(),
+        const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
+        if (supportedPasskitTypes.value.includes(req.body.passType))
+          await this.sendSQSMessage(
+            {
+              ...req,
+              body: {
+                ...req.body,
+                mandaiId: mandaiId,
+                passType: passTypeMapping.toLowerCase(),
+              },
             },
-          },
-          "createMembershipPass"
-        );
+            "createMembershipPass"
+          );
+
         return loggerService.log(
           {
             user: {
@@ -223,9 +226,7 @@ class UserMembershipPassService {
       // send message to SQS to re-generate passkit (Trigger whenever pass update)
       // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
       const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
-      console.log("Supported passkit types:", supportedPasskitTypes.value);
-      if (supportedPasskitTypes.value.includes(req.body.passType)) {
-        console.log("Calling SQS to generate passkit for:", req.body.passType);
+      if (supportedPasskitTypes.value.includes(req.body.passType))
         await this.sendSQSMessage(
           {
             ...req,
@@ -236,7 +237,6 @@ class UserMembershipPassService {
           },
           "updateMembershipPass"
         );
-      }
 
       loggerService.log(
         {
