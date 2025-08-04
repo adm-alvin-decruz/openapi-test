@@ -124,18 +124,20 @@ class UserMembershipPassService {
           }));
 
         const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
+        console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
         if (supportedPasskitTypes.value.includes(req.body.passType))
-          await this.sendSQSMessage(
-            {
-              ...req,
-              body: {
-                ...req.body,
-                mandaiId: mandaiId,
-                passType: passTypeMapping.toLowerCase(),
-              },
+          console.log("Calling SQS to generate passkit: ", req.body.passType);
+        await this.sendSQSMessage(
+          {
+            ...req,
+            body: {
+              ...req.body,
+              mandaiId: mandaiId,
+              passType: passTypeMapping.toLowerCase(),
             },
-            "createMembershipPass"
-          );
+          },
+          "createMembershipPass"
+        );
 
         return loggerService.log(
           {
@@ -226,17 +228,19 @@ class UserMembershipPassService {
       // send message to SQS to re-generate passkit (Trigger whenever pass update)
       // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
       const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
+      console.log("Passkit supported types: ", JSON.stringify(supportedPasskitTypes.value));
       if (supportedPasskitTypes.value.includes(req.body.passType))
-        await this.sendSQSMessage(
-          {
-            ...req,
-            body: {
-              ...req.body,
-              membershipId: updateMembershipRs.membershipId,
-            },
+        console.log("Calling SQS to generate passkit: ", req.body.passType);
+      await this.sendSQSMessage(
+        {
+          ...req,
+          body: {
+            ...req.body,
+            membershipId: updateMembershipRs.membershipId,
           },
-          "updateMembershipPass"
-        );
+        },
+        "updateMembershipPass"
+      );
 
       loggerService.log(
         {
