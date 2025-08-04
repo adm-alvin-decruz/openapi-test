@@ -237,11 +237,10 @@ class UserMembershipPassService {
             ...req,
             body: {
               ...req.body,
-              mandaiId: mandaiId,
-              passType: passTypeMapping.toLowerCase(),
+              membershipId: updateMembershipRs.membershipId,
             },
           },
-          "createMembershipPass"
+          "updateMembershipPass"
         );
       }
 
