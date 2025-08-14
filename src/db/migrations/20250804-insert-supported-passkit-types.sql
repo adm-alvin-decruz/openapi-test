@@ -1,0 +1,1 @@
+INSERT INTO `configs` (`config`, `key`, `value`, `created_at`, `updated_at`) VALUES ('membership-passes', 'passkit-supported-types', '[\"fow\", \"fowp\", \"forfwa\", \"fom\", \"fomp\"]', '2025-08-04 12:00:00', '2025-08-04 12:00:00');
