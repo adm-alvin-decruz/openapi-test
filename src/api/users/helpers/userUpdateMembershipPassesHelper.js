@@ -374,4 +374,5 @@ module.exports = {
   updateDBUserInfo,
   manipulatePassword,
   updateCognitoUserInfo,
+  isUserExisted,
 };
