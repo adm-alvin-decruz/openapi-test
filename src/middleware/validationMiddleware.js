@@ -14,7 +14,6 @@ const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
-const MembershipErrors = require("../config/https/errors/membershipErrors");
 const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
 const { query, validationResult } = require("express-validator");
 const validator = require("validator");

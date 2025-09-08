@@ -5,7 +5,6 @@ const userRoutes = require("./src/api/users/userRoutes");
 const galaxyRoutes = require("./src/api/components/galaxy/galaxyRoutes");
 const supportRoutes = require("./src/api/supports/supportRoutes");
 const userPrivateRoutes = require("./src/api/users/userPrivateRoutes");
-const userServicePortalRoutes = require("./src/api/portal/portalUserRoutes");
 const errorHandler = require("./src/utils/errorHandler");
 const app = express();
 const serverless = require("serverless-http");
