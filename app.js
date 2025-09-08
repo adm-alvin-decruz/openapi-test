@@ -5,7 +5,6 @@ const userRoutes = require("./src/api/users/userRoutes");
 const galaxyRoutes = require("./src/api/components/galaxy/galaxyRoutes");
 const supportRoutes = require("./src/api/supports/supportRoutes");
 const userPrivateRoutes = require("./src/api/users/userPrivateRoutes");
-const userServicePortalRoutes = require("./src/api/portal/portalUserRoutes");
 const passwordlessRoutes = require("./src/api/users/myAccount/passwordless/passwordlessRoutes");
 const errorHandler = require("./src/utils/errorHandler");
 const app = express();

@@ -1,0 +1,3 @@
+UPDATE users
+SET mandai_id = CONCAT('deleted-', mandai_id), updated_at=now()
+WHERE email LIKE '%deleted-%';
