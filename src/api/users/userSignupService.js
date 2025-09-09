@@ -279,7 +279,7 @@ class UserSignupService {
   }
 
   async preparePassword(req) {
-    if (req.body.migrations) {
+    if (req.body.migrations || req.body.is_passwordless) {
       const saltPassword = !!req.body.passwordSalt
         ? req.body.passwordSalt
         : passwordService.createSaltKey(5);
