@@ -452,10 +452,19 @@ class UserSignupService {
     // generate Mandai ID
     let mandaiId = this.generateMandaiId(req, 0);
     if (await userModel.existsByMandaiId?.(mandaiId)) {
+      loggerService.log(
+        { mandaiId},
+        "[CIAM] MandaiId Duplicated"
+      );
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
       for (let c = 1; c <= 5; c++) {
         const tryId = this.generateMandaiId(req, c);
+        loggerService.log(
+          { mandaiId, tryId, counter: c },
+          "[CIAM] New MandaiId generated"
+        );
+
         if (!await userModel.existsByMandaiId(tryId)) {
           mandaiId = tryId; found = true; 
           break;
