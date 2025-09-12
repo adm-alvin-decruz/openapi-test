@@ -41,19 +41,26 @@ class UserSignupService {
     }
   }
 
-  generateMandaiId(req) {
-    //set source
+  generateMandaiId(req, counter = 0) {
     const source = getSource(req.headers["mwg-app-id"]);
     const groupKey = getGroup(req.body.group);
+    const secret = process.env.USER_POOL_CLIENT_SECRET;
+    if (!secret) throw new Error('Missing USER_POOL_CLIENT_SECRET');
 
-    const hash = crypto
-      .createHash("sha256")
-      .update(
-        `${req.body.email}${req.body.dob}${req.body.firstName}${req.body.lastName}`
-      )
-      .digest("hex");
-    const numbers = hash.replace(/\D/g, "");
-    return `M${groupKey}${source.sourceKey}${numbers.slice(0, 11)}`;
+    const payload = [
+            groupKey,
+            source.sourceKey,
+            req.body.email,
+            req.body.dob,
+            req.body.firstName,
+            req.body.lastName,
+            counter         
+          ].join('|');
+
+    const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    const tail = (BigInt('0x' + hex) % (10n ** 11n)).toString().padStart(11, '0');
+
+    return `M${groupKey}${source.sourceKey}${tail}`;
   }
 
   userModelExecution(userData) {
@@ -443,7 +450,21 @@ class UserSignupService {
     req.body.phoneNumber = phoneNumber;
 
     // generate Mandai ID
-    const mandaiId = this.generateMandaiId(req);
+    let mandaiId = this.generateMandaiId(req, 0);
+    if (await userModel.existsByMandaiId?.(mandaiId)) {
+      // try a few counters to find a free one before hitting Cognito/DB
+      let found = false;
+      for (let c = 1; c <= 5; c++) {
+        const tryId = this.generateMandaiId(req, c);
+        if (!await userModel.existsByMandaiId(tryId)) {
+          mandaiId = tryId; found = true; 
+          break;
+        }
+      }
+      if (!found) {
+        throw new Error('Could not reserve a unique Mandai ID');
+      }
+    }
 
     // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
@@ -506,7 +527,7 @@ class UserSignupService {
         birthdate: req.body.dob || "",
         address: req.body.address || "",
         country: req.body.country || "",
-        mandaiId: mandaiId,
+        mandaiId,
         newsletter: newsletterMapping,
         source: getSource(req.headers["mwg-app-id"]).source
           ? getSource(req.headers["mwg-app-id"]).source
@@ -536,14 +557,35 @@ class UserSignupService {
         !!req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1}));
 
-      await this.saveUserDB({
-        req,
-        phoneNumber: phoneNumber || "",
-        mandaiId: mandaiId || "",
-        hashPassword: passwordCredential.db.hashPassword || "",
-        saltPassword: passwordCredential.db.salt || "",
-        userSubId: cognitoInfo.User.Username ? cognitoInfo.User.Username : null
-      });
+      const TRY_LIMIT = 6;
+      for (let counter = 0; counter < TRY_LIMIT; counter++) {
+        try {
+          await this.saveUserDB({
+            req,
+            phoneNumber: phoneNumber || "",
+            mandaiId,
+            hashPassword: passwordCredential.db.hashPassword || "",
+            saltPassword: passwordCredential.db.salt || "",
+            userSubId: cognitoInfo.User.Username || null
+          });
+          break; // success
+        } catch (e) {
+          if (!this.isMandaiIdDupError(e) || counter === TRY_LIMIT - 1) throw e;
+
+          // Compute a new ID and keep Cognito in sync
+          const newId = this.generateMandaiId(req, counter + 1);
+
+          const updateParams = [
+              {
+                Name: "custom:mandai_id",
+                Value: newId,
+              }
+            ];
+          // Update Cognito custom attribute to the new ID
+          await cognitoService.cognitoAdminUpdateNewUser(updateParams, req.body.email);
+          mandaiId = newId; // try DB again with the new ID
+        }
+      }
       this.loggerWrapper("[CIAM] End Signup with FOs Service - Success", {
         layer: "userSignupService.signup",
         action: "adminCreateMPUser",
@@ -607,6 +649,11 @@ class UserSignupService {
       }
       throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }
+  }
+
+  isMandaiIdDupError(err) {
+  return err && (err.code === 'ER_DUP_ENTRY' || err.errno === 1062)
+         && /mandai_id/i.test(err.sqlMessage || err.message || '');
   }
 
   loggerWrapper(action, loggerObj, type = "logInfo") {

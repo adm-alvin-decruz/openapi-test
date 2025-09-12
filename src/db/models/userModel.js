@@ -284,6 +284,22 @@ class User {
       );
     }
   }
+  static async existsByMandaiId(mandaiId) {
+  const sql = 'SELECT 1 FROM users WHERE mandai_id = ? LIMIT 1';
+    try {
+      const [rows] = await pool.query(sql, [mandaiId]);
+      return rows.length > 0;
+    } catch (error) {
+      loggerService.error(
+        {
+          userModel: { mandaiId, error: String(error), sql_statement: sql },
+        },
+        {},
+        "[CIAM] userModel.existsByMandaiId - Failed"
+      );
+      throw error;
+    }
+  }
 
   static async update(id, userData) {
     const now = getCurrentUTCTimestamp();
