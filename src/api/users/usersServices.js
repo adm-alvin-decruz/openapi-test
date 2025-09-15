@@ -106,7 +106,7 @@ async function userSignup(req, membershipData) {
       throw new Error('Could not reserve a unique Mandai ID');
     }
   }
-  req.body["mandaiID"] = mandaiID;
+  req.body["mandaiID"] = mandaiId;
   req.body["mandaiIdCounter"] = idCounter;
 
   // prepare membership group
@@ -295,11 +295,11 @@ async function cognitoCreateUser(req, membershipData) {
     );
 
     const userSubIdFromCognito = cognitoResponse && cognitoResponse.User && cognitoResponse.User.Username ? cognitoResponse.User.Username : '';
-
+    let dbResponse;
     const TRY_LIMIT = 6;
     for (let attempt = 0; attempt < TRY_LIMIT; attempt++) {
       try {
-        var dbResponse = await usersSignupHelper.createUserSignupDB(req, membershipData, userSubIdFromCognito);
+        dbResponse = await usersSignupHelper.createUserSignupDB(req, membershipData, userSubIdFromCognito);
         break;
       } catch (e) {
         if (!isMandaiIdDupError(e) || attempt === TRY_LIMIT - 1) throw e;
@@ -321,44 +321,44 @@ async function cognitoCreateUser(req, membershipData) {
         req.body.mandaiID = newId;
       
       }
-      
-        // push to queue for Galaxy Import Pass
-        const galaxySQS = await galaxyWPService.galaxyToSQS(req, "userSignup");
-
-        // user migration - update user_migrations table for signup & sqs status
-        if (req.body.migrations) {
-          if (galaxySQS.$metadata.httpStatusCode === 200) {
-            await userDBService.updateUserMigration(req, "signup", "signupSQS");
-          }
-        }
-
-        response = {
-          cognito: cognitoResponse,
-          db: JSON.stringify(dbResponse),
-          galaxy: galaxySQS,
-        };
-
-        // prepare logs
-        newUserArray.TemporaryPassword = ""; // fix clear-text logging of sensitive information
-        let logObj = loggerService.build(
-          "user",
-          "usersServices.createUserService",
-          req,
-          "MWG_CIAM_USER_SIGNUP_SUCCESS",
-          newUserArray,
-          response
-        );
-        // prepare response to client
-        let responseToClient = responseHelper.craftUsersApiResponse(
-          "",
-          req.body,
-          "MWG_CIAM_USER_SIGNUP_SUCCESS",
-          "USERS_SIGNUP",
-          logObj
-        );
-
-        return responseToClient;
     }
+      
+    // push to queue for Galaxy Import Pass
+    const galaxySQS = await galaxyWPService.galaxyToSQS(req, "userSignup");
+
+    // user migration - update user_migrations table for signup & sqs status
+    if (req.body.migrations) {
+      if (galaxySQS.$metadata.httpStatusCode === 200) {
+        await userDBService.updateUserMigration(req, "signup", "signupSQS");
+      }
+    }
+
+    response = {
+      cognito: cognitoResponse,
+      db: JSON.stringify(dbResponse),
+      galaxy: galaxySQS,
+    };
+
+    // prepare logs
+    newUserArray.TemporaryPassword = ""; // fix clear-text logging of sensitive information
+    let logObj = loggerService.build(
+      "user",
+      "usersServices.createUserService",
+      req,
+      "MWG_CIAM_USER_SIGNUP_SUCCESS",
+      newUserArray,
+      response
+    );
+    // prepare response to client
+    let responseToClient = responseHelper.craftUsersApiResponse(
+      "",
+      req.body,
+      "MWG_CIAM_USER_SIGNUP_SUCCESS",
+      "USERS_SIGNUP",
+      logObj
+    );
+
+    return responseToClient;
   } catch (error) {
     // prepare logs
     let logObj = loggerService.build(

@@ -159,7 +159,7 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito){
         return response;
       } else {
         req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
-        throw newUserResult;
+        return newUserResult;
       }
   } catch (error) {
     req.apiTimer.end('usersSignupHelper.createUserSignupDB');
