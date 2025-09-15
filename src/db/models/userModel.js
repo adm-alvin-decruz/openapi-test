@@ -286,31 +286,6 @@ class User {
       );
     }
   }
-  static async existsByMandaiId(mandaiId) {
-    const sql = `
-      SELECT EXISTS(SELECT 1 FROM users WHERE mandai_id = ? LIMIT 1) AS exists_flag
-    `;
-    const params = [mandaiId];
-    try {
-      const [rows] = await pool.query(sql, params);
-      return rows[0]?.exists_flag === 1;  // true if exists
-    } catch (error) {
-      loggerService.error(
-        {
-          userModel: {
-            mandaiId,
-            error: String(error),
-            sql_statement: commonService.replaceSqlPlaceholders
-              ? commonService.replaceSqlPlaceholders(sql, params)
-              : sql,
-          },
-        },
-        {},
-        "[CIAM] userModel.existsByMandaiId - Failed"
-      );
-      throw error;
-    }
-  }
 
   static async update(id, userData) {
     const now = getCurrentUTCTimestamp();
