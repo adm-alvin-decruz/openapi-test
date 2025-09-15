@@ -76,7 +76,7 @@ const preSignedURLS3 = async (path) => {
   try {
     const s3Client = new S3Client({});
     const command = new GetObjectCommand({
-      Bucket: `mwg-passkit-sandbox`,
+      Bucket: `mwg-passkit-${process.env.APP_ENV}`,
       Key: path,
     });
     return await getSignedUrl(s3Client, command, {
