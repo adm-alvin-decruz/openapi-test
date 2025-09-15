@@ -41,7 +41,7 @@ class UserSignupService {
     }
   }
 
-  generateMandaiId(req, counter = 0) {
+  async generateMandaiId(req, counter = 0) {
     const source = getSource(req.headers["mwg-app-id"]);
     const groupKey = getGroup(req.body.group);
     const secret = process.env.USER_POOL_CLIENT_SECRET;
@@ -58,7 +58,12 @@ class UserSignupService {
           ].join('|');
 
     const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-    const tail = (BigInt('0x' + hex) % (10n ** 11n)).toString().padStart(11, '0');
+    // 10 digits for fowp/fomp, else 11
+    const is10 = ['fowp', 'fomp'].includes(req.body.group);
+    const k = is10 ? 10n : 11n;
+    const mod = 10n ** k;
+
+    const tail = (BigInt('0x' + hex) % mod).toString().padStart(Number(k), '0');
 
     return `M${groupKey}${source.sourceKey}${tail}`;
   }
@@ -450,7 +455,8 @@ class UserSignupService {
     req.body.phoneNumber = phoneNumber;
 
     // generate Mandai ID
-    let mandaiId = this.generateMandaiId(req, 0);
+    let idCounter = 0;
+    let mandaiId = await this.generateMandaiId(req, idCounter);
     if (await userModel.existsByMandaiId?.(mandaiId)) {
       loggerService.log(
         { mandaiId},
@@ -459,14 +465,16 @@ class UserSignupService {
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
       for (let c = 1; c <= 5; c++) {
-        const tryId = this.generateMandaiId(req, c);
+        const tryId = await this.generateMandaiId(req, c);
         loggerService.log(
           { mandaiId, tryId, counter: c },
           "[CIAM] New MandaiId generated"
         );
 
         if (!await userModel.existsByMandaiId(tryId)) {
-          mandaiId = tryId; found = true; 
+          mandaiId = tryId; 
+          found = true; 
+          idCounter = c;         
           break;
         }
       }
@@ -582,7 +590,8 @@ class UserSignupService {
           if (!this.isMandaiIdDupError(e) || counter === TRY_LIMIT - 1) throw e;
 
           // Compute a new ID and keep Cognito in sync
-          const newId = this.generateMandaiId(req, counter + 1);
+          idCounter += 1;
+          const newId =  await this.generateMandaiId(req, idCounter);
 
           const updateParams = [
               {
