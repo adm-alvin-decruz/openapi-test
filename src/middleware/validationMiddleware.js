@@ -14,8 +14,11 @@ const { messageLang } = require("../utils/common");
 const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
-const MembershipErrors = require("../config/https/errors/membershipErrors");
 const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
+const { query, validationResult } = require("express-validator");
+const validator = require("validator");
+const { jwtDecode } = require("jwt-decode");
+const { secrets } = require("../services/secretsService");
 
 /**
  * Validate empty request
@@ -25,13 +28,11 @@ const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
  * @returns
  */
 function isEmptyRequest(req, res, next) {
-  if (
-    req.method === "POST" ||
-    req.method === "PUT" ||
-    req.method === "PATCH" ||
-    req.method === "DELETE"
-  ) {
-    if (Object.keys(req.body).length === 0 || (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === 'language')) {
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
+    if (
+      Object.keys(req.body).length === 0 ||
+      (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === "language")
+    ) {
       return resStatusFormatter(res, 400, "Request body is empty");
     }
   }
@@ -47,7 +48,7 @@ async function validateEmail(req, res, next) {
   }
   await emailSensitiveHelper.findEmailInCognito(email);
   //handle adhook for newEmail property - If newEmail is existed in request payload
-  const newEmail = req.body.data && req.body.data.newEmail ? req.body.data.newEmail : '';
+  const newEmail = req.body.data && req.body.data.newEmail ? req.body.data.newEmail : "";
   if (newEmail) {
     req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(newEmail);
   }
@@ -71,11 +72,15 @@ async function validateEmailDisposable(req, res, next) {
 
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
-    loggerWrapper("ValidateEmailDisposable - Failed", {
-      email: req.body.email,
-      error: "Invalid Email - Domain Service has blocked",
-      layer: "validationMiddleware.validateEmailDisposable"
-    }, "error");
+    loggerWrapper(
+      "ValidateEmailDisposable - Failed",
+      {
+        email: req.body.email,
+        error: "Invalid Email - Domain Service has blocked",
+        layer: "validationMiddleware.validateEmailDisposable",
+      },
+      "error"
+    );
     return resStatusFormatter(res, 400, "The email is invalid");
   }
 
@@ -113,17 +118,17 @@ function resStatusFormatter(res, status, msg) {
  * @returns
  */
 function resStatusFormatterCustom(req, res, status, msg) {
-  let mwgCode=null
+  let mwgCode = null;
   // check if response from AEM
   const requestFromAEM = commonService.isRequestFromAEM(req.headers);
   // custom mwg code
   if (requestFromAEM) {
     // custom for user signup
-    if(req.method.toLowerCase() === 'post' && req.originalUrl === '/v1/ciam/users'){
-      let signupConfig = resHelper.responseConfigHelper('users_signup', 'MWG_CIAM_USER_SIGNUP_ERR');
+    if (req.method.toLowerCase() === "post" && req.originalUrl === "/v1/ciam/users") {
+      let signupConfig = resHelper.responseConfigHelper("users_signup", "MWG_CIAM_USER_SIGNUP_ERR");
       mwgCode = signupConfig.mwgCode;
       status = signupConfig.code;
-      msg = messageLang('email_is_invalid', req.body.language);
+      msg = messageLang("email_is_invalid", req.body.language);
     }
   }
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg, mwgCode));
@@ -150,15 +155,11 @@ async function refreshToken(credentialInfo) {
 
 async function AccessTokenAuthGuard(req, res, next) {
   if (!req.headers.authorization) {
-    return res
-      .status(401)
-      .json(CommonErrors.UnauthorizedException(req.body.language));
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
   if (!req.body || (!req.body.email && !req.body.mandaiId)) {
-    return res
-      .status(401)
-      .json(CommonErrors.UnauthorizedException(req.body.language));
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
   const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
@@ -167,15 +168,17 @@ async function AccessTokenAuthGuard(req, res, next) {
   );
 
   if (!userCredentials) {
-    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
-      email: req.body.email || "",
-      mandaiId: req.body.mandaiId || "",
-      error: 'Account has no record!',
-      layer: 'validationMiddleware.AccessTokenAuthGuard'
-    }, 'error');
-    return res
-      .status(400)
-      .json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
+    loggerWrapper(
+      "AccessTokenAuthGuard Middleware Failed",
+      {
+        email: req.body.email || "",
+        mandaiId: req.body.mandaiId || "",
+        error: "Account has no record!",
+        layer: "validationMiddleware.AccessTokenAuthGuard",
+      },
+      "error"
+    );
+    return res.status(400).json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
   }
 
   if (
@@ -184,29 +187,29 @@ async function AccessTokenAuthGuard(req, res, next) {
     !userCredentials.tokens.refreshToken ||
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
-    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
-      email: req.body.email || "",
-      mandaiId: req.body.mandaiId || "",
-      error: 'Token Credentials Information can not found!',
-      layer: 'validationMiddleware.AccessTokenAuthGuard'
-    }, 'error');
-    return res
-      .status(401)
-      .json(CommonErrors.UnauthorizedException(req.body.language));
+    loggerWrapper(
+      "AccessTokenAuthGuard Middleware Failed",
+      {
+        email: req.body.email || "",
+        mandaiId: req.body.mandaiId || "",
+        error: "Token Credentials Information can not found!",
+        layer: "validationMiddleware.AccessTokenAuthGuard",
+      },
+      "error"
+    );
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
+
+  const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
   const verifierAccessToken = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
     tokenUse: "access",
-    clientId: process.env.USER_POOL_CLIENT_ID,
+    clientId: ciamSecrets.USER_POOL_CLIENT_ID,
   });
   try {
-    const payloadAccessToken = await verifierAccessToken.verify(
-      req.headers.authorization
-    );
+    const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
-      return res
-        .status(401)
-        .json(CommonErrors.UnauthorizedException(req.body.language));
+      return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
   } catch (error) {
     if (error && error.message && error.message.includes("Token expired at")) {
@@ -215,27 +218,26 @@ async function AccessTokenAuthGuard(req, res, next) {
         res.newAccessToken = newAccessToken;
         return next();
       } else {
-        return res
-          .status(401)
-          .json(CommonErrors.UnauthorizedException(req.body.language));
+        return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
     }
 
-    loggerWrapper("AccessTokenAuthGuard Middleware Failed", {
-      email: req.body.email,
-      error: new Error(error),
-      layer: 'validationMiddleware.AccessTokenAuthGuard'
-    }, 'error');
-    return res
-      .status(401)
-      .json(CommonErrors.UnauthorizedException(req.body.language));
+    loggerWrapper(
+      "AccessTokenAuthGuard Middleware Failed",
+      {
+        email: req.body.email,
+        error: new Error(error),
+        layer: "validationMiddleware.AccessTokenAuthGuard",
+      },
+      "error"
+    );
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
   next();
 }
 
 async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
-  const mwgAppID =
-    req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
+  const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
   if (mwgAppID.includes("aem") && req.body.group === GROUP.MEMBERSHIP_PASSES) {
     return await AccessTokenAuthGuard(req, res, next);
   }
@@ -253,45 +255,46 @@ async function validateAPIKey(req, res, next) {
     layer: "middleware.validateAPIKey",
     validateAPIKeySwitch: JSON.stringify(validateAPIKeySwitch),
     mwgAppID: maskKeyRandomly(mwgAppID),
-    incomingApiKey: maskKeyRandomly(reqHeaderAPIKey)
-  }
+    incomingApiKey: maskKeyRandomly(reqHeaderAPIKey),
+  };
 
-  loggerWrapper(action +" - Process", logObj);
+  loggerWrapper(action + " - Process", logObj);
 
   try {
     // get App ID from db config table
     const dbConfigAppId = await configsModel.findByConfigKey("app_id", "app_id_key_binding");
     if (!dbConfigAppId || !dbConfigAppId.key) {
       logObj.appIdConfiguration = undefined;
-      loggerWrapper(action +" - Process", logObj);
+      loggerWrapper(action + " - Process", logObj);
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
     logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
-    loggerWrapper(action +" - Process", logObj);
+    loggerWrapper(action + " - Process", logObj);
     if (validateAPIKeySwitch.switch === 1) {
       logObj.error = "configuration app id not found!";
       if (!dbConfigAppId.value || !dbConfigAppId.value.length) {
-        loggerWrapper(action +"  - Failed validation", logObj);
+        loggerWrapper(action + "  - Failed validation", logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
       const appIdConfigFromDB = getAppIdConfiguration(dbConfigAppId.value, mwgAppID);
       if (!appIdConfigFromDB) {
-        loggerWrapper(action +"  - Failed validation", logObj);
+        loggerWrapper(action + "  - Failed validation", logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
       const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
       const bindingCheck = appIdConfigFromDB.binding;
-      const apiKeyEnv = process.env[`${apiKeyConfig}`];
+      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+      const apiKeyEnv = ciamSecrets[`${apiKeyConfig}`];
       if (!bindingCheck) {
-        loggerWrapper(action +" - Completed validation - binding is false", logObj);
+        loggerWrapper(action + " - Completed validation - binding is false", logObj);
         return next();
       }
       if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
         logObj.error = "";
-        loggerWrapper(action +" - Completed validation - binding is true", logObj);
+        loggerWrapper(action + " - Completed validation - binding is true", logObj);
         return next();
       }
     }
@@ -299,12 +302,12 @@ async function validateAPIKey(req, res, next) {
       return next();
     }
 
-    loggerWrapper(action +" - Finished validation", logObj);
+    loggerWrapper(action + " - Finished validation", logObj);
 
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   } catch (error) {
     logObj.error = new Error(error);
-    loggerWrapper(action +" - Failed Exception", logObj);
+    loggerWrapper(action + " - Failed Exception", logObj);
 
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
@@ -334,18 +337,14 @@ function transformObject(reqBodyObj) {
       return rs;
     }
 
-    if (
-      keysAcceptedTrimAndLower.includes(key) &&
-      value &&
-      typeof value === "string"
-    ) {
+    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === "string") {
       rs[key] = value.toLowerCase().trim();
       return rs;
     }
 
     if (transformArrayException.includes(key) && Array.isArray(value)) {
-      rs[key] = value.map(ele => {
-        return transformObject(ele)
+      rs[key] = value.map((ele) => {
+        return transformObject(ele);
       });
       return rs;
     }
@@ -368,6 +367,95 @@ function loggerWrapper(action, loggerObj, type = "logInfo") {
   return loggerService.log({ middlewareValidation: { ...loggerObj } }, action);
 }
 
+function validateQueryParameters(req, res, next) {
+  const errors = [];
+  const queryRaw = req.query;
+  const page = queryRaw.page;
+  const limit = queryRaw.limit;
+  if (queryRaw) {
+    const parts = queryRaw.query.split(",");
+
+    if (parts.length > 0) {
+      const [email, name, visualID, mandaiID] = parts;
+      if (email && !validator.isEmail(email)) {
+        errors.push({ msg: "Email is incorrect format!" });
+      }
+
+      if (name && !validator.isAlphanumeric(name)) {
+        errors.push({ msg: "Name is incorrect format!" });
+      }
+
+      if (visualID && !validator.isNumber(name)) {
+        errors.push({ msg: "visualID is incorrect format!" });
+      }
+
+      if (mandaiID && !validator.isAlphanumeric(mandaiID)) {
+        errors.push({ msg: "MandaiId is incorrect format!" });
+      }
+    }
+  }
+
+  if (!!page && !validator.isInt(page, { min: 1 })) {
+    errors.push({ msg: "page must be a positive integer" });
+  }
+
+  if (!!limit && !validator.isInt(limit, { min: 1, max: 100 })) {
+    errors.push({ msg: "limit must be between 1 and 100" });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ errors });
+  }
+
+  next();
+}
+
+async function CookiesAuthGuard(req, res, next) {
+  if (!req.headers || !req.headers["mwg-csp-auth-cookie"]) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  const rawPath = req.route.path;
+  const accessToken = req.headers["mwg-csp-auth-cookie"];
+  const accessTokenDecode = jwtDecode(accessToken);
+  const permissionConfig = await configsModel.findByConfigKey("siam_api_access_control", "path_permission");
+  if (!permissionConfig || !permissionConfig.value) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+  //validate roles
+  const entries = Object.entries(permissionConfig.value);
+  let roles = null;
+  for (const [pattern, data] of entries) {
+    if (pattern === rawPath) {
+      roles = data;
+      break;
+    }
+  }
+  if (!roles) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+  const permissionFromJWT =
+    accessTokenDecode.permissions && accessTokenDecode.permissions.CSP && accessTokenDecode.permissions.CSP.CSP
+      ? accessTokenDecode.permissions.CSP.CSP
+      : null;
+  if (!permissionFromJWT) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+
+  let allowed = false;
+  for (const role of roles) {
+    const permissions = permissionFromJWT[`${role.module}`] || null;
+    if (permissions && permissions.indexOf(role.permission) >= 0) {
+      allowed = true;
+      break;
+    }
+  }
+  if (!allowed) {
+    return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
+  }
+  next();
+}
+
 module.exports = {
   isEmptyRequest,
   validateEmail,
@@ -377,4 +465,6 @@ module.exports = {
   validateEmailDisposable,
   lowercaseTrimKeyValueString,
   validateAPIKey,
+  validateQueryParameters,
+  CookiesAuthGuard,
 };

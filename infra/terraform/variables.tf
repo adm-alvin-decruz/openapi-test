@@ -93,10 +93,6 @@ variable "USER_POOL_ID" {
   default = ""
 }
 
-variable "USER_POOL_CLIENT_ID" {}
-
-variable "USER_POOL_CLIENT_SECRET" {}
-
 variable "GALAXY_URL" {
   description = "GALAXY_URL"
   default = ""
@@ -134,29 +130,47 @@ variable "SOURCE_DB_MAPPING" {
 
 
 variable "github_hash" {
-  description = "goithub commit hash"
+  description = "github commit hash"
 }
 
-variable "PASSKIT_API_KEY" {
-  description = "PASSKIT API Key"
+variable "enable_parameters_secrets_extension" {
+  description = "Enable AWS Parameters and Secrets Lambda Extension"
+  type        = bool
+  default     = true
 }
 
-variable "EMAIL_SERVICE_API_KEY" {
-  description = "EMAIL SERVICE API KEY"
+variable "parameters_secrets_extension_cache_enabled" {
+  description = "Enable cache for the extension"
+  type        = bool
+  default     = true
 }
 
-variable "AEM_REQ_API_KEY" {
-  description = "API Key for AEM"
+variable "parameters_secrets_extension_cache_size" {
+  description = "Maximum size of the cache in terms of number of items"
+  type        = number
+  default     = 1000
 }
 
-variable "NOPCOMMERCE_REQ_API_KEY" {
-  description = "API Key for Nopcommerce Public endpoint"
+variable "ssm_parameter_store_ttl" {
+  description = "TTL in seconds for SSM Parameter Store cache (0-300)"
+  type        = number
+  default     = 300
 }
 
-variable "NOPCOMMERCE_REQ_PRIVATE_API_KEY" {
-  description = "API Key for Nopcommerce Private endpoint"
+variable "secrets_manager_ttl" {
+  description = "TTL in seconds for Secrets Manager cache (0-300)"
+  type        = number
+  default     = 300
 }
 
-variable "MFA_MOBILE_REQ_PUBLIC_API_KEY" {
-  description = "API Key for MFA"
+variable "parameters_secrets_extension_log_level" {
+  description = "Log level for the extension (DEBUG, INFO, WARN, ERROR)"
+  type        = string
+  default     = "INFO"
+}
+
+# List of ARN to be found here https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
+variable "parameters_secrets_extension_arn" {
+  description = "ARN for using AWS Parameters and Secrets Lambda Extension"
+  default = "arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension:17"
 }

@@ -1,3 +1,12 @@
+locals {
+    parameters_secrets_extension_arn = var.parameters_secrets_extension_arn
+    # Combine existing layers with extension layer
+    all_layers = var.enable_parameters_secrets_extension ? concat(
+        var.layers,
+        [local.parameters_secrets_extension_arn]
+    ) : var.layers
+}
+
 data "aws_kms_alias" "s3" {
   name = "alias/aws/s3"
 }
@@ -64,26 +73,20 @@ module "lambda_function_ciam_membership" {
     bucket         = aws_s3_object.ciam.bucket
     key            = aws_s3_object.ciam.key
   }
-  environment_variables = {
+  environment_variables = merge({
     LAMBDA_CIAM_SIGNUP_TRIGGER_MAIL_FUNCTION = data.terraform_remote_state.email_trigger_function.outputs.lambda_name
     LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION = data.terraform_remote_state.card_face_generator_function.outputs.lambda_name
     APP_ENV = var.env
     APP_LOG_SWITCH = var.APP_LOG_SWITCH
     USER_POOL_ID = var.USER_POOL_ID
-    USER_POOL_CLIENT_ID = var.USER_POOL_CLIENT_ID
-    USER_POOL_CLIENT_SECRET = var.USER_POOL_CLIENT_SECRET
     GALAXY_URL = var.GALAXY_URL
     GALAXY_IMPORT_PASS_PATH = var.GALAXY_IMPORT_PASS_PATH
     GALAXY_UPDATE_PASS_PATH = var.GALAXY_UPDATE_PASS_PATH
     GALAXY_QUERY_TICKET_PATH = var.GALAXY_QUERY_TICKET_PATH
     MYSQL_MASTER_HOST = data.terraform_remote_state.rds.outputs.cluster_endpoint
-    MYSQL_MASTER_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_user"]
-    MYSQL_MASTER_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_password"]
     MYSQL_MASTER_DATABASE = var.MYSQL_MASTER_DATABASE
     MYSQL_MASTER_PORT = data.terraform_remote_state.rds.outputs.cluster_port
     MYSQL_SLAVE_HOST = data.terraform_remote_state.rds.outputs.cluster_endpoint
-    MYSQL_SLAVE_USERNAME = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_user"]
-    MYSQL_SLAVE_PASSWORD = jsondecode(data.aws_secretsmanager_secret_version.ciam.secret_string)["db_password"]
     MYSQL_SLAVE_DATABASE = var.MYSQL_SLAVE_DATABASE
     MYSQL_SLAVE_PORT = data.terraform_remote_state.rds.outputs.cluster_port
     NEW_RELIC_LAMBDA_EXTENSION_ENABLED = "true"
@@ -99,13 +102,15 @@ module "lambda_function_ciam_membership" {
     AWS_REGION_NAME = var.region
     SQS_QUEUE_URL = data.terraform_remote_state.sqs.outputs.sqs_queue_url
     LAMBDA_CIAM_SIGNUP_TRIGGER_PASSKIT_MAIL_FUNCTION = data.terraform_remote_state.passkit_email_trigger_function.outputs.lambda_name
-    PASSKIT_API_KEY = var.PASSKIT_API_KEY
-    EMAIL_SERVICE_API_KEY = var.EMAIL_SERVICE_API_KEY
-    AEM_REQ_API_KEY = var.AEM_REQ_API_KEY
-    NOPCOMMERCE_REQ_API_KEY = var.NOPCOMMERCE_REQ_API_KEY
-    NOPCOMMERCE_REQ_PRIVATE_API_KEY = var.NOPCOMMERCE_REQ_PRIVATE_API_KEY
-    MFA_MOBILE_REQ_PUBLIC_API_KEY = var.MFA_MOBILE_REQ_PUBLIC_API_KEY
-  }
+  }, var.enable_parameters_secrets_extension ? {
+    # AWS Parameters and Secrets Lambda Extension configuration
+        PARAMETERS_SECRETS_EXTENSION_CACHE_ENABLED = tostring(var.parameters_secrets_extension_cache_enabled)
+        PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE = tostring(var.parameters_secrets_extension_cache_size)
+        SSM_PARAMETER_STORE_TTL = tostring(var.ssm_parameter_store_ttl)
+        SECRETS_MANAGER_TTL = tostring(var.secrets_manager_ttl)
+        PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL = var.parameters_secrets_extension_log_level
+        PARAMETERS_SECRETS_EXTENSION_HTTP_PORT = "2773"
+    } : {})
 #  allowed_triggers = {
 #    apigateway = {
 #      service  = "apigateway"
@@ -115,7 +120,7 @@ module "lambda_function_ciam_membership" {
   create_current_version_allowed_triggers = false
   lambda_role = aws_iam_role.lambda.arn
   create_role = false
-  layers = var.layers
+  layers = local.all_layers
 
 ### VPC ####
   vpc_subnet_ids         = data.terraform_remote_state.network.outputs.private_subnets

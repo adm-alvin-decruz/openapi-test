@@ -6,25 +6,25 @@ const { getOrCheck } = require("../../utils/cognitoAttributes");
 const loggerService = require("../../logs/logger");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const { proceedSetPassword } = require('./helpers/loginHelper');
+const { proceedSetPassword } = require("./helpers/loginHelper");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
+const { secrets } = require("../../services/secretsService");
 
 class UserLoginService {
   async login(req) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const hashSecret = usersService.genSecretHash(
       req.body.email,
-      process.env.USER_POOL_CLIENT_ID,
-      process.env.USER_POOL_CLIENT_SECRET
+      ciamSecrets.USER_POOL_CLIENT_ID,
+      ciamSecrets.USER_POOL_CLIENT_SECRET
     );
-    const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(
-      req.body.email
-    );
+    const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(req.body.email);
 
     const loginData = {
       email: req.body.email,
-      password: req.body.password
-    }
+      password: req.body.password,
+    };
     try {
       await proceedSetPassword(userHasFirstLogin, req.body.password, req.body.language);
 
@@ -43,17 +43,13 @@ class UserLoginService {
         {},
         "[CIAM] Login Service trigger Login Execution - Failed"
       );
-      throw new Error(
-        JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language))
-      );
+      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
     }
   }
 
   async getUser(req) {
     try {
-      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(
-        req.body.email
-      );
+      const userCognito = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
       const userDB = await userCredentialModel.findByUserEmail(req.body.email);
       return {
         email: getOrCheck(userCognito, "email"),
@@ -74,25 +70,20 @@ class UserLoginService {
         {},
         "[CIAM] Login Service Get User - Failed"
       );
-      throw new Error(
-        JSON.stringify(
-          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)
-        )
-      );
+      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
     }
   }
 
   async updateUser(id, tokens) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     try {
       const verifierAccessToken = CognitoJwtVerifier.create({
         userPoolId: process.env.USER_POOL_ID,
         tokenUse: "access",
-        clientId: process.env.USER_POOL_CLIENT_ID,
+        clientId: ciamSecrets.USER_POOL_CLIENT_ID,
       });
 
-      const payloadAccessToken = await verifierAccessToken.verify(
-        tokens.accessToken
-      );
+      const payloadAccessToken = await verifierAccessToken.verify(tokens.accessToken);
 
       await userCredentialModel.updateByUserId(id, {
         tokens: JSON.stringify({
@@ -119,14 +110,9 @@ class UserLoginService {
   }
 
   async execute(req) {
-
     const userInfo = await this.getUser(req);
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
-      throw new Error(
-        JSON.stringify(
-          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)
-        )
-      );
+      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
     }
     try {
       loggerService.log(
@@ -142,12 +128,15 @@ class UserLoginService {
       const loginSession = await this.login(req);
       await this.updateUser(userInfo.userId, loginSession);
       //insert events
-      await UserCredentialEventService.createEvent({
-        eventType: EVENTS.LOGIN,
-        data: req.body.email,
-        source: 1,
-        status: 1
-      }, userInfo.userId);
+      await UserCredentialEventService.createEvent(
+        {
+          eventType: EVENTS.LOGIN,
+          data: req.body.email,
+          source: 1,
+          status: 1,
+        },
+        userInfo.userId
+      );
       loggerService.log(
         {
           user: {
@@ -164,12 +153,16 @@ class UserLoginService {
         email: userInfo.email,
       };
     } catch (error) {
-      await UserCredentialEventService.createEvent({
-        eventType: EVENTS.LOGIN,
-        data: req.body.email,
-        source: 1,
-        status: 0
-      }, null, req.body.email);
+      await UserCredentialEventService.createEvent(
+        {
+          eventType: EVENTS.LOGIN,
+          data: req.body.email,
+          source: 1,
+          status: 0,
+        },
+        null,
+        req.body.email
+      );
       loggerService.error(
         {
           user: {

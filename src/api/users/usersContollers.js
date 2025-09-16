@@ -801,7 +801,7 @@ async function userUpdateMembershipPass(req, res) {
 
   const bodyLogger = {...req.body};
   if (bodyLogger.membershipPhoto && bodyLogger.membershipPhoto.bytes) {
-    bodyLogger.membershipPhoto.bytes = maskKeyRandomly(bodyLogger.membershipPhoto.bytes)
+    bodyLogger.membershipPhoto = JSON.stringify({ bytes: maskKeyRandomly(bodyLogger.membershipPhoto.bytes)})
   }
   loggerService.log(
     {
