@@ -80,7 +80,7 @@ async function userSignup(req, membershipData) {
   }
   // generate Mandai ID
   let idCounter = 0;
-  let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
+  let mandaiId = userSignupService.generateMandaiId(req, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log(
       { mandaiId},
@@ -89,7 +89,7 @@ async function userSignup(req, membershipData) {
     
     let found = false;
     for (let c = 1; c <= 5; c++) {
-      const tryId = await userSignupService.generateMandaiId(req, c);
+      const tryId = userSignupService.generateMandaiId(req, c);
       loggerService.log(
         { mandaiId, tryId, counter: c },
         "[CIAM] New MandaiId generated"
@@ -305,7 +305,8 @@ async function cognitoCreateUser(req, membershipData) {
         if (!isMandaiIdDupError(e) || attempt === TRY_LIMIT - 1) throw e;
 
         req.body.mandaiIdCounter = (req.body.mandaiIdCounter ?? 0) + 1;
-        const newId = usersSignupHelper.generateMandaiId(req.body, req.body.mandaiIdCounter);
+        const salt = crypto.randomUUID();
+        const newId = usersSignupHelper.generateMandaiId(req.body, req.body.mandaiIdCounter, salt);
 
         if (await userModel.existsByMandaiId(newId)) {
           continue;

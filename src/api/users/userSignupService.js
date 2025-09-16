@@ -41,7 +41,7 @@ class UserSignupService {
     }
   }
 
-  async generateMandaiId(req, counter = 0) {
+  generateMandaiId(req, counter = 0, salt = '') {
     const source = getSource(req.headers["mwg-app-id"]);
     const groupKey = getGroup(req.body.group);
     const secret = process.env.USER_POOL_CLIENT_SECRET;
@@ -54,7 +54,8 @@ class UserSignupService {
             req.body.dob,
             req.body.firstName,
             req.body.lastName,
-            counter         
+            counter,
+            salt          
           ].join('|');
 
     const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
@@ -456,7 +457,7 @@ class UserSignupService {
 
     // generate Mandai ID
     let idCounter = 0;
-    let mandaiId = await this.generateMandaiId(req, idCounter);
+    let mandaiId = this.generateMandaiId(req, idCounter);
     if (await userModel.existsByMandaiId?.(mandaiId)) {
       loggerService.log(
         { mandaiId},
@@ -465,7 +466,7 @@ class UserSignupService {
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
       for (let c = 1; c <= 5; c++) {
-        const tryId = await this.generateMandaiId(req, c);
+        const tryId = this.generateMandaiId(req, c);
         loggerService.log(
           { mandaiId, tryId, counter: c },
           "[CIAM] New MandaiId generated"
@@ -591,7 +592,8 @@ class UserSignupService {
 
           // Compute a new ID and keep Cognito in sync
           idCounter += 1;
-          const newId =  await this.generateMandaiId(req, idCounter);
+          const salt = crypto.randomUUID();
+          const newId =  this.generateMandaiId(req, idCounter, salt);
 
           const updateParams = [
               {
