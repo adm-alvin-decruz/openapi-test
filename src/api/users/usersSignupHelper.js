@@ -126,38 +126,46 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito){
   // insert to user table
   // if singup wildpass but account already have membership passes - reuse this for upsert
   const userExisted = !!membershipData && !!membershipData.userId;
-  let newUserResult= userExisted ? await updateUser(membershipData.userId, req) : await insertUser(req);
 
-  if(!newUserResult.error){
-    // insert to membership table - membership-passes have empty so keep insert
-    let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
-    // upsert to newsletter table
-    let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id, userExisted);
-    // insert to credential table - if membership-passes ignore update user credential
-    let newUserCredentialResult = !userExisted ? await insertUserCredential(req, newUserResult.user_id, userSubIdFromCognito) : {};
-    // upsert to detail table
-    let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
+  try {
+    let newUserResult= userExisted 
+                        ? await updateUser(membershipData.userId, req) 
+                        : await insertUser(req);
 
-    // user migrations - update user_migrations user ID
-    if(req.body.migrations) {
-      let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
-    }
-    // if group non wildpass, insert user credential
-    let response = {
-      newUserResult: JSON.stringify(newUserResult),
-      newMembershipResult: JSON.stringify(newMembershipResult),
-      newUserNewsLetterResult: JSON.stringify(newUserNewsLetterResult),
-      newUserCredentialResult: JSON.stringify(newUserCredentialResult),
-      newUserDetailResult: JSON.stringify(newUserDetailResult)
-    }
+      if(!userExisted){
+        // insert to membership table - membership-passes have empty so keep insert
+        let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
+        // upsert to newsletter table
+        let newUserNewsLetterResult = await insertUserNewletter(req, newUserResult.user_id, userExisted);
+        // insert to credential table - if membership-passes ignore update user credential
+        let newUserCredentialResult = !userExisted ? await insertUserCredential(req, newUserResult.user_id, userSubIdFromCognito) : {};
+        // upsert to detail table
+        let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
 
-    req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
-    return response;
+        // user migrations - update user_migrations user ID
+        if(req.body.migrations) {
+          let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
+        }
+        // if group non wildpass, insert user credential
+        let response = {
+          newUserResult: JSON.stringify(newUserResult),
+          newMembershipResult: JSON.stringify(newMembershipResult),
+          newUserNewsLetterResult: JSON.stringify(newUserNewsLetterResult),
+          newUserCredentialResult: JSON.stringify(newUserCredentialResult),
+          newUserDetailResult: JSON.stringify(newUserDetailResult)
+        }
+
+        req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
+        return response;
+      } else {
+        req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
+        return newUserResult;
+      }
+  } catch (error) {
+    req.apiTimer.end('usersSignupHelper.createUserSignupDB');
+    throw error;
   }
-  else{
-    req.apiTimer.end('usersSignupHelper.createUserSignupDB'); // log end time
-    throw newUserResult;
-  }
+  
 
 }
 
@@ -189,7 +197,7 @@ async function insertUser(req){
   } catch (error) {
     let catchError = new Error(`userSignupHelper.inserUserMembership error: ${error}`);
     console.log(catchError);
-    return catchError;
+    throw error;
   }
 }
 

@@ -59,6 +59,8 @@ const {
 } = require("./helpers/userUpdateMembershipPassesHelper");
 const userEventAuditTrailService = require("./userEventAuditTrailService");
 const userCredentialEventService = require("./userCredentialEventService");
+const UserSignupService = require("./userSignupService");
+const userSignupService = require("./userSignupService");
 
 /**
  * Function User signup service
@@ -77,11 +79,35 @@ async function userSignup(req, membershipData) {
     return handleMPAccountSignupWP(req, membershipData.data);
   }
   // generate Mandai ID
-  let mandaiID = usersSignupHelper.generateMandaiID(req.body);
-  if (mandaiID.error) {
-    return mandaiID;
+  let idCounter = 0;
+  let mandaiId = userSignupService.generateMandaiId(req, idCounter);
+  if (await userModel.existsByMandaiId?.(mandaiId)) {
+    loggerService.log(
+      { mandaiId},
+      "[CIAM] MandaiId Duplicated"
+    );
+    
+    let found = false;
+    for (let c = 1; c <= 5; c++) {
+      const tryId = userSignupService.generateMandaiId(req, c);
+      loggerService.log(
+        { mandaiId, tryId, counter: c },
+        "[CIAM] New MandaiId generated"
+      );
+
+      if (!await userModel.existsByMandaiId(tryId)) {
+        mandaiId = tryId; 
+        found = true; 
+        idCounter = c;     
+        break;
+      }
+    }
+    if (!found) {
+      throw new Error('Could not reserve a unique Mandai ID');
+    }
   }
-  req.body["mandaiID"] = mandaiID;
+  req.body["mandaiID"] = mandaiId;
+  req.body["mandaiIdCounter"] = idCounter;
 
   // prepare membership group
   req["body"]["membershipGroup"] = commonService.prepareMembershipGroup(
@@ -269,10 +295,35 @@ async function cognitoCreateUser(req, membershipData) {
     );
 
     const userSubIdFromCognito = cognitoResponse && cognitoResponse.User && cognitoResponse.User.Username ? cognitoResponse.User.Username : '';
-    const dbResponse = await retryOperation(async () => {
-      return usersSignupHelper.createUserSignupDB(req, membershipData, userSubIdFromCognito);
-    });
+    let dbResponse;
+    const TRY_LIMIT = 6;
+    for (let attempt = 0; attempt < TRY_LIMIT; attempt++) {
+      try {
+        dbResponse = await usersSignupHelper.createUserSignupDB(req, membershipData, userSubIdFromCognito);
+        break;
+      } catch (e) {
+        if (!isMandaiIdDupError(e) || attempt === TRY_LIMIT - 1) throw e;
 
+        req.body.mandaiIdCounter = (req.body.mandaiIdCounter ?? 0) + 1;
+        const salt = crypto.randomUUID();
+        const newId = usersSignupHelper.generateMandaiId(req.body, req.body.mandaiIdCounter, salt);
+
+        if (await userModel.existsByMandaiId(newId)) {
+          continue;
+        }
+
+        //update cognito to be in sync
+        await cognitoService.cognitoAdminUpdateNewUser(
+          [{ Name: "custom:mandai_id", Value: newId }],
+          req.body.email
+        );
+
+        // Replace ID on request and retry DB write
+        req.body.mandaiID = newId;
+      
+      }
+    }
+      
     // push to queue for Galaxy Import Pass
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, "userSignup");
 
@@ -343,6 +394,7 @@ async function cognitoCreateUser(req, membershipData) {
     );
     return responseErrorToClient;
   }
+  
 }
 
 /**
@@ -1101,6 +1153,11 @@ async function retryOperation(operation, maxRetries = 9, delay = 200) {
 
   return lastError;
 }
+function isMandaiIdDupError(err) {
+  return err && (err.code === 'ER_DUP_ENTRY' || err.errno === 1062) &&
+         /mandai_id/i.test(err.sqlMessage || err.message || '');
+}
+
 
 /** export the module */
 module.exports = {

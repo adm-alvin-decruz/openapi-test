@@ -87,25 +87,27 @@ class User {
     }
   }
 
-  static async findByEmailMandaiId(email, mandaiId) {
+  static async existsByMandaiId(mandaiId) {
+    const sql = "SELECT * FROM users WHERE mandai_id = ?";
+    const params = [mandaiId];
     try {
-      const sql = "SELECT * FROM users WHERE email = ? AND mandai_id = ?";
-      const rows = await pool.query(sql, [email, mandaiId]);
-
-      return rows[0];
+      const [rows] = await pool.query(sql, params);
+      loggerService.log(
+        {test: rows},
+        "[CIAM] rows"
+      );
+      return rows == undefined ? false : true;
     } catch (error) {
       loggerService.error(
         {
           userModel: {
-            mandaiId,
-            email,
+            userId: id,
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] userModel.findByEmailMandaiId - Failed"
+        "[CIAM] userModel.existsByMandaiId - Failed"
       );
-      throw error;
     }
   }
 
