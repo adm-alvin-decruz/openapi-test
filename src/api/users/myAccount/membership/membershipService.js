@@ -3,6 +3,11 @@ const { messageLang, omit } = require("../../../../utils/common");
 const loggerService = require("../../../../logs/logger");
 const GetMembershipError = require("../../../../config/https/errors/membershipErrors");
 const { preSignedURLS3 } = require("../../../../services/s3Service");
+const { getCurrentUTCTimestamp } = require("../../../../utils/dateUtils");
+const DeleteUserErrors = require("../../../../config/https/errors/deleteUserErrors");
+const cognitoService = require("../../../../services/cognitoService");
+const MembershipErrors = require("../../../../config/https/errors/membershipErrors");
+const userEventAuditTrailService = require("../../userEventAuditTrailService");
 
 function loggerWrapper(action, obj, type = "logInfo") {
   if (type === "error") {
@@ -19,18 +24,20 @@ async function retrieveMembership(data) {
   try {
     //define query for model
     const rs = await userModel.retrieveMembership(email);
-    const memberships = await Promise.all(rs.memberships.map(async ele => {
-      const signedURL = await preSignedURLS3(ele.photoUrl);
-      return {
-        ...ele,
-        photoUrl: signedURL
-      }
-    }))
+    const memberships = await Promise.all(
+      rs.memberships.map(async (ele) => {
+        const signedURL = await preSignedURLS3(ele.photoUrl);
+        return {
+          ...ele,
+          photoUrl: signedURL,
+        };
+      })
+    );
 
     return {
       user_memberships: {
         ...rs,
-        memberships
+        memberships,
       },
       mwgCode: "MWG_CIAM_GET_USER_MEMBERSHIPS_SUCCESS",
       message: messageLang("get_membership_success", language),
@@ -39,17 +46,77 @@ async function retrieveMembership(data) {
     };
   } catch (error) {
     loggerWrapper(
-      "[CIAM-ServicePortal] Error Retrieve Memberships",
+      "[CIAM-MYACCOUNT] Error Retrieve Memberships",
       { email, error: new Error(error), layer: "service.retrieveMembership" },
-      "error",
+      "error"
     );
-    throw new Error(
-      JSON.stringify(GetMembershipError.ciamMembershipGetPassesInvalid(language)),
+    throw new Error(JSON.stringify(GetMembershipError.ciamMembershipGetPassesInvalid(language)));
+  }
+}
+
+//Delete users
+async function deleteUserMembership(data) {
+  const language = data.language;
+  const email = data.email;
+  try {
+    //define query for model
+    const rs = await userModel.retrieveMembership(email);
+
+    console.log("rs", rs);
+    if (!rs || !rs.email) {
+      await Promise.reject(new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))));
+    }
+
+    if (rs.memberships.length > 0) {
+      const membershipExpireDate = rs.memberships.map((ele) => ele.expires_at.split(" ")[0]);
+      if (membershipExpireDate.some((ele) => ele < getCurrentUTCTimestamp().split(" ")[0])) {
+        await Promise.reject(new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language))));
+      }
+    }
+    //proceed delete
+    await userModel.softDeleteUserByEmail(email, {
+      email: `delete-${email}`,
+      active: false,
+    });
+
+    await cognitoService.cognitoDisabledUser(email);
+    await userEventAuditTrailService.createEvent(
+      email,
+      "success",
+      "deleteUser",
+      {
+        email,
+      },
+      1
     );
+    return {
+      user_memberships: rs,
+      mwgCode: "MWG_CIAM_DELETE_USER_SUCCESS",
+      message: messageLang("delete_user_success", language),
+      status: "success",
+      statusCode: 200,
+    };
+  } catch (error) {
+    await userEventAuditTrailService.createEvent(
+      email,
+      "failed",
+      "deleteUser",
+      {
+        email,
+      },
+      1
+    );
+    loggerWrapper(
+      "[CIAM-MYACCOUNT] Error Delete User",
+      { email, error: new Error(error), layer: "service.deleteUserMembership" },
+      "error"
+    );
+    throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
   }
 }
 
 /** export the module */
 module.exports = {
   retrieveMembership,
+  deleteUserMembership,
 };

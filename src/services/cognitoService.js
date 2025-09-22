@@ -856,6 +856,92 @@ class Cognito {
 
     return null;
   }
+
+  static async cognitoDisabledUser(email) {
+    const command = new AdminDisableUserCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+    });
+    try {
+      loggerService.log(
+        {
+          cognitoService: {
+            username: email,
+            action: "cognitoDisabledUser",
+            layer: "services.cognitoDisabledUser",
+          },
+        },
+        "[CIAM] Start cognitoDisabledUser Service"
+      );
+      await client.send(command);
+      loggerService.log(
+        {
+          cognitoService: {
+            username: email,
+            action: "cognitoDisabledUser",
+            layer: "services.cognitoDisabledUser",
+          },
+        },
+        "[CIAM] End cognitoDisabledUser Service - Success"
+      );
+    } catch (error) {
+      loggerService.error(
+        {
+          cognitoService: {
+            username: email,
+            error: new Error(error),
+            action: "cognitoDisabledUser",
+            layer: "services.cognitoDisabledUser",
+          },
+        },
+        {},
+        "[CIAM] End cognitoDisabledUser Service - Failed"
+      );
+    }
+  }
+
+  static async cognitoEnabledUser(email) {
+    const command = new AdminEnableUserCommand({
+      UserPoolId: process.env.USER_POOL_ID,
+      Username: email,
+    });
+    try {
+      loggerService.log(
+        {
+          cognitoService: {
+            username: email,
+            action: "cognitoEnabledUser",
+            layer: "services.cognitoEnabledUser",
+          },
+        },
+        "[CIAM] Start cognitoEnabledUser Service"
+      );
+      await client.send(command);
+      loggerService.log(
+        {
+          cognitoService: {
+            username: email,
+            action: "cognitoEnabledUser",
+            layer: "services.cognitoEnabledUser",
+          },
+        },
+        "[CIAM] End cognitoEnabledUser Service - Success"
+      );
+    } catch (error) {
+      loggerService.error(
+        {
+          cognitoService: {
+            username: email,
+            error: new Error(error),
+            action: "cognitoEnabledUser",
+            layer: "services.cognitoEnabledUser",
+          },
+        },
+        {},
+        "[CIAM] End cognitoEnabledUser Service - Failed"
+      );
+    }
+  }
 }
 
 module.exports = Cognito;
