@@ -18,7 +18,7 @@ class User {
       convertDateToMySQLFormat(userData.birthdate),
       userData.mandai_id,
       userData.source,
-      userData.active,
+      userData.status,
       userData.created_at,
       now,
     ];
@@ -215,7 +215,7 @@ class User {
     const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   INNER JOIN user_newsletters un ON un.user_id = u.id
-                  WHERE u.email = ? AND u.active=1 AND um.name = 'wildpass'`;
+                  WHERE u.email = ? AND u.status = 1 AND um.name = 'wildpass'`;
     try {
       const rows = await pool.query(sql, [email]);
 

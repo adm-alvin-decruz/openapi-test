@@ -80,7 +80,7 @@ class UserSignupService {
       convertDateToMySQLFormat(userData.birthdate),
       userData.mandai_id,
       userData.source,
-      userData.active,
+      userData.status,
       userData.created_at,
       getCurrentUTCTimestamp(),
     ];

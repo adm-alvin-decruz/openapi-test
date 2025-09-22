@@ -6,7 +6,7 @@ async function getUserFullInfoByEmail(req) {
   const query = `
     SELECT
       u.id AS user_id, u.email, u.given_name, u.family_name, u.birthdate,
-      u.mandai_id, u.source, u.active, u.created_at AS user_created_at,
+      u.mandai_id, u.source, u.status, u.created_at AS user_created_at,
       u.updated_at AS user_updated_at,
 
       um.id AS membership_id, ud.user_id, um.name AS membership_name, um.visual_id AS membership_visual_id,
@@ -65,7 +65,7 @@ async function getUserFullInfoByEmail(req) {
           birthdate: row.birthdate,
           mandai_id: row.mandai_id,
           source: row.source,
-          active: row.active,
+          status: row.status,
           created_at: row.user_created_at,
           updated_at: row.user_updated_at,
         };
