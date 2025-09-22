@@ -1,13 +1,6 @@
-
-
-const pool = require('../../db/connections/mysqlConn');
-const userModel = require('../../db/models/userModel');
-const userMembershipModel = require('../../db/models/userMembershipModel');
-const userNewsletterModel = require('../../db/models/userNewletterModel');
-const userCredentialModel = require('../../db/models/userCredentialModel');
-const userDetailModel = require('../../db/models/userDetailsModel');
-const userConfig = require('../../config/usersConfig');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const pool = require("../../db/connections/mysqlConn");
+const userModel = require("../../db/models/userModel");
+const userConfig = require("../../config/usersConfig");
 
 async function getUserFullInfoByEmail(req) {
   const query = `
@@ -57,11 +50,11 @@ async function getUserFullInfoByEmail(req) {
       memberships: [],
       newsletters: [],
       details: {},
-      credentials: {}
+      credentials: {},
     };
 
     // Process the results
-    results.forEach(row => {
+    results.forEach((row) => {
       // User info (only need to do this once)
       if (Object.keys(response.user).length === 0) {
         response.user = {
@@ -74,7 +67,7 @@ async function getUserFullInfoByEmail(req) {
           source: row.source,
           active: row.active,
           created_at: row.user_created_at,
-          updated_at: row.user_updated_at
+          updated_at: row.user_updated_at,
         };
       }
 
@@ -82,12 +75,12 @@ async function getUserFullInfoByEmail(req) {
       if (row.membership_id) {
         response.memberships.push({
           id: row.membership_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           name: row.membership_name,
           visual_id: row.membership_visual_id,
           expires_at: row.membership_expires_at,
           created_at: row.membership_created_at,
-          updated_at: row.membership_updated_at
+          updated_at: row.membership_updated_at,
         });
       }
 
@@ -95,12 +88,12 @@ async function getUserFullInfoByEmail(req) {
       if (row.newsletter_id) {
         response.newsletters.push({
           id: row.newsletter_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           name: row.newsletter_name,
           type: row.newsletter_type,
           subscribed: row.newsletter_subscribed,
           created_at: row.newsletter_created_at,
-          updated_at: row.newsletter_updated_at
+          updated_at: row.newsletter_updated_at,
         });
       }
 
@@ -108,7 +101,7 @@ async function getUserFullInfoByEmail(req) {
       if (Object.keys(response.details).length === 0 && row.details_id) {
         response.details = {
           id: row.details_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           phone_number: row.phone_number,
           zoneinfo: row.zoneinfo,
           address: row.address,
@@ -117,7 +110,7 @@ async function getUserFullInfoByEmail(req) {
           vehicle_plate: row.vehicle_plate,
           extra: row.user_extra,
           created_at: row.details_created_at,
-          updated_at: row.details_updated_at
+          updated_at: row.details_updated_at,
         };
       }
 
@@ -125,26 +118,26 @@ async function getUserFullInfoByEmail(req) {
       if (Object.keys(response.credentials).length === 0 && row.credentials_id) {
         response.credentials = {
           id: row.credentials_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           username: row.username,
           tokens: row.tokens,
           last_login: row.last_login,
           created_at: row.credentials_created_at,
-          updated_at: row.credentials_updated_at
+          updated_at: row.credentials_updated_at,
         };
       }
     });
 
     return response;
   } catch (error) {
-    console.error('Error fetching user info:', error);
+    console.error("Error fetching user info:", error);
     throw error;
   }
 }
 
-async function getUserPageCustomField(req){
+async function getUserPageCustomField(req) {
   try {
-    const data = req.method === 'POST' ? req.body : req.query;
+    const data = req.method === "POST" ? req.body : req.query;
     // Parse parameters
     const page = parseInt(data.page) || 1;
     const columns = parseColumns(data.columns);
@@ -152,13 +145,13 @@ async function getUserPageCustomField(req){
 
     const maxPageSize = userConfig.DEFAULT_PAGE_SIZE;
     let pageSize = parseInt(data.pageSize) || maxPageSize;
-    pageSize = (pageSize < maxPageSize) ? pageSize : maxPageSize;
+    pageSize = pageSize < maxPageSize ? pageSize : maxPageSize;
 
     const result = await userModel.queryUsersWithPagination(page, pageSize, columns, filters);
 
     return result;
   } catch (error) {
-    let logError = (new Error(`Error in suppportDBServices.getUserPageCustomField: ${error}`));
+    let logError = new Error(`Error in suppportDBServices.getUserPageCustomField: ${error}`);
     console.log(logError);
     return { error: logError };
   }
@@ -168,31 +161,31 @@ function parseColumns(columns) {
   if (Array.isArray(columns)) {
     return columns;
   }
-  if (typeof columns === 'string') {
-    return columns.split(',').map(col => col.trim());
+  if (typeof columns === "string") {
+    return columns.split(",").map((col) => col.trim());
   }
-  return ['*'];
+  return ["*"];
 }
 
 function parseFilters(filters) {
-  if (typeof filters === 'string') {
+  if (typeof filters === "string") {
     try {
       return JSON.parse(filters);
     } catch (error) {
-      console.error('Error parsing filters:', error);
+      console.error("Error parsing filters:", error);
       return {};
     }
   }
-  if (typeof filters === 'object' && filters !== null) {
+  if (typeof filters === "object" && filters !== null) {
     return filters;
   }
   return {};
 }
 
-async function findUserWithEmptyVisualID (req) {
+async function findUserWithEmptyVisualID(req) {
   const maxLimit = 90;
   let limit = req.body.limit || maxLimit;
-  if(req.body.limit > maxLimit){
+  if (req.body.limit > maxLimit) {
     limit = maxLimit;
   }
 
@@ -211,11 +204,13 @@ async function findUserWithEmptyVisualID (req) {
     const results = await pool.query(query);
     return results;
   } catch (error) {
-    console.error('Error finding users with empty visual ID:', error);
+    console.error("Error finding users with empty visual ID:", error);
     throw error;
   }
 }
 
 module.exports = {
-  getUserFullInfoByEmail, getUserPageCustomField, findUserWithEmptyVisualID
-}
+  getUserFullInfoByEmail,
+  getUserPageCustomField,
+  findUserWithEmptyVisualID,
+};

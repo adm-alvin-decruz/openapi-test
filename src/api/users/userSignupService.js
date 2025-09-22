@@ -1,18 +1,11 @@
 const crypto = require("crypto");
 const cognitoService = require("../../services/cognitoService");
 const { getOrCheck } = require("../../utils/cognitoAttributes");
-const {
-  getSource,
-  getGroup,
-  maskKeyRandomly,
-} = require("../../utils/common");
+const { getSource, getGroup, maskKeyRandomly } = require("../../utils/common");
 const SignUpErrors = require("../../config/https/errors/signupErrors");
 const passwordService = require("./userPasswordService");
 const userModel = require("../../db/models/userModel");
-const {
-  getCurrentUTCTimestamp,
-  convertDateToMySQLFormat,
-} = require("../../utils/dateUtils");
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require("../../utils/dateUtils");
 const pool = require("../../db/connections/mysqlConn");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const commonService = require("../../services/commonService");
@@ -30,8 +23,7 @@ class UserSignupService {
       return await cognitoService.cognitoAdminGetUserByEmail(email);
     } catch (error) {
       const errorMessage = JSON.parse(error.message);
-      const errorData =
-        errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
+      const errorData = errorMessage.data && errorMessage.data.name ? errorMessage.data : "";
       if (errorData.name && errorData.name === "UserNotFoundException") {
         return false;
       }
@@ -55,9 +47,15 @@ class UserSignupService {
             req.body.firstName,
             req.body.lastName,
             counter,
-            salt          
+            salt
           ].join('|');
 
+    const hash = crypto
+      .createHash("sha256")
+      .update(`${req.body.email}${req.body.dob}${req.body.firstName}${req.body.lastName}`)
+      .digest("hex");
+    const numbers = hash.replace(/\D/g, "");
+    return `M${groupKey}${source.sourceKey}${numbers.slice(0, 11)}`;
     const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
     // 10 digits for fowp/fomp, else 11
     const is10 = ['fowp', 'fomp'].includes(req.body.group);
@@ -160,7 +158,7 @@ class UserSignupService {
         username: req.body.email,
         password_hash: hashPassword,
         salt: salt,
-        user_sub_id: userSubId
+        user_sub_id: userSubId,
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
@@ -187,7 +185,7 @@ class UserSignupService {
         birthdate: req.body.dob || null,
         mandai_id: mandaiId,
         source: source.sourceDB,
-        active: true,
+        status: 1,
         created_at: getCurrentUTCTimestamp(),
       });
     } catch (error) {
@@ -202,7 +200,7 @@ class UserSignupService {
           birthdate: req.body.dob || null,
           mandai_id: mandaiId,
           source: source.sourceDB,
-          active: true,
+          status: 1,
           created_at: getCurrentUTCTimestamp(),
         }),
         source: 2,
@@ -217,14 +215,7 @@ class UserSignupService {
 
       try {
         await pool.transaction(
-          this.importUserInformation(
-            userDB,
-            req,
-            hashPassword,
-            saltPassword,
-            phoneNumber,
-            userSubId
-          )
+          this.importUserInformation(userDB, req, hashPassword, saltPassword, phoneNumber, userSubId)
         );
         this.loggerWrapper("[CIAM] End saveUserDB at Signup Service - Success", {
           layer: "userSignupService.signup",
@@ -233,26 +224,25 @@ class UserSignupService {
           mandaiId,
         });
       } catch (error) {
-        this.loggerWrapper("[CIAM] End saveUserDB at Signup Service - Failed", {
-          layer: "userSignupService.signup",
-          action: "adminCreateMPUser.saveUserDB",
-          email: req.body.email,
-          error: new Error(error),
-          phoneNumber,
-          mandaiId,
-          hashPassword: maskKeyRandomly(hashPassword),
-          saltPassword: maskKeyRandomly(saltPassword),
-        }, "error");
+        this.loggerWrapper(
+          "[CIAM] End saveUserDB at Signup Service - Failed",
+          {
+            layer: "userSignupService.signup",
+            action: "adminCreateMPUser.saveUserDB",
+            email: req.body.email,
+            error: new Error(error),
+            phoneNumber,
+            mandaiId,
+            hashPassword: maskKeyRandomly(hashPassword),
+            saltPassword: maskKeyRandomly(saltPassword),
+          },
+          "error"
+        );
         await failedJobsModel.create({
           uuid: crypto.randomUUID(),
           name: "failedCreateNewUserInformation",
           action: "failed",
-          data: this.importUserInformation(
-            userDB,
-            req,
-            hashPassword,
-            saltPassword
-          ).join("|"),
+          data: this.importUserInformation(userDB, req, hashPassword, saltPassword).join("|"),
           source: 2,
           triggered_at: null,
           status: 0,
@@ -280,9 +270,7 @@ class UserSignupService {
 
   async preparePassword(req) {
     if (req.body.migrations || req.body.is_passwordless) {
-      const saltPassword = !!req.body.passwordSalt
-        ? req.body.passwordSalt
-        : passwordService.createSaltKey(5);
+      const saltPassword = !!req.body.passwordSalt ? req.body.passwordSalt : passwordService.createSaltKey(5);
       const passwordTemporary = crypto.randomUUID();
       const hashPassword = !!req.body.passwordHash
         ? req.body.passwordHash
@@ -302,9 +290,7 @@ class UserSignupService {
         },
       };
     }
-    const hashPassword = await passwordService.hashPassword(
-      req.body.password.toString()
-    );
+    const hashPassword = await passwordService.hashPassword(req.body.password.toString());
     return {
       db: {
         hashPassword: hashPassword,
@@ -329,10 +315,7 @@ class UserSignupService {
    */
   async handleUpdateUserBelongWildPass(req, userCognito, userDB, passwordCredential) {
     try {
-      await cognitoService.cognitoAdminSetUserPassword(
-        req.body.email,
-        passwordCredential.cognito.hashPassword
-      );
+      await cognitoService.cognitoAdminSetUserPassword(req.body.email, passwordCredential.cognito.hashPassword);
 
       await userSignupHelper.updatePasswordCredential(req.body.email, passwordCredential);
 
@@ -350,26 +333,18 @@ class UserSignupService {
         await userModel.update(userDB.id, {
           given_name: req.body.firstName || undefined,
           family_name: req.body.lastName || undefined,
-          birthdate: req.body.dob
-            ? convertDateToMySQLFormat(req.body.dob)
-            : undefined,
+          birthdate: req.body.dob ? convertDateToMySQLFormat(req.body.dob) : undefined,
         });
         let userName = getOrCheck(userCognito, "name");
         const userFirstName = getOrCheck(userCognito, "given_name");
         const userLastName = getOrCheck(userCognito, "family_name");
 
         if (req.body.firstName && userFirstName) {
-          userName = userName.replace(
-            userFirstName.toString(),
-            req.body.firstName
-          );
+          userName = userName.replace(userFirstName.toString(), req.body.firstName);
         }
 
         if (req.body.firstName && userLastName) {
-          userName = userName.replace(
-            userLastName.toString(),
-            req.body.firstName
-          );
+          userName = userName.replace(userLastName.toString(), req.body.firstName);
         }
         await cognitoService.cognitoAdminUpdateNewUser(
           [
@@ -399,25 +374,27 @@ class UserSignupService {
         layer: "userSignupService.signup",
         action: "adminCreateMPUser.handleUpdateUserBelongWildPass",
         email: req.body.email,
-        mandaiId
+        mandaiId,
       });
-      return { mandaiId }
+      return { mandaiId };
     } catch (error) {
-      this.loggerWrapper("[CIAM] End handleUpdateUserBelongWildPass Service - Failed", {
-        layer: "userSignupService.signup",
-        action: "adminCreateMPUser.handleUpdateUserBelongWildPass",
-        email: req.body.email,
-        userCognito: userCognito,
-        userDB: userDB,
-        error: new Error(`User is signup failed with case existed at Cognito! - ${error}`)
-      }, "error");
+      this.loggerWrapper(
+        "[CIAM] End handleUpdateUserBelongWildPass Service - Failed",
+        {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser.handleUpdateUserBelongWildPass",
+          email: req.body.email,
+          userCognito: userCognito,
+          userDB: userDB,
+          error: new Error(`User is signup failed with case existed at Cognito! - ${error}`),
+        },
+        "error"
+      );
       req.body.migrations &&
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 3,
         }));
-      throw new Error(
-        JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
-      );
+      throw new Error(JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language)));
     }
   }
 
@@ -473,9 +450,9 @@ class UserSignupService {
         );
 
         if (!await userModel.existsByMandaiId(tryId)) {
-          mandaiId = tryId; 
-          found = true; 
-          idCounter = c;         
+          mandaiId = tryId;
+          found = true;
+          idCounter = c;
           break;
         }
       }
@@ -487,7 +464,10 @@ class UserSignupService {
     // if user exist MP group
     if (userExistedInCognito && getOrCheck(userExistedInCognito, "custom:mandai_id")) {
       // check is user email existed at wildpass userCognito
-      const userBelongWildpassGroup = await cognitoService.checkUserBelongOnlyWildpass(req.body.email, userExistedInCognito);
+      const userBelongWildpassGroup = await cognitoService.checkUserBelongOnlyWildpass(
+        req.body.email,
+        userExistedInCognito
+      );
 
       const userInfo = await userModel.findByEmail(req.body.email);
       if (userInfo && userInfo.email && userBelongWildpassGroup) {
@@ -499,39 +479,42 @@ class UserSignupService {
         const updateIfMigrationSwitch = await switchService.findSwitchValue(dbSwitch, "migration_update_existing_user");
 
         if (updateIfMigrationSwitch && updateIfMigrationSwitch === true) {
-
           // update membership pass user
           let update = await userSignupHelper.signupMPWithUpdateIfExist(req.body, userInfo, passwordCredential);
-          if(update.success){
-            (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1,}));
-            return {mandaiId};
+          if (update.success) {
+            await empMembershipUserAccountsModel.updateByEmail(req.body.email, { picked: 1 });
+            return { mandaiId };
           }
         }
         // perform update migration user membership account if migrations exist
-        await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 3,});
+        await empMembershipUserAccountsModel.updateByEmail(req.body.email, { picked: 3 });
       }
-      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
-        layer: "userSignupService.signup",
-        action: "adminCreateMPUser",
-        email: userInfo.email,
-        error: "User is signup failed with email case sensitive existed at Cognito!"
-      }, "error");
-      throw new Error(
-        JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
+      this.loggerWrapper(
+        "[CIAM] End Signup with FOs Service - Failed",
+        {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser",
+          email: userInfo.email,
+          error: "User is signup failed with email case sensitive existed at Cognito!",
+        },
+        "error"
       );
+      throw new Error(JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language)));
     }
 
     //cover for case email sensitive at Cognito have chance that email capitalize
     if (userInfo && userInfo.email) {
-      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
-        layer: "userSignupService.signup",
-        action: "adminCreateMPUser",
-        email: userInfo.email,
-        error: "User is already exists at DB!"
-      }, "error");
-      throw new Error(
-          JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language))
+      this.loggerWrapper(
+        "[CIAM] End Signup with FOs Service - Failed",
+        {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser",
+          email: userInfo.email,
+          error: "User is already exists at DB!",
+        },
+        "error"
       );
+      throw new Error(JSON.stringify(SignUpErrors.ciamEmailExists(req.body.language)));
     }
 
     try {
@@ -547,33 +530,25 @@ class UserSignupService {
         country: req.body.country || "",
         mandaiId,
         newsletter: newsletterMapping,
-        source: getSource(req.headers["mwg-app-id"]).source
-          ? getSource(req.headers["mwg-app-id"]).source
-          : "",
+        source: getSource(req.headers["mwg-app-id"]).source ? getSource(req.headers["mwg-app-id"]).source : "",
       };
 
       // Only add phoneNumber if it has a meaningful value (not null, undefined, empty string, or just whitespace)
-      if (phoneNumber !== null && phoneNumber !== undefined && phoneNumber.trim() !== '') {
+      if (phoneNumber !== null && phoneNumber !== undefined && phoneNumber.trim() !== "") {
         cognitoData.phoneNumber = phoneNumber;
       }
       const cognitoInfo = await cognitoService.cognitoAdminCreateUser(cognitoData);
 
       // set user password in cognito
-      await cognitoService.cognitoAdminSetUserPassword(
-        req.body.email,
-        passwordCredential.cognito.hashPassword
-      );
+      await cognitoService.cognitoAdminSetUserPassword(req.body.email, passwordCredential.cognito.hashPassword);
 
       // set user into cognito group
-      await cognitoService.cognitoAdminAddUserToGroup(
-        req.body.email,
-        req.body.group
-      );
+      await cognitoService.cognitoAdminAddUserToGroup(req.body.email, req.body.group);
 
       //update picked = 1 in emp_membership+user_accounts tbl
       !!req.body &&
         !!req.body.migrations &&
-        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {picked: 1}));
+        (await empMembershipUserAccountsModel.updateByEmail(req.body.email, { picked: 1 }));
 
       const TRY_LIMIT = 6;
       for (let counter = 0; counter < TRY_LIMIT; counter++) {
@@ -610,34 +585,31 @@ class UserSignupService {
         layer: "userSignupService.signup",
         action: "adminCreateMPUser",
         cognitoCreated: JSON.stringify(cognitoInfo),
-        mandaiId
+        mandaiId,
       });
-      await userEventAuditTrailService.createEvent(
-        req.body.email,
-        "success",
-        "signup",
-        req.body,
-        1,
-        mandaiId
-      );
+      await userEventAuditTrailService.createEvent(req.body.email, "success", "signup", req.body, 1, mandaiId);
       return {
         mandaiId,
       };
     } catch (error) {
-      this.loggerWrapper("[CIAM] End Signup with FOs Service - Failed", {
-        layer: "userSignupService.signup",
-        action: "adminCreateMPUser",
-        error: new Error(error),
-        membership: req.body.group,
-        body: JSON.stringify(req.body)
-      }, "error");
+      this.loggerWrapper(
+        "[CIAM] End Signup with FOs Service - Failed",
+        {
+          layer: "userSignupService.signup",
+          action: "adminCreateMPUser",
+          error: new Error(error),
+          membership: req.body.group,
+          body: JSON.stringify(req.body),
+        },
+        "error"
+      );
       await userEventAuditTrailService.createEvent(
         req.body.email,
         "failed",
         "signup",
         {
           ...req.body,
-          error: JSON.stringify(error)
+          error: JSON.stringify(error),
         },
         1
       );
@@ -645,27 +617,14 @@ class UserSignupService {
         (await empMembershipUserAccountsModel.updateByEmail(req.body.email, {
           picked: 2,
         }));
-      const errorMessage =
-        error && error.message ? JSON.parse(error.message) : "";
-      if (
-        errorMessage &&
-        errorMessage.rawError &&
-        errorMessage.rawError.includes("Invalid phone number format.")
-      ) {
+      const errorMessage = error && error.message ? JSON.parse(error.message) : "";
+      if (errorMessage && errorMessage.rawError && errorMessage.rawError.includes("Invalid phone number format.")) {
         throw new Error(
-          JSON.stringify(
-            CommonErrors.BadRequest(
-              "phoneNumber",
-              "phoneNumber_invalid",
-              req.body.language
-            )
-          )
+          JSON.stringify(CommonErrors.BadRequest("phoneNumber", "phoneNumber_invalid", req.body.language))
         );
       }
       if (errorMessage.status === "failed") {
-        throw new Error(
-          JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language))
-        );
+        throw new Error(JSON.stringify(SignUpErrors.ciamSignUpErr(req.body.language)));
       }
       throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }

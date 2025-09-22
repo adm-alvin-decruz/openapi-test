@@ -76,7 +76,7 @@ async function deleteUserMembership(data) {
     //proceed delete
     await userModel.softDeleteUserByEmail(email, {
       email: `delete-${email}`,
-      active: false,
+      status: 2,
     });
 
     await cognitoService.cognitoDisabledUser(email);

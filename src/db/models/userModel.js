@@ -8,7 +8,7 @@ class User {
     const now = getCurrentUTCTimestamp();
     const sql = `
       INSERT INTO users
-      (email, given_name, family_name, birthdate, mandai_id, source, active, created_at, updated_at)
+      (email, given_name, family_name, birthdate, mandai_id, source, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
@@ -118,7 +118,7 @@ class User {
    */
   static async findActiveVisualId(visualIds, email, mandaiId) {
     const params = [visualIds];
-    let whereClause = "WHERE um.visual_id IN (?) AND u.active = 1 AND (umd.status IN (0) OR umd.status IS NULL)";
+    let whereClause = "WHERE um.visual_id IN (?) AND u.status = 1 AND (umd.status IN (0) OR umd.status IS NULL)";
 
     if (email) {
       whereClause += " AND u.email = ?";
@@ -165,7 +165,7 @@ class User {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE um.visual_id = ? AND u.active = 1 AND u.email = ? AND u.mandai_id = ? AND um.name = ?`;
+                  WHERE um.visual_id = ? AND u.status = 1 AND u.email = ? AND u.mandai_id = ? AND um.name = ?`;
 
       const rows = await pool.query(sql, [visualIds, email, mandaiId, passType]);
       return rows[0];
@@ -192,7 +192,7 @@ class User {
       const sql = `SELECT u.id, u.birthdate, u.given_name, u.family_name, u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE u.active = 1 AND u.email = ?`;
+                  WHERE u.status = 1 AND u.email = ?`;
 
       return await pool.query(sql, [email]);
     } catch (error) {
@@ -241,7 +241,7 @@ class User {
   /** Find passes belong user */
   static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
     // build the WHERE clause dynamically based on available parameters
-    let whereClause = "WHERE u.active = 1";
+    let whereClause = "WHERE u.status = 1";
     const params = [passes];
 
     if (email) {
@@ -386,12 +386,6 @@ class User {
     }
   }
 
-  static async delete(id) {
-    const now = getCurrentUTCTimestamp();
-    const sql = "UPDATE users SET active = false, updated_at = ? WHERE id = ?";
-    await pool.execute(sql, [now, id]);
-  }
-
   static async deletebyUserID(user_id) {
     const sql = "DELETE FROM users WHERE id = ?";
     try {
@@ -418,7 +412,7 @@ class User {
 
   static async disableByUserID(user_id) {
     const now = getCurrentUTCTimestamp();
-    const sql = "UPDATE users SET active = false, updated_at = ? WHERE id = ?";
+    const sql = "UPDATE users SET status = 0, updated_at = ? WHERE id = ?";
     try {
       await pool.execute(sql, [now, user_id]);
 
@@ -453,7 +447,7 @@ class User {
         "birthdate",
         "mandai_id",
         "source",
-        "active",
+        "status",
         "created_at",
         "updated_at",
       ];
@@ -538,7 +532,7 @@ class User {
                  FROM users u
                  LEFT JOIN user_memberships um ON um.user_id = u.id
                  LEFT JOIN user_membership_details umd ON umd.user_membership_id = um.id
-                 WHERE u.email = ? AND u.active = 1
+                 WHERE u.email = ? AND u.status = 1
                  GROUP BY u.email, u.given_name, u.family_name, u.birthdate, u.mandai_id`;
     try {
       const rows = await pool.query(sql, [email]);
