@@ -38,7 +38,7 @@ router.post("/", RateLimitMiddleware, validateEmail, AccessTokenAuthGuard, async
 });
 
 /**
- * CIAM MyAccount retrieve membership
+ * CIAM MyAccount delete user account
  */
 router.delete("/", RateLimitMiddleware, validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
