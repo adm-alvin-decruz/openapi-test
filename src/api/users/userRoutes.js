@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const he = require("he");
 
 const userController = require("./usersContollers");
 const commonService = require("../../services/commonService");
@@ -248,7 +249,8 @@ router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) =
     const data = await userController.userLogin(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
+    let errorMessage = JSON.parse(error.message);
+    errorMessage = sanitizeErrorObject(errorMessage);
     return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
@@ -274,7 +276,8 @@ router.delete("/users/sessions", isEmptyRequest, validateEmail, AccessTokenAuthG
     const data = await userController.userLogout(accessToken, req.body);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
+    let errorMessage = JSON.parse(error.message);
+    errorMessage = sanitizeErrorObject(errorMessage);
     return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
