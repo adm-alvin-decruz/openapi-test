@@ -5,34 +5,36 @@ const userModel = require("../../db/models/userModel");
 const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
 const UserCredentialEventService = require("./userCredentialEventService");
 const { EVENTS } = require("../../utils/constants");
+const { secrets } = require("../../services/secretsService");
 
 class UserRefreshTokenService {
   async execute(accessToken, body) {
+    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
     const verifierAccessToken = CognitoJwtVerifier.create({
       userPoolId: process.env.USER_POOL_ID,
       tokenUse: "access",
-      clientId: process.env.USER_POOL_CLIENT_ID,
+      clientId: ciamSecrets.USER_POOL_CLIENT_ID,
     });
     let email = body.email ? body.email : "";
     if (body.includeEmail) {
-      const userInfo = await userModel.findByEmailOrMandaiId(
-        email,
-        body.mandaiId
-      );
+      const userInfo = await userModel.findByEmailOrMandaiId(email, body.mandaiId);
       email = userInfo.email;
     }
     try {
       const payloadAccessToken = await verifierAccessToken.verify(accessToken);
-      await UserCredentialEventService.createEvent({
-        eventType: EVENTS.REFRESH_TOKEN,
-        data: body,
-        source: 1,
-        status: 1
-      }, null, body.email || '', body.mandaiId || '');
+      await UserCredentialEventService.createEvent(
+        {
+          eventType: EVENTS.REFRESH_TOKEN,
+          data: body,
+          source: 1,
+          status: 1,
+        },
+        null,
+        body.email || "",
+        body.mandaiId || ""
+      );
       return {
-        expired_at:
-          formatDateToMySQLDateTime(new Date(payloadAccessToken.exp * 1000)) ||
-          null,
+        expired_at: formatDateToMySQLDateTime(new Date(payloadAccessToken.exp * 1000)) || null,
         valid: true,
         email,
       };
@@ -47,26 +49,27 @@ class UserRefreshTokenService {
         {},
         "UserRefreshTokenService Failed"
       );
-      if (
-        error &&
-        error.message &&
-        error.message.includes("Token expired at")
-      ) {
+      if (error && error.message && error.message.includes("Token expired at")) {
         return {
           expired_at: formatDateToMySQLDateTime(new Date()) || null,
           valid: false,
           email,
         };
       }
-      await UserCredentialEventService.createEvent({
-        eventType: EVENTS.REFRESH_TOKEN,
-        data: {
-          ...body,
-          error: JSON.stringify(error)
+      await UserCredentialEventService.createEvent(
+        {
+          eventType: EVENTS.REFRESH_TOKEN,
+          data: {
+            ...body,
+            error: JSON.stringify(error),
+          },
+          source: 1,
+          status: 0,
         },
-        source: 1,
-        status: 0
-      }, null, body.email || '', body.mandaiId || '');
+        null,
+        body.email || "",
+        body.mandaiId || ""
+      );
       return {
         expired_at: null,
         valid: false,

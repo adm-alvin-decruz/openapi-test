@@ -1,0 +1,2 @@
+UPDATE configs SET value='[\"fosz\", \"fobp\", \"fons\", \"fors\", \"fow\", \"fowp\", \"forfwa\", \"fom\", \"fomp\", \"sg60seasonpass\"]', updated_at=now() WHERE config='membership-passes' AND `key`='pass-type';
+UPDATE configs SET value='{\"fom\": \"fom\", \"fow\": \"fow\", \"fobp\": \"fobp\", \"fomp\": \"fomp\", \"fons\": \"fons\", \"fors\": \"fors\", \"fosz\": \"fosz\", \"fowp\": \"fowp\", \"forfwa\": \"forfwa\", \"sg60seasonpass\": \"sg60seasonpass\"}', updated_at=now() WHERE config='membership-passes' AND `key`='pass-type-mapping';

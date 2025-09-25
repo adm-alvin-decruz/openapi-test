@@ -44,7 +44,7 @@ class UserMembershipPassService {
     const mandaiId = userInfo && userInfo.mandai_id ? userInfo.mandai_id : req.body.mandaiId;
     const passTypeMapping = await getPassType(req.body);
     try {
-      const user = await userModel.findByEmailMandaiId(req.body.email, mandaiId);
+      const user = await userModel.findByEmailOrMandaiId(req.body.email, mandaiId);
       if (!user || !user.id) {
         req.body &&
           req.body.migrations &&
