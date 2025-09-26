@@ -676,9 +676,9 @@ class User {
                              )
                      ) AS memberships
                  FROM users u
-                          INNER JOIN user_memberships um ON u.id = um.user_id
+                          LEFT JOIN user_memberships um ON u.id = um.user_id
                           LEFT JOIN user_membership_details umd ON um.id = umd.user_membership_id
-                 WHERE u.email = ?
+                 WHERE u.email = ? AND u.status = 1
                  GROUP BY u.id;`;
     const params = [email];
     try {

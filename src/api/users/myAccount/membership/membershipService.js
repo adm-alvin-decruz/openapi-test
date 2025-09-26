@@ -62,20 +62,23 @@ async function deleteUserMembership(data) {
     //define query for model
     const rs = await userModel.retrieveMembership(email);
 
-    console.log("rs", rs);
     if (!rs || !rs.email) {
       await Promise.reject(new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))));
     }
 
     if (rs.memberships.length > 0) {
-      const membershipExpireDate = rs.memberships.map((ele) => ele.expires_at.split(" ")[0]);
+      const membershipExpireDateHasValue = rs.memberships.filter((ele) => !!ele.expires_at);
+      const membershipExpireDate =
+        membershipExpireDateHasValue.length > 0
+          ? membershipExpireDateHasValue.map((ele) => ele.expires_at.split(" ")[0])
+          : [];
       if (membershipExpireDate.some((ele) => ele < getCurrentUTCTimestamp().split(" ")[0])) {
         await Promise.reject(new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language))));
       }
     }
     //proceed delete
     await userModel.softDeleteUserByEmail(email, {
-      email: `delete-${email}`,
+      email: `deleted-${email}`,
       status: 2,
     });
 
