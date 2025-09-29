@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 
-const { RateLimitMiddleware } = require("../../../../middleware/rateLimitMiddleware");
 const validationService = require("../../../../services/validationService");
 const processTimer = require("../../../../utils/processTimer");
 const { AccessTokenAuthGuard, validateEmail } = require("../../../../middleware/validationMiddleware");
@@ -14,7 +13,7 @@ router.use(express.json());
 /**
  * CIAM MyAccount retrieve membership
  */
-router.post("/", RateLimitMiddleware, validateEmail, AccessTokenAuthGuard, async (req, res) => {
+router.post("/", validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -40,7 +39,7 @@ router.post("/", RateLimitMiddleware, validateEmail, AccessTokenAuthGuard, async
 /**
  * CIAM MyAccount delete user account
  */
-router.delete("/", RateLimitMiddleware, validateEmail, AccessTokenAuthGuard, async (req, res) => {
+router.delete("/", validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
