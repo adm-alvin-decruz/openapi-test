@@ -11,13 +11,10 @@ module.exports = {
     db_membership_details_create_error: "Failed to create membership details.",
     db_membership_details_update_error: "Failed to update membership details.",
     db_user_membership_create_error: "Failed to create user membership.",
-    db_user_membership_not_exist:
-      "This Visual ID does not have a user membership.",
+    db_user_membership_not_exist: "This Visual ID does not have a user membership.",
     db_user_membership_update_error: "Failed to update user membership.",
-    dob_invalid:
-      "The date of birth is invalid. Must between 13 and 99 years old.",
-    email_being_used:
-      "This email address is already being used for a Mandai Account.",
+    dob_invalid: "The date of birth is invalid. Must between 13 and 99 years old.",
+    email_being_used: "This email address is already being used for a Mandai Account.",
     email_is_invalid: "The email is invalid",
     email_no_record: "No record found.",
     email_not_being_used: "This email address does not have a Mandai Account.",
@@ -37,8 +34,7 @@ module.exports = {
     membership_pass_categoryType: "The Category Type is empty or invalid.",
     membership_pass_childQty: "The Child Qty is empty or invalid.",
     membership_pass_coMembers: "The co-members data is empty or invalid.",
-    membership_pass_cognito_error:
-      "Failed to update membership pass details in Cognito.",
+    membership_pass_cognito_error: "Failed to update membership pass details in Cognito.",
     membership_pass_create_error: "Failed to create membership pass.",
     membership_pass_create_success: "Successfully created membership pass.",
     membership_pass_email: "The email is empty or invalid.",
@@ -48,10 +44,8 @@ module.exports = {
     membership_pass_mandaiId: "The Mandai ID is empty or invalid.",
     membership_pass_member: "The member data is empty or invalid.",
     membership_pass_member_dob: "The Member DOB is empty or invalid.",
-    membership_pass_member_first_name:
-      "The Member First Name is empty or invalid.",
-    membership_pass_member_last_name:
-      "The Member Last Name is empty or invalid.",
+    membership_pass_member_first_name: "The Member First Name is empty or invalid.",
+    membership_pass_member_last_name: "The Member Last Name is empty or invalid.",
     membership_pass_membershipPhoto: "The photo data is empty or invalid.",
     membership_pass_parking: "The Parking is empty or invalid.",
     membership_pass_passType: "The pass type is empty or invalid.",
@@ -61,8 +55,7 @@ module.exports = {
     membership_pass_update_success: "Successfully updated membership pass.",
     membership_pass_validUntil: "The pass expiry is empty or invalid.",
     membership_pass_visualId: "The Visual ID is empty or invalid.",
-    newEmail_being_used:
-      "New email address is already being used for a Mandai Account.",
+    newEmail_being_used: "New email address is already being used for a Mandai Account.",
     newEmail_invalid: "New email is invalid.",
     newPassword_invalid: "Password does not meet complexity requirements.",
     newPassword_required: "Password is required.",
@@ -79,8 +72,7 @@ module.exports = {
     phoneNumber_invalid: "Phone number is invalid.",
     request_body_is_empty: "Request body is empty",
     request_reset_password_success: "Password reset link sent to your email",
-    signup_email:
-      "This email address is already being used for a Mandai Account.",
+    signup_email: "This email address is already being used for a Mandai Account.",
     signup_error: "New user signup error.",
     signup_success: "New user signed up successfully.",
     token_reset_password_being_used: "Token has already been used.",
@@ -90,7 +82,12 @@ module.exports = {
     update_user_error: "User info update error.",
     visualId_invalid: "Visual id is invalid",
     wildpass_account_request_invalid: "Requested account is invalid.",
-    wildpass_not_having_membership_account_error: "You do not have a paid membership account."
+    wildpass_not_having_membership_account_error: "You do not have a paid membership account.",
+    captchaError: "Turnstile verification failed. Please try again.",
+    captchaMissing: "Turnstile token is empty or invalid.",
+    captchaSecretKeyMissing: "Turnstile secret key is empty or invalid.",
+    delete_user_success: "User info deleted successfully.",
+    delete_user_unable: "Unable to delete account with active membership",
   },
   zh: {
     address_invalid: "地址無效。",
@@ -175,12 +172,16 @@ module.exports = {
     update_user_error: "用户信息更新错误。",
     visualId_invalid: "可视 ID 无效",
     wildpass_account_request_invalid: "请求的账户无效。",
-    wildpass_not_having_membership_account_error: "您没有付费会员帐户。"
+    wildpass_not_having_membership_account_error: "您没有付费会员帐户。",
+    captchaError: "验证码验证失败。请再试一次。",
+    captchaMissing: "Turnstile 令牌为空或无效。",
+    captchaSecretKeyMissing: "Turnstile 密钥为空或无效。",
+    delete_user_success: "用户信息删除成功。",
+    delete_user_unable: "无法删除有有效会员资格的账户。",
   },
   kr: {
     address_invalid: "주소가 유효하지 않습니다.",
-    cognito_user_not_exist:
-      "이 이메일 주소에 해당하는 Cognito 사용자가 없습니다.",
+    cognito_user_not_exist: "이 이메일 주소에 해당하는 Cognito 사용자가 없습니다.",
     confirmPassword_required: "비밀번호가 일치하지 않습니다.",
     confirmPassword_invalid: "비밀번호가 일치하지 않습니다.",
     confirm_reset_password_success: "비밀번호가 성공적으로 재설정되었습니다.",
@@ -188,8 +189,7 @@ module.exports = {
     confirmPassword_required: "비밀번호 확인이 필요합니다.",
     db_email_not_exist: "이 이메일 주소에 해당하는 Mandai 계정이 없습니다.",
     db_membership_details_create_error: "멤버십 세부정보 생성에 실패했습니다.",
-    db_membership_details_update_error:
-      "멤버십 세부정보 업데이트에 실패했습니다.",
+    db_membership_details_update_error: "멤버십 세부정보 업데이트에 실패했습니다.",
     db_user_membership_create_error: "사용자 멤버십 생성에 실패했습니다.",
     db_user_membership_not_exist: "이 비주얼 ID에 사용자 멤버십이 없습니다.",
     db_user_membership_update_error: "사용자 멤버십 업데이트에 실패했습니다.",
@@ -198,8 +198,7 @@ module.exports = {
     email_invalid: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
     email_is_invalid: "이메일이 유효하지 않습니다",
     email_no_record: "기록을 찾을 수 없습니다.",
-    email_not_being_used:
-      "이 이메일 주소는 Mandai 계정을 가지고 있지 않습니다.",
+    email_not_being_used: "이 이메일 주소는 Mandai 계정을 가지고 있지 않습니다.",
     email_or_password_invalid: "입력하신 사용자 이름 또는 비밀번호가 유효하지 않습니다. 다시 확인해주세요.",
     firstName_invalid: "이름이 유효하지 않습니다.",
     get_membership_failed: "내 멤버십 가져오기에 실패했습니다",
@@ -213,13 +212,10 @@ module.exports = {
     membership_get_success: "멤버십 획득 성공.",
     membership_pass_adultQty: "성인 수량이 비어 있거나 유효하지 않습니다.",
     membership_pass_carPlate: "차량 번호판이 유효하지 않습니다.",
-    membership_pass_categoryType:
-      "카테고리 유형이 비어 있거나 유효하지 않습니다.",
+    membership_pass_categoryType: "카테고리 유형이 비어 있거나 유효하지 않습니다.",
     membership_pass_childQty: "아동 수량이 비어 있거나 유효하지 않습니다.",
-    membership_pass_coMembers:
-      "공동 회원 데이터가 비어 있거나 유효하지 않습니다.",
-    membership_pass_cognito_error:
-      "Cognito의 회원권 세부정보 업데이트에 실패했습니다.",
+    membership_pass_coMembers: "공동 회원 데이터가 비어 있거나 유효하지 않습니다.",
+    membership_pass_cognito_error: "Cognito의 회원권 세부정보 업데이트에 실패했습니다.",
     membership_pass_create_error: "회원권 생성에 실패했습니다.",
     membership_pass_create_success: "회원권이 성공적으로 생성되었습니다.",
     membership_pass_email: "이메일이 비어 있거나 유효하지 않습니다.",
@@ -229,20 +225,16 @@ module.exports = {
     membership_pass_mandaiId: "Mandai ID가 비어 있거나 유효하지 않습니다.",
     membership_pass_member: "회원 데이터가 비어 있거나 유효하지 않습니다.",
     membership_pass_member_dob: "회원 생년월일이 유효하지 않습니다.",
-    membership_pass_member_first_name:
-      "회원의 이름이 비어 있거나 유효하지 않습니다.",
-    membership_pass_member_last_name:
-      "회원의 성이 비어 있거나 유효하지 않습니다.",
-    membership_pass_membershipPhoto:
-      "사진 데이터가 비어 있거나 유효하지 않습니다.",
+    membership_pass_member_first_name: "회원의 이름이 비어 있거나 유효하지 않습니다.",
+    membership_pass_member_last_name: "회원의 성이 비어 있거나 유효하지 않습니다.",
+    membership_pass_membershipPhoto: "사진 데이터가 비어 있거나 유효하지 않습니다.",
     membership_pass_parking: "주차 정보가 유효하지 않습니다.",
     membership_pass_passType: "패스 유형이 비어 있거나 유효하지 않습니다.",
     membership_pass_s3_error: "회원 사진을 S3에 업로드하는 데 실패했습니다.",
     membership_pass_sqs_error: "SQS 메시지 전송에 실패했습니다.",
     membership_pass_update_error: "회원권 업데이트에 실패했습니다.",
     membership_pass_update_success: "회원권이 성공적으로 업데이트되었습니다.",
-    membership_pass_validUntil:
-      "회원권의 만료일이 비어 있거나 유효하지 않습니다.",
+    membership_pass_validUntil: "회원권의 만료일이 비어 있거나 유효하지 않습니다.",
     membership_pass_visualId: "비주얼 ID가 비어 있거나 유효하지 않습니다.",
     newEmail_being_used: "새 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
     newEmail_invalid: "새 이메일이 유효하지 않습니다.",
@@ -260,8 +252,15 @@ module.exports = {
     password_has_same_with_old_password: "새 비밀번호는 이전 비밀번호와 동일해서는 안 됩니다.",
     phoneNumber_invalid: "전화번호가 유효하지 않습니다.",
     request_body_is_empty: "요청 본문이 비어 있습니다",
-    request_reset_password_success:
-      "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
+    request_reset_password_success: "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
+    sendCode_failed: "인증 코드를 보내는 데 실패했습니다.",
+    sendCode_success: "인증 코드가 성공적으로 전송되었습니다.",
+    sendCode_tooSoon: "다음 코드를 요청하려면 잠시 기다려주세요.",
+    verifyML_invalid: "링크가 유효하지 않거나 만료되었습니다. 새 링크를 요청해 주세요.",
+    verifyML_missingToken: "토큰이 없거나 비어 있습니다.",
+    verifyOTP_invalid: "OTP가 유효하지 않습니다. 다시 시도해 주세요.",
+    verifyOTP_expired: "코드가 만료되었습니다. 새 코드를 요청해 주세요.",
+    verifyOTP_tooManyAttempts: "시도 횟수가 너무 많습니다. 새 코드를 요청해 주세요.",
     signup_email: "이 이메일 주소는 이미 Mandai 계정에서 사용 중입니다.",
     signup_error: "새 사용자 등록 오류입니다.",
     signup_success: "기록을 찾을 수 없습니다.",
@@ -272,33 +271,33 @@ module.exports = {
     update_user_error: "사용자 정보 업데이트 오류.",
     visualId_invalid: "시각 ID가 유효하지 않습니다",
     wildpass_account_request_invalid: "요청한 계정이 유효하지 않습니다.",
-    wildpass_not_having_membership_account_error: "유료 멤버십 계정이 없습니다."
+    wildpass_not_having_membership_account_error: "유료 멤버십 계정이 없습니다.",
+    captchaError: "Turnstile 인증에 실패했습니다. 다시 시도해 주세요.",
+    captchaMissing: "Turnstile 토큰이 비어 있거나 유효하지 않습니다.",
+    captchaSecretKeyMissing: "Turnstile 비밀 키가 비어 있거나 잘못되었습니다.",
+    delete_user_success: "사용자 정보가 성공적으로 삭제되었습니다.",
+    delete_user_unable: "활성 멤버십이 있는 계정은 삭제할 수 없습니다.",
   },
   ja: {
     address_invalid: "住所が無効です。",
-    cognito_user_not_exist:
-      "このメールアドレスには Cognito ユーザーが存在しません。",
+    cognito_user_not_exist: "このメールアドレスには Cognito ユーザーが存在しません。",
     confirmPassword_required: "パスワードが一致しません。",
     confirmPassword_invalid: "パスワードが一致しません。",
     confirm_reset_password_success: "パスワードが正常にリセットされました。",
     confirmPassword_required: "パスワードの確認が必要です。",
     country_invalid: "国が無効です。",
-    db_email_not_exist:
-      "このメールアドレスには Mandai アカウントが存在しません。",
+    db_email_not_exist: "このメールアドレスには Mandai アカウントが存在しません。",
     db_membership_details_create_error: "会員詳細の作成に失敗しました。",
     db_membership_details_update_error: "会員詳細の更新に失敗しました。",
     db_user_membership_create_error: "ユーザー会員資格の作成に失敗しました。",
-    db_user_membership_not_exist:
-      "このビジュアル ID にはユーザー会員資格がありません。",
+    db_user_membership_not_exist: "このビジュアル ID にはユーザー会員資格がありません。",
     db_user_membership_update_error: "ユーザー会員資格の更新に失敗しました。",
     dob_invalid: "生年月日が無効です。13歳以上99歳以下である必要があります。",
     email_being_used: "このメールアドレスはすでに Mandai アカウントで使用されています。",
-    email_invalid:
-      "このメールアドレスはすでにMandaiアカウントで使用されています。",
+    email_invalid: "このメールアドレスはすでにMandaiアカウントで使用されています。",
     email_is_invalid: "メールが無効です",
     email_no_record: "記録が見つかりません。",
-    email_not_being_used:
-      "このメールアドレスはMandaiアカウントを持っていません。",
+    email_not_being_used: "このメールアドレスはMandaiアカウントを持っていません。",
     email_or_password_invalid: "入力したユーザー名またはパスワードが無効です。もう一度ご確認ください。",
     firstName_invalid: "名前が無効です。",
     get_membership_failed: "私のメンバーシップの取得に失敗しました",
@@ -336,8 +335,7 @@ module.exports = {
     membership_pass_update_success: "会員証の更新に成功しました。",
     membership_pass_validUntil: "会員パスの有効期限が空であるか無効です。",
     membership_pass_visualId: "ビジュアル ID が空または無効です。",
-    newEmail_being_used:
-      "新しいメールアドレスは既にMandaiアカウントで使用されています。",
+    newEmail_being_used: "新しいメールアドレスは既にMandaiアカウントで使用されています。",
     newEmail_invalid: "新しいメールアドレスが無効です。",
     newPassword_invalid: "パスワードが複雑性の要件を満たしていません。",
     newPassword_required: "パスワードが必要です。",
@@ -353,10 +351,8 @@ module.exports = {
     password_has_same_with_old_password: "新しいパスワードは以前のパスワードと同じであってはなりません。",
     phoneNumber_invalid: "電話番号が無効です。",
     request_body_is_empty: "リクエストボディが空です",
-    request_reset_password_success:
-      "パスワードリセットリンクをメールに送信しました。",
-    signup_email:
-      "このメールアドレスはすでにMandaiアカウントで使用されています。",
+    request_reset_password_success: "パスワードリセットリンクをメールに送信しました。",
+    signup_email: "このメールアドレスはすでにMandaiアカウントで使用されています。",
     signup_error: "新規ユーザー登録エラーです。",
     signup_success: "記録が見つかりませんでした。",
     token_reset_password_being_used: "トークンは既に使用されています。",
@@ -366,6 +362,11 @@ module.exports = {
     update_user_error: "ユーザー情報の更新エラー。",
     visualId_invalid: "ビジュアルIDが無効です",
     wildpass_account_request_invalid: "要求されたアカウントは無効です。",
-    wildpass_not_having_membership_account_error: "有料会員アカウントをお持ちではありません。"
+    wildpass_not_having_membership_account_error: "有料会員アカウントをお持ちではありません。",
+    captchaError: "Turnstileの認証に失敗しました。もう一度お試しください。",
+    captchaMissing: "Turnstileトークンが空白または無効です。",
+    captchaSecretKeyMissing: "Turnstile秘密キーが空または無効です。",
+    delete_user_success: "ユーザー情報を正常に削除しました。",
+    delete_user_unable: "有効なメンバーシップがあるアカウントは削除できません。",
   },
 };

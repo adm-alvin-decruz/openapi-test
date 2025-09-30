@@ -10,6 +10,7 @@ const app = express();
 const serverless = require("serverless-http");
 const helmetMiddleware = require("./src/config/helmetConfig");
 const permissionsPolicyMiddleware = require("./src/config/permission-policy");
+const membershipMyAccountRoutes = require("./src/api/users/myAccount/membership/membershipRoutes");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -28,6 +29,8 @@ app.use("/v1/ciam", supportRoutes); // controlled by app ID
 
 // private user route
 app.use("/private", userPrivateRoutes);
+
+app.use("/v2/ciam/auth/membership", membershipMyAccountRoutes);
 
 const handler = serverless(app);
 
