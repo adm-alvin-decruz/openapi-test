@@ -1,10 +1,22 @@
 // eslint.config.mjs
+import fs from 'fs';
+import path from 'path';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import n from 'eslint-plugin-n';
-import prettierConfig from 'eslint-config-prettier'; // ✅ import prettier config
+import prettierConfig from 'eslint-config-prettier';
 
-// ✅ reuseable glob for test files
+const root = process.cwd();
+const hasTsConfig = fs.existsSync(path.join(root, 'tsconfig.json'));
+let hasTypeScript = false;
+try {
+  require.resolve('typescript', { paths: [root] });
+  hasTypeScript = true;
+} catch {
+  hasTypeScript = false;
+}
+
+// ✅ reusable test file glob
 const jestFiles = [
   '**/*.test.{js,ts,tsx}',
   '**/*.spec.{js,ts,tsx}',
@@ -16,36 +28,35 @@ export default [
   // Base JS rules
   js.configs.recommended,
 
-  // TypeScript recommended configs
-  ...tseslint.configs.recommendedTypeChecked,
-
-  // TypeScript overrides
-  {
-    files: ['**/*.ts', '**/*.tsx'],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint.plugin,
-    },
-    rules: {
-      '@typescript-eslint/no-require-imports': 'error',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
+  // If TS is present, add TS rules
+  ...(hasTypeScript && hasTsConfig
+    ? [
+        ...tseslint.configs.recommendedTypeChecked,
         {
-          argsIgnorePattern: '^_',
-          caughtErrors: 'all',
-          caughtErrorsIgnorePattern: '^_',
+          files: ['**/*.ts', '**/*.tsx'],
+          languageOptions: {
+            parser: tseslint.parser,
+            parserOptions: {
+              project: true,
+              tsconfigRootDir: root,
+            },
+          },
+          plugins: { '@typescript-eslint': tseslint.plugin },
+          rules: {
+            '@typescript-eslint/no-require-imports': 'error',
+            '@typescript-eslint/no-unused-vars': [
+              'error',
+              {
+                argsIgnorePattern: '^_',
+                caughtErrors: 'all',
+                caughtErrorsIgnorePattern: '^_',
+              },
+            ],
+            'no-undef': 'off', // TS compiler already enforces this
+          },
         },
-      ],
-      // handled by TS, no need for eslint duplicate
-      'no-undef': 'off',
-    },
-  },
+      ]
+    : []),
 
   // JavaScript (CommonJS) overrides
   {
@@ -78,9 +89,9 @@ export default [
     },
   },
 
-  // Jest tests
+  // Jest test files
   {
-    files: jestFiles, // ✅ reuse constant
+    files: jestFiles,
     languageOptions: {
       globals: {
         jest: 'readonly',
@@ -97,6 +108,6 @@ export default [
     },
   },
 
-  // ✅ Prettier config goes last to disable conflicting stylistic rules
+  // Prettier config last to disable conflicting stylistic rules
   prettierConfig,
 ];
