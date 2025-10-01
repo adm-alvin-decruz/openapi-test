@@ -140,6 +140,11 @@ async function adminCreateMPUser(req) {
     },
     "[CIAM] Start Signup with FOs Request"
   );
+  if (!req.body.password && !req.body.confirmPassword) {
+    req.body.is_passwordless = true;
+  } else {
+    req.body.is_passwordless = false;
+  }
   const message = UserSignUpValidation.execute(req);
   if (!!message) {
     loggerService.error(

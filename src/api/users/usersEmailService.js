@@ -67,7 +67,7 @@ async function mapEmailType(emailType) {
  * @param {json} req
  * @returns
  */
-async function emailServiceAPI(req) {
+async function emailServiceAPI(req, isPasswordless = false, codeData = null) {
   req["apiTimer"] = req.processTimer.apiRequestTimer();
   req.apiTimer.log("usersEmailService.emailTriggerApi start"); // log process time
 
@@ -77,7 +77,9 @@ async function emailServiceAPI(req) {
 
   try {
     const headers = await createEmailServiceHeader();
-    const body = await createApiRequestBody(req);
+    const body = !isPasswordless
+      ? await createApiRequestBody(req)
+      : await createApiRequestBodyPasswordless(req, codeData);
 
     const response = await ApiUtils.makeRequest(apiEndpoint, "post", headers, body);
 
@@ -113,6 +115,33 @@ async function createApiRequestBody(req) {
 
   logger.log(body, "userEmailService.createApiRequestBody");
   return body;
+}
+
+async function createApiRequestBodyPasswordless(req, codeData) {
+  // let appEnv = process.env.APP_ENV;
+
+  const emailTo = req.body?.email;
+  const otp = codeData.otp;
+  const magicToken = codeData.magicToken;
+
+  const emailFrom = appConfig.PASSWORDLESS_EMAIL_FROM || "Mandai Wildlife Reserve <no-reply@mandai.com>";
+  const emailTemplateId = appConfig.PASSWORDLESS_EMAIL_TEMPLATE_ID || "d-ce7103f8f3de4bddbba29d38631d1061";
+
+  const appEnv = process.env.APP_ENV;
+  const baseKey = `PASSWORDLESS_MAGIC_LINK_BASE_URL_${appEnv.toUpperCase()}`;
+  const magicBase = appConfig[baseKey] || appConfig.PASSWORDLESS_MAGIC_LINK_BASE_URL || "http://localhost:5173";
+
+  const magicLink = `${magicBase}?token=${encodeURIComponent(magicToken)}`;
+
+  return {
+    emailFrom,
+    emailTo,
+    emailTemplateId,
+    customData: {
+      otp,
+      membershipPageDomain: magicLink,
+    },
+  };
 }
 
 async function createEmailServiceHeader() {
