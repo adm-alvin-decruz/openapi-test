@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# Load nvm if available (safe no-op if not)
+: "${NVM_DIR:=$HOME/.nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" >/dev/null 2>&1
+[ -f ".nvmrc" ] && nvm use >/dev/null 2>&1 || true
+
+# Common PATH fallbacks (Homebrew/macOS/Linux)
+export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+
+# Run your tasks (local bins via npm)
+npm exec --no -- lint-staged # Comment this line to tempoarily disable linting
