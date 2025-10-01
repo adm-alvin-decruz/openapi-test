@@ -39,9 +39,12 @@
     "validator": "^13.11.0"
   },
   "lint-staged": {
-    "src/**/*.{js,ts,jsx,tsx,json,css,md}": [
-      "prettier --write",
-      "eslint --fix"
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
     ]
   },
   "devDependencies": {
