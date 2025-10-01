@@ -1,4 +1,4 @@
-// eslint.config.js (flat config)
+// eslint.config.js
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import n from 'eslint-plugin-n';
@@ -7,16 +7,21 @@ export default [
   // Base JS rules
   js.configs.recommended,
 
-  // TypeScript files
+  // TypeScript recommended configs (spread as array, not inline object!)
+  ...tseslint.configs.recommendedTypeChecked,
+
+  // Your TypeScript overrides
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ...tseslint.configs.recommendedTypeChecked,
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        project: true, // uses your tsconfig.json
+        project: true,
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
     },
     rules: {
       '@typescript-eslint/no-require-imports': 'error',
@@ -28,12 +33,11 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      // TS already checks undefined identifiers
-      'no-undef': 'off',
+      'no-undef': 'off', // TS already does this
     },
   },
 
-  // JavaScript (CommonJS) files
+  // JavaScript overrides
   {
     files: ['**/*.js', '**/*.cjs'],
     plugins: { n },
@@ -49,11 +53,8 @@ export default [
       },
     },
     rules: {
-      // turn off TS-only rules for JS
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-
-      // handle unused vars in JS with underscore convention
       'no-unused-vars': [
         'error',
         {
@@ -62,28 +63,21 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-
-      // optional Node checks
       'n/no-missing-require': 'error',
       'n/no-unsupported-features/es-syntax': 'off',
     },
   },
 
-  // ✅ Jest test files (JS & TS)
+  // Jest tests
   {
     files: [
-      '**/*.test.js',
-      '**/*.spec.js',
-      '**/__tests__/**/*.js',
-      '**/__test__/**/*.js',
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      '**/*.test.tsx',
-      '**/*.spec.tsx',
+      '**/*.test.{js,ts,tsx}',
+      '**/*.spec.{js,ts,tsx}',
+      '**/__tests__/**/*.{js,ts,tsx}',
+      '**/__test__/**/*.{js,ts,tsx}',
     ],
     languageOptions: {
       globals: {
-        // Jest globals
         jest: 'readonly',
         describe: 'readonly',
         it: 'readonly',
@@ -93,13 +87,8 @@ export default [
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
-        // Sometimes flagged in strict sandboxes
         console: 'readonly',
       },
-    },
-    rules: {
-      // keep your usual severity; underscore still allowed if you want:
-      // 'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
 ];
