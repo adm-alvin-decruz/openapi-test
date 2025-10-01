@@ -39,7 +39,7 @@ class UserVerifyTokenService {
         token: {
           code: 200,
           valid: !!payload && !!payload.username,
-          expired_at: !!exp ? formatDateToMySQLDateTime(new Date(exp * 1000)) : null,
+          expired_at: exp ? formatDateToMySQLDateTime(new Date(exp * 1000)) : null,
           [`${body.email && body.email.trim().length > 0 ? "email" : "mandaiId"}`]: body.email || body.mandaiId,
         },
         status: "success",

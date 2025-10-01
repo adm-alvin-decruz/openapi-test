@@ -146,7 +146,7 @@ async function adminCreateMPUser(req) {
     req.body.is_passwordless = false;
   }
   const message = UserSignUpValidation.execute(req);
-  if (!!message) {
+  if (message) {
     loggerService.error(
       {
         user: {
@@ -321,7 +321,7 @@ async function adminUpdateMPUser(req) {
     "[CIAM] Start Update User with FOs Request"
   );
   const message = await UserUpdateValidation.execute(req.body);
-  if (!!message) {
+  if (message) {
     loggerService.error(
       {
         user: {
@@ -590,7 +590,7 @@ async function userResetPassword(req) {
     );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
@@ -602,7 +602,7 @@ async function userValidateResetPassword(passwordToken, lang) {
     passwordToken,
     lang
   );
-  if (!!message) {
+  if (message) {
     throw new Error(JSON.stringify(message));
   }
   try {
@@ -610,7 +610,7 @@ async function userValidateResetPassword(passwordToken, lang) {
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
@@ -619,7 +619,7 @@ async function userValidateResetPassword(passwordToken, lang) {
 
 async function userConfirmResetPassword(reqBody) {
   const message = await UserConfirmResetPasswordValidation.execute(reqBody);
-  if (!!message) {
+  if (message) {
     throw new Error(JSON.stringify(message));
   }
   try {
@@ -627,7 +627,7 @@ async function userConfirmResetPassword(reqBody) {
   } catch (error) {
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
@@ -646,7 +646,7 @@ async function userGetMembershipPasses(body) {
     "[CIAM] userGetMembershipPasses Start Request"
   );
   const message = UserGetMembershipPassesValidation.execute(body);
-  if (!!message) {
+  if (message) {
     loggerService.log(
       {
         user: {
@@ -676,7 +676,7 @@ async function userGetMembershipPasses(body) {
     );
     const errorMessage =
       error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
@@ -746,7 +746,7 @@ async function userCreateMembershipPass(req, res) {
 
   const message =
     await UserMembershipPassValidation.validateCreateUserMembershipPass(req);
-  if (!!message) {
+  if (message) {
     loggerService.error(
       {
         user: {
@@ -834,7 +834,7 @@ async function userUpdateMembershipPass(req, res) {
 
   const message =
     await UserMembershipPassValidation.validateUpdateUserMembershipPass(req);
-  if (!!message) {
+  if (message) {
     loggerService.error(
       {
         user: {
@@ -916,7 +916,7 @@ async function userRefreshAccessToken(accessToken, req) {
     );
     const errorMessage =
         error && error.message ? JSON.parse(error.message) : "";
-    if (!!errorMessage) {
+    if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
     throw new Error(JSON.stringify(CommonErrors.InternalServerError()));

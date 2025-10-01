@@ -483,8 +483,8 @@ class UserMembershipPassService {
             !!req.body.member && !!req.body.member.identificationNo ? req.body.member.identificationNo : null,
           phoneNumber: !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : null,
           coMember: req.body.coMembers && req.body.coMembers.length > 0 ? JSON.stringify(req.body.coMembers) : null,
-          validFrom: !!req.body.validFrom ? req.body.validFrom : null,
-          validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+          validFrom: req.body.validFrom ? req.body.validFrom : null,
+          validUntil: req.body.validUntil ? req.body.validUntil : null,
         }));
 
       return {
@@ -526,14 +526,14 @@ class UserMembershipPassService {
           expires_at: expiryDate,
         }));
 
-      if (!!membershipInfo.membershipId) {
+      if (membershipInfo.membershipId) {
         const updatedRecord = await userMembershipDetailsModel.updateByMembershipId(membershipInfo.membershipId, {
           category_type: req.body.categoryType || undefined,
           item_name: req.body.itemName || undefined,
           plu: req.body.plu || undefined,
           adult_qty: req.body.adultQty || undefined,
           child_qty: req.body.childQty || undefined,
-          parking: !!req.body.parking ? (req.body.parking === "yes" ? 1 : 0) : undefined,
+          parking: req.body.parking ? (req.body.parking === "yes" ? 1 : 0) : undefined,
           iu: req.body.iu || undefined,
           car_plate: req.body.carPlate || undefined,
           membership_photo: undefined,
@@ -572,8 +572,8 @@ class UserMembershipPassService {
               !!req.body.member && !!req.body.member.identificationNo ? req.body.member.identificationNo : null,
             phoneNumber: !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : null,
             coMember: req.body.coMembers && req.body.coMembers.length > 0 ? JSON.stringify(req.body.coMembers) : null,
-            validFrom: !!req.body.validFrom ? req.body.validFrom : null,
-            validUntil: !!req.body.validUntil ? req.body.validUntil : null,
+            validFrom: req.body.validFrom ? req.body.validFrom : null,
+            validUntil: req.body.validUntil ? req.body.validUntil : null,
             status: typeof req.body.status !== "undefined" && req.body.status !== null ? req.body.status : null,
           });
         }

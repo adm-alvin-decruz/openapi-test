@@ -15,10 +15,10 @@ class UserSignupValidation {
   static validateRequestMembershipPasses(req) {
     let reqBody = req.body;
     //validate missing required params
-    let requireParams = !!reqBody.migrations
+    let requireParams = reqBody.migrations
       ? ["email", "firstName", "lastName"]
       : ["email", "firstName", "lastName", "password", "confirmPassword", "dob"];
-    requireParams = !!reqBody.is_passwordless ? ["email", "firstName", "lastName", "dob"] : requireParams;
+    requireParams = reqBody.is_passwordless ? ["email", "firstName", "lastName", "dob"] : requireParams;
 
     const listKeys = Object.keys(reqBody);
     const paramsMissing = requireParams.filter(
@@ -45,7 +45,7 @@ class UserSignupValidation {
         reqBody.language
       ));
     }
-    const paramsShouldNotEmpty = !!reqBody.migrations
+    const paramsShouldNotEmpty = reqBody.migrations
       ? ["email", "firstName", "lastName"]
       : [
           "email",

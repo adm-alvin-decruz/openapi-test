@@ -10,4 +10,4 @@ set -e
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 
 # Run your tasks (local bins via npm)
-npm exec --no -- lint-staged # Comment this line to tempoarily disable linting
+npm exec --no -- lint-staged # Comment this line to tempoarily disable linting on commit
