@@ -10,7 +10,7 @@
   "rules": {
     "prettier/prettier": ["error", { "endOfLine": "auto" }],
     "no-unused-vars": "warn",
-    "no-console": "off",
+    "no-console": "warn",
     "eqeqeq": "error",
     "prefer-const": "error"
   }

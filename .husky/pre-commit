@@ -1,3 +1,31 @@
-#!/usr/bin/env sh
-. "$(dirname "$0")/h"
-lint-staged
+#!/bin/sh
+# Make Node/NPM available in Git hooks (nvm/asdf/global)
+set -e
+
+# --- nvm (most common) ---
+: "${NVM_DIR:=$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+  if [ -f ".nvmrc" ]; then
+    nvm use >/dev/null
+  else
+    nvm use --silent default >/dev/null 2>&1 || true
+  fi
+fi
+
+# --- asdf (optional; safe if not installed) ---
+if ! command -v node >/dev/null 2>&1 && [ -s "$HOME/.asdf/asdf.sh" ]; then
+  . "$HOME/.asdf/asdf.sh"
+fi
+
+# --- common PATHs (Homebrew/macOS/Linux) ---
+export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:/usr/bin"
+
+# Guardrails
+if ! command -v npm >/dev/null 2>&1; then
+  echo "Error: npm not found in PATH for git hook. Ensure Node is installed or nvm/asdf is loaded." >&2
+  exit 1
+fi
+
+# Run your tasks (use npm exec so local bins resolve)
+npm exec --no -- lint-staged
