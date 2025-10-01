@@ -1,16 +1,25 @@
-// eslint.config.js
+// eslint.config.mjs
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import n from 'eslint-plugin-n';
+import prettierConfig from 'eslint-config-prettier'; // ✅ import prettier config
+
+// ✅ reuseable glob for test files
+const jestFiles = [
+  '**/*.test.{js,ts,tsx}',
+  '**/*.spec.{js,ts,tsx}',
+  '**/__tests__/**/*.{js,ts,tsx}',
+  '**/__test__/**/*.{js,ts,tsx}',
+];
 
 export default [
   // Base JS rules
   js.configs.recommended,
 
-  // TypeScript recommended configs (spread as array, not inline object!)
+  // TypeScript recommended configs
   ...tseslint.configs.recommendedTypeChecked,
 
-  // Your TypeScript overrides
+  // TypeScript overrides
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
@@ -33,11 +42,12 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      'no-undef': 'off', // TS already does this
+      // handled by TS, no need for eslint duplicate
+      'no-undef': 'off',
     },
   },
 
-  // JavaScript overrides
+  // JavaScript (CommonJS) overrides
   {
     files: ['**/*.js', '**/*.cjs'],
     plugins: { n },
@@ -70,12 +80,7 @@ export default [
 
   // Jest tests
   {
-    files: [
-      '**/*.test.{js,ts,tsx}',
-      '**/*.spec.{js,ts,tsx}',
-      '**/__tests__/**/*.{js,ts,tsx}',
-      '**/__test__/**/*.{js,ts,tsx}',
-    ],
+    files: jestFiles, // ✅ reuse constant
     languageOptions: {
       globals: {
         jest: 'readonly',
@@ -91,4 +96,7 @@ export default [
       },
     },
   },
+
+  // ✅ Prettier config goes last to disable conflicting stylistic rules
+  prettierConfig,
 ];
