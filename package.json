@@ -34,7 +34,11 @@
     "mysql2": "^3.11.0",
     "serverless-http": "^3.2.0",
     "supertest": "^7.0.0",
-    "validator": "^13.11.0"
+    "form-data": "^4.0.0",
+    "express-validator": "^7.0.1",
+    "validator": "^13.11.0",
+    "escape-html": "^1.0.3",
+    "he": "^1.2.0"
   },
   "lint-staged": {
     "src/**/*.{js,ts,jsx,tsx,json,css,md}": [

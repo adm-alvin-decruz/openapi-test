@@ -15,7 +15,6 @@ const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
 const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
 const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
 const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
-const { query, validationResult } = require("express-validator");
 const validator = require("validator");
 const { jwtDecode } = require("jwt-decode");
 const { secrets } = require("../services/secretsService");

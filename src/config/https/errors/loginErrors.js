@@ -1,5 +1,6 @@
 /*TODO update multiple language later*/
 const { messageLang } = require("../../../utils/common");
+const escape = require("escape-html");
 
 class LoginErrors {
   static ciamLoginUserNotFound(email, lang) {
@@ -8,7 +9,7 @@ class LoginErrors {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
         message: messageLang("email_no_record", lang),
-        email: email,
+        email: escape(email),
       },
       status: "success",
       statusCode: 200,
@@ -21,7 +22,7 @@ class LoginErrors {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
         message: messageLang("membership_email_invalid", lang),
-        email: email,
+        email: escape(email),
       },
       status: "success",
       statusCode: 200,
@@ -34,7 +35,7 @@ class LoginErrors {
         code: 200,
         mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
         message: messageLang("email_or_password_invalid", lang),
-        email: email,
+        email: escape(email),
       },
       status: "success",
       statusCode: 200,

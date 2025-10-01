@@ -3,6 +3,7 @@ const failedJobsModel = require('../../db/models/failedJobsModel');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
 const userDBService = require('../users/usersDBService');
 const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const escape = require('escape-html');
 
 class FailedJobsSupportService {
   constructor() {
@@ -194,13 +195,13 @@ class FailedJobsSupportService {
 
     if (retrigger) {
       return {
-        message: `Successfully retriggered failed job: ${req.body.uuid}`,
+        message: `Successfully retriggered failed job: ${escape(req.body.uuid)}`,
         data: retrigger,
         status: 'success'
       };
     } else {
       return {
-        message: `Failed to retrigger failed job: ${req.body.uuid}`,
+        message: `Failed to retrigger failed job: ${escape(req.body.uuid)}`,
         data: failedJob,
         status: 'failed'
       };

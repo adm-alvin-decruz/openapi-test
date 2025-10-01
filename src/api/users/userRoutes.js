@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const he = require("he");
 
 const userController = require("./usersContollers");
 const commonService = require("../../services/commonService");
@@ -22,7 +23,6 @@ const { GROUP, GROUPS_SUPPORTS } = require("../../utils/constants");
 const CommonErrors = require("../../config/https/errors/commonErrors");
 const loggerService = require("../../logs/logger");
 const { maskKeyRandomly } = require("../../utils/common");
-const { RateLimitMiddleware } = require("../../middleware/rateLimitMiddleware");
 
 const pong = { pong: "pang" };
 
@@ -35,7 +35,7 @@ router.get("/ping", async (req, res) => {
 /**
  * User signup, create new CIAM user
  */
-router.post("/users", RateLimitMiddleware, isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
+router.post("/users", isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
@@ -44,17 +44,11 @@ router.post("/users", RateLimitMiddleware, isEmptyRequest, validateEmail, lowerc
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
     req.apiTimer.end("Route CIAM Signup User Error Unauthorized", startTimer);
-    return res
-      .status(401)
-      .send(CommonErrors.UnauthorizedException(req.body.language));
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
   if (!req.body.group || !GROUPS_SUPPORTS.includes(req.body.group)) {
-    return res
-      .status(400)
-      .json(
-        CommonErrors.BadRequest("group", "group_invalid", req.body.language)
-      );
+    return res.status(400).json(CommonErrors.BadRequest("group", "group_invalid", req.body.language));
   }
 
   //#region Signup Membership Passes
@@ -73,10 +67,7 @@ router.post("/users", RateLimitMiddleware, isEmptyRequest, validateEmail, lowerc
 
   //#region Signup Wildpass
   // validate request params is listed, NOTE: listedParams doesn't have email
-  const listedParams = commonService.mapCognitoJsonObj(
-    userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-    req.body
-  );
+  const listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
   if (commonService.isJsonNotEmpty(listedParams) === false) {
     return res.status(400).json({ error: "Bad Requests" });
@@ -102,8 +93,8 @@ router.post("/users", RateLimitMiddleware, isEmptyRequest, validateEmail, lowerc
  *
  * Handling most HTTP validation here
  */
-router.put("/users",
-  RateLimitMiddleware,
+router.put(
+  "/users",
   isEmptyRequest,
   validateEmail,
   AccessTokenAuthGuardByAppIdGroupFOSeries,
@@ -117,21 +108,12 @@ router.put("/users",
     // validate req app-id
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
-      req.apiTimer.end(
-        "Route CIAM Update User Error 401 Unauthorized",
-        startTimer
-      );
-      return res
-        .status(401)
-        .send(CommonErrors.UnauthorizedException(req.body.language));
+      req.apiTimer.end("Route CIAM Update User Error 401 Unauthorized", startTimer);
+      return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
     }
 
     if (!req.body.group || !GROUPS_SUPPORTS.includes(req.body.group)) {
-      return res
-        .status(400)
-        .json(
-          CommonErrors.BadRequest("group", "group_invalid", req.body.language)
-        );
+      return res.status(400).json(CommonErrors.BadRequest("group", "group_invalid", req.body.language));
     }
     // region Update Account Membership Passes
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
@@ -153,10 +135,7 @@ router.put("/users",
     // clean the request data for possible white space
     req["body"] = commonService.cleanData(req.body);
     // validate request params is listed, NOTE: listedParams doesn't have email
-    var listedParams = commonService.mapCognitoJsonObj(
-      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-      req.body
-    );
+    var listedParams = commonService.mapCognitoJsonObj(userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, req.body);
 
     if (commonService.isJsonNotEmpty(listedParams) === false) {
       return res.status(400).json({ error: "Bad Requests" });
@@ -180,171 +159,125 @@ router.put("/users",
 /**
  * Resend wildpass
  */
-router.post(
-  "/users/memberships/resend",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateEmail,
-  async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const startTimer = process.hrtime();
+router.post("/users/memberships/resend", isEmptyRequest, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
-    // validate req app-id
-    var valAppID = validationService.validateAppID(req.headers);
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
 
-    if (valAppID === true) {
-      let resendUser = await userController.membershipResend(req);
+  if (valAppID === true) {
+    let resendUser = await userController.membershipResend(req);
 
-      req.apiTimer.end("Route CIAM Resend Membership ", startTimer);
-      let code = 200;
-      if ("membership" in resendUser && "code" in resendUser.membership) {
-        code = resendUser.membership.code;
-      }
-      return res.status(200).json(resendUser);
-    } else {
-      req.apiTimer.end(
-        "Route CIAM Resend Membership Error 401 Unauthorized",
-        startTimer
-      );
-      return res.status(401).send({ error: "Unauthorized" });
+    req.apiTimer.end("Route CIAM Resend Membership ", startTimer);
+    let code = 200;
+    if ("membership" in resendUser && "code" in resendUser.membership) {
+      code = resendUser.membership.code;
     }
+    return res.status(200).json(resendUser);
+  } else {
+    req.apiTimer.end("Route CIAM Resend Membership Error 401 Unauthorized", startTimer);
+    return res.status(401).send({ error: "Unauthorized" });
   }
-);
+});
 
 /**
  * Delete user in cognito & DB
  * only in dev/UAT
  */
-router.post(
-  "/users/delete",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateEmail,
-  async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const startTimer = process.hrtime();
+router.post("/users/delete", isEmptyRequest, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
-    // validate req app-id
-    var valAppID = validationService.validateAppID(req.headers);
-    if (valAppID === true) {
-      // allow dev, uat & prod to call. Prod will disable, no deletion
-      if (["dev", "uat", "prod"].includes(process.env.APP_ENV)) {
-        let deleteMember = await userController.membershipDelete(req);
+  // validate req app-id
+  var valAppID = validationService.validateAppID(req.headers);
+  if (valAppID === true) {
+    // allow dev, uat & prod to call. Prod will disable, no deletion
+    if (["dev", "uat", "prod"].includes(process.env.APP_ENV)) {
+      let deleteMember = await userController.membershipDelete(req);
 
-        req.apiTimer.end("Route CIAM Delete User", startTimer);
-        return res.status(200).json({ deleteMember });
-      } else {
-        req.apiTimer.end(
-          "Route CIAM Delete User Error 501 Not Implemented",
-          startTimer
-        );
-        return res.status(501).json({ error: "Not Implemented" });
-      }
+      req.apiTimer.end("Route CIAM Delete User", startTimer);
+      return res.status(200).json({ deleteMember });
     } else {
-      req.apiTimer.end(
-        "Route CIAM Delete User Error 401 Unauthorized",
-        startTimer
-      );
-      return res.status(401).send({ error: "Unauthorized" });
+      req.apiTimer.end("Route CIAM Delete User Error 501 Not Implemented", startTimer);
+      return res.status(501).json({ error: "Not Implemented" });
     }
+  } else {
+    req.apiTimer.end("Route CIAM Delete User Error 401 Unauthorized", startTimer);
+    return res.status(401).send({ error: "Unauthorized" });
   }
-);
+});
 
 /**
  * Get User API (Method Get)
  */
-router.get(
-  "/users",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateEmail,
-  async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const startTimer = process.hrtime();
+router.get("/users", isEmptyRequest, validateEmail, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
 
-    // validate req app-id
-    const valAppID = validationService.validateAppID(req.headers);
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
 
-    if (valAppID === true) {
-      let getUser = await userController.getUser(req);
+  if (valAppID === true) {
+    let getUser = await userController.getUser(req);
 
-      req.apiTimer.end("Route CIAM Get User", startTimer);
-      return res.status(200).json(getUser);
-    } else {
-      req.apiTimer.end(
-        "Route CIAM Get User Error 401 Unauthorized",
-        startTimer
-      );
-      return res.status(401).send({ error: "Unauthorized" });
-    }
+    req.apiTimer.end("Route CIAM Get User", startTimer);
+    return res.status(200).json(getUser);
+  } else {
+    req.apiTimer.end("Route CIAM Get User Error 401 Unauthorized", startTimer);
+    return res.status(401).send({ error: "Unauthorized" });
   }
-);
+});
 
 /**
  * User Login API (Method POST)
  */
-router.post("/users/sessions", RateLimitMiddleware, isEmptyRequest, validateEmail, async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const startTimer = process.hrtime();
-    // validate req app-id
-    const valAppID = validationService.validateAppID(req.headers);
-    if (!valAppID) {
-      req.apiTimer.end(
-        "Route CIAM Login User Error 401 Unauthorized",
-        startTimer
-      );
-      return res.status(401).send({ message: "Unauthorized" });
-    }
-    try {
-      const data = await userController.userLogin(req);
-      return res.status(data.statusCode).json(data);
-    } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
-    }
-  }
-);
-
-/**
- * User Logout API (Method DELETE)
- */
-router.delete("/users/sessions",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateEmail,
-  AccessTokenAuthGuard,
-  async (req, res) => {
+router.post("/users/sessions", isEmptyRequest, validateEmail, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    req.apiTimer.end(
-      "Route CIAM Logout User Error 401 Unauthorized",
-      startTimer
-    );
+    req.apiTimer.end("Route CIAM Login User Error 401 Unauthorized", startTimer);
     return res.status(401).send({ message: "Unauthorized" });
   }
-  let accessToken =
-    req.headers && req.headers.authorization
-       ? req.headers.authorization.toString()
-       : "";
-  if (accessToken && res.newAccessToken) {
-     accessToken = res.newAccessToken;
-  }
   try {
-    const data = await userController.userLogout(
-      accessToken,
-      req.body
-    );
+    const data = await userController.userLogin(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
+    let errorMessage = JSON.parse(error.message);
+    errorMessage = sanitizeErrorObject(errorMessage);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
+
+/**
+ * User Logout API (Method DELETE)
+ */
+router.delete("/users/sessions", isEmptyRequest, validateEmail, AccessTokenAuthGuard, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end("Route CIAM Logout User Error 401 Unauthorized", startTimer);
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+  let accessToken = req.headers && req.headers.authorization ? req.headers.authorization.toString() : "";
+  if (accessToken && res.newAccessToken) {
+    accessToken = res.newAccessToken;
+  }
+  try {
+    const data = await userController.userLogout(accessToken, req.body);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    let errorMessage = JSON.parse(error.message);
+    errorMessage = sanitizeErrorObject(errorMessage);
     return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
@@ -352,37 +285,25 @@ router.delete("/users/sessions",
 /**
  * User Request Reset Password API (Method POST)
  */
-router.post(
-  "/users/reset-password",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateEmail,
-  lowercaseTrimKeyValueString,
-  async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const startTimer = process.hrtime();
-    // validate req app-id
-    const valAppID = validationService.validateAppID(req.headers);
-    if (!valAppID) {
-      req.apiTimer.end(
-        "Route CIAM Reset Password User Error 401 Unauthorized",
-        startTimer
-      );
-      return res
-        .status(401)
-        .send(CommonErrors.UnauthorizedException(req.body.language));
-    }
-
-    try {
-      const data = await userController.userResetPassword(req);
-      return res.status(data.statusCode).json(data);
-    } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
-    }
+router.post("/users/reset-password", isEmptyRequest, validateEmail, lowercaseTrimKeyValueString, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const startTimer = process.hrtime();
+  // validate req app-id
+  const valAppID = validationService.validateAppID(req.headers);
+  if (!valAppID) {
+    req.apiTimer.end("Route CIAM Reset Password User Error 401 Unauthorized", startTimer);
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
-);
+
+  try {
+    const data = await userController.userResetPassword(req);
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
+  }
+});
 
 /**
  * User Validate Reset Password API (Method GET)
@@ -394,20 +315,12 @@ router.get("/users/reset-password", async (req, res) => {
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    req.apiTimer.end(
-      "Route CIAM Validate Reset Password User Error 401 Unauthorized",
-      startTimer
-    );
-    return res
-      .status(401)
-      .send(CommonErrors.UnauthorizedException(req.query.language));
+    req.apiTimer.end("Route CIAM Validate Reset Password User Error 401 Unauthorized", startTimer);
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.query.language));
   }
 
   try {
-    const data = await userController.userValidateResetPassword(
-      req.query.passwordToken,
-      req.query.language
-    );
+    const data = await userController.userValidateResetPassword(req.query.passwordToken, req.query.language);
     return res.status(data.statusCode).json(data);
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
@@ -425,13 +338,8 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    req.apiTimer.end(
-      "Route CIAM Confirm Reset Password User Error 401 Unauthorized",
-      startTimer
-    );
-    return res
-      .status(401)
-      .send(CommonErrors.UnauthorizedException(req.body.language));
+    req.apiTimer.end("Route CIAM Confirm Reset Password User Error 401 Unauthorized", startTimer);
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
 
   try {
@@ -448,7 +356,6 @@ router.put("/users/reset-password", isEmptyRequest, async (req, res) => {
  */
 router.post(
   "/users/membership-passes",
-  RateLimitMiddleware,
   isEmptyRequest,
   AccessTokenAuthGuard,
   lowercaseTrimKeyValueString,
@@ -459,13 +366,8 @@ router.post(
     // validate req app-id
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
-      req.apiTimer.end(
-        "Route CIAM Get Membership Passes Error 401 Unauthorized",
-        startTimer
-      );
-      return res
-        .status(401)
-        .send(CommonErrors.UnauthorizedException(req.body.language));
+      req.apiTimer.end("Route CIAM Get Membership Passes Error 401 Unauthorized", startTimer);
+      return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
     }
 
     try {
@@ -484,29 +386,19 @@ router.post(
 /**
  * User Verify Access Token API (Method POST)
  */
-router.post("/token/verify", RateLimitMiddleware, isEmptyRequest, async (req, res) => {
+router.post("/token/verify", isEmptyRequest, async (req, res) => {
   req["processTimer"] = processTimer;
   req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
   //validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    req.apiTimer.end(
-      "Route CIAM Verify Token Error 401 Unauthorized",
-      startTimer
-    );
-    return res
-      .status(401)
-      .send(CommonErrors.UnauthorizedException(req.body.language));
+    req.apiTimer.end("Route CIAM Verify Token Error 401 Unauthorized", startTimer);
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
   if (req.headers && !req.headers.authorization) {
-    req.apiTimer.end(
-      "Route CIAM Verify Token Error 401 Unauthorized",
-      startTimer
-    );
-    return res
-      .status(401)
-      .send(CommonErrors.UnauthorizedException(req.body.language));
+    req.apiTimer.end("Route CIAM Verify Token Error 401 Unauthorized", startTimer);
+    return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
   const accessToken = req.headers.authorization.toString();
   try {
@@ -534,7 +426,6 @@ router.post(
  */
 router.put(
   "/users/my-membership",
-  RateLimitMiddleware,
   isEmptyRequest,
   validateEmail,
   lowercaseTrimKeyValueString,
@@ -544,64 +435,57 @@ router.put(
 /**
  * CIAM user refresh token endpoint
  */
-router.post(
-  "/token/refresh",
-  RateLimitMiddleware,
-  isEmptyRequest,
-  validateAPIKey,
-  AccessTokenAuthGuard,
-  async (req, res) => {
-    req["processTimer"] = processTimer;
-    req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
-    const accessToken = res.newAccessToken ? res.newAccessToken : req.headers.authorization.toString();
-    try {
-      loggerService.log(
-        {
-          user: {
-            action: "Router",
-            url: "/token/refresh",
-            api_header: {
-                ...req.headers,
-                authorization: maskKeyRandomly(req.headers.authorization)
-            },
-            api_body: req.body,
+router.post("/token/refresh", isEmptyRequest, validateAPIKey, AccessTokenAuthGuard, async (req, res) => {
+  req["processTimer"] = processTimer;
+  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+  const accessToken = res.newAccessToken ? res.newAccessToken : req.headers.authorization.toString();
+  try {
+    loggerService.log(
+      {
+        user: {
+          action: "Router",
+          url: "/token/refresh",
+          api_header: {
+            ...req.headers,
+            authorization: maskKeyRandomly(req.headers.authorization),
           },
+          api_body: req.body,
         },
-        "[CIAM] userRefreshAccessToken Start Request"
-      );
-      const data = await userController.userRefreshAccessToken(accessToken, req);
-      const loggerData = {...data};
-      if (res.newAccessToken) {
-        data.token.accessToken = res.newAccessToken;
-        Object.assign(loggerData, { token: { ...data.token, accessToken: maskKeyRandomly(res.newAccessToken) }})
-      }
-      loggerService.log(
-        {
-          user: {
-            action: "Router",
-            url: "/token/refresh",
-            response_to_client: JSON.stringify(loggerData),
-          },
-        },
-        "[CIAM-MAIN] userRefreshAccessToken Success"
-      );
-      return res.status(data.statusCode).json(data);
-    } catch (error) {
-       loggerService.error(
-        {
-            user: {
-                action: "Router",
-                url: "/token/refresh",
-                response_to_client: new Error(error),
-            },
-        },
-        {url: "/token/refresh"},
-        "[CIAM] userRefreshAccessToken End Request - Failed"
-      );
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      },
+      "[CIAM] userRefreshAccessToken Start Request"
+    );
+    const data = await userController.userRefreshAccessToken(accessToken, req);
+    const loggerData = { ...data };
+    if (res.newAccessToken) {
+      data.token.accessToken = res.newAccessToken;
+      Object.assign(loggerData, { token: { ...data.token, accessToken: maskKeyRandomly(res.newAccessToken) } });
     }
+    loggerService.log(
+      {
+        user: {
+          action: "Router",
+          url: "/token/refresh",
+          response_to_client: JSON.stringify(loggerData),
+        },
+      },
+      "[CIAM-MAIN] userRefreshAccessToken Success"
+    );
+    return res.status(data.statusCode).json(data);
+  } catch (error) {
+    loggerService.error(
+      {
+        user: {
+          action: "Router",
+          url: "/token/refresh",
+          response_to_client: new Error(error),
+        },
+      },
+      { url: "/token/refresh" },
+      "[CIAM] userRefreshAccessToken End Request - Failed"
+    );
+    const errorMessage = JSON.parse(error.message);
+    return res.status(errorMessage.statusCode).send(errorMessage);
   }
-);
+});
 
 module.exports = router;
