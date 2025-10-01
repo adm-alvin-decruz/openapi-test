@@ -1,47 +1,69 @@
-// eslint.config.mjs
-import js from '@eslint/js';
-import prettier from 'eslint-config-prettier';
-import pluginPrettier from 'eslint-plugin-prettier';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
+// eslint.config.js (flat config)
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import n from "eslint-plugin-n";
 
 export default [
-  // Ignore build artifacts
-  { ignores: ['dist/**', 'node_modules/**'] },
-
   // Base JS rules
   js.configs.recommended,
 
-  // TypeScript rules (parser + plugin presets)
-  ...tseslint.configs.recommended,
-
-  // Disable formatting rules that Prettier handles
-  prettier,
-
-  // Project-wide rules
+  // TypeScript rules only for TS files
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    files: ["**/*.ts", "**/*.tsx"],
+    ...tseslint.configs.recommendedTypeChecked,
     languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: 'module',
-    },
-    plugins: {
-      prettier: pluginPrettier,
+      parser: tseslint.parser,
+      parserOptions: {
+        project: true,            // uses your tsconfig.json
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
-      'prettier/prettier': ['error', { endOfLine: 'auto' }],
-      'no-unused-vars': 'warn',
-      'no-console': 'warn',
-      eqeqeq: 'error',
-      'prefer-const': 'error',
+      "@typescript-eslint/no-require-imports": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 
-  // Jest test files (allow describe/it/expect, etc.)
+  // JavaScript (CommonJS) files
   {
-    files: ['src/__test__/**/*.{js,jsx,ts,tsx}', 'src/**/__tests__/**/*.{js,jsx,ts,tsx}'],
+    files: ["**/*.js", "**/*.cjs"],
+    plugins: { n },
     languageOptions: {
-      globals: { ...globals.jest },
+      sourceType: "commonjs",
+      ecmaVersion: "latest",
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        process: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
+    },
+    rules: {
+      // turn off TS-only rules for JS
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+
+      // handle unused vars in JS with underscore convention
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+
+      // optional Node checks
+      "n/no-missing-require": "error",
+      "n/no-unsupported-features/es-syntax": "off",
     },
   },
 ];
