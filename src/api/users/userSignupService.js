@@ -162,7 +162,7 @@ class UserSignupService {
       }),
       this.userDetailModelExecution({
         user_id: userDB.user_id,
-        phone_number: !!phoneNumber ? phoneNumber : null,
+        phone_number: phoneNumber ? phoneNumber : null,
         zoneinfo: req.body.country ? req.body.country : null,
         address: req.body.address ? req.body.address : null,
         picture: req.body.picture ? req.body.picture : null,
@@ -270,9 +270,9 @@ class UserSignupService {
 
   async preparePassword(req) {
     if (req.body.migrations || req.body.is_passwordless) {
-      const saltPassword = !!req.body.passwordSalt ? req.body.passwordSalt : passwordService.createSaltKey(5);
+      const saltPassword = req.body.passwordSalt ? req.body.passwordSalt : passwordService.createSaltKey(5);
       const passwordTemporary = crypto.randomUUID();
-      const hashPassword = !!req.body.passwordHash
+      const hashPassword = req.body.passwordHash
         ? req.body.passwordHash
         : passwordService.createPassword(passwordTemporary, saltPassword);
 

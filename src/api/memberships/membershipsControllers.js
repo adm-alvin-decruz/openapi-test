@@ -24,7 +24,7 @@ async function adminGetUser(reqBody) {
     "[CIAM] Start Check User Membership"
   );
   const message = MembershipCheckValidation.execute(reqBody);
-  if (!!message) {
+  if (message) {
     throw new Error(JSON.stringify(message));
   }
 

@@ -8,7 +8,10 @@
   "scripts": {
     "test": "jest",
     "watch": "nodemon app.js",
-    "prepare": "node .husky/install.mjs"
+    "prepare": "node .husky/install.mjs",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write ."
   },
   "author": "",
   "license": "ISC",
