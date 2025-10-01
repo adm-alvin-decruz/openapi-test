@@ -5,7 +5,6 @@ import pluginPrettier from 'eslint-plugin-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   // Ignore build artifacts
   { ignores: ['dist/**', 'node_modules/**'] },
