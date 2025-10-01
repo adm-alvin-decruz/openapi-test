@@ -7,7 +7,7 @@ export default [
   // Base JS rules
   js.configs.recommended,
 
-  // TypeScript rules only for TS files
+  // TypeScript files
   {
     files: ['**/*.ts', '**/*.tsx'],
     ...tseslint.configs.recommendedTypeChecked,
@@ -28,6 +28,8 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      // TS already checks undefined identifiers
+      'no-undef': 'off',
     },
   },
 
@@ -64,6 +66,40 @@ export default [
       // optional Node checks
       'n/no-missing-require': 'error',
       'n/no-unsupported-features/es-syntax': 'off',
+    },
+  },
+
+  // ✅ Jest test files (JS & TS)
+  {
+    files: [
+      '**/*.test.js',
+      '**/*.spec.js',
+      '**/__tests__/**/*.js',
+      '**/__test__/**/*.js',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      '**/*.test.tsx',
+      '**/*.spec.tsx',
+    ],
+    languageOptions: {
+      globals: {
+        // Jest globals
+        jest: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        // Sometimes flagged in strict sandboxes
+        console: 'readonly',
+      },
+    },
+    rules: {
+      // keep your usual severity; underscore still allowed if you want:
+      // 'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
 ];
