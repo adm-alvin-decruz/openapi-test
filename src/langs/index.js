@@ -5,7 +5,6 @@ module.exports = {
     confirmPassword_required: 'Confirm Passwords is required.',
     confirmPassword_invalid: 'Passwords do not match.',
     confirm_reset_password_success: 'Password successfully reset.',
-    confirmPassword_required: 'Confirm Passwords is required.',
     country_invalid: 'Country is invalid.',
     db_email_not_exist: 'This email address does not have a Mandai account.',
     db_membership_details_create_error: 'Failed to create membership details.',
@@ -75,6 +74,7 @@ module.exports = {
     request_body_is_empty: 'Request body is empty',
     request_reset_password_success: 'Password reset link sent to your email',
     signup_email: 'This email address is already being used for a Mandai Account.',
+    signup_mid: 'This Mandai ID is already being used for a Mandai Account. Please try again.',
     signup_error: 'New user signup error.',
     signup_success: 'New user signed up successfully.',
     token_reset_password_being_used: 'Token has already been used.',
@@ -102,7 +102,6 @@ module.exports = {
   zh: {
     address_invalid: '地址無效。',
     cognito_user_not_exist: '此电子邮件地址没有对应的 Cognito 用户。',
-    confirmPassword_required: '密码不匹配。',
     confirmPassword_invalid: '密码不匹配。',
     confirm_reset_password_success: '密码已成功重置。',
     confirmPassword_required: '需要确认密码。',
@@ -181,6 +180,7 @@ module.exports = {
     verifyOTP_expired: '验证码已过期。请请求新的验证码。',
     verifyOTP_tooManyAttempts: '尝试次数过多。请请求新的验证码。',
     signup_email: '此电子邮件地址已被用于 Mandai 帐户。',
+    signup_mid: '此Mandai ID已被用于 Mandai 帐户。',
     signup_error: '新用户注册错误。',
     signup_success: '新用户注册成功。',
     token_reset_password_being_used: '令牌已被使用。',
@@ -200,7 +200,6 @@ module.exports = {
   kr: {
     address_invalid: '주소가 유효하지 않습니다.',
     cognito_user_not_exist: '이 이메일 주소에 해당하는 Cognito 사용자가 없습니다.',
-    confirmPassword_required: '비밀번호가 일치하지 않습니다.',
     confirmPassword_invalid: '비밀번호가 일치하지 않습니다.',
     confirm_reset_password_success: '비밀번호가 성공적으로 재설정되었습니다.',
     country_invalid: '국가가 유효하지 않습니다.',
@@ -300,7 +299,6 @@ module.exports = {
   ja: {
     address_invalid: '住所が無効です。',
     cognito_user_not_exist: 'このメールアドレスには Cognito ユーザーが存在しません。',
-    confirmPassword_required: 'パスワードが一致しません。',
     confirmPassword_invalid: 'パスワードが一致しません。',
     confirm_reset_password_success: 'パスワードが正常にリセットされました。',
     confirmPassword_required: 'パスワードの確認が必要です。',

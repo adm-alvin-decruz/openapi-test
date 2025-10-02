@@ -23,6 +23,17 @@ class SignupErrors {
       statusCode: 200,
     };
   }
+  static ciamMandaiIdExists(lang) {
+    return {
+      membership: {
+        code: 200,
+        mwgCode: 'MWG_CIAM_USER_SIGNUP_MANDAIID_EXIST_ERR',
+        message: messageLang('signup_mid', lang),
+      },
+      status: 'success',
+      statusCode: 200,
+    };
+  }
 }
 
 module.exports = SignupErrors;

@@ -33,6 +33,7 @@ export default [
       globals: {
         console: 'readonly',
         process: 'readonly',
+        require: 'readonly',
       },
     },
   },
@@ -81,6 +82,7 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
         console: 'readonly',
+        Buffer: 'readonly',
       },
     },
     rules: {

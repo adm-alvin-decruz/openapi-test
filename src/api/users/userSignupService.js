@@ -17,6 +17,7 @@ const switchService = require('../../services/switchService');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userSignupHelper = require('./usersSignupHelper');
 const { secrets } = require('../../services/secretsService');
+const SignupErrors = require('../../config/https/errors/signupErrors');
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -452,8 +453,8 @@ class UserSignupService {
 
     // generate Mandai ID
     let idCounter = 0;
-    let mandaiId = this.generateMandaiId(req, idCounter);
-    if (await userModel.existsByMandaiId?.(mandaiId)) {
+    let mandaiId = await this.generateMandaiId(req, idCounter);
+    if (await userModel.existsByMandaiId(mandaiId)) {
       loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
@@ -469,7 +470,7 @@ class UserSignupService {
         }
       }
       if (!found) {
-        throw new Error('Could not reserve a unique Mandai ID');
+        throw new Error(JSON.stringify(SignupErrors.ciamMandaiIdExists()));
       }
     }
 
