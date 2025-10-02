@@ -1,10 +1,10 @@
-const fs = require("fs");
-const path = require("path");
-const dotenv = require("dotenv");
-const { secrets } = require("../../services/secretsService");
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+const { secrets } = require('../../services/secretsService');
 dotenv.config();
 
-let cert = path.join(__dirname, "../certs/ap-southeast-1-bundle.pem");
+let cert = path.join(__dirname, '../certs/ap-southeast-1-bundle.pem');
 
 async function getDbConfig() {
   const dbSecrets = await secrets.getSecrets(`ciam-${process.env.APP_ENV}-db-user1`);
@@ -19,7 +19,7 @@ async function getDbConfig() {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      timezone: "+00:00", // UTC+0
+      timezone: '+00:00', // UTC+0
       ssl: {
         ca: fs.readFileSync(cert),
         rejectUnauthorized: false,
@@ -34,7 +34,7 @@ async function getDbConfig() {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      timezone: "+00:00", // UTC+0
+      timezone: '+00:00', // UTC+0
       ssl: {
         ca: fs.readFileSync(cert),
         rejectUnauthorized: false,

@@ -1,5 +1,5 @@
 const EmailDomainService = require('../../services/emailDomainsService');
-const loggerService = require("../../logs/logger");
+const loggerService = require('../../logs/logger');
 const ApiUtils = require('../../utils/apiUtils');
 const switchService = require('../../services/switchService');
 
@@ -9,21 +9,21 @@ jest.mock('../../db/models/emailDomainsModel', () => ({
     create: jest.fn(),
     update: jest.fn(),
     findByDomain: jest.fn(),
-    upsert: jest.fn()
-  }
+    upsert: jest.fn(),
+  },
 }));
 
 jest.mock('../../logs/logger', () => ({
   error: jest.fn(),
-  log: jest.fn()
+  log: jest.fn(),
 }));
 
 jest.mock('../../utils/apiUtils', () => ({
-  makeRequest: jest.fn()
+  makeRequest: jest.fn(),
 }));
 
 jest.mock('../../services/switchService', () => ({
-  findByName: jest.fn()
+  findByName: jest.fn(),
 }));
 
 describe('EmailDomainService', () => {
@@ -76,8 +76,9 @@ describe('EmailDomainService', () => {
       const id = 1;
       const invalid = 4;
 
-      await expect(EmailDomainService.updateDomainStatus(id, invalid))
-        .rejects.toThrow('Invalid status value');
+      await expect(EmailDomainService.updateDomainStatus(id, invalid)).rejects.toThrow(
+        'Invalid status value',
+      );
     });
   });
 
@@ -91,7 +92,7 @@ describe('EmailDomainService', () => {
       expect(result).toEqual({
         isValid: false,
         status: 'unknown',
-        message: `Domain not found in database. Email: ${email}`
+        message: `Domain not found in database. Email: ${email}`,
       });
     });
 
@@ -104,7 +105,7 @@ describe('EmailDomainService', () => {
       expect(result).toEqual({
         isValid: true,
         status: 'whitelist',
-        message: 'Domain is whitelisted'
+        message: 'Domain is whitelisted',
       });
     });
   });
@@ -112,7 +113,7 @@ describe('EmailDomainService', () => {
   describe('valApiDisposableEmail', () => {
     it('should detect disposable email and update database', async () => {
       const email = 'test@disposable.com';
-      ApiUtils.makeRequest.mockImplementation(() => Promise.resolve({ disposable: "true" }));
+      ApiUtils.makeRequest.mockImplementation(() => Promise.resolve({ disposable: 'true' }));
       EmailDomainService.domain = 'disposable.com';
 
       const result = await EmailDomainService.valApiDisposableEmail(email);
@@ -123,7 +124,7 @@ describe('EmailDomainService', () => {
 
     it('should handle valid email domains', async () => {
       const email = 'test@valid.com';
-      ApiUtils.makeRequest.mockImplementation(() => Promise.resolve({ disposable: "false" }));
+      ApiUtils.makeRequest.mockImplementation(() => Promise.resolve({ disposable: 'false' }));
       EmailDomainService.domain = 'valid.com';
 
       const result = await EmailDomainService.valApiDisposableEmail(email);

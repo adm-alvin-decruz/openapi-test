@@ -1,11 +1,11 @@
-const UserRefreshTokenService = require("./userRefreshTokenService");
-const appConfig = require("../../config/appConfig");
-const loggerService = require("../../logs/logger");
+const UserRefreshTokenService = require('./userRefreshTokenService');
+const appConfig = require('../../config/appConfig');
+const loggerService = require('../../logs/logger');
 
 class UserRefreshAccessTokenJob {
   constructor() {
     this.callbackUrl = `${
-        appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]
+      appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]
     }${appConfig.AEM_CALLBACK_PATH}`;
   }
 
@@ -20,7 +20,7 @@ class UserRefreshAccessTokenJob {
             mandaiId: body.mandaiId,
             callbackURL: this.callbackUrl,
           },
-          status: "success",
+          status: 'success',
           statusCode: 200,
         }
       : {
@@ -31,7 +31,7 @@ class UserRefreshAccessTokenJob {
             mandaiId: body.mandaiId,
             callbackURL: this.callbackUrl,
           },
-          status: "success",
+          status: 'success',
           statusCode: 200,
         };
   }
@@ -42,12 +42,12 @@ class UserRefreshAccessTokenJob {
       loggerService.log(
         {
           user: {
-            action: "userRefreshAccessToken",
-            layer: "UserRefreshAccessTokenJob.perform",
+            action: 'userRefreshAccessToken',
+            layer: 'UserRefreshAccessTokenJob.perform',
             response: JSON.stringify(rs),
           },
         },
-        "[CIAM] userRefreshAccessToken Success"
+        '[CIAM] userRefreshAccessToken Success',
       );
       return this.success(rs, body);
     } catch (error) {

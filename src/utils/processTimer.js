@@ -4,39 +4,45 @@ const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2,
 const processTimer = (processName) => {
   const start = process.hrtime();
 
-  console.log(`Process Timer: [${new Date().toISOString()}] [CIAM-MAIN] Process "${processName}" started`);
+  console.log(
+    `Process Timer: [${new Date().toISOString()}] [CIAM-MAIN] Process "${processName}" started`,
+  );
 
   return () => {
     const end = process.hrtime(start);
     const duration = (end[0] * 1000 + end[1] / 1e6).toFixed(2);
-    console.log(`Process Timer: [${new Date().toISOString()}] [CIAM-MAIN] Process "${processName}" ended. Duration: ${duration}ms`);
+    console.log(
+      `Process Timer: [${new Date().toISOString()}] [CIAM-MAIN] Process "${processName}" ended. Duration: ${duration}ms`,
+    );
   };
 };
 
-const apiRequestTimer = (startReq=false) => {
+const apiRequestTimer = (startReq = false) => {
   const start = process.hrtime();
 
   const log = (message) => {
-    console.log(`Process Timer: [${new Date().toISOString()}] [${requestId}] [CIAM-MAIN] Process ${message}`);
+    console.log(
+      `Process Timer: [${new Date().toISOString()}] [${requestId}] [CIAM-MAIN] Process ${message}`,
+    );
   };
 
-  if(startReq === true){
+  if (startReq === true) {
     log('API request started');
   }
 
   return {
     log,
-    end: (message, startTimeOvewrite='') => {
+    end: (message, startTimeOvewrite = '') => {
       let startTime = start;
       if (startTimeOvewrite != '') {
-        startTime = startTimeOvewrite
+        startTime = startTimeOvewrite;
       }
       const end = process.hrtime(startTime);
       const duration = (end[0] * 1000 + end[1] / 1e6).toFixed(2);
       log(`${message} ended. Duration: ${duration}ms`);
     },
-    getRequestId: () => requestId
+    getRequestId: () => requestId,
   };
 };
 
-module.exports = {apiRequestTimer,processTimer};
+module.exports = { apiRequestTimer, processTimer };

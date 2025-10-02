@@ -1,5 +1,5 @@
-const UserSignupService = require("./userSignupService");
-const { messageLang } = require("../../utils/common");
+const UserSignupService = require('./userSignupService');
+const { messageLang } = require('../../utils/common');
 
 class UserSignupJob {
   async perform(req) {
@@ -8,11 +8,11 @@ class UserSignupJob {
       return {
         membership: {
           code: 200,
-          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
-          message: messageLang("signup_success", req.language),
+          mwgCode: 'MWG_CIAM_USER_SIGNUP_SUCCESS',
+          message: messageLang('signup_success', req.language),
           mandaiId: rs.mandaiId,
         },
-        status: "success",
+        status: 'success',
         statusCode: 200,
       };
     } catch (error) {

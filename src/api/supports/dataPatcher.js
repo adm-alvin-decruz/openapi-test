@@ -1,17 +1,17 @@
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
   if (!env) return 'ap-southeast-1';
-  if (env === "false") return 'ap-southeast-1';
+  if (env === 'false') return 'ap-southeast-1';
   return env;
-}
+};
 
 const {
   CognitoIdentityProviderClient,
   AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
   ListUsersCommand,
-  UserNotFoundException
-} = require("@aws-sdk/client-cognito-identity-provider");
+  UserNotFoundException,
+} = require('@aws-sdk/client-cognito-identity-provider');
 
 const db = require('../../db/connections/mysqlConn');
 const commonService = require('../../services/commonService');
@@ -28,7 +28,7 @@ class DataPatcher {
       patchTo,
       patchFieldsFrom,
       patchFieldsTo,
-      patchToQueryConditions
+      patchToQueryConditions,
     } = input;
 
     // Validate input parameters
@@ -90,7 +90,7 @@ class DataPatcher {
           email,
           source: patchFrom,
           destination: patchTo,
-          updatedFields: Object.keys(updateData)
+          updatedFields: Object.keys(updateData),
         });
         return email;
       } catch (error) {
@@ -113,7 +113,7 @@ class DataPatcher {
     }
 
     // Validate condition values
-    Object.values(conditions).forEach(value => {
+    Object.values(conditions).forEach((value) => {
       if (value === undefined || value === null) {
         throw new Error('Query conditions cannot contain null or undefined values');
       }
@@ -184,7 +184,7 @@ class DataPatcher {
     if (conditions.Username) {
       const params = {
         UserPoolId: process.env.USER_POOL_ID,
-        Username: conditions.Username
+        Username: conditions.Username,
       };
       try {
         const command = new AdminGetUserCommand(params);
@@ -202,7 +202,7 @@ class DataPatcher {
         Filter: Object.entries(conditions)
           .filter(([key]) => key !== 'table') // Exclude table property from Cognito filter
           .map(([key, value]) => `${key} = "${value}"`)
-          .join(' and ')
+          .join(' and '),
       };
       const command = new ListUsersCommand(params);
       const response = await this.cognitoClient.send(command);
@@ -215,7 +215,7 @@ class DataPatcher {
 
   formatCognitoUser(user) {
     const attributes = {};
-    user.UserAttributes.forEach(attr => {
+    user.UserAttributes.forEach((attr) => {
       attributes[attr.Name] = attr.Value;
     });
     return { ...user, ...attributes };
@@ -240,8 +240,8 @@ class DataPatcher {
         .filter(([_, value]) => value !== null && value !== undefined)
         .map(([Name, Value]) => ({
           Name,
-          Value: Value.toString()
-        }))
+          Value: Value.toString(),
+        })),
     };
 
     const command = new AdminUpdateUserAttributesCommand(params);
@@ -250,4 +250,3 @@ class DataPatcher {
 }
 
 module.exports = DataPatcher;
-

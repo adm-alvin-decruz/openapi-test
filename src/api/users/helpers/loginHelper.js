@@ -1,27 +1,21 @@
-const cognitoService = require("../../../services/cognitoService");
-const passwordService = require("../userPasswordService");
-const userCredentialModel = require("../../../db/models/userCredentialModel");
-const loggerService = require("../../../logs/logger");
-const nopCommerceLoginService = require("../../components/nopCommerce/services/nopCommerceLoginService");
-const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
+const cognitoService = require('../../../services/cognitoService');
+const passwordService = require('../userPasswordService');
+const userCredentialModel = require('../../../db/models/userCredentialModel');
+const loggerService = require('../../../logs/logger');
+const nopCommerceLoginService = require('../../components/nopCommerce/services/nopCommerceLoginService');
+const { switchIsTurnOn } = require('../../../helpers/dbSwitchesHelpers');
 
 async function proceedVerifyPassword(userInfo, password) {
-  const enableVerificationByNC = await switchIsTurnOn("password_verification_nopCommerce");
+  const enableVerificationByNC = await switchIsTurnOn('password_verification_nopCommerce');
   if (enableVerificationByNC) {
-    const loginResult = await nopCommerceLoginService.loginNopCommerce(
-      userInfo.username,
-      password
-    );
+    const loginResult = await nopCommerceLoginService.loginNopCommerce(userInfo.username, password);
     return !!(
       loginResult.MembershipLoginResult &&
-      loginResult.MembershipLoginResult.Message === "3420|Login Success"
+      loginResult.MembershipLoginResult.Message === '3420|Login Success'
     );
   }
 
-  const passwordHashed = passwordService.createPassword(
-    password,
-    userInfo.password_salt
-  );
+  const passwordHashed = passwordService.createPassword(password, userInfo.password_salt);
   return passwordHashed.toUpperCase() === userInfo.password_hash.toUpperCase();
 }
 
@@ -32,7 +26,7 @@ async function proceedSetPassword(userInfo, password) {
   }
 
   //if match argon - user is normal flow - do nothing
-  if (userInfo.password_hash.startsWith("$argon2")) {
+  if (userInfo.password_hash.startsWith('$argon2')) {
     return;
   }
 
@@ -45,10 +39,7 @@ async function proceedSetPassword(userInfo, password) {
     // }
 
     try {
-      await cognitoService.cognitoAdminSetUserPassword(
-        userInfo.username,
-        password
-      );
+      await cognitoService.cognitoAdminSetUserPassword(userInfo.username, password);
       const hashPassword = await passwordService.hashPassword(password);
       await userCredentialModel.updateByUserEmail(userInfo.username, {
         password_hash: hashPassword,
@@ -58,14 +49,14 @@ async function proceedSetPassword(userInfo, password) {
       loggerService.error(
         {
           user: {
-            action: "proceedSetPassword",
+            action: 'proceedSetPassword',
             email: userInfo.username,
-            layer: "userLoginServices.proceedSetPassword",
+            layer: 'userLoginServices.proceedSetPassword',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] Proceed Set Password - Failed"
+        '[CIAM] Proceed Set Password - Failed',
       );
     }
   }

@@ -1,7 +1,7 @@
-const { validateDOB } = require("../../../services/validationService");
-const { passwordPattern } = require("../../../utils/common");
-const CommonErrors = require("../../../config/https/errors/commonErrors");
-const commonService = require("../../../services/commonService");
+const { validateDOB } = require('../../../services/validationService');
+const { passwordPattern } = require('../../../utils/common');
+const CommonErrors = require('../../../config/https/errors/commonErrors');
+const commonService = require('../../../services/commonService');
 
 class UserSignupValidation {
   constructor() {
@@ -16,79 +16,71 @@ class UserSignupValidation {
     let reqBody = req.body;
     //validate missing required params
     let requireParams = reqBody.migrations
-      ? ["email", "firstName", "lastName"]
-      : ["email", "firstName", "lastName", "password", "confirmPassword", "dob"];
-    requireParams = reqBody.is_passwordless ? ["email", "firstName", "lastName", "dob"] : requireParams;
+      ? ['email', 'firstName', 'lastName']
+      : ['email', 'firstName', 'lastName', 'password', 'confirmPassword', 'dob'];
+    requireParams = reqBody.is_passwordless
+      ? ['email', 'firstName', 'lastName', 'dob']
+      : requireParams;
 
     const listKeys = Object.keys(reqBody);
-    const paramsMissing = requireParams.filter(
-      (key) => !listKeys.includes(key)
-    );
+    const paramsMissing = requireParams.filter((key) => !listKeys.includes(key));
     if (paramsMissing.length) {
-      if (paramsMissing.includes("password")) {
+      if (paramsMissing.includes('password')) {
         return (this.error = CommonErrors.BadRequest(
-          "password",
-          "newPassword_required",
-          reqBody.language
-        ))
+          'password',
+          'newPassword_required',
+          reqBody.language,
+        ));
       }
-      if (paramsMissing.includes("confirmPassword")) {
+      if (paramsMissing.includes('confirmPassword')) {
         return (this.error = CommonErrors.BadRequest(
-          "confirmPassword",
-          "confirmPassword_required",
-          reqBody.language
-        ))
+          'confirmPassword',
+          'confirmPassword_required',
+          reqBody.language,
+        ));
       }
       return (this.error = CommonErrors.BadRequest(
         paramsMissing[0],
         `${paramsMissing[0]}_invalid`,
-        reqBody.language
+        reqBody.language,
       ));
     }
     const paramsShouldNotEmpty = reqBody.migrations
-      ? ["email", "firstName", "lastName"]
+      ? ['email', 'firstName', 'lastName']
       : [
-          "email",
-          "firstName",
-          "lastName",
-          "country",
+          'email',
+          'firstName',
+          'lastName',
+          'country',
           // "phoneNumber", // disabled for now, onsite signup may have many rubbish phone number
-          "password",
-          "confirmPassword",
+          'password',
+          'confirmPassword',
         ];
     //if parameters have some empty string
     const paramsInvalid = paramsShouldNotEmpty
       .filter((key) => listKeys.includes(key))
-      .filter((ele) => reqBody[`${ele}`].trim() === "");
+      .filter((ele) => reqBody[`${ele}`].trim() === '');
 
     if (paramsInvalid.length) {
       return (this.error = CommonErrors.BadRequest(
         paramsInvalid[0],
         `${paramsInvalid[0]}_invalid`,
-        reqBody.language
+        reqBody.language,
       ));
     }
 
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
     if (reqBody.dob && requestFromAEM) {
-      if (reqBody.dob || reqBody.dob === "") {
+      if (reqBody.dob || reqBody.dob === '') {
         const dob = validateDOB(reqBody.dob);
         if (!dob) {
-          return (this.error = CommonErrors.BadRequest(
-            "dob",
-            "dob_invalid",
-            reqBody.language
-          ));
+          return (this.error = CommonErrors.BadRequest('dob', 'dob_invalid', reqBody.language));
         }
       }
     }
 
     if (reqBody.country && reqBody.country.length !== 2) {
-      return (this.error = CommonErrors.BadRequest(
-        "country",
-        "country_invalid",
-        reqBody.language
-      ));
+      return (this.error = CommonErrors.BadRequest('country', 'country_invalid', reqBody.language));
     }
 
     if (reqBody.password) {

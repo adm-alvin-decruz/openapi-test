@@ -1,14 +1,14 @@
-const { messageLang } = require("../../../utils/common");
+const { messageLang } = require('../../../utils/common');
 
 class CommonErrors {
   static NotImplemented() {
     return {
       membership: {
         code: 501,
-        mwgCode: "MWG_CIAM_NOT_IMPLEMENTED",
-        message: "Not implemented",
+        mwgCode: 'MWG_CIAM_NOT_IMPLEMENTED',
+        message: 'Not implemented',
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 501,
     };
   }
@@ -16,10 +16,10 @@ class CommonErrors {
     return {
       membership: {
         code: 500,
-        mwgCode: "MWG_CIAM_INTERNAL_SERVER_ERROR",
-        message: "Internal Server Error",
+        mwgCode: 'MWG_CIAM_INTERNAL_SERVER_ERROR',
+        message: 'Internal Server Error',
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 500,
     };
   }
@@ -27,13 +27,13 @@ class CommonErrors {
     return {
       membership: {
         code: 400,
-        mwgCode: "MWG_CIAM_PARAMS_ERR",
-        message: "Wrong parameters",
+        mwgCode: 'MWG_CIAM_PARAMS_ERR',
+        message: 'Wrong parameters',
         error: {
           [`${key}`]: messageLang(message, lang),
         },
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 400,
     };
   }
@@ -41,10 +41,10 @@ class CommonErrors {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_01",
-        message: messageLang("password_invalid", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_01',
+        message: messageLang('password_invalid', lang),
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
@@ -52,10 +52,10 @@ class CommonErrors {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_02",
-        message: messageLang("confirmPassword_invalid", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_02',
+        message: messageLang('confirmPassword_invalid', lang),
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
@@ -63,10 +63,10 @@ class CommonErrors {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
-        message: messageLang("oldPassword_invalid", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_03',
+        message: messageLang('oldPassword_invalid', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 200,
     };
   }
@@ -74,10 +74,10 @@ class CommonErrors {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_UNAUTHORIZED",
-        message: messageLang("unauthorized", lang),
+        mwgCode: 'MWG_CIAM_UNAUTHORIZED',
+        message: messageLang('unauthorized', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 401,
     };
   }
@@ -85,10 +85,10 @@ class CommonErrors {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_04",
-        message: messageLang("password_has_same_with_old_password", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_04',
+        message: messageLang('password_has_same_with_old_password', lang),
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
@@ -96,10 +96,10 @@ class CommonErrors {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_05",
-        message: messageLang("token_reset_password_being_used", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_05',
+        message: messageLang('token_reset_password_being_used', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 401,
     };
   }
@@ -108,10 +108,10 @@ class CommonErrors {
     return {
       membership: {
         code: 400,
-        mwgCode: "MWG_CIAM_PARAMS_ERR",
-        message: messageLang("request_body_is_empty", lang),
+        mwgCode: 'MWG_CIAM_PARAMS_ERR',
+        message: messageLang('request_body_is_empty', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 400,
     };
   }
@@ -120,10 +120,10 @@ class CommonErrors {
     return {
       membership: {
         code: 400,
-        mwgCode: "MWG_CIAM_REQUIRE_CHANGE_PASSWORD",
-        message: messageLang("password_require_change", lang),
+        mwgCode: 'MWG_CIAM_REQUIRE_CHANGE_PASSWORD',
+        message: messageLang('password_require_change', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 400,
     };
   }

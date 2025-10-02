@@ -4,7 +4,7 @@ const db = require('../../db/connections/mysqlConn');
 // Mock the database connection
 jest.mock('../../db/connections/mysqlConn', () => ({
   query: jest.fn(),
-  execute: jest.fn()
+  execute: jest.fn(),
 }));
 
 describe('EmailDomainModel', () => {
@@ -32,10 +32,7 @@ describe('EmailDomainModel', () => {
 
       const result = await EmailDomainModel.findById(mockId);
 
-      expect(db.query).toHaveBeenCalledWith(
-        'SELECT * FROM email_domains WHERE id = ?',
-        [mockId]
-      );
+      expect(db.query).toHaveBeenCalledWith('SELECT * FROM email_domains WHERE id = ?', [mockId]);
       expect(result).toEqual(mockResult);
     });
   });
@@ -48,10 +45,9 @@ describe('EmailDomainModel', () => {
 
       const result = await EmailDomainModel.findByDomain(mockDomain);
 
-      expect(db.query).toHaveBeenCalledWith(
-        'SELECT * FROM email_domains WHERE domain = ?',
-        [mockDomain]
-      );
+      expect(db.query).toHaveBeenCalledWith('SELECT * FROM email_domains WHERE domain = ?', [
+        mockDomain,
+      ]);
       expect(result).toEqual(mockResult);
     });
   });
@@ -62,15 +58,14 @@ describe('EmailDomainModel', () => {
       const mockDateTime = '2024-01-01 12:00:00';
       const mockResult = { insertId: 1 };
 
-      jest.spyOn(EmailDomainModel, 'getMySQLDateTime')
-        .mockReturnValue(mockDateTime);
+      jest.spyOn(EmailDomainModel, 'getMySQLDateTime').mockReturnValue(mockDateTime);
       db.execute.mockResolvedValue(mockResult);
 
       const result = await EmailDomainModel.create(mockDomain);
 
       expect(db.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO email_domains'),
-        [mockDomain, 0, mockDateTime, mockDateTime]
+        [mockDomain, 0, mockDateTime, mockDateTime],
       );
       expect(result).toEqual(mockResult);
     });
@@ -80,14 +75,13 @@ describe('EmailDomainModel', () => {
       const mockValid = 1;
       const mockDateTime = '2024-01-01 12:00:00';
 
-      jest.spyOn(EmailDomainModel, 'getMySQLDateTime')
-        .mockReturnValue(mockDateTime);
+      jest.spyOn(EmailDomainModel, 'getMySQLDateTime').mockReturnValue(mockDateTime);
 
       await EmailDomainModel.create(mockDomain, mockValid);
 
       expect(db.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO email_domains'),
-        [mockDomain, mockValid, mockDateTime, mockDateTime]
+        [mockDomain, mockValid, mockDateTime, mockDateTime],
       );
     });
   });
@@ -103,7 +97,7 @@ describe('EmailDomainModel', () => {
 
       expect(db.execute).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE email_domains'),
-        expect.arrayContaining(['new.com', 1, mockId])
+        expect.arrayContaining(['new.com', 1, mockId]),
       );
       expect(result).toEqual(mockResult);
     });
@@ -127,10 +121,7 @@ describe('EmailDomainModel', () => {
 
       const result = await EmailDomainModel.delete(mockId);
 
-      expect(db.execute).toHaveBeenCalledWith(
-        'DELETE FROM email_domains WHERE id = ?',
-        [mockId]
-      );
+      expect(db.execute).toHaveBeenCalledWith('DELETE FROM email_domains WHERE id = ?', [mockId]);
       expect(result).toEqual(mockResult);
     });
   });
@@ -144,7 +135,7 @@ describe('EmailDomainModel', () => {
 
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT * FROM email_domains'),
-        [10, 0]
+        [10, 0],
       );
       expect(result).toEqual(mockResult);
     });
@@ -159,7 +150,7 @@ describe('EmailDomainModel', () => {
 
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT * FROM email_domains'),
-        [limit, 5]
+        [limit, 5],
       );
       expect(result).toEqual(mockResult);
     });
@@ -172,18 +163,17 @@ describe('EmailDomainModel', () => {
       const mockResult = {
         insertId: 1,
         affectedRows: 1,
-        changedRows: 0
+        changedRows: 0,
       };
 
-      jest.spyOn(EmailDomainModel, 'getMySQLDateTime')
-        .mockReturnValue(mockDateTime);
+      jest.spyOn(EmailDomainModel, 'getMySQLDateTime').mockReturnValue(mockDateTime);
       db.execute.mockResolvedValue(mockResult);
 
       await EmailDomainModel.upsert(mockDomain);
 
       expect(db.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO email_domains'),
-        [mockDomain, 0, mockDateTime, mockDateTime, mockDateTime]
+        [mockDomain, 0, mockDateTime, mockDateTime, mockDateTime],
       );
     });
 
@@ -191,9 +181,9 @@ describe('EmailDomainModel', () => {
       const mockDomain = 'example.com';
       db.execute.mockRejectedValue(new Error('Database error'));
 
-      await expect(EmailDomainModel.upsert(mockDomain))
-        .rejects
-        .toThrow('Upsert failed: Database error');
+      await expect(EmailDomainModel.upsert(mockDomain)).rejects.toThrow(
+        'Upsert failed: Database error',
+      );
     });
   });
 });

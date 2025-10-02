@@ -1,8 +1,8 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const CommonErrors = require('../../config/https/errors/commonErrors');
+const loggerService = require('../../logs/logger');
 
 class UserMembership {
   static async create(membershipData) {
@@ -38,30 +38,29 @@ class UserMembership {
           },
         },
         {},
-        "UserMembership.create"
+        'UserMembership.create',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
   static async findByUserId(userId) {
-    const sql = "SELECT * FROM user_memberships WHERE user_id = ?";
+    const sql = 'SELECT * FROM user_memberships WHERE user_id = ?';
     return await pool.query(sql, [userId]);
   }
 
   static async findByUserIdAndGroup(userId, group) {
-    const sql = "SELECT * FROM user_memberships WHERE user_id = ? and name = ?";
+    const sql = 'SELECT * FROM user_memberships WHERE user_id = ? and name = ?';
     return await pool.query(sql, [userId, group]);
   }
 
   static async findByUserIdAndExcludeGroup(userId, group) {
-    const sql =
-      "SELECT * FROM user_memberships WHERE user_id = ? and name != ?";
+    const sql = 'SELECT * FROM user_memberships WHERE user_id = ? and name != ?';
     return await pool.query(sql, [userId, group]);
   }
 
   static async findByVisualId(visualId) {
-    const sql = "SELECT * FROM user_memberships WHERE visual_id = ?";
+    const sql = 'SELECT * FROM user_memberships WHERE visual_id = ?';
     return await pool.query(sql, [visualId]);
   }
 
@@ -92,22 +91,18 @@ class UserMembership {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     //TODO: need to add one more condition: membershipId (id)
     // Construct the SQL query
     const sql = `
       UPDATE user_memberships
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE user_id = ?
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(data).filter((value) => value !== undefined),
-      now,
-      userId,
-    ];
+    const params = [...Object.values(data).filter((value) => value !== undefined), now, userId];
 
     try {
       // Execute the query
@@ -126,7 +121,7 @@ class UserMembership {
           },
         },
         {},
-        "UserMembership.updateByUserId"
+        'UserMembership.updateByUserId',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -137,16 +132,16 @@ class UserMembership {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_memberships
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `;
 
@@ -167,14 +162,14 @@ class UserMembership {
       };
     } catch (error) {
       loggerService.error(
-          {
-            UserMembershipModel: {
-              error: `${error}`,
-              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            },
+        {
+          UserMembershipModel: {
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
-          {},
-          "UserMembership.updateByUserId"
+        },
+        {},
+        'UserMembership.updateByUserId',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -182,13 +177,13 @@ class UserMembership {
 
   static async delete(id) {
     const now = getCurrentUTCTimestamp();
-    const sql = "DELETE FROM user_memberships WHERE id = ?";
+    const sql = 'DELETE FROM user_memberships WHERE id = ?';
     await pool.execute(sql, [id]);
   }
 
   static async deletebyUserID(user_id) {
     try {
-      const sql = "DELETE FROM user_memberships WHERE user_id = ?";
+      const sql = 'DELETE FROM user_memberships WHERE user_id = ?';
       var result = await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
@@ -213,14 +208,14 @@ class UserMembership {
       return rows[0];
     } catch (error) {
       loggerService.error(
-          {
-            UserMembershipModel: {
-              error: `${error}`,
-              sql_statement: commonService.replaceSqlPlaceholders(sql, [membershipId]),
-            },
+        {
+          UserMembershipModel: {
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, [membershipId]),
           },
-          {},
-          "[CIAM] UserMembership.queryMembershipDetailsByMembershipId - Failed"
+        },
+        {},
+        '[CIAM] UserMembership.queryMembershipDetailsByMembershipId - Failed',
       );
     }
   }
@@ -230,20 +225,20 @@ class UserMembership {
                     FROM users u
                     LEFT JOIN user_memberships um ON um.user_id = u.id
                     WHERE u.email = ?
-                    GROUP BY u.id, u.email, u.mandai_id`
+                    GROUP BY u.id, u.email, u.mandai_id`;
     try {
       const rows = await pool.query(sql, [email]);
       return rows[0];
     } catch (error) {
       loggerService.error(
-          {
-            UserMembershipModel: {
-              error: new Error(error),
-              sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
-            },
+        {
+          UserMembershipModel: {
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
           },
-          {},
-          "[CIAM-MAIN] UserMembershipModel.queryUserPassType - Failed"
+        },
+        {},
+        '[CIAM-MAIN] UserMembershipModel.queryUserPassType - Failed',
       );
     }
   }

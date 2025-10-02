@@ -1,14 +1,14 @@
-const { messageLang } = require("../../../utils/common");
+const { messageLang } = require('../../../utils/common');
 
 class ValidateTokenErrors {
   static ciamValidateTokenErr(lang) {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_VALIDATE_TOKEN_ERR",
-        message: messageLang("passwordToken_invalid", lang),
+        mwgCode: 'MWG_CIAM_VALIDATE_TOKEN_ERR',
+        message: messageLang('passwordToken_invalid', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 401,
     };
   }
@@ -16,10 +16,10 @@ class ValidateTokenErrors {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_VALIDATE_TOKEN_EXPIRED",
-        message: messageLang("passwordToken_expired", lang),
+        mwgCode: 'MWG_CIAM_VALIDATE_TOKEN_EXPIRED',
+        message: messageLang('passwordToken_expired', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 401,
     };
   }
@@ -27,10 +27,10 @@ class ValidateTokenErrors {
     return {
       membership: {
         code: 401,
-        mwgCode: "MWG_CIAM_PASSWORD_ERR_03",
-        message: messageLang("token_reset_password_being_used", lang),
+        mwgCode: 'MWG_CIAM_PASSWORD_ERR_03',
+        message: messageLang('token_reset_password_being_used', lang),
       },
-      status: "failed",
+      status: 'failed',
       statusCode: 401,
     };
   }

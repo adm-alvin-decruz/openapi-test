@@ -44,5 +44,5 @@ function findNestedValue(obj, key) {
 }
 
 module.exports = {
-  findProductValue
-}
+  findProductValue,
+};

@@ -1,5 +1,5 @@
-const mysql = require("mysql2/promise");
-const { getDbConfig } = require("../config/mysqlConfig");
+const mysql = require('mysql2/promise');
+const { getDbConfig } = require('../config/mysqlConfig');
 
 let masterPool, slavePool;
 
@@ -29,11 +29,11 @@ async function transaction(work) {
     await Promise.all(work.map((unit) => connection.query(unit)));
     await connection.commit();
   } catch (err) {
-    console.log("rollback");
+    console.log('rollback');
     await connection.rollback();
     throw err;
   } finally {
-    console.log("release");
+    console.log('release');
     connection.release();
   }
 }

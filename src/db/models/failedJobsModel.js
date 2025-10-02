@@ -9,7 +9,7 @@ class FailedJobsModel {
   }
 
   async create(jobData) {
-    const {uuid,name,action,data,source,triggered_at,status} = jobData;
+    const { uuid, name, action, data, source, triggered_at, status } = jobData;
 
     const query = `
       INSERT INTO ${this.tableName}
@@ -25,16 +25,16 @@ class FailedJobsModel {
         JSON.stringify(data),
         source,
         triggered_at,
-        status
+        status,
       ]);
       return result.insertId;
     } catch (error) {
-      console.error( new Error(`[FailedJobsModel] Failed to create job: ${error.message}`) );
+      console.error(new Error(`[FailedJobsModel] Failed to create job: ${error.message}`));
     }
   }
 
   async upsert(jobData) {
-    const {uuid,name,action,data,source,triggered_at,status} = jobData;
+    const { uuid, name, action, data, source, triggered_at, status } = jobData;
 
     // Using MySQL's ON DUPLICATE KEY UPDATE
     const query = `
@@ -47,21 +47,13 @@ class FailedJobsModel {
       data = VALUES(data)
     `;
 
-    const params = [
-      uuid,
-        name,
-        action,
-        JSON.stringify(data),
-        source,
-        triggered_at,
-        status
-    ];
+    const params = [uuid, name, action, JSON.stringify(data), source, triggered_at, status];
     const result = await this.pool.execute(query, params);
     console.log('[FailedJobsModel] Success insert failed job:', result);
-  } catch (error) {
-    console.error( new Error(`[FailedJobsModel] Failed to create job: ${error.message}`) );
   }
-
+  catch(error) {
+    console.error(new Error(`[FailedJobsModel] Failed to create job: ${error.message}`));
+  }
 
   async findById(id) {
     const query = `
@@ -103,13 +95,18 @@ class FailedJobsModel {
       WHERE id = ?
     `;
 
-    console.log("FailedJobsModel.update statement", commonService.replaceSqlPlaceholders(sql, [...values, id]))
+    console.log(
+      'FailedJobsModel.update statement',
+      commonService.replaceSqlPlaceholders(sql, [...values, id]),
+    );
 
     try {
       const result = await this.pool.execute(sql, [...values, id]);
       return result.affectedRows > 0;
     } catch (error) {
-      console.error(new Error(`[FailedJobModel][Update] Failed to update failed jobs table: ${error}`));
+      console.error(
+        new Error(`[FailedJobModel][Update] Failed to update failed jobs table: ${error}`),
+      );
     }
   }
 
@@ -144,8 +141,11 @@ class FailedJobsModel {
   }
 
   async query(sql, params) {
-    console.log("FailedJobsModel.query statement", commonService.replaceSqlPlaceholders(sql, params))
-    try{
+    console.log(
+      'FailedJobsModel.query statement',
+      commonService.replaceSqlPlaceholders(sql, params),
+    );
+    try {
       const rows = await this.pool.query(sql, params);
       return {
         data: rows,

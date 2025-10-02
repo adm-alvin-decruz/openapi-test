@@ -1,27 +1,20 @@
-const cognitoService = require("../services/cognitoService");
-const { getOrCheck } = require("../utils/cognitoAttributes");
-const loggerService = require("../logs/logger");
-const MembershipErrors = require("../config/https/errors/membershipErrors");
-const { getPassType } = require("./dbConfigsHelpers")
+const cognitoService = require('../services/cognitoService');
+const { getOrCheck } = require('../utils/cognitoAttributes');
+const loggerService = require('../logs/logger');
+const MembershipErrors = require('../config/https/errors/membershipErrors');
+const { getPassType } = require('./dbConfigsHelpers');
 
 async function updateMembershipInCognito(data) {
   try {
-    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(
-      data.email
-    );
-    const existingMemberships = JSON.parse(
-      getOrCheck(cognitoUser, "custom:membership")
-    );
+    const cognitoUser = await cognitoService.cognitoAdminGetUserByEmail(data.email);
+    const existingMemberships = JSON.parse(getOrCheck(cognitoUser, 'custom:membership'));
 
     // reformat "custom:membership" to JSON array
-    const updatedMemberships = await formatCustomMembershipAttribute(
-      data,
-      existingMemberships
-    );
+    const updatedMemberships = await formatCustomMembershipAttribute(data, existingMemberships);
     let updateParams = [
-      { Name: "custom:membership", Value: JSON.stringify(updatedMemberships) },
-      { Name: "custom:vehicle_iu", Value: data.iu || "null" },
-      { Name: "custom:vehicle_plate", Value: data.carPlate || "null" },
+      { Name: 'custom:membership', Value: JSON.stringify(updatedMemberships) },
+      { Name: 'custom:vehicle_iu', Value: data.iu || 'null' },
+      { Name: 'custom:vehicle_plate', Value: data.carPlate || 'null' },
     ];
 
     loggerService.log(
@@ -31,42 +24,37 @@ async function updateMembershipInCognito(data) {
           existingMemberships: JSON.stringify(existingMemberships),
           updatedMemberships: JSON.stringify(updatedMemberships),
           params: JSON.stringify(updateParams),
-          layer: "userMembershipPassService.updateMembershipInCognito",
+          layer: 'userMembershipPassService.updateMembershipInCognito',
         },
       },
-      "Start updateMembershipInCognito"
+      'Start updateMembershipInCognito',
     );
     // update cognito custom membership
-    let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(
-      updateParams,
-      data.email
-    );
+    let cognitoResult = await cognitoService.cognitoAdminUpdateNewUser(updateParams, data.email);
 
     loggerService.log(
       {
         user: {
           userEmail: data.email,
-          layer: "userMembershipPassService.updateMembershipInCognito",
+          layer: 'userMembershipPassService.updateMembershipInCognito',
           data: JSON.stringify(cognitoResult),
         },
       },
-      "End updateMembershipInCognito - Success"
+      'End updateMembershipInCognito - Success',
     );
   } catch (error) {
     loggerService.error(
       {
         user: {
           userEmail: data.email,
-          layer: "userMembershipPassService.updateMembershipInCognito",
+          layer: 'userMembershipPassService.updateMembershipInCognito',
           error: new Error(error),
         },
       },
       {},
-      "End updateMembershipInCognito - Failed"
+      'End updateMembershipInCognito - Failed',
     );
-    JSON.stringify(
-      MembershipErrors.ciamMembershipUserNotFound(data.email, data.language)
-    );
+    JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(data.email, data.language));
   }
 }
 
@@ -87,7 +75,7 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
     let updatedMemberships;
     // Check if any existing membership needs to be updated based on visualId
     const membershipToUpdateIdx = existingMemberships.findIndex(
-      (membership) => membership.visualID === newMembership.visualID
+      (membership) => membership.visualID === newMembership.visualID,
     );
 
     if (membershipToUpdateIdx >= 0) {
@@ -100,7 +88,7 @@ async function formatCustomMembershipAttribute(data, existingMemberships) {
   }
 
   //handle old format membership in Cognito
-  if (typeof existingMemberships === "object") {
+  if (typeof existingMemberships === 'object') {
     // Check if any existing membership needs to be updated based on visualId
     return existingMemberships.visualID === newMembership.visualID
       ? [newMembership]
@@ -125,11 +113,13 @@ function parseCognitoAttributeObject(userCognito) {
   }
 
   const attributes = {};
-  userCognito.UserAttributes.forEach((attr) => { attributes[attr.Name] = attr.Value });
+  userCognito.UserAttributes.forEach((attr) => {
+    attributes[attr.Name] = attr.Value;
+  });
   return { ...attributes };
 }
 
 module.exports = {
   updateMembershipInCognito,
-  parseCognitoAttributeObject
+  parseCognitoAttributeObject,
 };

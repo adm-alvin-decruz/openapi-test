@@ -6,15 +6,15 @@ const loggerService = require('../../logs/logger');
 // Mock dependencies
 jest.mock('../../db/connections/mysqlConn', () => ({
   execute: jest.fn(),
-  query: jest.fn()
+  query: jest.fn(),
 }));
 
 jest.mock('../../services/commonService', () => ({
-  replaceSqlPlaceholders: jest.fn()
+  replaceSqlPlaceholders: jest.fn(),
 }));
 
 jest.mock('../../logs/logger', () => ({
-  error: jest.fn()
+  error: jest.fn(),
 }));
 
 describe('Switch Model', () => {
@@ -27,7 +27,7 @@ describe('Switch Model', () => {
       const mockData = {
         name: 'test_switch',
         switch: 1,
-        description: 'Test switch'
+        description: 'Test switch',
       };
       const mockResult = { insertId: 1 };
       const mockSqlStatement = 'INSERT statement';
@@ -37,13 +37,14 @@ describe('Switch Model', () => {
 
       const result = await Switch.create(mockData);
 
-      expect(pool.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO switches'),
-        [mockData.name, mockData.switch, mockData.description]
-      );
+      expect(pool.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO switches'), [
+        mockData.name,
+        mockData.switch,
+        mockData.description,
+      ]);
       expect(result).toEqual({
         sql_statement: mockSqlStatement,
-        newsletter_id: mockResult.insertId
+        newsletter_id: mockResult.insertId,
       });
     });
 
@@ -51,7 +52,7 @@ describe('Switch Model', () => {
       const mockData = {
         name: 'test_switch',
         switch: 1,
-        description: 'Test switch'
+        description: 'Test switch',
       };
       const mockError = new Error('Database error');
 
@@ -73,10 +74,7 @@ describe('Switch Model', () => {
 
       const result = await Switch.findByName(mockName);
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT * FROM switches WHERE name = ?',
-        [mockName]
-      );
+      expect(pool.query).toHaveBeenCalledWith('SELECT * FROM switches WHERE name = ?', [mockName]);
       expect(result).toEqual(mockResult[0]);
     });
 
@@ -96,7 +94,7 @@ describe('Switch Model', () => {
     it('should find all switches successfully', async () => {
       const mockResult = [
         { id: 1, name: 'switch1' },
-        { id: 2, name: 'switch2' }
+        { id: 2, name: 'switch2' },
       ];
 
       pool.query.mockResolvedValue(mockResult);
@@ -121,7 +119,7 @@ describe('Switch Model', () => {
       const mockData = {
         name: 'updated_switch',
         switch: 0,
-        description: 'Updated description'
+        description: 'Updated description',
       };
       const mockResult = { affectedRows: 1 };
       const mockSqlStatement = 'UPDATE statement';
@@ -131,13 +129,15 @@ describe('Switch Model', () => {
 
       const result = await Switch.update(mockId, mockData);
 
-      expect(pool.execute).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE switches'),
-        [mockData.name, mockData.switch, mockData.description, mockId]
-      );
+      expect(pool.execute).toHaveBeenCalledWith(expect.stringContaining('UPDATE switches'), [
+        mockData.name,
+        mockData.switch,
+        mockData.description,
+        mockId,
+      ]);
       expect(result).toEqual({
         sql_statement: mockSqlStatement,
-        newsletter_id: mockResult.affectedRows
+        newsletter_id: mockResult.affectedRows,
       });
     });
 
@@ -146,7 +146,7 @@ describe('Switch Model', () => {
       const mockData = {
         name: 'updated_switch',
         switch: 0,
-        description: 'Updated description'
+        description: 'Updated description',
       };
       const mockError = new Error('Database error');
 
@@ -160,7 +160,7 @@ describe('Switch Model', () => {
     it('should update multiple switches successfully', async () => {
       const mockReqBody = [
         { id: 1, switch: 1, description: 'Switch 1' },
-        { id: 2, switch: 0, description: 'Switch 2' }
+        { id: 2, switch: 0, description: 'Switch 2' },
       ];
       const mockResult = { affectedRows: 1 };
       const mockSqlStatement = 'UPDATE statement';
@@ -176,9 +176,7 @@ describe('Switch Model', () => {
     });
 
     it('should handle updateMultiple error', async () => {
-      const mockReqBody = [
-        { id: 1, switch: 1, description: 'Switch 1' }
-      ];
+      const mockReqBody = [{ id: 1, switch: 1, description: 'Switch 1' }];
       const mockError = new Error('Database error');
 
       pool.execute.mockRejectedValue(mockError);
@@ -201,10 +199,7 @@ describe('Switch Model', () => {
 
       const result = await Switch.delete(mockId);
 
-      expect(pool.execute).toHaveBeenCalledWith(
-        'DELETE FROM switches WHERE id = ?',
-        [mockId]
-      );
+      expect(pool.execute).toHaveBeenCalledWith('DELETE FROM switches WHERE id = ?', [mockId]);
       expect(result).toHaveProperty('sql_statement');
       expect(result).toHaveProperty('newsletter_id');
     });

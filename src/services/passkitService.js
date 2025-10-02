@@ -1,6 +1,4 @@
-
-
-async function generateWildpass(req){
+async function generateWildpass(req) {
   // clean the request data for possible white space
   var reqBody = commonService.cleanData(req.body);
 
@@ -16,12 +14,12 @@ async function generateWildpass(req){
     email: reqBody.email,
     name: passName,
     group: reqBody.group,
-    mandaiID: reqBody.mandaiID
+    mandaiID: reqBody.mandaiID,
   };
 
   return lambdaService.lambdaInvokeFunction(event, functionName, req);
 }
 
 module.exports = {
-  generateWildpass
-}
+  generateWildpass,
+};

@@ -1,9 +1,9 @@
-require("dotenv").config();
-const appConfig = require("../../../../config/appConfig");
-const loggerService = require("../../../../logs/logger");
-const { maskKeyRandomly } = require("../../../../utils/common");
-const { getAccessToken } = require("./nopCommerceCommonService");
-const ApiUtils = require("../../../../utils/apiUtils");
+require('dotenv').config();
+const appConfig = require('../../../../config/appConfig');
+const loggerService = require('../../../../logs/logger');
+const { maskKeyRandomly } = require('../../../../utils/common');
+const { getAccessToken } = require('./nopCommerceCommonService');
+const ApiUtils = require('../../../../utils/apiUtils');
 
 const nopCommerceLoginUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
@@ -15,7 +15,7 @@ function generateBodyRequest(email, password, accessToken, storeId) {
     storeId: storeId,
     userName: email,
     password: password,
-    isGuestCustomerId: "0",
+    isGuestCustomerId: '0',
   };
 }
 /**
@@ -39,7 +39,7 @@ async function loginNopCommerce(email, password) {
     email,
     password,
     accessTokenInfo.accessToken,
-    accessTokenInfo.storeId
+    accessTokenInfo.storeId,
   );
   const dataLogger = {
     token: maskKeyRandomly(accessTokenInfo.accessToken),
@@ -48,54 +48,44 @@ async function loginNopCommerce(email, password) {
     password: maskKeyRandomly(password),
   };
   try {
-    loggerHandler("Start loginNopCommerce - Start", dataLogger);
-    const response = await ApiUtils.makeRequest(
-      nopCommerceLoginUrl,
-      "post",
-      {},
-      body
-    );
+    loggerHandler('Start loginNopCommerce - Start', dataLogger);
+    const response = await ApiUtils.makeRequest(nopCommerceLoginUrl, 'post', {}, body);
 
     //retry one time when token is expired
-    if (response && response.message === "Token Expired!") {
+    if (response && response.message === 'Token Expired!') {
       const newAccessToken = await getAccessToken(true);
       body.token = newAccessToken.accessToken;
       dataLogger.token = newAccessToken.accessToken;
-      const requestAgain = await ApiUtils.makeRequest(
-        nopCommerceLoginUrl,
-        "post",
-        {},
-        body
-      );
-      loggerHandler("End loginNopCommerce Service - Success", {
+      const requestAgain = await ApiUtils.makeRequest(nopCommerceLoginUrl, 'post', {}, body);
+      loggerHandler('End loginNopCommerce Service - Success', {
         ...dataLogger,
         response: JSON.stringify(requestAgain.MembershipLoginResult),
       });
       return requestAgain;
     }
-    loggerHandler("End loginNopCommerce Service - Success", {
+    loggerHandler('End loginNopCommerce Service - Success', {
       ...dataLogger,
       response: JSON.stringify(response),
     });
     return response;
   } catch (error) {
     loggerHandler(
-      "End loginNopCommerce Service - Failed",
+      'End loginNopCommerce Service - Failed',
       {
         ...dataLogger,
         error,
       },
-      "error"
+      'error',
     );
     return undefined;
   }
 }
 
-function loggerHandler(action, info, type = "log") {
+function loggerHandler(action, info, type = 'log') {
   const loggerObj = {
     nopCommerceService: {
       path: nopCommerceLoginUrl,
-      layer: "nopCommerceService.loginNopCommerce",
+      layer: 'nopCommerceService.loginNopCommerce',
       data: {
         token: maskKeyRandomly(info.token) || undefined,
         storeId: info.storeId,
@@ -112,11 +102,7 @@ function loggerHandler(action, info, type = "log") {
   }
 
   return info.error
-    ? loggerService[`${type}`](
-        loggerObj,
-        { apiPath: nopCommerceLoginUrl },
-        action
-      )
+    ? loggerService[`${type}`](loggerObj, { apiPath: nopCommerceLoginUrl }, action)
     : loggerService[`${type}`](loggerObj, action);
 }
 

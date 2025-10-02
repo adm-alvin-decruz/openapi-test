@@ -1,4 +1,4 @@
-require("dotenv").config();
+require('dotenv').config();
 
 const errorHandler = (err, req, res, next) => {
   // log the full error for debugging (to your server logs, not to the client)
@@ -9,13 +9,16 @@ const errorHandler = (err, req, res, next) => {
 
   // return a sanitized error response
   res.status(statusCode).json({
-    status: "failed",
+    status: 'failed',
     statusCode: statusCode,
     error: {
-      message: process.env.APP_ENV === 'prod' ? 'An error occurred' : err.message || 'Internal Server Error',
+      message:
+        process.env.APP_ENV === 'prod'
+          ? 'An error occurred'
+          : err.message || 'Internal Server Error',
       // optionally include a code for client-side handling
-      code: err.code || 'UNKNOWN_ERROR'
-    }
+      code: err.code || 'UNKNOWN_ERROR',
+    },
   });
 };
 

@@ -16,12 +16,12 @@ class UserNewsletter {
       newsletterData.type,
       newsletterData.subscribe,
       now,
-      now
+      now,
     ];
     const result = await pool.execute(sql, params);
     return {
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      newsletter_id: result.insertId
+      newsletter_id: result.insertId,
     };
   }
 
@@ -30,16 +30,13 @@ class UserNewsletter {
     return await pool.query(sql, [userId]);
   }
 
-  static async findNewsletter(user_id, data){
-    try{
+  static async findNewsletter(user_id, data) {
+    try {
       const sql = 'SELECT * FROM user_newsletters WHERE user_id = ? AND name = ? AND type =?';
-      const params = [
-        user_id, data.name, data.type
-      ];
+      const params = [user_id, data.name, data.type];
       const rows = await pool.execute(sql, params);
       return rows[0];
-    }
-    catch (error){
+    } catch (error) {
       return error;
     }
   }
@@ -63,18 +60,14 @@ class UserNewsletter {
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(userData).filter(value => value !== undefined),
-      now,
-      id
-    ];
+    const params = [...Object.values(userData).filter((value) => value !== undefined), now, id];
 
     // Execute the query
     const result = await pool.execute(sql, params);
 
     return {
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.insertId
+      user_id: result.insertId,
     };
   }
 
@@ -83,8 +76,8 @@ class UserNewsletter {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([key, value]) => value !== undefined)
+      .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');
@@ -97,18 +90,14 @@ class UserNewsletter {
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(userData).filter(value => value !== undefined),
-      now,
-      userId
-    ];
+    const params = [...Object.values(userData).filter((value) => value !== undefined), now, userId];
 
     // Execute the query
     const result = await pool.execute(sql, params);
 
     return {
       sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-      user_id: result.insertId
+      user_id: result.insertId,
     };
   }
 
@@ -118,15 +107,14 @@ class UserNewsletter {
   }
 
   static async deletebyUserID(user_id) {
-    try{
+    try {
       const sql = 'DELETE FROM user_newsletters WHERE user_id = ?';
       var result = await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
         sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
       });
-    }
-    catch (error){
+    } catch (error) {
       throw error;
     }
   }

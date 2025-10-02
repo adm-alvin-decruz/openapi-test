@@ -1,9 +1,12 @@
 // src/api/users/myAccount/passwordless/createChallenge.js
-const validator = require("validator");
-const { messageLang } = require("../../../../utils/common");
-const PasswordlessSendCodeService = require("./passwordlessSendCodeServices");
-const { getUserFromDBCognito, isUserExisted } = require("../../helpers/userUpdateMembershipPassesHelper");
-const emailService = require("../../usersEmailService");
+const validator = require('validator');
+const { messageLang } = require('../../../../utils/common');
+const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
+const {
+  getUserFromDBCognito,
+  isUserExisted,
+} = require('../../helpers/userUpdateMembershipPassesHelper');
+const emailService = require('../../usersEmailService');
 
 /**
  * Create
@@ -18,21 +21,21 @@ module.exports = async function createChallenge(req) {
   const isNewUser = !isUserExisted(userInfo);
 
   if (isNewUser) {
-    const emailSanitised = validator.isEmail(email) ? email.trim() : "";
+    const emailSanitised = validator.isEmail(email) ? email.trim() : '';
     return {
       auth: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_SIGNUP_NOT_SUPPORTED",
-        message: "OTP signup is currently not supported.",
+        mwgCode: 'MWG_CIAM_USERS_SIGNUP_NOT_SUPPORTED',
+        message: 'OTP signup is currently not supported.',
         email: emailSanitised,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
 
   //Generate code (interval/expiry/salt handled in service)
-  const codeData = await PasswordlessSendCodeService.generateCode(req, "login");
+  const codeData = await PasswordlessSendCodeService.generateCode(req, 'login');
 
   await emailService.emailServiceAPI(req, true, codeData);
 
@@ -41,12 +44,12 @@ module.exports = async function createChallenge(req) {
 
   return {
     auth: {
-      method: "passwordless",
+      method: 'passwordless',
       code: 200,
-      mwgCode: "MWG_CIAM_USERS_OTP_SENT_SUCCESS",
-      message: messageLang("sendCode_success", req.body.language),
+      mwgCode: 'MWG_CIAM_USERS_OTP_SENT_SUCCESS',
+      message: messageLang('sendCode_success', req.body.language),
     },
-    status: "success",
+    status: 'success',
     statusCode: 200,
   };
 };

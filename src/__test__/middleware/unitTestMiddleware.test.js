@@ -20,12 +20,12 @@ describe('ValidationMiddleware', () => {
     // Setup mock request, response, and next function
     mockReq = {
       method: 'POST',
-      body: {}
+      body: {},
     };
 
     mockRes = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn()
+      json: jest.fn(),
     };
 
     mockNext = jest.fn();
@@ -33,7 +33,7 @@ describe('ValidationMiddleware', () => {
     // Setup default response helper mock
     resHelper.formatMiddlewareRes.mockImplementation((status, msg) => ({
       status,
-      message: msg
+      message: msg,
     }));
   });
 
@@ -68,7 +68,7 @@ describe('ValidationMiddleware', () => {
       expect(mockRes.status).not.toHaveBeenCalled();
     });
 
-    ['PUT', 'PATCH'].forEach(method => {
+    ['PUT', 'PATCH'].forEach((method) => {
       it(`should validate empty request body for ${method} requests`, () => {
         mockReq.method = method;
         mockReq.body = {};
@@ -104,7 +104,10 @@ describe('ValidationMiddleware', () => {
 
       await validationMiddleware.validateEmail(mockReq, mockRes, mockNext);
 
-      expect(loggerService.error).toHaveBeenCalledWith('Invalid email format invalid-email', mockReq);
+      expect(loggerService.error).toHaveBeenCalledWith(
+        'Invalid email format invalid-email',
+        mockReq,
+      );
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(resHelper.formatMiddlewareRes).toHaveBeenCalledWith(400, 'The email is invalid');
     });

@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const argon2 = require('argon2');
 
 class PasswordService {
-
   /**
    * Function to generate a password based on the specified policy
    *

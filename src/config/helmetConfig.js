@@ -1,4 +1,4 @@
-const helmet = require("helmet");
+const helmet = require('helmet');
 
 const helmetMiddleware = helmet({
   //CSP
@@ -9,7 +9,7 @@ const helmetMiddleware = helmet({
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
-      imgSrc: ["'self'", "data:"],
+      imgSrc: ["'self'", 'data:'],
       styleSrc: ["'self'", "'unsafe-inline'"],
     },
   },
@@ -23,7 +23,7 @@ const helmetMiddleware = helmet({
 
   xssFilter: true, // Prevent reflected XSS attacks
   noSniff: true, // Prevent MIME type sniffing
-  frameguard: { action: "deny" }, // Prevent Click jacking
+  frameguard: { action: 'deny' }, // Prevent Click jacking
   hidePoweredBy: true, // Remove "X-Powered-By: Express"
 });
 

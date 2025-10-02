@@ -1,8 +1,8 @@
-require("dotenv").config();
-const appConfig = require("../../../../config/appConfig");
-const ApiUtils = require("../../../../utils/apiUtils");
-const loggerService = require("../../../../logs/logger");
-const passkitCommonService = require("./passkitCommonService");
+require('dotenv').config();
+const appConfig = require('../../../../config/appConfig');
+const ApiUtils = require('../../../../utils/apiUtils');
+const loggerService = require('../../../../logs/logger');
+const passkitCommonService = require('./passkitCommonService');
 
 const passkitGeneratorEndpoint = `${
   appConfig[`PASSKIT_URL_${process.env.APP_ENV.toUpperCase()}`]
@@ -27,37 +27,32 @@ async function retrievePasskit(data) {
     {
       passkitComponent: {
         data: JSON.stringify(body),
-        action: "retrievePasskit",
-        layer: "passkitCommonService.retrievePasskit",
+        action: 'retrievePasskit',
+        layer: 'passkitCommonService.retrievePasskit',
       },
     },
-    "Start retrievePasskit Service"
+    'Start retrievePasskit Service',
   );
 
   try {
     const headers = await passkitCommonService.setPasskitReqHeader();
-    const response = await ApiUtils.makeRequest(
-      passkitGeneratorEndpoint,
-      "post",
-      headers,
-        body
-    );
+    const response = await ApiUtils.makeRequest(passkitGeneratorEndpoint, 'post', headers, body);
     const rsHandler = ApiUtils.handleResponse(response);
     loggerService.log(
       {
         passkitComponent: {
-          action: "retrievePasskit",
-          layer: "passkitCommonService.retrievePasskit",
+          action: 'retrievePasskit',
+          layer: 'passkitCommonService.retrievePasskit',
           response: `${response}`,
         },
       },
-      "End retrievePasskit Service - Success"
+      'End retrievePasskit Service - Success',
     );
     return {
       visualId: data.visualId,
       urls: {
-        apple: rsHandler.applePassUrl ? rsHandler.applePassUrl : "",
-        google: rsHandler.googlePassUrl ? rsHandler.googlePassUrl : "",
+        apple: rsHandler.applePassUrl ? rsHandler.applePassUrl : '',
+        google: rsHandler.googlePassUrl ? rsHandler.googlePassUrl : '',
       },
     };
   } catch (error) {
@@ -65,24 +60,24 @@ async function retrievePasskit(data) {
       {
         passkitComponent: {
           data: JSON.stringify(body),
-          action: "retrievePasskit",
-          layer: "passkitCommonService.retrievePasskit",
-          error: new Error("error :", error),
+          action: 'retrievePasskit',
+          layer: 'passkitCommonService.retrievePasskit',
+          error: new Error('error :', error),
         },
       },
       {
         url: passkitGeneratorEndpoint,
-        method: "post",
+        method: 'post',
       },
-      "End retrievePasskit Service - Failed"
+      'End retrievePasskit Service - Failed',
     );
     //handle 404: case not yet add apple and google passkit
     if (error.message.includes('"status":404')) {
       return {
         visualId: data.visualId,
         urls: {
-          apple: "",
-          google: "",
+          apple: '',
+          google: '',
         },
       };
     }

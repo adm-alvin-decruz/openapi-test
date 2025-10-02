@@ -1,8 +1,8 @@
-const crypto = require("crypto");
-const cognitoService = require("../../../../services/cognitoService");
-const userCredentialModel = require("../../../../db/models/userCredentialModel");
-const loggerService = require("../../../../logs/logger");
-const { encrypt, decrypt } = require("../../../../utils/cryptoEnvelope");
+const crypto = require('crypto');
+const cognitoService = require('../../../../services/cognitoService');
+const userCredentialModel = require('../../../../db/models/userCredentialModel');
+const loggerService = require('../../../../logs/logger');
+const { encrypt, decrypt } = require('../../../../utils/cryptoEnvelope');
 
 async function getBridgePasswordIfAny(email) {
   const cred = await userCredentialModel.findByUserEmail(email);
@@ -19,12 +19,14 @@ async function getBridgePasswordIfAny(email) {
 async function getOrCreateBridgePassword(email) {
   const cred = await userCredentialModel.findByUserEmail(email);
   if (!cred) {
-    throw new Error(JSON.stringify({
-      statusCode: 400,
-      status: "failed",
-      message: "User not found",
-      mwgCode: "MWG_CIAM_USERS_NOT_FOUND"
-    }));
+    throw new Error(
+      JSON.stringify({
+        statusCode: 400,
+        status: 'failed',
+        message: 'User not found',
+        mwgCode: 'MWG_CIAM_USERS_NOT_FOUND',
+      }),
+    );
   }
 
   if (cred.passwordless_bridge_pw_enc) {
@@ -33,14 +35,14 @@ async function getOrCreateBridgePassword(email) {
       return plain;
     } catch (e) {
       loggerService.error(
-        { bridgePwService: { email, action: "decrypt", error: String(e) } },
+        { bridgePwService: { email, action: 'decrypt', error: String(e) } },
         {},
-        "[CIAM] Bridge PW decrypt failed"
+        '[CIAM] Bridge PW decrypt failed',
       );
     }
   }
 
-  const bridgePw = crypto.randomBytes(48).toString("base64url");
+  const bridgePw = crypto.randomBytes(48).toString('base64url');
 
   //Set once in Cognito
   await cognitoService.cognitoAdminSetUserPassword(email, bridgePw);
@@ -48,12 +50,12 @@ async function getOrCreateBridgePassword(email) {
   const enc = encrypt(bridgePw);
   await userCredentialModel.updateByUserEmail(email, {
     passwordless_bridge_pw_enc: enc,
-    passwordless_bridge_pw_set_at: new Date()
+    passwordless_bridge_pw_set_at: new Date(),
   });
 
   loggerService.log(
-    { bridgePwService: { email, action: "created_and_stored" } },
-    "[CIAM] Bridge PW created"
+    { bridgePwService: { email, action: 'created_and_stored' } },
+    '[CIAM] Bridge PW created',
   );
 
   return bridgePw;

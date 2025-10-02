@@ -1,4 +1,4 @@
-const UserConfirmResetPasswordService = require("./userConfirmResetPasswordService");
+const UserConfirmResetPasswordService = require('./userConfirmResetPasswordService');
 
 class UserConfirmResetPasswordJob {
   success(message) {

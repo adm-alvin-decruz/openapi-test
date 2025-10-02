@@ -7,7 +7,18 @@ const escape = require('escape-html');
 
 class FailedJobsSupportService {
   constructor() {
-    this.allowedFields = ["id","uuid","name","action","data","source","triggered_at","status","created_at","updated_at"];
+    this.allowedFields = [
+      'id',
+      'uuid',
+      'name',
+      'action',
+      'data',
+      'source',
+      'triggered_at',
+      'status',
+      'created_at',
+      'updated_at',
+    ];
     this.tableName = 'failed_jobs';
   }
   /**
@@ -24,7 +35,7 @@ class FailedJobsSupportService {
     NEW: 0,
     RETRIGGERED: 1,
     SUCCESS: 2,
-    FAILED: 3
+    FAILED: 3,
   };
 
   /**
@@ -33,13 +44,13 @@ class FailedJobsSupportService {
   static SOURCE_MAP = {
     SQS: 1,
     CIAM_MAIN: 2,
-    PASSKIT: 3
+    PASSKIT: 3,
   };
 
   // dynamic function caller using string method name
   async execute(methodName, ...args) {
     if (typeof this[methodName] === 'function') {
-        return this[methodName](...args);
+      return this[methodName](...args);
     }
     throw new Error(`Method ${methodName} not found`);
   }
@@ -62,17 +73,21 @@ class FailedJobsSupportService {
       const {
         page = page ? page : FailedJobsSupportService.DEFAULT_PAGE,
         pageSize = FailedJobsSupportService.DEFAULT_PAGE_SIZE,
-        limit, status, source, startDate, endDate,
+        limit,
+        status,
+        source,
+        startDate,
+        endDate,
         search = sanitizedSearch(search),
         fields = ['*'],
         sortBy = 'created_at',
-        sortOrder = 'DESC'
+        sortOrder = 'DESC',
       } = options.body;
 
       const sanitizedSearch = {
         name: this.sanitizeSearchTerm(search.name),
         action: this.sanitizeSearchTerm(search.action),
-        uuid: this.sanitizeSearchTerm(search.uuid)
+        uuid: this.sanitizeSearchTerm(search.uuid),
       };
 
       // Validate and sanitize field selection
@@ -105,28 +120,28 @@ class FailedJobsSupportService {
 
       // Enhanced search conditions
       if (search.name) {
-        const nameTerms = search.name.split(',').map(term => term.trim());
+        const nameTerms = search.name.split(',').map((term) => term.trim());
         if (nameTerms.length > 0) {
           const nameConditions = nameTerms.map(() => 'name LIKE ?').join(' OR ');
           conditions.push(`(${nameConditions})`);
-          nameTerms.forEach(term => params.push(`%${term}%`));
+          nameTerms.forEach((term) => params.push(`%${term}%`));
         }
       }
 
       if (search.action) {
-        const actionTerms = search.action.split(',').map(term => term.trim());
+        const actionTerms = search.action.split(',').map((term) => term.trim());
         if (actionTerms.length > 0) {
           const actionConditions = actionTerms.map(() => 'action LIKE ?').join(' OR ');
           conditions.push(`(${actionConditions})`);
-          actionTerms.forEach(term => params.push(`%${term}%`));
+          actionTerms.forEach((term) => params.push(`%${term}%`));
         }
       }
 
       if (search.uuid) {
         // For UUID, we can support exact match or partial match
-        const uuidTerms = search.uuid.split(',').map(term => term.trim());
+        const uuidTerms = search.uuid.split(',').map((term) => term.trim());
         if (uuidTerms.length > 0) {
-          const uuidConditions = uuidTerms.map(term => {
+          const uuidConditions = uuidTerms.map((term) => {
             // If the term is a complete UUID (36 characters)
             if (term.length === 36) {
               conditions.push('uuid = ?');
@@ -139,9 +154,7 @@ class FailedJobsSupportService {
         }
       }
 
-      const whereClause = conditions.length > 0
-        ? `WHERE ${conditions.join(' AND ')}`
-        : '';
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       // Get total count
       const countQuery = `
@@ -160,10 +173,7 @@ class FailedJobsSupportService {
         ORDER BY ${sortBy} ${sortOrder}
         LIMIT ? OFFSET ?
       `;
-      const rows = await failedJobsModel.query(
-        dataQuery,
-        [...params, limit, offset]
-      );
+      const rows = await failedJobsModel.query(dataQuery, [...params, limit, offset]);
 
       return {
         data: rows,
@@ -171,13 +181,13 @@ class FailedJobsSupportService {
           total: totalCount,
           page: page,
           limit: limit,
-          totalPages: Math.ceil(totalCount / limit)
+          totalPages: Math.ceil(totalCount / limit),
         },
         query: {
           fields: selectedFields,
           sortBy,
-          sortOrder
-        }
+          sortOrder,
+        },
       };
     } catch (error) {
       console.error(new Error(`[CIAM-SUPPORT] Failed to retrieve failed jobs: ${error}`));
@@ -197,13 +207,13 @@ class FailedJobsSupportService {
       return {
         message: `Successfully retriggered failed job: ${escape(req.body.uuid)}`,
         data: retrigger,
-        status: 'success'
+        status: 'success',
       };
     } else {
       return {
         message: `Failed to retrigger failed job: ${escape(req.body.uuid)}`,
         data: failedJob,
-        status: 'failed'
+        status: 'failed',
       };
     }
   }
@@ -220,17 +230,24 @@ class FailedJobsSupportService {
 
       // user migration - update user_migrations table for signup & sqs status
       let dbUpdate;
-      if(galaxySQS.$metadata.httpStatusCode === 200) {
-        if(failedJob.data.body.migrations){
+      if (galaxySQS.$metadata.httpStatusCode === 200) {
+        if (failedJob.data.body.migrations) {
           // update user migration table
           dbUpdate = await userDBService.updateUserMigration(req, 'signup', 'signupSQS');
         }
         // update failed job status
-        dbUpdate = await this.updateJobStatus(failedJob.id, FailedJobsSupportService.STATUS_MAP.RETRIGGERED);
+        dbUpdate = await this.updateJobStatus(
+          failedJob.id,
+          FailedJobsSupportService.STATUS_MAP.RETRIGGERED,
+        );
       }
       return dbUpdate;
     }
-    console.log(new Error(`[supportFailedJobsService] Failed job name: ${failedJob.name} and failed job action: ${failedJob.action} not supported`));
+    console.log(
+      new Error(
+        `[supportFailedJobsService] Failed job name: ${failedJob.name} and failed job action: ${failedJob.action} not supported`,
+      ),
+    );
     return false;
   }
 
@@ -242,7 +259,6 @@ class FailedJobsSupportService {
    * @returns {Promise<Object>} Updated job
    */
   async updateJobStatus(id, status, supportNotes = {}) {
-
     try {
       // Validate status
       if (!Object.values(FailedJobsSupportService.STATUS_MAP).includes(status)) {
@@ -257,9 +273,9 @@ class FailedJobsSupportService {
       const allowedFields = ['status', 'triggered_at'];
 
       let updateData = {
-            status: status,
-            triggered_at: getCurrentUTCTimestamp()
-      }
+        status: status,
+        triggered_at: getCurrentUTCTimestamp(),
+      };
 
       const updates = [];
       const values = [];
@@ -267,11 +283,11 @@ class FailedJobsSupportService {
       Object.entries(updateData).forEach(([key, value]) => {
         if (allowedFields.includes(key)) {
           updates.push(`${key} = ?`);
-          values.push(key === 'status' ? value : value)
+          values.push(key === 'status' ? value : value);
         }
       });
 
-      updateData = {updates: updates, values: values}
+      updateData = { updates: updates, values: values };
 
       // Update job
       await failedJobsModel.update(id, updateData);
@@ -303,14 +319,14 @@ class FailedJobsSupportService {
           timestamp: new Date().toISOString(),
           resolvedBy: metadata.resolvedBy || 'support_system',
           notes: metadata.notes || '',
-          reason: metadata.reason || 'Support completed'
-        }
+          reason: metadata.reason || 'Support completed',
+        },
       };
 
       // Update the job one last time before deletion
       await failedJobsModel.update(id, {
         status: FailedJobsSupportService.STATUS_MAP.SUCCESS,
-        data: updatedData
+        data: updatedData,
       });
 
       // Soft delete by moving to archive table or marking as deleted
@@ -372,17 +388,21 @@ class FailedJobsSupportService {
 
       // Check if this.allowedFields is defined and is an array
       if (!Array.isArray(this.allowedFields)) {
-        console.warn('[CIAM-SUPPORT] FailedJobsSupportService.validateFields: allowedFields is not properly initialized');
+        console.warn(
+          '[CIAM-SUPPORT] FailedJobsSupportService.validateFields: allowedFields is not properly initialized',
+        );
         return ['*'];
       }
 
-      const sanitizedFields = fields.filter(field =>
-        this.allowedFields.includes(field)
-      );
+      const sanitizedFields = fields.filter((field) => this.allowedFields.includes(field));
 
       return sanitizedFields.length > 0 ? sanitizedFields : ['*'];
     } catch (error) {
-      console.error(new Error(`[CIAM-SUPPORT] FailedJobsSupportService.validateFields Failed to validate fields: ${error}`));
+      console.error(
+        new Error(
+          `[CIAM-SUPPORT] FailedJobsSupportService.validateFields Failed to validate fields: ${error}`,
+        ),
+      );
       return ['*']; // Return a default value in case of error
     }
   }

@@ -1,9 +1,9 @@
 // src/api/users/myAccount/passwordless/verifyChallenge.js
-const PasswordlessVerifyCodeService = require("./passwordlessVerifyCodeServices");
-const UserLoginService = require("../../userLoginServices");
-const { messageLang } = require("../../../../utils/common");
-const appConfig = require("../../../../config/appConfig");
-const { getOrCreateBridgePassword } = require("./passwordlessBridgeService");
+const PasswordlessVerifyCodeService = require('./passwordlessVerifyCodeServices');
+const UserLoginService = require('../../userLoginServices');
+const { messageLang } = require('../../../../utils/common');
+const appConfig = require('../../../../config/appConfig');
+const { getOrCreateBridgePassword } = require('./passwordlessBridgeService');
 
 /**
  * Verify
@@ -39,14 +39,14 @@ module.exports = async function verifyChallenge(req) {
     return {
       auth: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
-        message: messageLang("login_success", language),
+        mwgCode: 'MWG_CIAM_USERS_LOGIN_SUCCESS',
+        message: messageLang('login_success', language),
         accessToken: loginResult.accessToken,
         mandaiId: loginResult.mandaiId,
         email: loginResult.email,
         callbackURL: callbackUrl,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   } catch (err) {

@@ -1,11 +1,11 @@
-const pool = require("../connections/mysqlConn");
-const {getCurrentUTCTimestamp, convertDateToMySQLFormat} = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class PasswordVersionModel {
   static async findByUserId(userId) {
-    const sql = "SELECT * FROM password_versions WHERE user_id = ? ORDER BY created_at DESC";
+    const sql = 'SELECT * FROM password_versions WHERE user_id = ? ORDER BY created_at DESC';
     const params = [userId];
     try {
       return await pool.query(sql, params);
@@ -14,11 +14,11 @@ class PasswordVersionModel {
         {
           passwordVersion: {
             userId,
-            error: new Error(error)
+            error: new Error(error),
           },
         },
         {},
-        "[CIAM-MAIN] PasswordVersionModel.findByUserId - Failed"
+        '[CIAM-MAIN] PasswordVersionModel.findByUserId - Failed',
       );
       throw error;
     }
@@ -26,12 +26,7 @@ class PasswordVersionModel {
 
   static async updateVersion(userId, id, version) {
     const sql = `UPDATE password_versions SET version = ?, updated_at = ? WHERE user_id = ? AND id = ?`;
-    const params = [
-      version,
-      getCurrentUTCTimestamp(),
-      userId,
-      id,
-    ];
+    const params = [version, getCurrentUTCTimestamp(), userId, id];
 
     try {
       // Execute the query
@@ -39,7 +34,7 @@ class PasswordVersionModel {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        success: true
+        success: true,
       };
     } catch (error) {
       loggerService.error(
@@ -52,18 +47,18 @@ class PasswordVersionModel {
           },
         },
         {},
-        "[CIAM-MAIN] PasswordVersionModel.updateVersion - Failed"
+        '[CIAM-MAIN] PasswordVersionModel.updateVersion - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }
 
   static async deleteVersionNegativeByUserID(userId) {
-    const sql = "DELETE FROM password_versions WHERE user_id = ? AND version <= 0";
+    const sql = 'DELETE FROM password_versions WHERE user_id = ? AND version <= 0';
     const params = [userId];
     try {
       await pool.execute(sql, params);
@@ -81,7 +76,7 @@ class PasswordVersionModel {
           },
         },
         {},
-        "[CIAM-MAIN] PasswordVersionModel.deleteVersionNegativeByUserID - Failed"
+        '[CIAM-MAIN] PasswordVersionModel.deleteVersionNegativeByUserID - Failed',
       );
       throw error;
     }
@@ -95,14 +90,14 @@ class PasswordVersionModel {
       return rows[0];
     } catch (error) {
       loggerService.error(
-          {
-            passwordVersion: {
-              userId,
-              error: new Error(error)
-            },
+        {
+          passwordVersion: {
+            userId,
+            error: new Error(error),
           },
-          {},
-          "[CIAM-MAIN] PasswordVersionModel.create - Failed"
+        },
+        {},
+        '[CIAM-MAIN] PasswordVersionModel.create - Failed',
       );
       throw error;
     }

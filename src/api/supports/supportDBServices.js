@@ -1,6 +1,6 @@
-const pool = require("../../db/connections/mysqlConn");
-const userModel = require("../../db/models/userModel");
-const userConfig = require("../../config/usersConfig");
+const pool = require('../../db/connections/mysqlConn');
+const userModel = require('../../db/models/userModel');
+const userConfig = require('../../config/usersConfig');
 
 async function getUserFullInfoByEmail(req) {
   const query = `
@@ -130,14 +130,14 @@ async function getUserFullInfoByEmail(req) {
 
     return response;
   } catch (error) {
-    console.error("Error fetching user info:", error);
+    console.error('Error fetching user info:', error);
     throw error;
   }
 }
 
 async function getUserPageCustomField(req) {
   try {
-    const data = req.method === "POST" ? req.body : req.query;
+    const data = req.method === 'POST' ? req.body : req.query;
     // Parse parameters
     const page = parseInt(data.page) || 1;
     const columns = parseColumns(data.columns);
@@ -161,22 +161,22 @@ function parseColumns(columns) {
   if (Array.isArray(columns)) {
     return columns;
   }
-  if (typeof columns === "string") {
-    return columns.split(",").map((col) => col.trim());
+  if (typeof columns === 'string') {
+    return columns.split(',').map((col) => col.trim());
   }
-  return ["*"];
+  return ['*'];
 }
 
 function parseFilters(filters) {
-  if (typeof filters === "string") {
+  if (typeof filters === 'string') {
     try {
       return JSON.parse(filters);
     } catch (error) {
-      console.error("Error parsing filters:", error);
+      console.error('Error parsing filters:', error);
       return {};
     }
   }
-  if (typeof filters === "object" && filters !== null) {
+  if (typeof filters === 'object' && filters !== null) {
     return filters;
   }
   return {};
@@ -204,7 +204,7 @@ async function findUserWithEmptyVisualID(req) {
     const results = await pool.query(query);
     return results;
   } catch (error) {
-    console.error("Error finding users with empty visual ID:", error);
+    console.error('Error finding users with empty visual ID:', error);
     throw error;
   }
 }

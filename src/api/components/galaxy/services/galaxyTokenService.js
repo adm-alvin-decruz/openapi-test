@@ -8,11 +8,11 @@ class TokenService {
     const data = querystring.stringify({
       grant_type: dbToken.credentials.grant_type,
       client_id: dbToken.credentials.client_id,
-      client_secret: dbToken.credentials.client_secret
+      client_secret: dbToken.credentials.client_secret,
     });
 
     const headers = {
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
     };
 
     const tokenURL = dbToken.configuration.token_url + dbToken.configuration.token_path;
@@ -57,7 +57,7 @@ class TokenService {
     return now > expiresAt;
   }
 
-  async updateTokenToDB(dbToken, tokenData){
+  async updateTokenToDB(dbToken, tokenData) {
     dbToken['token'] = tokenData;
     const expiresIn = tokenData.expires_in || 0;
     dbToken['expires_at'] = new Date(Date.now() + expiresIn * 1000);
@@ -65,22 +65,22 @@ class TokenService {
     return TokenModel.updateTokenData(dbToken);
   }
 
-  async useToken(){
+  async useToken() {
     const dbToken = await this.getToken('galaxy');
     let tokenType = '';
     let accessToken = '';
-    if(dbToken.token){
+    if (dbToken.token) {
       tokenType = dbToken.token.token_type;
       accessToken = dbToken.token.access_token;
-    }else{
+    } else {
       tokenType = dbToken.token_type;
       accessToken = dbToken.access_token;
     }
 
     return {
       token_type: tokenType,
-      access_token: accessToken
-    }
+      access_token: accessToken,
+    };
   }
 }
 

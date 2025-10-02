@@ -1,22 +1,22 @@
-const commonService = require("../../../../services/commonService");
-const loggerService = require("../../../../logs/logger");
-const createChallenge = require("./createChallenge");
-const verifyChallenge = require("./verifyChallenge");
-const { safeJsonParse } = require("../passwordless/passwordlessSendCodeHelpers");
+const commonService = require('../../../../services/commonService');
+const loggerService = require('../../../../logs/logger');
+const createChallenge = require('./createChallenge');
+const verifyChallenge = require('./verifyChallenge');
+const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 
 async function sendCode(req) {
   // clean the request data for possible white space
-  req["body"] = commonService.cleanData(req.body);
+  req['body'] = commonService.cleanData(req.body);
 
   try {
     loggerService.log(
       {
         user: {
           email: req.body.email,
-          layer: "controller.sendCode",
+          layer: 'controller.sendCode',
         },
       },
-      "[CIAM] Start Send OTP Request"
+      '[CIAM] Start Send OTP Request',
     );
 
     return await createChallenge(req);
@@ -25,12 +25,12 @@ async function sendCode(req) {
       {
         user: {
           email: req.body.email,
-          layer: "controller.sendCode",
+          layer: 'controller.sendCode',
           error: `${error}`,
         },
       },
       {},
-      "[CIAM] End Send Code Request - Failed"
+      '[CIAM] End Send Code Request - Failed',
     );
     // const errorMessage = JSON.parse(error.message);
     // throw new Error(JSON.stringify(errorMessage));
@@ -39,11 +39,13 @@ async function sendCode(req) {
     if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
-    throw new Error(JSON.stringify({
-      status: "failed",
-      statusCode: 500,
-      message: error.message || "Unknown error",
-    }));
+    throw new Error(
+      JSON.stringify({
+        status: 'failed',
+        statusCode: 500,
+        message: error.message || 'Unknown error',
+      }),
+    );
   }
 }
 
@@ -56,13 +58,13 @@ async function verifyCode(req) {
     loggerService.log(
       {
         user: {
-          email: req.body.email || "",
-          code: req.body.code || "",
-          magicToken: req.query.token || "",
-          layer: "controller.verifyCode",
+          email: req.body.email || '',
+          code: req.body.code || '',
+          magicToken: req.query.token || '',
+          layer: 'controller.verifyCode',
         },
       },
-      "[CIAM] Start Verify Code Request"
+      '[CIAM] Start Verify Code Request',
     );
 
     return await verifyChallenge(req);
@@ -70,15 +72,15 @@ async function verifyCode(req) {
     loggerService.error(
       {
         user: {
-          email: req.body.email || "",
-          code: req.body.code || "",
-          magicToken: req.query.token || "",
-          layer: "controller.verifyCode",
+          email: req.body.email || '',
+          code: req.body.code || '',
+          magicToken: req.query.token || '',
+          layer: 'controller.verifyCode',
           error: `${error}`,
         },
       },
       {},
-      "[CIAM] End Verify Code Request - Failed"
+      '[CIAM] End Verify Code Request - Failed',
     );
 
     // const errorMessage = JSON.parse(error.message);
@@ -88,11 +90,13 @@ async function verifyCode(req) {
     if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
-    throw new Error(JSON.stringify({
-      status: "failed",
-      statusCode: 500,
-      message: error.message || "Unknown error",
-    }));
+    throw new Error(
+      JSON.stringify({
+        status: 'failed',
+        statusCode: 500,
+        message: error.message || 'Unknown error',
+      }),
+    );
   }
 }
 

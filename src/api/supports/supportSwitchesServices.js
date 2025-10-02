@@ -2,8 +2,7 @@ const supportDBService = require('./supportDBServices');
 const SwitchesModel = require('../../db/models/switches/switchesModel');
 
 class SupportSwitchesServices {
-
-  static async getAllSwitchesService () {
+  static async getAllSwitchesService() {
     let result = {};
     result = await SwitchesModel.findAll();
 
@@ -11,7 +10,7 @@ class SupportSwitchesServices {
     return result;
   }
 
-  static async updateSwitchesService (req) {
+  static async updateSwitchesService(req) {
     return await SwitchesModel.updateMultiple(req.body);
   }
 

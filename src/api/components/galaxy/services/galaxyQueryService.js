@@ -19,14 +19,13 @@ class GalaxyQueryService {
 
       return ApiUtils.handleResponse(response);
     } catch (error) {
-
       throw ApiUtils.handleError(error);
     }
   }
 
   createRequestBody(inputData) {
     return {
-      VisualID: [inputData.visualID]
+      VisualID: [inputData.visualID],
     };
   }
 }

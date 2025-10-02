@@ -1,7 +1,7 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class UserCredentialEventsModel {
   static async create(userId, eventData) {
@@ -35,7 +35,7 @@ class UserCredentialEventsModel {
           },
         },
         {},
-        "[CIAM] UserCredentialEventsModel.create - Failed"
+        '[CIAM] UserCredentialEventsModel.create - Failed',
       );
     }
   }
