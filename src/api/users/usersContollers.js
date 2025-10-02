@@ -218,7 +218,7 @@ async function adminUpdateUser(req, listedParams) {
         }
       } else {
         // prepare error params response
-        errorConfig = commonService.processUserUpdateErrors(
+        const errorConfig = commonService.processUserUpdateErrors(
           validatedParams,
           req.body,
           'MWG_CIAM_USER_SIGNUP_ERR',
@@ -401,7 +401,7 @@ async function membershipResend(req) {
   }
 
   // prepare error params response
-  errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_PARAMS_ERR');
+  const errorConfig = usersService.processErrors(validatedParams, req.body, 'MWG_CIAM_PARAMS_ERR');
   // prepare logs
   let logObj = loggerService.build(
     'user',

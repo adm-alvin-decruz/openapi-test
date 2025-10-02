@@ -28,6 +28,15 @@ export default [
     ignores: ['node_modules', 'dist', 'build', 'coverage', '.husky', 'infra'],
   },
 
+  {
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+
   js.configs.recommended,
 
   ...(hasTypeScript && hasTsConfig
@@ -71,6 +80,7 @@ export default [
         process: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
+        console: 'readonly',
       },
     },
     rules: {

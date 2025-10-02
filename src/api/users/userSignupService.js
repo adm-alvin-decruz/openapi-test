@@ -33,22 +33,22 @@ class UserSignupService {
     }
   }
 
-  generateMandaiId(req, counter = 0, salt = '') {
+  generateMandaiId(req, _counter = 0, _salt = '') {
     const source = getSource(req.headers['mwg-app-id']);
     const groupKey = getGroup(req.body.group);
     const secret = process.env.USER_POOL_CLIENT_SECRET;
     if (!secret) throw new Error('Missing USER_POOL_CLIENT_SECRET');
 
-    const payload = [
-      groupKey,
-      source.sourceKey,
-      req.body.email,
-      req.body.dob,
-      req.body.firstName,
-      req.body.lastName,
-      counter,
-      salt,
-    ].join('|');
+    // const payload = [
+    //   groupKey,
+    //   source.sourceKey,
+    //   req.body.email,
+    //   req.body.dob,
+    //   req.body.firstName,
+    //   req.body.lastName,
+    //   counter,
+    //   salt,
+    // ].join('|');
 
     const hash = crypto
       .createHash('sha256')
@@ -56,15 +56,15 @@ class UserSignupService {
       .digest('hex');
     const numbers = hash.replace(/\D/g, '');
     return `M${groupKey}${source.sourceKey}${numbers.slice(0, 11)}`;
-    const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-    // 10 digits for fowp/fomp, else 11
-    const is10 = ['fowp', 'fomp'].includes(req.body.group);
-    const k = is10 ? 10n : 11n;
-    const mod = 10n ** k;
+    // const hex = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    // // 10 digits for fowp/fomp, else 11
+    // const is10 = ['fowp', 'fomp'].includes(req.body.group);
+    // const k = is10 ? 10n : 11n;
+    // const mod = 10n ** k;
 
-    const tail = (BigInt('0x' + hex) % mod).toString().padStart(Number(k), '0');
+    // const tail = (BigInt('0x' + hex) % mod).toString().padStart(Number(k), '0');
 
-    return `M${groupKey}${source.sourceKey}${tail}`;
+    // return `M${groupKey}${source.sourceKey}${tail}`;
   }
 
   userModelExecution(userData) {
@@ -189,6 +189,7 @@ class UserSignupService {
         created_at: getCurrentUTCTimestamp(),
       });
     } catch (error) {
+      console.log(error);
       await failedJobsModel.create({
         uuid: crypto.randomUUID(),
         name: 'failedCreateNewUser',
