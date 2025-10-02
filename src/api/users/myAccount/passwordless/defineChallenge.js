@@ -42,7 +42,10 @@ async function shouldIssueChallenge(req) {
   return { proceed: true, purpose };
 }
 
-//Define step before verify
+/**
+ * Define step before verify.
+ * Decide whether to issue a challenge.
+ */
 async function defineForVerify(req) {
   const { email } = req.body || {};
 
@@ -53,7 +56,7 @@ async function defineForVerify(req) {
     req.body.code = decryptedToken.otp;
   }
 
-  //pre-check against latest token if the challenge still valid
+  // Check for max attempt for last retrieved token
   const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName(
     'passwordless-otp',
     'otp-config',
@@ -73,7 +76,7 @@ async function defineForVerify(req) {
     return { proceed: false, reason: 'expired' };
   }
 
-  const tooMany = (token.attempt || 0) > MAX_ATTEMPTS;
+  const tooMany = token.attempt >= MAX_ATTEMPTS;
   if (tooMany) {
     return { proceed: false, reason: 'rate_limit' };
   }

@@ -147,7 +147,6 @@ router.post(
     req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
 
-    // validate req app-id
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
       req.apiTimer.end('Route CIAM Login User Error 401 Unauthorized', startTimer);
