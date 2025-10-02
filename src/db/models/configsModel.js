@@ -1,12 +1,12 @@
-const pool = require("../connections/mysqlConn");
-const loggerService = require("../../logs/logger");
-const commonService = require("../../services/commonService");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
+const pool = require('../connections/mysqlConn');
+const loggerService = require('../../logs/logger');
+const commonService = require('../../services/commonService');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
 
 class Configs {
   static async findByConfigKey(config, key) {
-    const params = [config, key]
-    const sql = "SELECT * FROM configs WHERE config = ? AND `key` = ?";
+    const params = [config, key];
+    const sql = 'SELECT * FROM configs WHERE config = ? AND `key` = ?';
     try {
       const [rows] = await pool.query(sql, params);
       return rows;
@@ -21,7 +21,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.findByConfigKey - Failed"
+        '[CIAM-MAIN] ConfigsModel.findByConfigKey - Failed',
       );
     }
   }
@@ -40,7 +40,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.findAll - Failed"
+        '[CIAM-MAIN] ConfigsModel.findAll - Failed',
       );
       throw new Error(`Error reading all configs: ${error}`);
     }
@@ -60,7 +60,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.findByConfig - Failed"
+        '[CIAM-MAIN] ConfigsModel.findByConfig - Failed',
       );
       throw new Error(`Error reading all configs: ${error}`);
     }
@@ -72,7 +72,7 @@ class Configs {
     try {
       await pool.execute(sql, [id]);
       return {
-        message: "delete config successfully!"
+        message: 'delete config successfully!',
       };
     } catch (error) {
       loggerService.error(
@@ -83,20 +83,21 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.delete - Failed"
+        '[CIAM-MAIN] ConfigsModel.delete - Failed',
       );
       throw new Error(`Error delete configs: ${error}`);
     }
   }
 
   static async create(data) {
-    const sql = "INSERT INTO configs (config, `key`, value, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())"
+    const sql =
+      'INSERT INTO configs (config, `key`, value, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())';
     const params = [data.config, data.key, data.value];
 
     try {
       await pool.execute(sql, params);
       return {
-        message: "create config successfully!"
+        message: 'create config successfully!',
       };
     } catch (error) {
       loggerService.error(
@@ -107,7 +108,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.create - Failed"
+        '[CIAM-MAIN] ConfigsModel.create - Failed',
       );
       throw new Error(`Error create configs: ${error}`);
     }
@@ -118,30 +119,26 @@ class Configs {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE configs
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(data).filter((value) => value !== undefined),
-      now,
-      id
-    ];
+    const params = [...Object.values(data).filter((value) => value !== undefined), now, id];
 
     try {
       await pool.execute(sql, params);
       return {
-        message: "update config successfully!"
+        message: 'update config successfully!',
       };
     } catch (error) {
       loggerService.error(
@@ -152,7 +149,7 @@ class Configs {
           },
         },
         {},
-        "[CIAM-MAIN] ConfigsModel.update - Failed"
+        '[CIAM-MAIN] ConfigsModel.update - Failed',
       );
       throw new Error(`Error update configs: ${error}`);
     }
