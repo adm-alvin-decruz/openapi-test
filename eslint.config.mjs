@@ -16,7 +16,6 @@ try {
   hasTypeScript = false;
 }
 
-// ✅ reusable test file glob
 const jestFiles = [
   '**/*.test.{js,ts,tsx}',
   '**/*.spec.{js,ts,tsx}',
@@ -25,10 +24,12 @@ const jestFiles = [
 ];
 
 export default [
-  // Base JS rules
+  {
+    ignores: ['node_modules', 'dist', 'build', 'coverage', '.husky', 'infra'],
+  },
+
   js.configs.recommended,
 
-  // If TS is present, add TS rules
   ...(hasTypeScript && hasTsConfig
     ? [
         ...tseslint.configs.recommendedTypeChecked,
@@ -52,13 +53,12 @@ export default [
                 caughtErrorsIgnorePattern: '^_',
               },
             ],
-            'no-undef': 'off', // TS compiler already enforces this
+            'no-undef': 'off',
           },
         },
       ]
     : []),
 
-  // JavaScript (CommonJS) overrides
   {
     files: ['**/*.js', '**/*.cjs'],
     plugins: { n },
@@ -71,7 +71,6 @@ export default [
         process: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
-        Buffer: 'readonly',
       },
     },
     rules: {
@@ -90,7 +89,6 @@ export default [
     },
   },
 
-  // Jest test files
   {
     files: jestFiles,
     languageOptions: {
@@ -109,6 +107,5 @@ export default [
     },
   },
 
-  // Prettier config last to disable conflicting stylistic rules
   prettierConfig,
 ];
