@@ -217,7 +217,13 @@ class Cognito {
       throw new Error(
         JSON.stringify({
           status: 'failed',
-          data: error,
+          data: {
+            name: error.name,
+            message: error.message,
+            __type: error.__type,
+            $fault: error.$fault,
+            $metadata: error.$metadata,
+          },
         }),
       );
     }
