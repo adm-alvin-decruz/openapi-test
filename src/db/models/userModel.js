@@ -95,7 +95,7 @@ class User {
       loggerService.error(
         {
           userModel: {
-            userId: id,
+            userId: mandaiId,
             error: `${error}`,
           },
         },
@@ -287,8 +287,8 @@ class User {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');
@@ -338,8 +338,8 @@ class User {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');
@@ -387,7 +387,7 @@ class User {
   static async deletebyUserID(user_id) {
     const sql = 'DELETE FROM users WHERE id = ?';
     try {
-      var result = await pool.execute(sql, [user_id]);
+      await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
         sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
@@ -594,8 +594,8 @@ class User {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');

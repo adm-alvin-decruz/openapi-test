@@ -16,6 +16,7 @@ const empMembershipUserAccountsModel = require('../../db/models/empMembershipUse
 const switchService = require('../../services/switchService');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userSignupHelper = require('./usersSignupHelper');
+const { secrets } = require('../../services/secretsService');
 
 class UserSignupService {
   async isUserExistedInCognito(email) {
@@ -33,11 +34,11 @@ class UserSignupService {
     }
   }
 
-  generateMandaiId(req, counter = 0, salt = '') {
+  async generateMandaiId(req, counter = 0, salt = '') {
     const source = getSource(req.headers['mwg-app-id']);
     const groupKey = getGroup(req.body.group);
-    const secret = process.env.USER_POOL_CLIENT_SECRET;
-    if (!secret) throw new Error('Missing USER_POOL_CLIENT_SECRET');
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+    const secret = ciamSecrets.USER_POOL_CLIENT_SECRET;
 
     const payload = [
       groupKey,
