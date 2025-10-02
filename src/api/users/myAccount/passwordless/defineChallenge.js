@@ -7,7 +7,7 @@ const PasswordlessVerifyCodeService = require('./passwordlessVerifyCodeServices'
  * Define step before create.
  * Decide whether to issue a challenge.
  */
-async function defineForCreate(req) {
+async function shouldIssueChallenge(req) {
   const { email, purpose = 'login' } = req.body || {};
 
   //check flag for send otp and email
@@ -19,6 +19,7 @@ async function defineForCreate(req) {
       return { proceed: false, reason: 'send_disabled_signup' };
     }
   }
+
   if (!sendEnabled) {
     return { proceed: false, reason: 'send_disabled_login' };
   }
@@ -104,7 +105,7 @@ function mapDefineReasonToHelperKey(reason) {
 }
 
 module.exports = {
-  defineForCreate,
+  shouldIssueChallenge,
   defineForVerify,
   mapDefineCreateReasonToHelperKey,
   mapDefineReasonToHelperKey,
