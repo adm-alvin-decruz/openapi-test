@@ -19,11 +19,11 @@ require('dotenv').config();
  * @param {json} userDBData
  * @returns
  */
-async function deleteDBUserInfo(userDBData){
+async function deleteDBUserInfo(userDBData) {
   const user_id = userDBData.id;
 
-  try{
-    if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+  try {
+    if (['dev', 'uat'].includes(process.env.APP_ENV)) {
       // delete from user's details table
       let userDetail = await userDetailModel.deletebyUserID(user_id);
       // delete from user's memberships table
@@ -40,23 +40,21 @@ async function deleteDBUserInfo(userDBData){
         user_membership: userMembership,
         user_newsletter: userNewsletter,
         user_credential: userCredential,
-        user: user
+        user: user,
       };
     }
-  }
-  catch(error){
+  } catch (error) {
     let err = new Error(`usersDeleteHelpers.deleteDBUserInfo error: ${error}`);
     console.log(err);
     return err;
   }
 }
 
-async function disableDBUser(userDBData){
+async function disableDBUser(userDBData) {
   const user_id = userDBData.id;
-  try{
+  try {
     return await userModel.disableByUserID(user_id);
-  }
-  catch(error){
+  } catch (error) {
     let err = new Error(`usersDeleteHelpers.deleteDBUserInfo error: ${error}`);
     console.log(err);
     return err;
@@ -65,5 +63,5 @@ async function disableDBUser(userDBData){
 
 module.exports = {
   deleteDBUserInfo,
-  disableDBUser
-}
+  disableDBUser,
+};

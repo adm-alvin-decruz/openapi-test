@@ -1,16 +1,16 @@
-const axios = require("axios");
-const loggerService = require("../logs/logger");
-const CommonErrors = require("../config/https/errors/commonErrors");
-const { messageLang } = require("../utils/common");
+const axios = require('axios');
+const loggerService = require('../logs/logger');
+const CommonErrors = require('../config/https/errors/commonErrors');
+const { messageLang } = require('../utils/common');
 
 function captchaError(lang) {
   return {
     auth: {
       code: 403,
-      mwgCode: "MWG_CIAM_CAPTCHA_ERROR",
-      message: messageLang("captchaError", lang),
+      mwgCode: 'MWG_CIAM_CAPTCHA_ERROR',
+      message: messageLang('captchaError', lang),
     },
-    status: "error",
+    status: 'error',
     statusCode: 403,
   };
 }
@@ -19,10 +19,10 @@ function missingTokenError(lang) {
   return {
     auth: {
       code: 400,
-      mwgCode: "MWG_CIAM_CAPTCHA_TOKEN_MISSING",
-      message: messageLang("captchaMissing", lang),
+      mwgCode: 'MWG_CIAM_CAPTCHA_TOKEN_MISSING',
+      message: messageLang('captchaMissing', lang),
     },
-    status: "error",
+    status: 'error',
     statusCode: 400,
   };
 }
@@ -31,30 +31,30 @@ function missingSecretKeyError(lang) {
   return {
     auth: {
       code: 500,
-      mwgCode: "MWG_CIAM_CAPTCHA_SECRET_MISSING",
-      message: messageLang("captchaSecretKeyMissing", lang),
+      mwgCode: 'MWG_CIAM_CAPTCHA_SECRET_MISSING',
+      message: messageLang('captchaSecretKeyMissing', lang),
     },
-    status: "error",
+    status: 'error',
     statusCode: 500,
   };
 }
 
 async function verifyTurnstile(req, res, next) {
   try {
-    const email = req.body.email || req.query.email || "unknown";
+    const email = req.body.email || req.query.email || 'unknown';
     const token = req.body.captchaToken;
-    const lang = req.body.language || req.query.language || "en";
+    const lang = req.body.language || req.query.language || 'en';
 
     loggerService.log(
       {
         user: {
           email,
-          layer: "Middleware.verifyTurnstile",
-          action: "start",
-          message: "Starting Turnstile verification",
+          layer: 'Middleware.verifyTurnstile',
+          action: 'start',
+          message: 'Starting Turnstile verification',
         },
       },
-      "[CIAM] Captcha Verification Start"
+      '[CIAM] Captcha Verification Start',
     );
 
     const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
@@ -63,14 +63,14 @@ async function verifyTurnstile(req, res, next) {
         {
           user: {
             email,
-            layer: "Middleware.verifyTurnstile",
-            action: "missing-secret",
+            layer: 'Middleware.verifyTurnstile',
+            action: 'missing-secret',
           },
         },
         {},
-        "[CIAM] Turnstile secret not configured"
+        '[CIAM] Turnstile secret not configured',
       );
-       return res.status(500).json(missingSecretKeyError(lang));
+      return res.status(500).json(missingSecretKeyError(lang));
     }
 
     if (!token) {
@@ -78,30 +78,31 @@ async function verifyTurnstile(req, res, next) {
         {
           user: {
             email,
-            layer: "Middleware.verifyTurnstile",
-            action: "missing-token",
+            layer: 'Middleware.verifyTurnstile',
+            action: 'missing-token',
           },
         },
         {},
-        "[CIAM] Turnstile token missing"
+        '[CIAM] Turnstile token missing',
       );
-       return res.status(400).json(missingTokenError(lang));
+      return res.status(400).json(missingTokenError(lang));
     }
 
     const remoteip =
-      (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() || req.socket?.remoteAddress;
+      (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() ||
+      req.socket?.remoteAddress;
 
     const resp = await axios.post(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
       new URLSearchParams({
         secret,
         response: token,
-        remoteip: remoteip || "",
+        remoteip: remoteip || '',
       }),
       {
-        headers: { "content-type": "application/x-www-form-urlencoded" },
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
-      }
+      },
     );
 
     const data = resp.data;
@@ -111,13 +112,13 @@ async function verifyTurnstile(req, res, next) {
         {
           user: {
             email,
-            layer: "Middleware.verifyTurnstile",
-            action: "verification-failed",
-            details: data?.["error-codes"] || [],
+            layer: 'Middleware.verifyTurnstile',
+            action: 'verification-failed',
+            details: data?.['error-codes'] || [],
           },
         },
         {},
-        "[CIAM] Captcha Verification Failed"
+        '[CIAM] Captcha Verification Failed',
       );
 
       return res.status(403).json(captchaError(lang));
@@ -127,11 +128,11 @@ async function verifyTurnstile(req, res, next) {
       {
         user: {
           email,
-          layer: "Middleware.verifyTurnstile",
-          action: "verification-success",
+          layer: 'Middleware.verifyTurnstile',
+          action: 'verification-success',
         },
       },
-      "[CIAM] Captcha Verification Success"
+      '[CIAM] Captcha Verification Success',
     );
 
     req.turnstile = { ok: true, meta: data };
@@ -141,11 +142,11 @@ async function verifyTurnstile(req, res, next) {
       {
         user: {
           email,
-          layer: "Middleware.verifyTurnstile",
+          layer: 'Middleware.verifyTurnstile',
           error: new Error(e),
         },
       },
-      "[CIAM] Captcha Verification Exception"
+      '[CIAM] Captcha Verification Exception',
     );
     return res.status(500).json(CommonErrors.InternalServerError());
   }

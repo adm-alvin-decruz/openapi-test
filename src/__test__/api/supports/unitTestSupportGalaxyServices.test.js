@@ -19,14 +19,18 @@ describe('supportGalaxyServices', () => {
 
   describe('execute', () => {
     it('should call the specified method if it exists', async () => {
-      const mockMethod = jest.spyOn(supportGalaxyServices, 'triggerGalaxyImportSvc').mockResolvedValue('result');
+      const mockMethod = jest
+        .spyOn(supportGalaxyServices, 'triggerGalaxyImportSvc')
+        .mockResolvedValue('result');
       const result = await supportGalaxyServices.execute('triggerGalaxyImportSvc', {});
       expect(result).toBe('result');
       expect(mockMethod).toHaveBeenCalledWith({});
     });
 
     it('should throw an error if the method does not exist', async () => {
-      await expect(supportGalaxyServices.execute('nonExistentMethod')).rejects.toThrow('Method nonExistentMethod not found');
+      await expect(supportGalaxyServices.execute('nonExistentMethod')).rejects.toThrow(
+        'Method nonExistentMethod not found',
+      );
     });
   });
 
@@ -34,24 +38,31 @@ describe('supportGalaxyServices', () => {
     it('should handle manual type request', async () => {
       const req = {
         body: {
-          "type": "manual", // manual
-          "action": "userSignup",
-          "accounts":[{
-                 "email": "kwanoun.liong@mandai.com",
-                "firstName": "Kay",
-                "lastName": "Liong",
-                "dob": "22/09/1966",
-                "group": "wildpass",
-                "newsletter": {"type": "1", "name": "wildpass", "subscribe": true}
-          }]
-      }
+          type: 'manual', // manual
+          action: 'userSignup',
+          accounts: [
+            {
+              email: 'kwanoun.liong@mandai.com',
+              firstName: 'Kay',
+              lastName: 'Liong',
+              dob: '22/09/1966',
+              group: 'wildpass',
+              newsletter: { type: '1', name: 'wildpass', subscribe: true },
+            },
+          ],
+        },
       };
       commonService.valJsonObjOrArray.mockReturnValue(true);
-      supportGalaxyServices.retriggerGalaxyTask = jest.fn().mockResolvedValue({ sqs: 'success', db: 'success' });
+      supportGalaxyServices.retriggerGalaxyTask = jest
+        .fn()
+        .mockResolvedValue({ sqs: 'success', db: 'success' });
 
       const result = await supportGalaxyServices.triggerGalaxyImportSvc(req);
 
-      expect(result).toEqual([{ sqs: 'success', db: 'success' }, { sqs: 'success', db: 'success' }]);
+      expect(result).toEqual([
+        { sqs: 'success', db: 'success' },
+        { sqs: 'success', db: 'success' },
+      ]);
       expect(supportGalaxyServices.retriggerGalaxyTask).toHaveBeenCalledTimes(2);
     });
 
@@ -59,15 +70,20 @@ describe('supportGalaxyServices', () => {
       const req = {
         body: {
           type: 'batch',
-          action: 'someAction'
-        }
+          action: 'someAction',
+        },
       };
       supportDBService.findUserWithEmptyVisualID.mockResolvedValue([{ id: 1 }, { id: 2 }]);
-      supportGalaxyServices.retriggerGalaxyTask = jest.fn().mockResolvedValue({ sqs: 'success', db: 'success' });
+      supportGalaxyServices.retriggerGalaxyTask = jest
+        .fn()
+        .mockResolvedValue({ sqs: 'success', db: 'success' });
 
       const result = await supportGalaxyServices.triggerGalaxyImportSvc(req);
 
-      expect(result).toEqual([{ sqs: 'success', db: 'success' }, { sqs: 'success', db: 'success' }]);
+      expect(result).toEqual([
+        { sqs: 'success', db: 'success' },
+        { sqs: 'success', db: 'success' },
+      ]);
       expect(supportDBService.findUserWithEmptyVisualID).toHaveBeenCalledWith(req);
       expect(supportGalaxyServices.retriggerGalaxyTask).toHaveBeenCalledTimes(2);
     });
@@ -76,8 +92,8 @@ describe('supportGalaxyServices', () => {
       const req = {
         body: {
           type: 'manual',
-          accounts: null
-        }
+          accounts: null,
+        },
       };
       commonService.valJsonObjOrArray.mockReturnValue(false);
 
@@ -96,17 +112,19 @@ describe('supportGalaxyServices', () => {
         action: 'callMembershipPassApi',
         data: {
           action: 'someAction',
-          body: { migrations: true }
-        }
+          body: { migrations: true },
+        },
       };
-      supportGalaxyServices.retriggerGalaxyTask = jest.fn().mockResolvedValue({ sqs: 'success', db: 'success' });
+      supportGalaxyServices.retriggerGalaxyTask = jest
+        .fn()
+        .mockResolvedValue({ sqs: 'success', db: 'success' });
 
       const result = await supportGalaxyServices.retriggerByType(req, failedJob);
 
       expect(result).toEqual({ sqs: 'success', db: 'success' });
       expect(supportGalaxyServices.retriggerGalaxyTask).toHaveBeenCalledWith(
         expect.objectContaining({ body: failedJob.data.body }),
-        { action: 'someAction', migrations: true }
+        { action: 'someAction', migrations: true },
       );
     });
 
@@ -115,7 +133,7 @@ describe('supportGalaxyServices', () => {
       const failedJob = {
         name: 'OtherService',
         action: 'someAction',
-        data: { body: {} }
+        data: { body: {} },
       };
 
       const result = await supportGalaxyServices.retriggerByType(req, failedJob);

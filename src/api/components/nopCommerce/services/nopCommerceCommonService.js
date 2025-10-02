@@ -1,9 +1,9 @@
-require("dotenv").config();
-const appConfig = require("../../../../config/appConfig");
-const ApiUtils = require("../../../../utils/apiUtils");
-const loggerService = require("../../../../logs/logger");
-const appTokenModel = require("../../../../db/models/appTokenModel");
-const { maskKeyRandomly } = require("../../../../utils/common");
+require('dotenv').config();
+const appConfig = require('../../../../config/appConfig');
+const ApiUtils = require('../../../../utils/apiUtils');
+const loggerService = require('../../../../logs/logger');
+const appTokenModel = require('../../../../db/models/appTokenModel');
+const { maskKeyRandomly } = require('../../../../utils/common');
 
 const nopCommerceAccessTokenUrl = `${
   appConfig[`NOP_COMMERCE_URL_${process.env.APP_ENV.toUpperCase()}`]
@@ -11,7 +11,7 @@ const nopCommerceAccessTokenUrl = `${
 
 async function getAccessToken(isRefreshToken = false) {
   //get token from DB
-  const appToken = await appTokenModel.getLatestToken("nopCommerce");
+  const appToken = await appTokenModel.getLatestToken('nopCommerce');
   if (
     appToken &&
     appToken.credentials &&
@@ -32,20 +32,17 @@ async function getAccessToken(isRefreshToken = false) {
   };
 
   try {
-    loggerHandler(
-      "Proceed getAccessToken from NopCommerce - Start",
-      dataLogger
-    );
+    loggerHandler('Proceed getAccessToken from NopCommerce - Start', dataLogger);
     const response = await ApiUtils.makeRequest(
       nopCommerceAccessTokenUrl,
-      "post",
+      'post',
       {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       {
         membershipSecretKey: appToken.credentials.client_secret,
         storeId: appToken.configuration.storeId,
-      }
+      },
     );
 
     if (
@@ -54,51 +51,51 @@ async function getAccessToken(isRefreshToken = false) {
       !response.GenerateMembershipTokenResult.Message
     ) {
       loggerHandler(
-        "Proceed getAccessToken - Failed",
+        'Proceed getAccessToken - Failed',
         {
           ...dataLogger,
           error: `Incorrect response format! ${JSON.stringify(response)}`,
         },
-        "error"
+        'error',
       );
       await Promise.reject(
         JSON.stringify({
-          process: "nopCommerce integration",
-          status: "failed",
-        })
+          process: 'nopCommerce integration',
+          status: 'failed',
+        }),
       );
     }
 
     //Not yet checking format accessToken from NC
-    await appTokenModel.updateTokenByClient("nopCommerce", {
+    await appTokenModel.updateTokenByClient('nopCommerce', {
       accessToken: response.GenerateMembershipTokenResult.Message,
     });
-    loggerHandler("Proceed getAccessToken from NopCommerce - Success", {
+    loggerHandler('Proceed getAccessToken from NopCommerce - Success', {
       ...dataLogger,
       response: JSON.stringify(response),
     });
     return {
-      accessToken: response.GenerateMembershipTokenResult.Message || "",
+      accessToken: response.GenerateMembershipTokenResult.Message || '',
       storeId: appToken.configuration.storeId,
     };
   } catch (error) {
     loggerHandler(
-      "End getAccessToken - Failed",
+      'End getAccessToken - Failed',
       {
         ...dataLogger,
         error: new Error(error),
       },
-      "error"
+      'error',
     );
     return undefined;
   }
 }
 
-function loggerHandler(action, info, type = "log") {
+function loggerHandler(action, info, type = 'log') {
   const loggerObj = {
     nopCommerceService: {
       path: nopCommerceAccessTokenUrl,
-      layer: "nopCommerceService.getAccessToken",
+      layer: 'nopCommerceService.getAccessToken',
       data: {
         membershipSecretKey: maskKeyRandomly(info.membershipSecretKey),
         storeId: info.storeId,
@@ -113,11 +110,7 @@ function loggerHandler(action, info, type = "log") {
   }
 
   return info.error
-    ? loggerService[`${type}`](
-        loggerObj,
-        { apiPath: nopCommerceAccessTokenUrl },
-        action
-      )
+    ? loggerService[`${type}`](loggerObj, { apiPath: nopCommerceAccessTokenUrl }, action)
     : loggerService[`${type}`](loggerObj, action);
 }
 

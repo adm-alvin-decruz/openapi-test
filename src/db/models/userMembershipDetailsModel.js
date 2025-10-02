@@ -1,8 +1,8 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const CommonErrors = require('../../config/https/errors/commonErrors');
+const loggerService = require('../../logs/logger');
 
 class UserMembershipDetails {
   static async create(membershipDetailsData) {
@@ -38,7 +38,7 @@ class UserMembershipDetails {
       membershipDetailsData.valid_from,
       membershipDetailsData.valid_until,
       now,
-      now
+      now,
     ];
 
     try {
@@ -57,7 +57,7 @@ class UserMembershipDetails {
           },
         },
         {},
-        "UserMembershipDetails.create"
+        'UserMembershipDetails.create',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -72,20 +72,18 @@ class UserMembershipDetails {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_membership_details
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE user_membership_id = ?
     `;
 
     // Prepare the params array
     const params = [
-      ...Object.values(updatedDetailsData).filter(
-        (value) => value !== undefined
-      ),
+      ...Object.values(updatedDetailsData).filter((value) => value !== undefined),
       now,
       membershipId,
     ];
@@ -107,7 +105,7 @@ class UserMembershipDetails {
           },
         },
         {},
-        "UserMembershipDetails.updateByMembershipId"
+        'UserMembershipDetails.updateByMembershipId',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -115,7 +113,7 @@ class UserMembershipDetails {
 
   static async lookupMemberDetailsHaveDob(email) {
     const sql =
-      "SELECT * FROM user_membership_details WHERE member_email = ? AND member_dob IS NOT NULL";
+      'SELECT * FROM user_membership_details WHERE member_email = ? AND member_dob IS NOT NULL';
 
     try {
       const rows = await pool.query(sql, [email]);
@@ -130,7 +128,7 @@ class UserMembershipDetails {
           },
         },
         {},
-        "[CIAM] userMembershipDetailsModel.lookupMemberDetailsHaveDob - Failed"
+        '[CIAM] userMembershipDetailsModel.lookupMemberDetailsHaveDob - Failed',
       );
     }
   }

@@ -1,28 +1,28 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const { updateMembershipInCognito } = require("../../helpers/cognitoHelpers");
-const userModel = require("../../db/models/userModel");
-const userMembershipModel = require("../../db/models/userMembershipModel");
-const userMembershipDetailsModel = require("../../db/models/userMembershipDetailsModel");
-const userMigrationsMembershipPassesModel = require("../../db/models/userMigrationsMembershipPassesModel");
-const empMembershipUserPassesModel = require("../../db/models/empMembershipUserPassesModel");
-const loggerService = require("../../logs/logger");
-const { uploadThumbnailToS3 } = require("../../services/s3Service");
-const MembershipPassErrors = require("../../config/https/errors/membershipPassErrors");
-const nopCommerceService = require("../components/nopCommerce/services/nopCommerceService");
-const { getPassType } = require("../../helpers/dbConfigsHelpers");
+const { updateMembershipInCognito } = require('../../helpers/cognitoHelpers');
+const userModel = require('../../db/models/userModel');
+const userMembershipModel = require('../../db/models/userMembershipModel');
+const userMembershipDetailsModel = require('../../db/models/userMembershipDetailsModel');
+const userMigrationsMembershipPassesModel = require('../../db/models/userMigrationsMembershipPassesModel');
+const empMembershipUserPassesModel = require('../../db/models/empMembershipUserPassesModel');
+const loggerService = require('../../logs/logger');
+const { uploadThumbnailToS3 } = require('../../services/s3Service');
+const MembershipPassErrors = require('../../config/https/errors/membershipPassErrors');
+const nopCommerceService = require('../components/nopCommerce/services/nopCommerceService');
+const { getPassType } = require('../../helpers/dbConfigsHelpers');
 
 const awsRegion = () => {
   const env = process.env.AWS_REGION_NAME;
-  if (!env) return "ap-southeast-1";
-  if (env === "false") return "ap-southeast-1";
+  if (!env) return 'ap-southeast-1';
+  if (env === 'false') return 'ap-southeast-1';
   return env;
 };
 
-const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
-const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const { omit } = require("../../utils/common");
-const Configs = require("../../db/models/configsModel");
+const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
+const MembershipErrors = require('../../config/https/errors/membershipErrors');
+const { omit } = require('../../utils/common');
+const Configs = require('../../db/models/configsModel');
 const sqsClient = new SQSClient({ region: awsRegion });
 
 class UserMembershipPassService {
@@ -33,10 +33,10 @@ class UserMembershipPassService {
           userEmail: req.body.email,
           membership: req.body.group,
           action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
-          layer: "userMembershipPassService.create",
+          layer: 'userMembershipPassService.create',
         },
       },
-      "Start userCreateMembershipPass Service"
+      'Start userCreateMembershipPass Service',
     );
 
     const migrationsFlag = req.body && req.body.migrations;
@@ -52,7 +52,9 @@ class UserMembershipPassService {
             picked: 2,
           }));
         await Promise.reject(
-          JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(req.body.email, req.body.language))
+          JSON.stringify(
+            MembershipErrors.ciamMembershipUserNotFound(req.body.email, req.body.language),
+          ),
         );
       }
 
@@ -61,7 +63,7 @@ class UserMembershipPassService {
         req.body.visualId,
         req.body.email,
         mandaiId,
-        req.body.passType
+        req.body.passType,
       );
       if (membershipInfo && membershipInfo.visualId === req.body.visualId) {
         req.body &&
@@ -70,7 +72,9 @@ class UserMembershipPassService {
             picked: 2,
           }));
         await Promise.reject(
-          JSON.stringify(MembershipPassErrors.membershipPassExistedError(req.body.email, req.body.language))
+          JSON.stringify(
+            MembershipPassErrors.membershipPassExistedError(req.body.email, req.body.language),
+          ),
         );
       }
 
@@ -87,7 +91,7 @@ class UserMembershipPassService {
           uploadPhoto = await uploadThumbnailToS3({
             body: {
               membershipPhoto: {
-                bytes: photoBase64.split("data:image/jpeg;base64,")[1],
+                bytes: photoBase64.split('data:image/jpeg;base64,')[1],
               },
               mandaiId,
               visualId: req.body.visualId,
@@ -114,16 +118,28 @@ class UserMembershipPassService {
       }
 
       // send to SQS and update migrations DB
-      if (req.body.member && req.body.coMembers && uploadPhoto && uploadPhoto.$metadata.httpStatusCode === 200) {
+      if (
+        req.body.member &&
+        req.body.coMembers &&
+        uploadPhoto &&
+        uploadPhoto.$metadata.httpStatusCode === 200
+      ) {
         // TODO: migrations flow need to update query
         req.body &&
           req.body.migrations &&
-          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(req.body.email, req.body.batchNo, {
-            pass_request: 1,
-            co_member_request: 1,
-          }));
+          (await userMigrationsMembershipPassesModel.updateByEmailAndBatchNo(
+            req.body.email,
+            req.body.batchNo,
+            {
+              pass_request: 1,
+              co_member_request: 1,
+            },
+          ));
 
-        const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
+        const supportedPasskitTypes = await Configs.findByConfigKey(
+          'membership-passes',
+          'passkit-supported-types',
+        );
         if (supportedPasskitTypes.value.includes(req.body.passType)) {
           await this.sendSQSMessage(
             {
@@ -134,7 +150,7 @@ class UserMembershipPassService {
                 passType: passTypeMapping.toLowerCase(),
               },
             },
-            "createMembershipPass"
+            'createMembershipPass',
           );
         }
 
@@ -142,11 +158,11 @@ class UserMembershipPassService {
           {
             user: {
               action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
-              layer: "userMembershipPassService.create",
-              triggerSQSAction: "success",
+              layer: 'userMembershipPassService.create',
+              triggerSQSAction: 'success',
             },
           },
-          "End userCreateMembershipPass Service - Success"
+          'End userCreateMembershipPass Service - Success',
         );
       } else {
         req.body &&
@@ -160,11 +176,11 @@ class UserMembershipPassService {
         {
           user: {
             action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
-            layer: "userMembershipPassService.create",
-            triggerSQSAction: "unused",
+            layer: 'userMembershipPassService.create',
+            triggerSQSAction: 'unused',
           },
         },
-        "End userCreateMembershipPass Service - Success"
+        'End userCreateMembershipPass Service - Success',
       );
     } catch (error) {
       loggerService.error(
@@ -172,21 +188,23 @@ class UserMembershipPassService {
           user: {
             userEmail: req.body.email,
             action: `userCreateMembershipPass - migration flow: ${!!req.body.migrations}`,
-            layer: "userMembershipPassService.create",
+            layer: 'userMembershipPassService.create',
             error: new Error(error),
           },
         },
         {},
-        "End userCreateMembershipPass Service - Failed"
+        'End userCreateMembershipPass Service - Failed',
       );
       req.body &&
         req.body.migrations &&
         (await empMembershipUserPassesModel.updatePassState(req.body, {
           picked: 2,
         }));
-      const errorMessage = error.message ? JSON.parse(error.message) : "";
-      if (errorMessage.status === "failed") {
-        throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)));
+      const errorMessage = error.message ? JSON.parse(error.message) : '';
+      if (errorMessage.status === 'failed') {
+        throw new Error(
+          JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)),
+        );
       }
       throw new Error(error);
     }
@@ -200,11 +218,11 @@ class UserMembershipPassService {
             userEmail: req.body.email,
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
-            layer: "userMembershipPassService.update",
+            layer: 'userMembershipPassService.update',
             data: JSON.stringify(req.body),
           },
         },
-        "Start userUpdateMembershipPass Service"
+        'Start userUpdateMembershipPass Service',
       );
       // update pass expiry in cognito (if present in request)
       await updateMembershipInCognito(req.body);
@@ -226,7 +244,10 @@ class UserMembershipPassService {
 
       // send message to SQS to re-generate passkit (Trigger whenever pass update)
       // if (req.body.member || updatePhoto || req.body.coMembers || (req.body.status > 0) || req.body.validUntil) { // disabled
-      const supportedPasskitTypes = await Configs.findByConfigKey("membership-passes", "passkit-supported-types");
+      const supportedPasskitTypes = await Configs.findByConfigKey(
+        'membership-passes',
+        'passkit-supported-types',
+      );
       if (supportedPasskitTypes.value.includes(req.body.passType)) {
         await this.sendSQSMessage(
           {
@@ -236,7 +257,7 @@ class UserMembershipPassService {
               membershipId: updateMembershipRs.membershipId,
             },
           },
-          "updateMembershipPass"
+          'updateMembershipPass',
         );
       }
 
@@ -246,10 +267,10 @@ class UserMembershipPassService {
             userEmail: req.body.email,
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
-            layer: "userMembershipPassService.update",
+            layer: 'userMembershipPassService.update',
           },
         },
-        "End userUpdateMembershipPass Service - Success"
+        'End userUpdateMembershipPass Service - Success',
       );
     } catch (error) {
       loggerService.error(
@@ -258,16 +279,18 @@ class UserMembershipPassService {
             userEmail: req.body.email,
             membership: req.body.group,
             action: `userUpdateMembershipPass`,
-            layer: "userMembershipPassService.update",
+            layer: 'userMembershipPassService.update',
             error: new Error(error),
           },
         },
         {},
-        "End userUpdateMembershipPass Service - Failed"
+        'End userUpdateMembershipPass Service - Failed',
       );
-      const errorMessage = error.message ? JSON.parse(error.message) : "";
-      if (errorMessage.status === "failed") {
-        throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)));
+      const errorMessage = error.message ? JSON.parse(error.message) : '';
+      if (errorMessage.status === 'failed') {
+        throw new Error(
+          JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)),
+        );
       }
       throw new Error(JSON.stringify(errorMessage));
     }
@@ -280,10 +303,10 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membership: { passType, visualId, validUntil },
-            layer: "userMembershipPassService.createUserMembership",
+            layer: 'userMembershipPassService.createUserMembership',
           },
         },
-        "Start createUserMembership"
+        'Start createUserMembership',
       );
       const createMembershipRs = await userMembershipModel.create({
         user_id: userId,
@@ -296,10 +319,10 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membership: { passType, visualId, validUntil },
-            layer: "userMembershipPassService.createUserMembership",
+            layer: 'userMembershipPassService.createUserMembership',
           },
         },
-        "End createUserMembership - Success"
+        'End createUserMembership - Success',
       );
       return createMembershipRs;
     } catch (error) {
@@ -308,11 +331,11 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membership: { passType, visualId, validUntil },
-            layer: "userMembershipPassService.createUserMembership",
+            layer: 'userMembershipPassService.createUserMembership',
           },
         },
         {},
-        "End createUserMembership - Failed"
+        'End createUserMembership - Failed',
       );
       throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError()));
     }
@@ -342,7 +365,7 @@ class UserMembershipPassService {
       coMember,
       validFrom,
       validUntil,
-    }
+    },
   ) {
     try {
       loggerService.log(
@@ -350,7 +373,7 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membershipId: membershipId,
-            layer: "userMembershipPassService.insertMembershipDetails",
+            layer: 'userMembershipPassService.insertMembershipDetails',
             data: {
               user_id: userId,
               user_membership_id: membershipId,
@@ -377,7 +400,7 @@ class UserMembershipPassService {
             },
           },
         },
-        "Start insertMembershipDetails"
+        'Start insertMembershipDetails',
       );
       await userMembershipDetailsModel.create({
         user_id: userId,
@@ -387,7 +410,7 @@ class UserMembershipPassService {
         plu: plu,
         adult_qty: adultQty,
         child_qty: childQty,
-        status: typeof status !== "undefined" && status !== null ? status : null,
+        status: typeof status !== 'undefined' && status !== null ? status : null,
         parking: parking,
         iu: iu,
         car_plate: carPlate,
@@ -408,10 +431,10 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membershipId: membershipId,
-            layer: "userMembershipPassService.insertMembershipDetails",
+            layer: 'userMembershipPassService.insertMembershipDetails',
           },
         },
-        "End insertMembershipDetails - Success"
+        'End insertMembershipDetails - Success',
       );
     } catch (error) {
       loggerService.error(
@@ -419,7 +442,7 @@ class UserMembershipPassService {
           user: {
             userId: userId,
             membershipId: membershipId,
-            layer: "userMembershipPassService.insertMembershipDetails",
+            layer: 'userMembershipPassService.insertMembershipDetails',
             data: {
               user_id: userId,
               user_membership_id: membershipId,
@@ -428,7 +451,7 @@ class UserMembershipPassService {
               plu: plu,
               adult_qty: adultQty,
               child_qty: childQty,
-              status: typeof status !== "undefined" && status !== null ? status : null,
+              status: typeof status !== 'undefined' && status !== null ? status : null,
               parking: parking,
               iu: iu,
               car_plate: carPlate,
@@ -447,7 +470,7 @@ class UserMembershipPassService {
           },
         },
         {},
-        "End insertMembershipDetails - Failed"
+        'End insertMembershipDetails - Failed',
       );
       throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError()));
     }
@@ -469,20 +492,31 @@ class UserMembershipPassService {
           plu: req.body.plu || null,
           adultQty: req.body.adultQty || null,
           childQty: req.body.childQty || null,
-          status: typeof req.body.status !== "undefined" && req.body.status !== null ? req.body.status : null,
-          parking: req.body.parking === "yes" ? 1 : 0,
+          status:
+            typeof req.body.status !== 'undefined' && req.body.status !== null
+              ? req.body.status
+              : null,
+          parking: req.body.parking === 'yes' ? 1 : 0,
           iu: req.body.iu || null,
           carPlate: req.body.carPlate || null,
           membershipPhoto: null,
-          firstName: !!req.body.member && !!req.body.member.firstName ? req.body.member.firstName : null,
-          lastName: !!req.body.member && !!req.body.member.lastName ? req.body.member.lastName : null,
+          firstName:
+            !!req.body.member && !!req.body.member.firstName ? req.body.member.firstName : null,
+          lastName:
+            !!req.body.member && !!req.body.member.lastName ? req.body.member.lastName : null,
           email: !!req.body.member && !!req.body.member.email ? req.body.member.email : null,
           dob: !!req.body.member && !!req.body.member.dob ? req.body.member.dob : null,
           country: !!req.body.member && !!req.body.member.country ? req.body.member.country : null,
           identificationNo:
-            !!req.body.member && !!req.body.member.identificationNo ? req.body.member.identificationNo : null,
-          phoneNumber: !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : null,
-          coMember: req.body.coMembers && req.body.coMembers.length > 0 ? JSON.stringify(req.body.coMembers) : null,
+            !!req.body.member && !!req.body.member.identificationNo
+              ? req.body.member.identificationNo
+              : null,
+          phoneNumber:
+            !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : null,
+          coMember:
+            req.body.coMembers && req.body.coMembers.length > 0
+              ? JSON.stringify(req.body.coMembers)
+              : null,
           validFrom: req.body.validFrom ? req.body.validFrom : null,
           validUntil: req.body.validUntil ? req.body.validUntil : null,
         }));
@@ -501,21 +535,23 @@ class UserMembershipPassService {
         {
           user: {
             data: req.body,
-            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+            layer: 'userMembershipPassService.updateUserMembershipPassToDB',
           },
         },
-        "Start updateUserMembershipPassToDB"
+        'Start updateUserMembershipPassToDB',
       );
       const membershipInfo = await userModel.findByEmailMandaiIdVisualId(
         req.body.visualId,
         req.body.email,
         req.body.mandaiId,
-        req.body.passType
+        req.body.passType,
       );
 
       if (!membershipInfo || !membershipInfo.membershipId) {
         await Promise.reject(
-          JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(req.body.email, req.body.language))
+          JSON.stringify(
+            MembershipErrors.ciamMembershipUserNotFound(req.body.email, req.body.language),
+          ),
         );
       }
 
@@ -527,31 +563,51 @@ class UserMembershipPassService {
         }));
 
       if (membershipInfo.membershipId) {
-        const updatedRecord = await userMembershipDetailsModel.updateByMembershipId(membershipInfo.membershipId, {
-          category_type: req.body.categoryType || undefined,
-          item_name: req.body.itemName || undefined,
-          plu: req.body.plu || undefined,
-          adult_qty: req.body.adultQty || undefined,
-          child_qty: req.body.childQty || undefined,
-          parking: req.body.parking ? (req.body.parking === "yes" ? 1 : 0) : undefined,
-          iu: req.body.iu || undefined,
-          car_plate: req.body.carPlate || undefined,
-          membership_photo: undefined,
-          member_first_name: !!req.body.member && !!req.body.member.firstName ? req.body.member.firstName : undefined,
-          member_last_name: !!req.body.member && !!req.body.member.lastName ? req.body.member.lastName : undefined,
-          member_email: req.body.newEmail || undefined,
-          member_dob: !!req.body.member && !!req.body.member.dob ? req.body.member.dob : undefined,
-          member_country: !!req.body.member && !!req.body.member.country ? req.body.member.country : undefined,
-          member_identification_no:
-            !!req.body.member && !!req.body.member.identificationNo ? req.body.member.identificationNo : undefined,
-          member_phone_number:
-            !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : undefined,
-          co_member:
-            req.body.coMembers && req.body.coMembers.length > 0 ? JSON.stringify(req.body.coMembers) : undefined,
-          valid_from: req.body.validFrom || undefined,
-          valid_until: expiryDate,
-          status: typeof req.body.status !== "undefined" && req.body.status !== null ? req.body.status : undefined,
-        });
+        const updatedRecord = await userMembershipDetailsModel.updateByMembershipId(
+          membershipInfo.membershipId,
+          {
+            category_type: req.body.categoryType || undefined,
+            item_name: req.body.itemName || undefined,
+            plu: req.body.plu || undefined,
+            adult_qty: req.body.adultQty || undefined,
+            child_qty: req.body.childQty || undefined,
+            parking: req.body.parking ? (req.body.parking === 'yes' ? 1 : 0) : undefined,
+            iu: req.body.iu || undefined,
+            car_plate: req.body.carPlate || undefined,
+            membership_photo: undefined,
+            member_first_name:
+              !!req.body.member && !!req.body.member.firstName
+                ? req.body.member.firstName
+                : undefined,
+            member_last_name:
+              !!req.body.member && !!req.body.member.lastName
+                ? req.body.member.lastName
+                : undefined,
+            member_email: req.body.newEmail || undefined,
+            member_dob:
+              !!req.body.member && !!req.body.member.dob ? req.body.member.dob : undefined,
+            member_country:
+              !!req.body.member && !!req.body.member.country ? req.body.member.country : undefined,
+            member_identification_no:
+              !!req.body.member && !!req.body.member.identificationNo
+                ? req.body.member.identificationNo
+                : undefined,
+            member_phone_number:
+              !!req.body.member && !!req.body.member.phoneNumber
+                ? req.body.member.phoneNumber
+                : undefined,
+            co_member:
+              req.body.coMembers && req.body.coMembers.length > 0
+                ? JSON.stringify(req.body.coMembers)
+                : undefined,
+            valid_from: req.body.validFrom || undefined,
+            valid_until: expiryDate,
+            status:
+              typeof req.body.status !== 'undefined' && req.body.status !== null
+                ? req.body.status
+                : undefined,
+          },
+        );
         if (updatedRecord && updatedRecord.row_affected === 0) {
           await this.insertMembershipDetails(membershipInfo.userId, membershipInfo.membershipId, {
             categoryType: req.body.categoryType,
@@ -559,22 +615,36 @@ class UserMembershipPassService {
             plu: req.body.plu || null,
             adultQty: req.body.adultQty || null,
             childQty: req.body.childQty || null,
-            parking: req.body.parking === "yes" ? 1 : 0,
+            parking: req.body.parking === 'yes' ? 1 : 0,
             iu: req.body.iu || null,
             carPlate: req.body.carPlate || null,
             membershipPhoto: null,
-            firstName: !!req.body.member && !!req.body.member.firstName ? req.body.member.firstName : null,
-            lastName: !!req.body.member && !!req.body.member.lastName ? req.body.member.lastName : null,
+            firstName:
+              !!req.body.member && !!req.body.member.firstName ? req.body.member.firstName : null,
+            lastName:
+              !!req.body.member && !!req.body.member.lastName ? req.body.member.lastName : null,
             email: !!req.body.member && !!req.body.member.email ? req.body.member.email : null,
             dob: !!req.body.member && !!req.body.member.dob ? req.body.member.dob : null,
-            country: !!req.body.member && !!req.body.member.country ? req.body.member.country : null,
+            country:
+              !!req.body.member && !!req.body.member.country ? req.body.member.country : null,
             identificationNo:
-              !!req.body.member && !!req.body.member.identificationNo ? req.body.member.identificationNo : null,
-            phoneNumber: !!req.body.member && !!req.body.member.phoneNumber ? req.body.member.phoneNumber : null,
-            coMember: req.body.coMembers && req.body.coMembers.length > 0 ? JSON.stringify(req.body.coMembers) : null,
+              !!req.body.member && !!req.body.member.identificationNo
+                ? req.body.member.identificationNo
+                : null,
+            phoneNumber:
+              !!req.body.member && !!req.body.member.phoneNumber
+                ? req.body.member.phoneNumber
+                : null,
+            coMember:
+              req.body.coMembers && req.body.coMembers.length > 0
+                ? JSON.stringify(req.body.coMembers)
+                : null,
             validFrom: req.body.validFrom ? req.body.validFrom : null,
             validUntil: req.body.validUntil ? req.body.validUntil : null,
-            status: typeof req.body.status !== "undefined" && req.body.status !== null ? req.body.status : null,
+            status:
+              typeof req.body.status !== 'undefined' && req.body.status !== null
+                ? req.body.status
+                : null,
           });
         }
       }
@@ -582,10 +652,10 @@ class UserMembershipPassService {
         {
           user: {
             userMembership: membershipInfo,
-            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+            layer: 'userMembershipPassService.updateUserMembershipPassToDB',
           },
         },
-        "End updateUserMembershipPassToDB - Success"
+        'End updateUserMembershipPassToDB - Success',
       );
       return {
         membershipId: membershipInfo.membershipId,
@@ -595,16 +665,18 @@ class UserMembershipPassService {
         {
           user: {
             data: req.body,
-            layer: "userMembershipPassService.updateUserMembershipPassToDB",
+            layer: 'userMembershipPassService.updateUserMembershipPassToDB',
             error: new Error(error),
           },
         },
         {},
-        "End updateUserMembershipPassToDB - Failed"
+        'End updateUserMembershipPassToDB - Failed',
       );
-      const errorMessage = error.message ? JSON.parse(error.message) : "";
-      if (errorMessage.status === "failed") {
-        throw new Error(JSON.stringify(MembershipPassErrors.updateMembershipPassError(req.body.language)));
+      const errorMessage = error.message ? JSON.parse(error.message) : '';
+      if (errorMessage.status === 'failed') {
+        throw new Error(
+          JSON.stringify(MembershipPassErrors.updateMembershipPassError(req.body.language)),
+        );
       }
       throw new Error(error);
     }
@@ -614,7 +686,7 @@ class UserMembershipPassService {
     delete req.body.membershipPhoto;
     const data = {
       action: action,
-      body: omit(req.body, ["membershipPhoto"]),
+      body: omit(req.body, ['membershipPhoto']),
     };
     const queueUrl = process.env.SQS_QUEUE_URL;
 
@@ -623,11 +695,11 @@ class UserMembershipPassService {
         SQS: {
           queueURL: queueUrl,
           messageBody: JSON.stringify(data),
-          layer: "userMembershipPassService.sendSQSMessage",
+          layer: 'userMembershipPassService.sendSQSMessage',
           body: JSON.stringify(req.body),
         },
       },
-      "Start sendSQSMessage"
+      'Start sendSQSMessage',
     );
 
     try {
@@ -642,11 +714,11 @@ class UserMembershipPassService {
           SQS: {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
-            layer: "userMembershipPassService.sendSQSMessage",
+            layer: 'userMembershipPassService.sendSQSMessage',
             data: result,
           },
         },
-        "End sendSQSMessage - Success"
+        'End sendSQSMessage - Success',
       );
       return result;
     } catch (error) {
@@ -655,15 +727,17 @@ class UserMembershipPassService {
           SQS: {
             queueURL: queueUrl,
             messageBody: JSON.stringify(data),
-            layer: "userMembershipPassService.sendSQSMessage",
-            error: new Error("userMembershipPassService.sendSQSMessage error", error),
+            layer: 'userMembershipPassService.sendSQSMessage',
+            error: new Error('userMembershipPassService.sendSQSMessage error', error),
           },
         },
         {},
-        "End sendSQSMessage - Failed"
+        'End sendSQSMessage - Failed',
       );
 
-      throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)));
+      throw new Error(
+        JSON.stringify(MembershipPassErrors.createMembershipPassError(req.body.language)),
+      );
     }
   }
 }

@@ -1,23 +1,23 @@
-const UserGetMembershipPassesService = require("./userGetMembershipPassesService");
-const { messageLang } = require("../../utils/common");
+const UserGetMembershipPassesService = require('./userGetMembershipPassesService');
+const { messageLang } = require('../../utils/common');
 
 class UserGetMembershipPassesJob {
   success(rs, lang) {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS",
-        message: messageLang("get_membership_success", lang),
+        mwgCode: 'MWG_CIAM_USERS_MY_MEMBERSHIP_SUCCESS',
+        message: messageLang('get_membership_success', lang),
         passes: rs.passes,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
 
   async perform(body) {
     // trim input
-    Object.keys(body).forEach(key => {
+    Object.keys(body).forEach((key) => {
       if (typeof body[key] === 'string') {
         body[key] = body[key].trim();
       }

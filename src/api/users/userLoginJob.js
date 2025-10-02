@@ -1,6 +1,6 @@
-const UserLoginService = require("./userLoginServices");
-const { messageLang } = require("../../utils/common");
-const appConfig = require("../../config/appConfig");
+const UserLoginService = require('./userLoginServices');
+const { messageLang } = require('../../utils/common');
+const appConfig = require('../../config/appConfig');
 
 class UserLoginJob {
   constructor() {
@@ -13,14 +13,14 @@ class UserLoginJob {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
-        message: messageLang("login_success", lang),
+        mwgCode: 'MWG_CIAM_USERS_LOGIN_SUCCESS',
+        message: messageLang('login_success', lang),
         accessToken: result.accessToken,
         mandaiId: result.mandaiId,
         email: result.email,
         callbackURL: this.callbackUrl,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }

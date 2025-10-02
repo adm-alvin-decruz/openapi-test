@@ -30,7 +30,7 @@ describe('AEMService', () => {
 
       expect(axios.post).toHaveBeenCalledWith(
         'http://test-aem.com/check-email',
-        expect.any(FormData)
+        expect.any(FormData),
       );
       expect(result).toEqual(mockResponse.data);
       expect(loggerService.log).toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('AEMService', () => {
 
       expect(axios.post).toHaveBeenCalledWith(
         'http://test-aem.com/resend-wildpass',
-        expect.any(FormData)
+        expect.any(FormData),
       );
       expect(result).toEqual(mockResponse.data);
       expect(loggerService.log).toHaveBeenCalled();

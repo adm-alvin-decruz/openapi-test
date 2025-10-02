@@ -1,8 +1,8 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const CommonErrors = require('../../config/https/errors/commonErrors');
+const loggerService = require('../../logs/logger');
 
 class UserCredential {
   static async create(credentialData) {
@@ -30,13 +30,13 @@ class UserCredential {
   }
 
   static async findByUserId(userId) {
-    const sql = "SELECT * FROM user_credentials WHERE user_id = ?";
+    const sql = 'SELECT * FROM user_credentials WHERE user_id = ?';
     const [rows] = await pool.query(sql, [userId]);
     return rows[0];
   }
 
   static async findByUserEmail(email) {
-    const sql = "SELECT * FROM user_credentials WHERE username = ?";
+    const sql = 'SELECT * FROM user_credentials WHERE username = ?';
     const [rows] = await pool.query(sql, [email]);
     return rows;
   }
@@ -50,7 +50,7 @@ class UserCredential {
   }
 
   static async findByPasswordHash(password) {
-    const sql = "SELECT * FROM user_credentials WHERE password_hash = ?";
+    const sql = 'SELECT * FROM user_credentials WHERE password_hash = ?';
     const [rows] = await pool.query(sql, [password]);
     return rows;
   }
@@ -68,12 +68,12 @@ class UserCredential {
           userCredentialModel: {
             email,
             sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
-            layer: "userCredentialModel.findUserHasFirstLogin",
+            layer: 'userCredentialModel.findUserHasFirstLogin',
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] findUserHasFirstLogin DB - Failed"
+        '[CIAM] findUserHasFirstLogin DB - Failed',
       );
       return error;
     }
@@ -88,12 +88,12 @@ class UserCredential {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_credentials
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE username = ?
     `;
 
@@ -105,10 +105,10 @@ class UserCredential {
         userCredentialModel: {
           email: username,
           sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-          layer: "userCredentialModel.updateByUserEmail",
+          layer: 'userCredentialModel.updateByUserEmail',
         },
       },
-      "[CIAM] updateByUserEmail DB - Start"
+      '[CIAM] updateByUserEmail DB - Start',
     );
 
     // Execute the query
@@ -118,10 +118,10 @@ class UserCredential {
         {
           userCredentialModel: {
             email: username,
-            layer: "userCredentialModel.updateByUserEmail",
+            layer: 'userCredentialModel.updateByUserEmail',
           },
         },
-        "[CIAM] updateByUserEmail DB - Success"
+        '[CIAM] updateByUserEmail DB - Success',
       );
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
@@ -135,12 +135,12 @@ class UserCredential {
             email: username,
             data: data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            layer: "userCredentialModel.updateByUserEmail",
+            layer: 'userCredentialModel.updateByUserEmail',
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] updateByUserEmail DB - Failed"
+        '[CIAM] updateByUserEmail DB - Failed',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -155,12 +155,12 @@ class UserCredential {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_credentials
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE user_id = ?
     `;
 
@@ -182,25 +182,25 @@ class UserCredential {
             userId: userId,
             data: data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            layer: "userCredentialModel.updateByUserId",
+            layer: 'userCredentialModel.updateByUserId',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] updateByUserId DB - Failed"
+        '[CIAM] updateByUserId DB - Failed',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
   }
 
   static async delete(id) {
-    const sql = "DELETE FROM user_credentials WHERE id = ?";
+    const sql = 'DELETE FROM user_credentials WHERE id = ?';
     await pool.execute(sql, [id]);
   }
 
   static async deletebyUserID(user_id) {
     try {
-      const sql = "DELETE FROM user_credentials WHERE user_id = ?";
+      const sql = 'DELETE FROM user_credentials WHERE user_id = ?';
       var result = await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
@@ -220,17 +220,22 @@ class UserCredential {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_credentials
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE username = ? AND user_id = ?
     `;
 
     // Prepare the params array
-    const params = [...Object.values(data).filter((value) => value !== undefined), now, email, userId];
+    const params = [
+      ...Object.values(data).filter((value) => value !== undefined),
+      now,
+      email,
+      userId,
+    ];
 
     loggerService.log(
       {
@@ -238,10 +243,10 @@ class UserCredential {
           email,
           userId,
           sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-          layer: "userCredentialModel.updateByUserIdAndEmail",
+          layer: 'userCredentialModel.updateByUserIdAndEmail',
         },
       },
-      "[CIAM] updateByUserIdAndEmail DB - Start"
+      '[CIAM] updateByUserIdAndEmail DB - Start',
     );
 
     // Execute the query
@@ -252,10 +257,10 @@ class UserCredential {
           userCredentialModel: {
             email,
             userId,
-            layer: "userCredentialModel.updateByUserIdAndEmail",
+            layer: 'userCredentialModel.updateByUserIdAndEmail',
           },
         },
-        "[CIAM] updateByUserIdAndEmail DB - Success"
+        '[CIAM] updateByUserIdAndEmail DB - Success',
       );
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
@@ -269,12 +274,12 @@ class UserCredential {
             email,
             userId,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            layer: "userCredentialModel.updateByUserIdAndEmail",
+            layer: 'userCredentialModel.updateByUserIdAndEmail',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] updateByUserIdAndEmail DB - Failed"
+        '[CIAM] updateByUserIdAndEmail DB - Failed',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

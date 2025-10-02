@@ -1,7 +1,7 @@
-const { messageLang } = require("../../../../utils/common");
-const PasswordlessVerifyCodeService = require("./passwordlessVerifyCodeServices");
-const UserLoginService = require("../../userLoginServices");
-const appConfig = require("../../../../config/appConfig");
+const { messageLang } = require('../../../../utils/common');
+const PasswordlessVerifyCodeService = require('./passwordlessVerifyCodeServices');
+const UserLoginService = require('../../userLoginServices');
+const appConfig = require('../../../../config/appConfig');
 
 class PasswordlessVerifyCodeJob {
   constructor() {
@@ -14,14 +14,14 @@ class PasswordlessVerifyCodeJob {
     return {
       auth: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_LOGIN_SUCCESS",
-        message: messageLang("login_success", lang),
+        mwgCode: 'MWG_CIAM_USERS_LOGIN_SUCCESS',
+        message: messageLang('login_success', lang),
         accessToken: result.accessToken,
         mandaiId: result.mandaiId,
         email: result.email,
         callbackURL: this.callbackUrl,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
@@ -32,16 +32,13 @@ class PasswordlessVerifyCodeJob {
       const isMagicLink = !!req.query?.token?.trim();
 
       if (isMagicLink) {
-        const decryptedToken =
-          await PasswordlessVerifyCodeService.decryptMagicToken(req);
+        const decryptedToken = await PasswordlessVerifyCodeService.decryptMagicToken(req);
         req.body.email = decryptedToken.email;
         req.body.code = decryptedToken.otp;
       }
 
       //refactor verify and validateToken
-      req.body.password = await PasswordlessVerifyCodeService.validateToken(
-        req
-      );
+      req.body.password = await PasswordlessVerifyCodeService.validateToken(req);
 
       const rs = await UserLoginService.execute(req);
       const language = isMagicLink ? req.query.language : req.body.language;

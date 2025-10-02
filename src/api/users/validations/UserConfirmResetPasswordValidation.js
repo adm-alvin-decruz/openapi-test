@@ -1,8 +1,8 @@
-const CommonErrors = require("../../../config/https/errors/commonErrors");
-const { passwordPattern } = require("../../../utils/common");
-const { checkPasswordHasValidPattern } = require("../helpers/checkPasswordComplexityHelper");
-const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
-const UserPasswordVersionService = require("../userPasswordVersionService");
+const CommonErrors = require('../../../config/https/errors/commonErrors');
+const { passwordPattern } = require('../../../utils/common');
+const { checkPasswordHasValidPattern } = require('../helpers/checkPasswordComplexityHelper');
+const { switchIsTurnOn } = require('../../../helpers/dbSwitchesHelpers');
+const UserPasswordVersionService = require('../userPasswordVersionService');
 
 class UserConfirmResetPasswordValidation {
   constructor() {
@@ -11,34 +11,28 @@ class UserConfirmResetPasswordValidation {
 
   static async execute(reqBody) {
     //validate missing required params
-    const paramsShouldNotEmpty = [
-      "newPassword",
-      "confirmPassword",
-      "passwordToken",
-    ];
+    const paramsShouldNotEmpty = ['newPassword', 'confirmPassword', 'passwordToken'];
     const listKeys = Object.keys(reqBody);
 
-    const paramsMissing = paramsShouldNotEmpty.filter(
-      (key) => !listKeys.includes(key)
-    );
+    const paramsMissing = paramsShouldNotEmpty.filter((key) => !listKeys.includes(key));
     if (paramsMissing.length) {
       return (this.error = CommonErrors.BadRequest(
         paramsMissing[0],
         `${paramsMissing[0]}_required`,
-        reqBody.language
+        reqBody.language,
       ));
     }
 
     //if parameters have some empty string
     const paramsInvalid = paramsShouldNotEmpty
       .filter((key) => listKeys.includes(key))
-      .filter((ele) => reqBody[`${ele}`].trim() === "");
+      .filter((ele) => reqBody[`${ele}`].trim() === '');
 
     if (paramsInvalid.length) {
       return (this.error = CommonErrors.BadRequest(
         paramsInvalid[0],
         `${paramsInvalid[0]}_invalid`,
-        reqBody.language
+        reqBody.language,
       ));
     }
 

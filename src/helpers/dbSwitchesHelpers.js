@@ -1,4 +1,4 @@
-const switchService = require("../services/switchService");
+const switchService = require('../services/switchService');
 
 /**
  * Should Check Switch is turn on

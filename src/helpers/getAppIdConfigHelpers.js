@@ -8,16 +8,16 @@
  * @return {Object} - Eg: { "lambda_api_key": "nopCommerce.private"}
  */
 function getAppIdConfiguration(data, appId) {
-    const findAppIdConfig = data.find(value => {
-        const key = Object.keys(value);
-        if (key[0] === appId) {
-            return value;
-        }
-        return undefined;
-    })
-    return findAppIdConfig ? Object.values(findAppIdConfig)[0] : undefined;
+  const findAppIdConfig = data.find((value) => {
+    const key = Object.keys(value);
+    if (key[0] === appId) {
+      return value;
+    }
+    return undefined;
+  });
+  return findAppIdConfig ? Object.values(findAppIdConfig)[0] : undefined;
 }
 
 module.exports = {
-    getAppIdConfiguration,
+  getAppIdConfiguration,
 };

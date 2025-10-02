@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const axios = require('axios');
 const FormData = require('form-data');
 const loggerService = require('../logs/logger');
@@ -9,25 +9,24 @@ const loggerService = require('../logs/logger');
  * @param {JSON} reqBody the request JSON
  * @returns
  */
-async function aemCheckWildPassByEmail (reqBody){
-  const aemLog = {'aem_check_wildpass_log':[]}
+async function aemCheckWildPassByEmail(reqBody) {
+  const aemLog = { aem_check_wildpass_log: [] };
   // get env dev/uat/prod
-  const appEnv = process.env.APP_ENV
+  const appEnv = process.env.APP_ENV;
   // get aem 'check email' url
-  const aemURL = buildAemURL (appEnv, "WILDPASS_CHECK_EMAIL");
+  const aemURL = buildAemURL(appEnv, 'WILDPASS_CHECK_EMAIL');
 
   // send post checkemail to aem
   const formData = new FormData();
   formData.append('email', reqBody.email);
   aemLog.aem_check_wildpass_log['form_data'] = JSON.stringify(formData);
 
-  try{
+  try {
     var response = await axios.post(aemURL, formData);
     aemLog.aem_check_wildpass_log['success'] = JSON.stringify(response.data);
     loggerService.log(aemLog);
     return response.data;
-  }
-  catch(error){
+  } catch (error) {
     aemLog.aem_check_wildpass_log['error'] = JSON.stringify(error);
     loggerService.log(aemLog);
     return error;
@@ -40,12 +39,12 @@ async function aemCheckWildPassByEmail (reqBody){
  * @param {json} reqBody
  * @returns
  */
-async function aemResendWildpass(reqBody){
-  const aemLog = {'aem_resend_wildpass_log':[]}
+async function aemResendWildpass(reqBody) {
+  const aemLog = { aem_resend_wildpass_log: [] };
   // get env dev/uat/prod
-  const appEnv = process.env.APP_ENV
+  const appEnv = process.env.APP_ENV;
   // get aem 'check email' url
-  const aemURL = buildAemURL (appEnv, "RESEND_WILDPASS");
+  const aemURL = buildAemURL(appEnv, 'RESEND_WILDPASS');
 
   // send post checkemail to aem
   const formData = new FormData();
@@ -53,13 +52,12 @@ async function aemResendWildpass(reqBody){
   formData.append('recaptchaResponse', reqBody.recaptchaResponse);
   aemLog.aem_resend_wildpass_log['form_data'] = JSON.stringify(formData);
 
-  try{
+  try {
     var response = await axios.post(aemURL, formData);
     aemLog.aem_resend_wildpass_log['success'] = JSON.stringify(response.data);
     loggerService.log(aemLog);
     return response.data;
-  }
-  catch(error){
+  } catch (error) {
     aemLog.aem_resend_wildpass_log['error'] = JSON.stringify(error);
     loggerService.log(aemLog);
     return error;
@@ -73,14 +71,14 @@ async function aemResendWildpass(reqBody){
  * @param {str} service
  * @returns
  */
-function buildAemURL (appEnv, service){
+function buildAemURL(appEnv, service) {
   var aemEnvUrl = process.env.AEM_URL;
-  let aemServicePath = 'AEM_PATH_'+service.toUpperCase();
+  let aemServicePath = 'AEM_PATH_' + service.toUpperCase();
 
   return aemEnvUrl + process.env[aemServicePath];
 }
 
 module.exports = {
   aemCheckWildPassByEmail,
-  aemResendWildpass
+  aemResendWildpass,
 };

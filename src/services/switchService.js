@@ -25,7 +25,7 @@ class SwitchService {
     try {
       if (Array.isArray(data)) {
         // If data is an array, use the previous logic
-        const item = data.find(item => item.name === name);
+        const item = data.find((item) => item.name === name);
         return item ? Boolean(item.switch) : false;
       } else {
         // If data is an object, directly access the property

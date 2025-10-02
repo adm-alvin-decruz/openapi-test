@@ -1,10 +1,10 @@
-require("dotenv").config();
-const userModel = require("../../db/models/userModel");
-const failedJobsModel = require("../../db/models/failedJobsModel");
-const MembershipErrors = require("../../config/https/errors/membershipErrors");
-const passkitRetrieveService = require("../components/passkit/services/passkitRetrieveService");
-const appConfig = require("../../config/appConfig");
-const loggerService = require("../../logs/logger");
+require('dotenv').config();
+const userModel = require('../../db/models/userModel');
+const failedJobsModel = require('../../db/models/failedJobsModel');
+const MembershipErrors = require('../../config/https/errors/membershipErrors');
+const passkitRetrieveService = require('../components/passkit/services/passkitRetrieveService');
+const appConfig = require('../../config/appConfig');
+const loggerService = require('../../logs/logger');
 
 class UserGetMembershipPassesService {
   constructor() {
@@ -16,7 +16,7 @@ class UserGetMembershipPassesService {
   async execute(body) {
     const visualIds = this.getVisualIds(body);
     try {
-      if (visualIds.includes("all")) {
+      if (visualIds.includes('all')) {
         return await this.retrieveAllPassesURL(body);
       }
       return await this.retrieveSinglePassURL(visualIds, body);
@@ -26,16 +26,16 @@ class UserGetMembershipPassesService {
           user: {
             body: body,
             action: `handleIntegration with Passkit`,
-            layer: "userGetMembershipPassesService.execute",
+            layer: 'userGetMembershipPassesService.execute',
             error: `${error}`,
           },
         },
-        "End getMembershipPasses Service - Failed"
+        'End getMembershipPasses Service - Failed',
       );
       await failedJobsModel.create({
         uuid: crypto.randomUUID(),
-        name: "failedGetMembershipPasses",
-        action: "failed",
+        name: 'failedGetMembershipPasses',
+        action: 'failed',
         data: {
           visualIds,
           passkitIntegration: this.apiEndpoint,
@@ -45,9 +45,7 @@ class UserGetMembershipPassesService {
         status: 0,
       });
       throw new Error(
-        JSON.stringify(
-          MembershipErrors.ciamMembershipGetPassesInvalid(body.language)
-        )
+        JSON.stringify(MembershipErrors.ciamMembershipGetPassesInvalid(body.language)),
       );
     }
   }
@@ -84,11 +82,11 @@ class UserGetMembershipPassesService {
         user: {
           body: body,
           action: `retrieveSinglePassURL`,
-          layer: "userGetMembershipPassesService.retrieveSinglePassURL",
+          layer: 'userGetMembershipPassesService.retrieveSinglePassURL',
           passUrl: JSON.stringify(passUrl),
         },
       },
-      "End getMembershipPasses Service - Success"
+      'End getMembershipPasses Service - Success',
     );
 
     return passUrl;
@@ -100,14 +98,14 @@ class UserGetMembershipPassesService {
         user: {
           userInfo: JSON.stringify(userInfo),
           action: `handleIntegration with Passkit`,
-          layer: "userGetMembershipPassesService.handleIntegration",
+          layer: 'userGetMembershipPassesService.handleIntegration',
         },
       },
-      "Start getMembershipPasses Service"
+      'Start getMembershipPasses Service',
     );
 
     const response = await Promise.all(
-      userInfo.map((info) => passkitRetrieveService.retrievePasskit(info))
+      userInfo.map((info) => passkitRetrieveService.retrievePasskit(info)),
     );
     return {
       passes: response.filter((rs) => !!rs),

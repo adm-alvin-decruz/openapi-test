@@ -1,6 +1,6 @@
-const axios = require("axios");
-const loggerService = require("../logs/logger");
-require("dotenv").config();
+const axios = require('axios');
+const loggerService = require('../logs/logger');
+require('dotenv').config();
 
 class Secrets {
   constructor() {
@@ -9,33 +9,33 @@ class Secrets {
   }
 
   async getSecrets(secretName) {
-    console.log("Getting secrets: ", secretName);
+    console.log('Getting secrets: ', secretName);
     loggerService.log(
       {
         secretsService: {
-          action: "getSecrets",
-          layer: "services.secretsService",
+          action: 'getSecrets',
+          layer: 'services.secretsService',
         },
       },
-      "[CIAM] Start getSecrets Service"
+      '[CIAM] Start getSecrets Service',
     );
 
     if (!secretName) {
       loggerService.error(
         {
           secretsService: {
-            action: "getSecrets",
-            layer: "services.secretsService",
-            error: "Secret name not defined",
+            action: 'getSecrets',
+            layer: 'services.secretsService',
+            error: 'Secret name not defined',
           },
         },
         {},
-        "[CIAM] End getSecrets Service - Failed"
+        '[CIAM] End getSecrets Service - Failed',
       );
       throw new Error(
         JSON.stringify({
-          status: "failed",
-        })
+          status: 'failed',
+        }),
       );
     }
 
@@ -43,29 +43,29 @@ class Secrets {
       const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
         params: { secretId: secretName },
         headers: {
-          "X-Aws-Parameters-Secrets-Token": this.awsSessionToken,
+          'X-Aws-Parameters-Secrets-Token': this.awsSessionToken,
         },
       });
 
-      console.log("Retrieved secrets");
+      console.log('Retrieved secrets');
       return JSON.parse(data.SecretString);
     } catch (error) {
       loggerService.error(
         {
           secretsService: {
-            action: "getSecrets",
-            layer: "services.secretsService",
+            action: 'getSecrets',
+            layer: 'services.secretsService',
             error: `${error.message}`,
           },
         },
         {},
-        "[CIAM] End getSecrets Service - Failed"
+        '[CIAM] End getSecrets Service - Failed',
       );
       throw new Error(
         JSON.stringify({
-          status: "failed",
+          status: 'failed',
           data: error,
-        })
+        }),
       );
     }
   }

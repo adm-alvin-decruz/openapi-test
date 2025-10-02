@@ -1,44 +1,41 @@
-const crypto = require("crypto");
-const CommonErrors = require("../../../../config/https/errors/commonErrors");
-const PasswordService = require("../../userPasswordService");
-const loggerService = require("../../../../logs/logger");
-const tokenModel = require("../../../../db/models/passwordlessTokenModel");
-const failedJobsModel = require("../../../../db/models/failedJobsModel");
-const configsModel = require("../../../../db/models/configsModel");
-const passwordlessVerifyCodeHelper = require("./passwordlessVerifyCodeHelpers");
-const { secrets } = require("../../../../services/secretsService");
-const PasswordlessSendCodeService = require("./passwordlessSendCodeServices");
+const crypto = require('crypto');
+const CommonErrors = require('../../../../config/https/errors/commonErrors');
+const PasswordService = require('../../userPasswordService');
+const loggerService = require('../../../../logs/logger');
+const tokenModel = require('../../../../db/models/passwordlessTokenModel');
+const failedJobsModel = require('../../../../db/models/failedJobsModel');
+const configsModel = require('../../../../db/models/configsModel');
+const passwordlessVerifyCodeHelper = require('./passwordlessVerifyCodeHelpers');
+const { secrets } = require('../../../../services/secretsService');
+const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
 
 class PasswordlessVerifyCodeService {
   async getTokenDB(email) {
     try {
       const token = await tokenModel.findLatestTokenByEmail(email);
 
-      this.loggerWrapper(
-        "[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Success",
-        {
-          layer: "passwordlessVerifyCodeService.validateOTP",
-          action: "performVerifyOTP.getTokenDB",
-          email: email,
-        }
-      );
+      this.loggerWrapper('[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Success', {
+        layer: 'passwordlessVerifyCodeService.validateOTP',
+        action: 'performVerifyOTP.getTokenDB',
+        email: email,
+      });
 
       return token;
     } catch (error) {
       this.loggerWrapper(
-        "[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Failed",
+        '[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Failed',
         {
-          layer: "passwordlessVerifyCodeService.validateOTP",
-          action: "performVerifyOTP.getTokenDB",
+          layer: 'passwordlessVerifyCodeService.validateOTP',
+          action: 'performVerifyOTP.getTokenDB',
           error: new Error(error),
           email: email,
         },
-        "error"
+        'error',
       );
       await failedJobsModel.create({
         uuid: crypto.randomUUID(),
-        name: "failedGettingOTPTokenInformation",
-        action: "failed",
+        name: 'failedGettingOTPTokenInformation',
+        action: 'failed',
         data: {
           email: email,
         },
@@ -54,14 +51,14 @@ class PasswordlessVerifyCodeService {
       await tokenModel.incrementAttemptById(id);
     } catch (error) {
       this.loggerWrapper(
-        "[CIAM] End incrementTokenAttempt at PasswordlessVerifyCode Service - Failed",
+        '[CIAM] End incrementTokenAttempt at PasswordlessVerifyCode Service - Failed',
         {
-          layer: "passwordlessVerifyCodeService.validateOTP",
-          action: "incrementTokenAttempt",
+          layer: 'passwordlessVerifyCodeService.validateOTP',
+          action: 'incrementTokenAttempt',
           error: new Error(error),
           tokenId: id,
         },
-        "error"
+        'error',
       );
       throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
     }
@@ -72,14 +69,14 @@ class PasswordlessVerifyCodeService {
       return await tokenModel.markTokenById(id); // Returns true or false
     } catch (error) {
       this.loggerWrapper(
-        "[CIAM] End markTokenAsUsed at PasswordlessVerifyCode Service - Failed",
+        '[CIAM] End markTokenAsUsed at PasswordlessVerifyCode Service - Failed',
         {
-          layer: "passwordlessVerifyCodeService.validateOTP",
-          action: "markTokenAsUsed",
+          layer: 'passwordlessVerifyCodeService.validateOTP',
+          action: 'markTokenAsUsed',
           error: new Error(error),
           tokenId: id,
         },
-        "error"
+        'error',
       );
     }
   }
@@ -88,7 +85,11 @@ class PasswordlessVerifyCodeService {
     // check if validating magic link token
     const isMagic = !!req.query?.token?.trim();
 
-    const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName("passwordless-otp", "otp-config", "otp_max_attempt");
+    const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName(
+      'passwordless-otp',
+      'otp-config',
+      'otp_max_attempt',
+    );
 
     const email = req.body.email;
     const otp = req.body.code;
@@ -96,9 +97,7 @@ class PasswordlessVerifyCodeService {
     // otp is empty
     if (!otp) {
       throw new Error(
-        JSON.stringify(
-          passwordlessVerifyCodeHelper.getTokenError("invalid", req, isMagic)
-        )
+        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
       );
     }
 
@@ -108,18 +107,14 @@ class PasswordlessVerifyCodeService {
       // token doesn't exist in token DB
       if (!token) {
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("notFound", req, isMagic)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('notFound', req, isMagic)),
         );
       }
       // token is already used
       const isUsed = token.is_used === 1;
       if (isUsed) {
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("used", req, isMagic)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('used', req, isMagic)),
         );
       }
       // token is epxired
@@ -127,9 +122,7 @@ class PasswordlessVerifyCodeService {
       if (new Date(token.expired_at) < now) {
         await this.markTokenAsUsedDB(token.id);
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("expired", req, isMagic)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('expired', req, isMagic)),
         );
       }
       // too many wrong attempts
@@ -137,13 +130,7 @@ class PasswordlessVerifyCodeService {
       if (tooManyAttempts) {
         await this.markTokenAsUsedDB(token.id);
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError(
-              "rateLimit",
-              req,
-              isMagic
-            )
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('rateLimit', req, isMagic)),
         );
       }
       // check whether OTP matches
@@ -151,9 +138,7 @@ class PasswordlessVerifyCodeService {
       if (!isValid) {
         await this.incrementTokenAttemptDB(token.id);
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("invalid", req, isMagic)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
         );
       }
       // validation passed
@@ -162,9 +147,7 @@ class PasswordlessVerifyCodeService {
       // (just before this), treat as a failed attempt.
       if (!markSuccess) {
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("invalid", req, isMagic)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
         );
       }
       const pw = otp + token.salt;
@@ -181,18 +164,16 @@ class PasswordlessVerifyCodeService {
 
     if (!base64token) {
       throw new Error(
-        JSON.stringify(
-          passwordlessVerifyCodeHelper.getTokenError("missing", req, true)
-        )
+        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('missing', req, true)),
       );
     }
 
     try {
-      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
-      const ALGORITHM = process.env.AES_ALGORITHM || "aes-256-gcm";
-      const KEY = Buffer.from(ciamSecrets.AES_SECRET_KEY, "hex");
+      const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+      const ALGORITHM = process.env.AES_ALGORITHM || 'aes-256-gcm';
+      const KEY = Buffer.from(ciamSecrets.AES_SECRET_KEY, 'hex');
 
-      const data = Buffer.from(base64token, "base64url");
+      const data = Buffer.from(base64token, 'base64url');
 
       // Split the buffer into iv, authTag, and encrypted payload
       const iv = data.subarray(0, 12);
@@ -202,42 +183,31 @@ class PasswordlessVerifyCodeService {
       const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv);
       decipher.setAuthTag(authTag);
 
-      let decrypted = decipher.update(encrypted, undefined, "utf8");
-      decrypted += decipher.final("utf8");
+      let decrypted = decipher.update(encrypted, undefined, 'utf8');
+      decrypted += decipher.final('utf8');
 
       const decryptedToken = JSON.parse(decrypted);
 
       if (Date.now() > decryptedToken.expiredAt) {
         throw new Error(
-          JSON.stringify(
-            passwordlessVerifyCodeHelper.getTokenError("expired", req, true)
-          )
+          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('expired', req, true)),
         );
       }
 
       return decryptedToken;
     } catch (err) {
       throw new Error(
-        JSON.stringify(
-          passwordlessVerifyCodeHelper.getTokenError("invalid", req, true)
-        )
+        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, true)),
       );
     }
   }
 
-  loggerWrapper(action, loggerObj, type = "logInfo") {
-    if (type === "error") {
-      return loggerService.error(
-        { passwordlessSendCodeService: { ...loggerObj } },
-        {},
-        action
-      );
+  loggerWrapper(action, loggerObj, type = 'logInfo') {
+    if (type === 'error') {
+      return loggerService.error({ passwordlessSendCodeService: { ...loggerObj } }, {}, action);
     }
 
-    return loggerService.log(
-      { passwordlessSendCodeService: { ...loggerObj } },
-      action
-    );
+    return loggerService.log({ passwordlessSendCodeService: { ...loggerObj } }, action);
   }
 }
 

@@ -1,5 +1,5 @@
-const CommonErrors = require("../../../config/https/errors/commonErrors");
-const ValidateTokenErrors = require("../../../config/https/errors/validateTokenErrors");
+const CommonErrors = require('../../../config/https/errors/commonErrors');
+const ValidateTokenErrors = require('../../../config/https/errors/validateTokenErrors');
 
 class UserValidateResetPasswordValidation {
   constructor() {
@@ -9,9 +9,9 @@ class UserValidateResetPasswordValidation {
   static validateRequest(token, lang) {
     if (!token) {
       return (this.error = CommonErrors.BadRequest(
-        "passwordToken",
-        "passwordToken_required",
-        lang
+        'passwordToken',
+        'passwordToken_required',
+        lang,
       ));
     }
     if (token && token.length !== 32) {

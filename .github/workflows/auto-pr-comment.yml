@@ -2,7 +2,7 @@ name: Codex Review (comment with PAT)
 
 on:
   pull_request_target:
-    types: [opened, reopened, ready_for_review, synchronize]  # include new commits; fork-safe
+    types: [opened, reopened, ready_for_review, synchronize] # include new commits; fork-safe
 
 permissions:
   pull-requests: write
@@ -12,7 +12,7 @@ jobs:
   comment:
     uses: MandaiWildlifeReserves/shared-workflows/.github/workflows/trigger-codex-review.yaml@main
     with:
-      run_on: "opened,reopened,ready_for_review,synchronize"
+      run_on: 'opened,reopened,ready_for_review,synchronize'
       # only_if_label: "ai-review"            # optional
       # allowed_base_branches: "main,develop" # optional
-    secrets: inherit  # <-- no explicit mapping needed
+    secrets: inherit # <-- no explicit mapping needed

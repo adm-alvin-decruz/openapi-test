@@ -11,17 +11,17 @@ const loggerService = require('../logs/logger');
  * @param {json} reqData
  * @returns new cleaned
  */
-function cleanData(reqData){
-	Object.keys(reqData).forEach(function(key) {
-    if(typeof reqData[key] === "string"){
-			reqData[key] = trimWhiteSpace (reqData[key]);
+function cleanData(reqData) {
+  Object.keys(reqData).forEach(function (key) {
+    if (typeof reqData[key] === 'string') {
+      reqData[key] = trimWhiteSpace(reqData[key]);
     }
-    if(key === "email"){
+    if (key === 'email') {
       // case sensitive email handling
       reqData[key] = reqData[key].toLowerCase();
     }
-	})
-	return reqData;
+  });
+  return reqData;
 }
 
 /**
@@ -30,17 +30,17 @@ function cleanData(reqData){
  * @param {string} str
  * @returns string
  */
-function trimWhiteSpace (str){
-	return str.trim()
+function trimWhiteSpace(str) {
+  return str.trim();
 }
 
-function prepareMembershipGroup(reqBody){
+function prepareMembershipGroup(reqBody) {
   // TODO: update expiry for future FOW, FOW+
   let visualID = reqBody.visualID ? reqBody.visualID : ''; // visual ID will update in queue process
-  return {"name":reqBody.group,"visualID": visualID,"expiry":""};
+  return { name: reqBody.group, visualID: visualID, expiry: '' };
 }
 
-function setSource(req){
+function setSource(req) {
   let reqBody = req.body;
   let reqHeaders = req.headers;
   let sourceMap = JSON.parse(userConfig.SOURCE_MAPPING);
@@ -87,8 +87,11 @@ function valJsonObjOrArray(input, req) {
     // Check if input is an array
     if (Array.isArray(input)) {
       if (input.length === 0) {
-        loggerService.error(new Error('CommonService.valJsonObjOrArray Array input cannot be empty'), req.body);
-        return false
+        loggerService.error(
+          new Error('CommonService.valJsonObjOrArray Array input cannot be empty'),
+          req.body,
+        );
+        return false;
       }
 
       // Validate each object in array
@@ -105,16 +108,25 @@ function valJsonObjOrArray(input, req) {
     // Check if input is an object
     if (typeof input === 'object' && input !== null) {
       if (Object.keys(input).length === 0) {
-        loggerService.log(new Error('CommonService.valJsonObjOrArray Object input cannot be empty'), req.body);
+        loggerService.log(
+          new Error('CommonService.valJsonObjOrArray Object input cannot be empty'),
+          req.body,
+        );
         return false;
       }
 
-      loggerService.log('CommonService.valJsonObjOrArray Valid object input with', Object.keys(input).length, 'properties');
+      loggerService.log(
+        'CommonService.valJsonObjOrArray Valid object input with',
+        Object.keys(input).length,
+        'properties',
+      );
       return true;
     }
 
-    loggerService.error(new Error('CommonService.valJsonObjOrArray Input must be either an array or an object'), req.body);
-
+    loggerService.error(
+      new Error('CommonService.valJsonObjOrArray Input must be either an array or an object'),
+      req.body,
+    );
   } catch (error) {
     loggerService.error('CommonService.valJsonObjOrArray Validation Error:', error);
     return false;
@@ -151,7 +163,7 @@ function mapJsonObjects(mappingJSON, inputJson) {
  * @param {JSON} inputJson
  * @returns
  */
-function mapCognitoJsonObj(mappingJSON, inputJSON){
+function mapCognitoJsonObj(mappingJSON, inputJSON) {
   const jsonC = [];
 
   for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
@@ -162,7 +174,7 @@ function mapCognitoJsonObj(mappingJSON, inputJSON){
       }
       jsonC.push({
         Name: keyA,
-        Value: value
+        Value: value,
       });
     }
   }
@@ -180,13 +192,13 @@ function mapCognitoJsonObj(mappingJSON, inputJSON){
  */
 function compareAndFilterJSON(inputJson, sourceCompare) {
   // Convert jsonB to a map for easier lookup
-  const jsonBMap = new Map(sourceCompare.map(item => [item.Name, item.Value]));
+  const jsonBMap = new Map(sourceCompare.map((item) => [item.Name, item.Value]));
 
   // Filter inputJson
-  const result = inputJson.filter(itemA => {
-      const valueB = jsonBMap.get(itemA.Name);
-      // Keep the item if it's not in sourceCompare or if the values are different
-      return valueB === undefined || itemA.Value !== valueB;
+  const result = inputJson.filter((itemA) => {
+    const valueB = jsonBMap.get(itemA.Name);
+    // Keep the item if it's not in sourceCompare or if the values are different
+    return valueB === undefined || itemA.Value !== valueB;
   });
 
   return result;
@@ -201,7 +213,7 @@ function compareAndFilterJSON(inputJson, sourceCompare) {
  */
 function findUserAttributeValue(userAttributes, attribute) {
   // Find the attribute object where the Name matches the attribute input
-  const attributeObject = userAttributes.find(attr => attr.Name === attribute);
+  const attributeObject = userAttributes.find((attr) => attr.Name === attribute);
 
   // Return the Value if the attribute object is found, otherwise return null
   return attributeObject ? attributeObject.Value : null;
@@ -229,9 +241,9 @@ function convertDateHyphenFormat(inputDate) {
  * @param {json} jsonObj
  * @param {string} objKey
  */
-function findJsonObjValue(jsonObj, objKey){
+function findJsonObjValue(jsonObj, objKey) {
   for (const key in jsonObj) {
-    if(jsonObj[key] === objKey){
+    if (jsonObj[key] === objKey) {
       return jsonObj[key];
     }
   }
@@ -272,11 +284,11 @@ function extractStringPart(input, index) {
 /**
  *
  * // Example usage
-  * const a = [
-  *   {"Name":"birthdate","Value":"01/02/1992"},
-  *   {"Name":"name","Value":"Kay Liong"}
-  * ];
-  * const b = ["birthdate", "newsletter"];
+ * const a = [
+ *   {"Name":"birthdate","Value":"01/02/1992"},
+ *   {"Name":"name","Value":"Kay Liong"}
+ * ];
+ * const b = ["birthdate", "newsletter"];
  * return ["birthdate"]
  * @returns array
  */
@@ -286,12 +298,12 @@ function extractStringPart(input, index) {
  * @param {json} b config arr
  * @returns
  */
-function detectAttrPresence(a, b){
-    // Create a Set of Names from 'a' for efficient lookup
-    const aNames = new Set(a.map(item => item.Name));
+function detectAttrPresence(a, b) {
+  // Create a Set of Names from 'a' for efficient lookup
+  const aNames = new Set(a.map((item) => item.Name));
 
-    // Filter 'b' to only include items that are present in 'a'
-    return b.filter(item => aNames.has(item));
+  // Filter 'b' to only include items that are present in 'a'
+  return b.filter((item) => aNames.has(item));
 }
 
 // helper function to format date
@@ -324,7 +336,7 @@ function convertUserAttrToNormJson(inputJson) {
     }
 
     // Convert "null" string to actual null value
-    if (value === "null") {
+    if (value === 'null') {
       value = null;
     }
 
@@ -334,27 +346,27 @@ function convertUserAttrToNormJson(inputJson) {
   return outputJson;
 }
 
-function processUserUpdateErrors(attr, reqBody, mwgCode){
+function processUserUpdateErrors(attr, reqBody, mwgCode) {
   const validationVar = JSON.parse(userConfig['SIGNUP_VALIDATE_PARAMS']);
 
   let errors = {};
-  if(isJsonNotEmpty(attr) && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
-    if(isJsonNotEmpty(attr.invalid)){
-      Object.keys(attr.invalid).forEach(function(key) {
+  if (isJsonNotEmpty(attr) && mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR') {
+    if (isJsonNotEmpty(attr.invalid)) {
+      Object.keys(attr.invalid).forEach(function (key) {
         let msg = validationVar[attr.invalid[key]].invalid;
         msg = msg.replace('%s', attr.invalid[key]);
-        errors[attr.invalid[key]]= msg;
-      })
+        errors[attr.invalid[key]] = msg;
+      });
     }
-    if(isJsonNotEmpty(attr.dob)){
-      Object.keys(attr.dob).forEach(function(key) {
-        errors['dob']= validationVar['dob'].range_error;
-      })
+    if (isJsonNotEmpty(attr.dob)) {
+      Object.keys(attr.dob).forEach(function (key) {
+        errors['dob'] = validationVar['dob'].range_error;
+      });
     }
-    if(isJsonNotEmpty(attr.newsletter)){
-      Object.keys(attr.newsletter).forEach(function(key) {
-        errors['newletter']= validationVar['newsletter'].subscribe_error;
-      })
+    if (isJsonNotEmpty(attr.newsletter)) {
+      Object.keys(attr.newsletter).forEach(function (key) {
+        errors['newletter'] = validationVar['newsletter'].subscribe_error;
+      });
     }
   }
   return errors;
@@ -459,9 +471,8 @@ function cleanPhoneNumber(phoneNumber) {
  * @returns
  */
 function isRequestFromAEM(headers) {
-  const mwgAppID =
-    headers && headers["mwg-app-id"] ? headers["mwg-app-id"] : "";
-  return mwgAppID.includes("aem");
+  const mwgAppID = headers && headers['mwg-app-id'] ? headers['mwg-app-id'] : '';
+  return mwgAppID.includes('aem');
 }
 
 module.exports = {
@@ -485,5 +496,5 @@ module.exports = {
   getDateTimeUTC8,
   valJsonObjOrArray,
   cleanPhoneNumber,
-  isRequestFromAEM
-}
+  isRequestFromAEM,
+};

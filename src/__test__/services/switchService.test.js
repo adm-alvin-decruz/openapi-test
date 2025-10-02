@@ -24,7 +24,7 @@ describe('SwitchService', () => {
     it('should return all switches successfully', async () => {
       const mockSwitches = [
         { id: 1, name: 'switch1', switch: 1 },
-        { id: 2, name: 'switch2', switch: 0 }
+        { id: 2, name: 'switch2', switch: 0 },
       ];
       switchDBModel.findAll.mockResolvedValue(mockSwitches);
 
@@ -86,7 +86,7 @@ describe('SwitchService', () => {
 
         expect(result).toBe(false);
         expect(console.error).toHaveBeenCalledWith(
-          'SwitchService Error: Input data must be an object or an array'
+          'SwitchService Error: Input data must be an object or an array',
         );
       });
 
@@ -95,7 +95,7 @@ describe('SwitchService', () => {
 
         expect(result).toBe(false);
         expect(console.error).toHaveBeenCalledWith(
-          'SwitchService Error: Input data must be an object or an array'
+          'SwitchService Error: Input data must be an object or an array',
         );
       });
 
@@ -103,9 +103,7 @@ describe('SwitchService', () => {
         const result = await SwitchService.findSwitchValue({}, 123);
 
         expect(result).toBe(false);
-        expect(console.error).toHaveBeenCalledWith(
-          'SwitchService Error: Name must be a string'
-        );
+        expect(console.error).toHaveBeenCalledWith('SwitchService Error: Name must be a string');
       });
     });
 
@@ -113,7 +111,7 @@ describe('SwitchService', () => {
       it('should find switch value in array', async () => {
         const data = [
           { name: 'switch1', switch: 1 },
-          { name: 'switch2', switch: 0 }
+          { name: 'switch2', switch: 0 },
         ];
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');
@@ -123,7 +121,7 @@ describe('SwitchService', () => {
       it('should return false for non-existent switch in array', async () => {
         const data = [
           { name: 'switch1', switch: 1 },
-          { name: 'switch2', switch: 0 }
+          { name: 'switch2', switch: 0 },
         ];
 
         const result = await SwitchService.findSwitchValue(data, 'switch3');
@@ -133,7 +131,7 @@ describe('SwitchService', () => {
       it('should handle falsy switch values in array', async () => {
         const data = [
           { name: 'switch1', switch: 0 },
-          { name: 'switch2', switch: false }
+          { name: 'switch2', switch: false },
         ];
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');
@@ -145,7 +143,7 @@ describe('SwitchService', () => {
       it('should find switch value in object', async () => {
         const data = {
           switch1: { switch: 1 },
-          switch2: { switch: 0 }
+          switch2: { switch: 0 },
         };
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');
@@ -154,7 +152,7 @@ describe('SwitchService', () => {
 
       it('should return false for non-existent switch in object', async () => {
         const data = {
-          switch1: { switch: 1 }
+          switch1: { switch: 1 },
         };
 
         const result = await SwitchService.findSwitchValue(data, 'switch2');
@@ -164,7 +162,7 @@ describe('SwitchService', () => {
       it('should handle falsy switch values in object', async () => {
         const data = {
           switch1: { switch: 0 },
-          switch2: { switch: false }
+          switch2: { switch: false },
         };
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');
@@ -175,7 +173,7 @@ describe('SwitchService', () => {
     describe('Error handling', () => {
       it('should handle and return false for malformed data', async () => {
         const data = {
-          switch1: 'invalid'
+          switch1: 'invalid',
         };
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');
@@ -185,7 +183,7 @@ describe('SwitchService', () => {
 
       it('should handle and return false for undefined switch property', async () => {
         const data = {
-          switch1: {}
+          switch1: {},
         };
 
         const result = await SwitchService.findSwitchValue(data, 'switch1');

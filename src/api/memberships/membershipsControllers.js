@@ -1,9 +1,9 @@
 // use dotenv
-require("dotenv").config();
+require('dotenv').config();
 
-const membershipsService = require("./membershipsServices");
-const MembershipCheckValidation = require("./validations/MembershipCheckValidation");
-const loggerService = require("../../logs/logger");
+const membershipsService = require('./membershipsServices');
+const MembershipCheckValidation = require('./validations/MembershipCheckValidation');
+const loggerService = require('../../logs/logger');
 
 /**
  * Function get user by email using AdminGetUserCommand
@@ -16,12 +16,12 @@ async function adminGetUser(reqBody) {
   loggerService.log(
     {
       membership: {
-        action: "checkUserMembership",
+        action: 'checkUserMembership',
         request: reqBody,
-        layer: "membershipsController.adminGetUser",
+        layer: 'membershipsController.adminGetUser',
       },
     },
-    "[CIAM] Start Check User Membership"
+    '[CIAM] Start Check User Membership',
   );
   const message = MembershipCheckValidation.execute(reqBody);
   if (message) {
@@ -33,26 +33,26 @@ async function adminGetUser(reqBody) {
     loggerService.log(
       {
         membership: {
-          action: "checkUserMembership",
-          layer: "membershipsController.adminGetUser",
+          action: 'checkUserMembership',
+          layer: 'membershipsController.adminGetUser',
           response: JSON.stringify(rs),
         },
       },
-      "[CIAM] End Check User Membership - Success"
+      '[CIAM] End Check User Membership - Success',
     );
     return rs;
   } catch (error) {
     loggerService.error(
       {
         membership: {
-          action: "checkUserMembership",
+          action: 'checkUserMembership',
           request: reqBody,
-          layer: "membershipsController.adminGetUser",
-          error:  new Error(error),
+          layer: 'membershipsController.adminGetUser',
+          error: new Error(error),
         },
       },
       {},
-      "[CIAM] End Check User Membership - Failed"
+      '[CIAM] End Check User Membership - Failed',
     );
     const errorMessage = JSON.parse(error.message);
     throw new Error(JSON.stringify(errorMessage));

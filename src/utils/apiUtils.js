@@ -1,4 +1,4 @@
-const axios = require("axios");
+const axios = require('axios');
 
 class ApiUtils {
   static async makeRequest(url, method, headers, data) {
@@ -6,7 +6,7 @@ class ApiUtils {
       let axiosConfig = {
         method,
         url,
-        headers
+        headers,
       };
 
       // Handle GET requests separately
@@ -28,14 +28,14 @@ class ApiUtils {
   static handleResponse(response) {
     //handle token expire separately
     if (
-        response &&
-        response.status === 200 &&
-        response.data.MembershipLoginResult &&
-        response.data.MembershipLoginResult.Message &&
-        response.data.MembershipLoginResult.Message === "5320|Token Expired"
+      response &&
+      response.status === 200 &&
+      response.data.MembershipLoginResult &&
+      response.data.MembershipLoginResult.Message &&
+      response.data.MembershipLoginResult.Message === '5320|Token Expired'
     ) {
       return {
-        message: "Token Expired!",
+        message: 'Token Expired!',
       };
     }
 

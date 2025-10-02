@@ -3,8 +3,8 @@ name: Auto Tag and Release
 on:
   workflow_dispatch:
     branches:
-      - "releases/*"
-      - "pr/releases/*"
+      - 'releases/*'
+      - 'pr/releases/*'
 
 jobs:
   release:
@@ -177,7 +177,7 @@ jobs:
             done < direct_commits.txt
             echo >> "$TEMP_CHANGELOG"
           fi
-  
+
           {
             echo "$HEADER"
             echo
@@ -198,20 +198,20 @@ jobs:
           git tag "$NEW_VERSION"
           git push origin "$NEW_VERSION"
 
-#      - name: Commit & Push CHANGELOG.md to Repo
-#        run: |
-#          cat CHANGELOG.md
-#          git config user.name "github-actions[bot]"
-#          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-#          git add CHANGELOG.md
-#          git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
-#          git push origin ${{ github.ref_name }}
+      #      - name: Commit & Push CHANGELOG.md to Repo
+      #        run: |
+      #          cat CHANGELOG.md
+      #          git config user.name "github-actions[bot]"
+      #          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #          git add CHANGELOG.md
+      #          git commit -m "docs: update CHANGELOG.md for $NEW_VERSION"
+      #          git push origin ${{ github.ref_name }}
 
       - name: Create GitHub Release with Changelog
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.NEW_VERSION }}
-          name: "Release ${{ env.NEW_VERSION }}"
+          name: 'Release ${{ env.NEW_VERSION }}'
           body: |
             ${{ env.RELEASE_NOTES }}
           draft: ${{ env.DRAFT }}

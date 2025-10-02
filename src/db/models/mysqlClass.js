@@ -26,7 +26,9 @@ class Database {
   }
 
   async read(table, conditions = {}, fields = '*') {
-    const where = Object.keys(conditions).map(key => `${key} = ?`).join(' AND ');
+    const where = Object.keys(conditions)
+      .map((key) => `${key} = ?`)
+      .join(' AND ');
     const sql = `SELECT ${fields} FROM ${table}${where ? ` WHERE ${where}` : ''}`;
     return this.query(sql, Object.values(conditions));
   }
@@ -35,8 +37,12 @@ class Database {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     data.updated_at = now;
 
-    const set = Object.keys(data).map(key => `${key} = ?`).join(', ');
-    const where = Object.keys(conditions).map(key => `${key} = ?`).join(' AND ');
+    const set = Object.keys(data)
+      .map((key) => `${key} = ?`)
+      .join(', ');
+    const where = Object.keys(conditions)
+      .map((key) => `${key} = ?`)
+      .join(' AND ');
     const sql = `UPDATE ${table} SET ${set} WHERE ${where}`;
 
     const values = [...Object.values(data), ...Object.values(conditions)];
@@ -45,7 +51,9 @@ class Database {
 
   async delete(table, conditions) {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const where = Object.keys(conditions).map(key => `${key} = ?`).join(' AND ');
+    const where = Object.keys(conditions)
+      .map((key) => `${key} = ?`)
+      .join(' AND ');
     const sql = `UPDATE ${table} SET updated_at = ? WHERE ${where}; DELETE FROM ${table} WHERE ${where}`;
 
     const values = [now, ...Object.values(conditions), ...Object.values(conditions)];
@@ -173,5 +181,5 @@ module.exports = {
   UserMembershipModel,
   UserNewsletterModel,
   UserDetailModel,
-  UserCredentialModel
+  UserCredentialModel,
 };

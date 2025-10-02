@@ -1,17 +1,17 @@
-const usersService = require("./usersServices");
-const cognitoService = require("../../services/cognitoService");
-const userCredentialModel = require("../../db/models/userCredentialModel");
-const LoginErrors = require("../../config/https/errors/loginErrors");
-const { getOrCheck } = require("../../utils/cognitoAttributes");
-const loggerService = require("../../logs/logger");
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const { proceedSetPassword } = require("./helpers/loginHelper");
-const UserCredentialEventService = require("./userCredentialEventService");
-const { EVENTS } = require("../../utils/constants");
-const { secrets } = require("../../services/secretsService");
-const { getBridgePasswordIfAny } = require("./myAccount/passwordless/passwordlessBridgeService");
-const PasswordService = require("./userPasswordService");
+const usersService = require('./usersServices');
+const cognitoService = require('../../services/cognitoService');
+const userCredentialModel = require('../../db/models/userCredentialModel');
+const LoginErrors = require('../../config/https/errors/loginErrors');
+const { getOrCheck } = require('../../utils/cognitoAttributes');
+const loggerService = require('../../logs/logger');
+const CommonErrors = require('../../config/https/errors/commonErrors');
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const { proceedSetPassword } = require('./helpers/loginHelper');
+const UserCredentialEventService = require('./userCredentialEventService');
+const { EVENTS } = require('../../utils/constants');
+const { secrets } = require('../../services/secretsService');
+const { getBridgePasswordIfAny } = require('./myAccount/passwordless/passwordlessBridgeService');
+const PasswordService = require('./userPasswordService');
 
 class UserLoginService {
   async verifyDBPassword(email, plaintext) {
@@ -22,13 +22,12 @@ class UserLoginService {
     return PasswordService.comparePassword(plaintext, cred.password_hash);
   }
   async login(req) {
-    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
     const hashSecret = usersService.genSecretHash(
       req.body.email,
       ciamSecrets.USER_POOL_CLIENT_ID,
-      ciamSecrets.USER_POOL_CLIENT_SECRET
+      ciamSecrets.USER_POOL_CLIENT_SECRET,
     );
-
 
     const email = req.body.email;
     const providedPw = req.body.password;
@@ -36,14 +35,13 @@ class UserLoginService {
 
     try {
       if (isPasswordless) {
-        return await cognitoService.cognitoUserLogin(
-          { email, password: providedPw },
-          hashSecret
-        );
+        return await cognitoService.cognitoUserLogin({ email, password: providedPw }, hashSecret);
       }
       const ok = await this.verifyDBPassword(email, providedPw);
       if (!ok) {
-        throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(email, req.body.language)));
+        throw new Error(
+          JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(email, req.body.language)),
+        );
       }
 
       //bridge password for Cognito if it exists
@@ -56,22 +54,29 @@ class UserLoginService {
         await proceedSetPassword(userHasFirstLogin, providedPw, req.body.language);
       }
 
-      return await cognitoService.cognitoUserLogin({ email, password: cognitoPassword }, hashSecret);
+      return await cognitoService.cognitoUserLogin(
+        { email, password: cognitoPassword },
+        hashSecret,
+      );
     } catch (error) {
       loggerService.error(
         {
           user: {
             email: req.body.email,
-            action: "login",
+            action: 'login',
             body: req.body,
-            layer: "userLoginServices.login",
+            layer: 'userLoginServices.login',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] Login Service trigger Login Execution - Failed"
+        '[CIAM] Login Service trigger Login Execution - Failed',
       );
-      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
+      throw new Error(
+        JSON.stringify(
+          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language),
+        ),
+      );
     }
   }
 
@@ -80,34 +85,38 @@ class UserLoginService {
       const userCognito = await cognitoService.cognitoAdminGetUserByEmail(req.body.email);
       const userDB = await userCredentialModel.findByUserEmail(req.body.email);
       return {
-        email: getOrCheck(userCognito, "email"),
-        mandaiId: getOrCheck(userCognito, "custom:mandai_id"),
-        userId: userDB.user_id ? userDB.user_id : "",
+        email: getOrCheck(userCognito, 'email'),
+        mandaiId: getOrCheck(userCognito, 'custom:mandai_id'),
+        userId: userDB.user_id ? userDB.user_id : '',
       };
     } catch (error) {
       loggerService.error(
         {
           user: {
             email: req.body.email,
-            action: "login",
+            action: 'login',
             body: req.body,
-            layer: "userLoginServices.getUser",
+            layer: 'userLoginServices.getUser',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] Login Service Get User - Failed"
+        '[CIAM] Login Service Get User - Failed',
       );
-      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
+      throw new Error(
+        JSON.stringify(
+          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language),
+        ),
+      );
     }
   }
 
   async updateUser(id, tokens) {
-    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
     try {
       const verifierAccessToken = CognitoJwtVerifier.create({
         userPoolId: process.env.USER_POOL_ID,
-        tokenUse: "access",
+        tokenUse: 'access',
         clientId: ciamSecrets.USER_POOL_CLIENT_ID,
       });
 
@@ -116,22 +125,22 @@ class UserLoginService {
       await userCredentialModel.updateByUserId(id, {
         tokens: JSON.stringify({
           ...tokens,
-          userSubId: payloadAccessToken.sub || "",
+          userSubId: payloadAccessToken.sub || '',
         }),
-        last_login: new Date().toISOString().slice(0, 19).replace("T", " "),
+        last_login: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
     } catch (error) {
       loggerService.error(
         {
           user: {
             userId: id,
-            action: "login",
-            layer: "userLoginServices.getUser",
+            action: 'login',
+            layer: 'userLoginServices.getUser',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] Login Service Update User - Failed"
+        '[CIAM] Login Service Update User - Failed',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }
@@ -140,18 +149,22 @@ class UserLoginService {
   async execute(req) {
     const userInfo = await this.getUser(req);
     if (!userInfo.userId || !userInfo.email || !userInfo.mandaiId) {
-      throw new Error(JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language)));
+      throw new Error(
+        JSON.stringify(
+          LoginErrors.ciamLoginEmailOrPasswordInvalid(req.body.email, req.body.language),
+        ),
+      );
     }
     try {
       loggerService.log(
         {
           user: {
             email: req.body.email,
-            action: "login",
-            layer: "userLoginServices.execute",
+            action: 'login',
+            layer: 'userLoginServices.execute',
           },
         },
-        "[CIAM] Start Login Service "
+        '[CIAM] Start Login Service ',
       );
       const loginSession = await this.login(req);
       await this.updateUser(userInfo.userId, loginSession);
@@ -163,17 +176,17 @@ class UserLoginService {
           source: 1,
           status: 1,
         },
-        userInfo.userId
+        userInfo.userId,
       );
       loggerService.log(
         {
           user: {
             email: req.body.email,
-            action: "login",
-            layer: "userLoginServices.execute",
+            action: 'login',
+            layer: 'userLoginServices.execute',
           },
         },
-        "[CIAM] End Login Service - Success"
+        '[CIAM] End Login Service - Success',
       );
       return {
         accessToken: loginSession.accessToken,
@@ -189,19 +202,19 @@ class UserLoginService {
           status: 0,
         },
         null,
-        req.body.email
+        req.body.email,
       );
       loggerService.error(
         {
           user: {
             email: req.body.email,
-            action: "login",
-            layer: "userLoginServices.execute",
+            action: 'login',
+            layer: 'userLoginServices.execute',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] End Login Service - Failed"
+        '[CIAM] End Login Service - Failed',
       );
       const errorMessage = JSON.parse(error.message);
       throw new Error(JSON.stringify(errorMessage));

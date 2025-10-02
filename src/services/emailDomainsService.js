@@ -1,11 +1,10 @@
-const { EmailDomainModel } = require("../db/models/emailDomainsModel");
-const loggerService = require("../logs/logger");
+const { EmailDomainModel } = require('../db/models/emailDomainsModel');
+const loggerService = require('../logs/logger');
 const ApiUtils = require('../utils/apiUtils');
 const switchService = require('./switchService');
-const { emailPattern } = require("../utils/common");
+const { emailPattern } = require('../utils/common');
 // use dotenv
 require('dotenv').config();
-
 
 class EmailDomainService {
   constructor(model) {
@@ -16,7 +15,7 @@ class EmailDomainService {
       0: { isValid: false, status: 'new', message: `Domain pending verification ${this.email}` },
       1: { isValid: true, status: 'whitelist', message: `Domain is whitelisted` },
       2: { isValid: true, status: 'greylist', message: `Domain is greylisted` },
-      3: { isValid: false, status: 'blacklist', message: `Domain is blacklisted ${this.email}` }
+      3: { isValid: false, status: 'blacklist', message: `Domain is blacklisted ${this.email}` },
     };
   }
 
@@ -61,7 +60,7 @@ class EmailDomainService {
 
   isValidDomainFormat(domain) {
     // Basic domain validation regex
-    const domainRegex =  /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
     return domainRegex.test(domain);
   }
 
@@ -77,7 +76,7 @@ class EmailDomainService {
 
     return {
       localPart: parts[0],
-      domain: parts[1].toLowerCase()
+      domain: parts[1].toLowerCase(),
     };
   }
 
@@ -91,7 +90,7 @@ class EmailDomainService {
         return {
           isValid: false,
           status: 'unknown',
-          message: `Domain not found in database. Email: ${email}`
+          message: `Domain not found in database. Email: ${email}`,
         };
       }
 
@@ -101,15 +100,19 @@ class EmailDomainService {
     }
   }
 
-  async valApiDisposableEmail (email) {
+  async valApiDisposableEmail(email) {
     try {
-      const result = await ApiUtils.makeRequest('https://disposable.debounce.io/', 'get', {}, { email: email });
-      if (result.disposable == "true") {
+      const result = await ApiUtils.makeRequest(
+        'https://disposable.debounce.io/',
+        'get',
+        {},
+        { email: email },
+      );
+      if (result.disposable == 'true') {
         // add to DB
         await this.upsertDomain(this.domain, 3);
         return true;
-      }
-      else if (result.disposable == "false") {
+      } else if (result.disposable == 'false') {
         // add to DB
         await this.createDomain(this.domain, 0);
         return false;
@@ -126,8 +129,7 @@ class EmailDomainService {
 
     if (!validEmail.isValid && validEmail.status == 'blacklist') {
       loggerService.error(`Invalid email domain ${email}`);
-      return false
-
+      return false;
     } else if (validEmail.status == 'greylist' || validEmail.status == 'unknown') {
       // call free API
       let disposable = await this.valApiDisposableEmail(email);
@@ -140,15 +142,18 @@ class EmailDomainService {
     return true;
   }
 
-  async getCheckDomainSwitch () {
-    if (process.env.APP_ENV == 'dev' || process.env.APP_ENV == 'uat' || process.env.APP_ENV == 'prod') {
+  async getCheckDomainSwitch() {
+    if (
+      process.env.APP_ENV == 'dev' ||
+      process.env.APP_ENV == 'uat' ||
+      process.env.APP_ENV == 'prod'
+    ) {
       // get switches from DB
       let dbSwitch = await switchService.findByName('email_domain_check');
       return dbSwitch.switch === 1;
     }
     return false;
   }
-
 }
 
 module.exports = new EmailDomainService();

@@ -30,7 +30,7 @@ class EmailDomainModel {
     const updates = [];
     const values = [];
 
-    allowedFields.forEach(field => {
+    allowedFields.forEach((field) => {
       if (data[field] !== undefined) {
         updates.push(`${field} = ?`);
         values.push(data[field]);
@@ -84,7 +84,7 @@ class EmailDomainModel {
         valid,
         now,
         now,
-        now
+        now,
       ]);
 
       // Return object with operation details
@@ -93,7 +93,7 @@ class EmailDomainModel {
         affectedRows: result.affectedRows,
         isInsert: result.insertId > 0,
         isUpdate: result.affectedRows === 2, // MySQL returns 2 for update, 1 for insert
-        changedRows: result.changedRows || 0
+        changedRows: result.changedRows || 0,
       });
     } catch (error) {
       throw new Error(`Upsert failed: ${error.message}`);
@@ -102,5 +102,5 @@ class EmailDomainModel {
 }
 
 module.exports = {
-  EmailDomainModel
+  EmailDomainModel,
 };

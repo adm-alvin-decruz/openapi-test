@@ -1,7 +1,7 @@
-const MembershipPassErrors = require("../../../config/https/errors/membershipPassErrors");
-const { validateDOBiso } = require("../../../services/validationService");
-const configsModel = require("../../../db/models/configsModel");
-const commonService = require("../../../services/commonService");
+const MembershipPassErrors = require('../../../config/https/errors/membershipPassErrors');
+const { validateDOBiso } = require('../../../services/validationService');
+const configsModel = require('../../../db/models/configsModel');
+const commonService = require('../../../services/commonService');
 
 class UserMembershipPassValidation {
   constructor() {
@@ -9,15 +9,10 @@ class UserMembershipPassValidation {
   }
 
   static async isPassTypeValid(passType) {
-    const passesSupported = await configsModel.findByConfigKey(
-      "membership-passes",
-      "pass-type"
-    );
+    const passesSupported = await configsModel.findByConfigKey('membership-passes', 'pass-type');
 
     const passes =
-      passesSupported &&
-      passesSupported.value &&
-      passesSupported.value.length > 0
+      passesSupported && passesSupported.value && passesSupported.value.length > 0
         ? passesSupported.value
         : [];
     return passes.includes(passType);
@@ -27,41 +22,39 @@ class UserMembershipPassValidation {
     const requiredParams =
       req.body && req.body.migrations
         ? [
-            "email",
-            "group",
-            "passType",
-            "visualId",
-            "categoryType",
+            'email',
+            'group',
+            'passType',
+            'visualId',
+            'categoryType',
             // "adultQty",
             // "childQty",
           ]
         : [
-            "email",
-            "mandaiId",
-            "group",
-            "passType",
-            "visualId",
-            "categoryType",
-            "adultQty",
-            "childQty",
+            'email',
+            'mandaiId',
+            'group',
+            'passType',
+            'visualId',
+            'categoryType',
+            'adultQty',
+            'childQty',
           ];
 
     const requestParams = Object.keys(req.body);
-    const missingParams = requiredParams.filter(
-      (param) => !requestParams.includes(param)
-    );
+    const missingParams = requiredParams.filter((param) => !requestParams.includes(param));
     if (missingParams.length > 0) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         missingParams[0],
-        req.body.language
+        req.body.language,
       ));
     }
 
     const isPassTypeValid = await this.isPassTypeValid(req.body.passType);
     if (!isPassTypeValid) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "passType",
-        req.body.language
+        'passType',
+        req.body.language,
       ));
     }
 
@@ -71,8 +64,8 @@ class UserMembershipPassValidation {
       const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "member_dob",
-          req.body.language
+          'member_dob',
+          req.body.language,
         ));
       }
     }
@@ -93,74 +86,65 @@ class UserMembershipPassValidation {
     //   ));
     // }
 
-    if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
+    if (req.body.parking && !['yes', 'no'].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "parking",
-        req.body.language
+        'parking',
+        req.body.language,
       ));
     }
 
     if (
       req.body.member &&
-      (typeof req.body.member !== "object" || Array.isArray(req.body.member))
+      (typeof req.body.member !== 'object' || Array.isArray(req.body.member))
     ) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member",
-        req.body.language
+        'member',
+        req.body.language,
       ));
     }
 
     if (req.body.coMembers && !Array.isArray(req.body.coMembers)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "coMembers",
-        req.body.language
+        'coMembers',
+        req.body.language,
       ));
     }
 
     if (
       req.body.membershipPhoto &&
-      (typeof req.body.membershipPhoto !== "object" ||
-        Array.isArray(req.body.membershipPhoto))
+      (typeof req.body.membershipPhoto !== 'object' || Array.isArray(req.body.membershipPhoto))
     ) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "membershipPhoto",
-        req.body.language
+        'membershipPhoto',
+        req.body.language,
       ));
     }
 
     if (req.body.membershipPhoto && !req.body.membershipPhoto.bytes) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "membershipPhoto",
-        req.body.language
+        'membershipPhoto',
+        req.body.language,
       ));
     }
   }
 
   static async validateUpdateUserMembershipPass(req) {
-    const requiredParams = [
-      "email",
-      "mandaiId",
-      "group",
-      "passType",
-      "visualId",
-    ];
+    const requiredParams = ['email', 'mandaiId', 'group', 'passType', 'visualId'];
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
     const requestParams = Object.keys(req.body);
-    const missingParams = requiredParams.filter(
-      (param) => !requestParams.includes(param)
-    );
+    const missingParams = requiredParams.filter((param) => !requestParams.includes(param));
     if (missingParams.length > 0) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
         missingParams[0],
-        req.body.language
+        req.body.language,
       ));
     }
 
     const isPassTypeValid = await this.isPassTypeValid(req.body.passType);
     if (!isPassTypeValid) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "passType",
-        req.body.language
+        'passType',
+        req.body.language,
       ));
     }
 
@@ -168,8 +152,8 @@ class UserMembershipPassValidation {
       const dob = validateDOBiso(req.body.member.dob);
       if (!dob) {
         return (this.error = MembershipPassErrors.membershipPassParamsError(
-          "member_dob",
-          req.body.language
+          'member_dob',
+          req.body.language,
         ));
       }
     }
@@ -206,10 +190,10 @@ class UserMembershipPassValidation {
     //   ));
     // }
 
-    if (req.body.parking && !["yes", "no"].includes(req.body.parking)) {
+    if (req.body.parking && !['yes', 'no'].includes(req.body.parking)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "parking",
-        req.body.language
+        'parking',
+        req.body.language,
       ));
     }
 
@@ -230,36 +214,35 @@ class UserMembershipPassValidation {
 
     if (
       req.body.member &&
-      (typeof req.body.member !== "object" || Array.isArray(req.body.member))
+      (typeof req.body.member !== 'object' || Array.isArray(req.body.member))
     ) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "member",
-        req.body.language
+        'member',
+        req.body.language,
       ));
     }
 
     if (req.body.coMembers && !Array.isArray(req.body.coMembers)) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "coMembers",
-        req.body.language
+        'coMembers',
+        req.body.language,
       ));
     }
 
     if (
       req.body.membershipPhoto &&
-      (typeof req.body.membershipPhoto !== "object" ||
-        Array.isArray(req.body.membershipPhoto))
+      (typeof req.body.membershipPhoto !== 'object' || Array.isArray(req.body.membershipPhoto))
     ) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "membershipPhoto",
-        req.body.language
+        'membershipPhoto',
+        req.body.language,
       ));
     }
 
     if (req.body.membershipPhoto && !req.body.membershipPhoto.bytes) {
       return (this.error = MembershipPassErrors.membershipPassParamsError(
-        "membershipPhoto",
-        req.body.language
+        'membershipPhoto',
+        req.body.language,
       ));
     }
   }

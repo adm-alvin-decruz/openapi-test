@@ -1,21 +1,22 @@
 // lambda
-const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
-const lambdaClient = new LambdaClient({ region: "ap-southeast-1" });
+const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
+const lambdaClient = new LambdaClient({ region: 'ap-southeast-1' });
 
 const loggerService = require('../logs/logger');
 const responseHelper = require('../helpers/responseHelpers');
 const commonService = require('../services/commonService');
 
-async function lambdaInvokeFunction(event, functionName){
+async function lambdaInvokeFunction(event, functionName) {
   const timeLog = {};
-  timeLog[functionName +'_start'] = new Date(); // log mail start time
+  timeLog[functionName + '_start'] = new Date(); // log mail start time
   // build input
-  const input = { // InvocationRequest
+  const input = {
+    // InvocationRequest
     FunctionName: functionName, // required
-    InvocationType: "RequestResponse",
-    LogType: "Tail",
+    InvocationType: 'RequestResponse',
+    LogType: 'Tail',
     // ClientContext: "STRING_VALUE",
-    Payload: JSON.stringify(event, null, 2)
+    Payload: JSON.stringify(event, null, 2),
     // Qualifier: "STRING_VALUE",
   };
 
@@ -25,27 +26,26 @@ async function lambdaInvokeFunction(event, functionName){
     // send to lambda
     const response = await lambdaClient.send(command);
 
-    timeLog[functionName +'_end'] = new Date(); // log mail end time
+    timeLog[functionName + '_end'] = new Date(); // log mail end time
     // decode response base64
     // let decodedString = commonService.decodeBase64(response.LogResult);
     let decodedString = JSON.parse(Buffer.from(response.Payload));
 
-    if(decodedString !== null){
-      if(decodedString.body){
-        decodedString["body"] = JSON.parse(decodedString.body);
+    if (decodedString !== null) {
+      if (decodedString.body) {
+        decodedString['body'] = JSON.parse(decodedString.body);
       }
-    }else{
-      decodedString = {}
+    } else {
+      decodedString = {};
     }
-    decodedString["time_log"] = JSON.stringify(timeLog);
+    decodedString['time_log'] = JSON.stringify(timeLog);
 
     return decodedString;
-
   } catch (error) {
     return error;
   }
 }
 
 module.exports = {
-  lambdaInvokeFunction
-}
+  lambdaInvokeFunction,
+};

@@ -8,8 +8,7 @@ const processTimer = require('../../utils/processTimer');
 const validationService = require('../../services/validationService');
 const loggerService = require('../../logs/logger');
 
-
-class SupportController{
+class SupportController {
   // to add process timer
   static addProcessTimer(req) {
     req['processTimer'] = processTimer;
@@ -18,35 +17,35 @@ class SupportController{
     return req;
   }
 
-  static async getUserAll (req) {
+  static async getUserAll(req) {
     return SupportUserServices.getUserAllInfoService(req);
   }
 
-  static async getAllSwitches () {
+  static async getAllSwitches() {
     return SupportSwitchesServices.getAllSwitchesService();
   }
 
-  static async updateSwitches (req) {
+  static async updateSwitches(req) {
     return SupportSwitchesServices.updateSwitchesService(req);
   }
 
-  static async createSwitches (body) {
+  static async createSwitches(body) {
     return SupportSwitchesServices.createSwitch(body);
   }
 
-  static async getUsersPaginationCustom(req){
+  static async getUsersPaginationCustom(req) {
     return SupportUserServices.getUsersPaginationCustomService(req);
   }
 
-  static async batchPatchUser(req){
+  static async batchPatchUser(req) {
     return SupportUserServices.batchPatchUserService(req);
   }
 
-  static async getTokenByClient(req){
+  static async getTokenByClient(req) {
     return SupportTokenServices.getTokenByClientService(req);
   }
 
-  static async updateToken(req, res){
+  static async updateToken(req, res) {
     req['processTimer'] = processTimer;
     req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
@@ -54,7 +53,7 @@ class SupportController{
     // validate req app-id
     var valAppID = validationService.validateAppID(req.headers, 'support');
 
-    if(valAppID === true){
+    if (valAppID === true) {
       let token;
       try {
         token = await SupportTokenServices.updateTokenData(req.body);
@@ -63,18 +62,17 @@ class SupportController{
         res.status(500).json({ success: false, error: error.message });
       }
       req.apiTimer.end('[CIAM-SUPPORT] get token ended', startTimer);
-    }
-    else{
+    } else {
       return res.status(401).send({ error: 'Unauthorized' });
     }
   }
 
   static async getFailedJobs(req, res) {
-    return await this.failedJobsCtrlToService(req, res, 'getFailedJobsWithPagination')
+    return await this.failedJobsCtrlToService(req, res, 'getFailedJobsWithPagination');
   }
 
   static async triggerFailedJobsCtr(req, res) {
-    return await this.failedJobsCtrlToService(req, res, 'receivedTriggerReq')
+    return await this.failedJobsCtrlToService(req, res, 'receivedTriggerReq');
   }
 
   static async failedJobsCtrlToService(req, res, faileJobMethodName) {
@@ -84,7 +82,7 @@ class SupportController{
     // validate req app-id
     var valAppID = validationService.validateAppID(req.headers, 'support');
 
-    if(valAppID === true){
+    if (valAppID === true) {
       let jobs;
       try {
         jobs = await SupportFailedJobsServices.execute(faileJobMethodName, req);
@@ -94,14 +92,13 @@ class SupportController{
         res.status(500).json({ status: 'failed', error: error.message });
       }
       req.apiTimer.end('[CIAM-SUPPORT] get failed jobs ended', startTimer);
-    }
-    else{
+    } else {
       return res.status(401).send({ error: 'Unauthorized' });
     }
   }
 
   static async triggerGalaxyWPImportCtrl(req, res) {
-    return await this.supportGalaxyFunc(req, res, 'triggerGalaxyImportSvc')
+    return await this.supportGalaxyFunc(req, res, 'triggerGalaxyImportSvc');
   }
 
   static async supportGalaxyFunc(req, res, faileJobMethodName) {
@@ -111,7 +108,7 @@ class SupportController{
     // validate req app-id
     var valAppID = validationService.validateAppID(req.headers, 'support');
 
-    if(valAppID === true){
+    if (valAppID === true) {
       let jobs;
       try {
         jobs = await SupportGalaxyServices.execute(faileJobMethodName, req);
@@ -121,8 +118,7 @@ class SupportController{
         res.status(500).json({ status: 'failed', error: error.message });
       }
       req.apiTimer.end('[CIAM-SUPPORT] galaxy jobs ended', startTimer);
-    }
-    else{
+    } else {
       return res.status(401).send({ error: 'Unauthorized' });
     }
   }

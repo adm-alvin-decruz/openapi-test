@@ -27,7 +27,7 @@ describe('SupportSwitchesServices', () => {
       // Mock data
       const mockSwitches = [
         { id: 1, name: 'switch1', switch: 1, description: 'Switch 1' },
-        { id: 2, name: 'switch2', switch: 0, description: 'Switch 2' }
+        { id: 2, name: 'switch2', switch: 0, description: 'Switch 2' },
       ];
 
       // Setup mock
@@ -62,9 +62,9 @@ describe('SupportSwitchesServices', () => {
       SwitchesModel.findAll.mockRejectedValue(mockError);
 
       // Execute and assert
-      await expect(SupportSwitchesServices.getAllSwitchesService())
-        .rejects
-        .toThrow('Database error');
+      await expect(SupportSwitchesServices.getAllSwitchesService()).rejects.toThrow(
+        'Database error',
+      );
     });
   });
 
@@ -74,16 +74,13 @@ describe('SupportSwitchesServices', () => {
       const mockRequest = {
         body: [
           { id: 1, switch: 1, description: 'Updated Switch 1' },
-          { id: 2, switch: 0, description: 'Updated Switch 2' }
-        ]
+          { id: 2, switch: 0, description: 'Updated Switch 2' },
+        ],
       };
 
       const mockUpdateResult = {
         sql_statement: ['UPDATE statement 1', 'UPDATE statement 2'],
-        switches: [
-          { affectedRows: 1 },
-          { affectedRows: 1 }
-        ]
+        switches: [{ affectedRows: 1 }, { affectedRows: 1 }],
       };
 
       // Setup mock
@@ -100,12 +97,12 @@ describe('SupportSwitchesServices', () => {
     it('should handle empty request body', async () => {
       // Mock request with empty body
       const mockRequest = {
-        body: []
+        body: [],
       };
 
       const mockUpdateResult = {
         sql_statement: [],
-        switches: []
+        switches: [],
       };
 
       // Setup mock
@@ -122,33 +119,31 @@ describe('SupportSwitchesServices', () => {
     it('should handle errors from updateMultiple', async () => {
       // Mock request and error
       const mockRequest = {
-        body: [
-          { id: 1, switch: 1, description: 'Switch 1' }
-        ]
+        body: [{ id: 1, switch: 1, description: 'Switch 1' }],
       };
 
       const mockError = new Error('Update failed');
       SwitchesModel.updateMultiple.mockRejectedValue(mockError);
 
       // Execute and assert
-      await expect(SupportSwitchesServices.updateSwitchesService(mockRequest))
-        .rejects
-        .toThrow('Update failed');
+      await expect(SupportSwitchesServices.updateSwitchesService(mockRequest)).rejects.toThrow(
+        'Update failed',
+      );
     });
 
     it('should handle invalid request body format', async () => {
       // Mock invalid request
       const mockRequest = {
-        body: 'invalid'
+        body: 'invalid',
       };
 
       const mockError = new Error('Invalid request body');
       SwitchesModel.updateMultiple.mockRejectedValue(mockError);
 
       // Execute and assert
-      await expect(SupportSwitchesServices.updateSwitchesService(mockRequest))
-        .rejects
-        .toThrow('Invalid request body');
+      await expect(SupportSwitchesServices.updateSwitchesService(mockRequest)).rejects.toThrow(
+        'Invalid request body',
+      );
     });
   });
 });

@@ -1,15 +1,15 @@
-const UserMembershipPassService = require("./userMembershipPassService");
-const { messageLang } = require("../../utils/common");
+const UserMembershipPassService = require('./userMembershipPassService');
+const { messageLang } = require('../../utils/common');
 
 class UserCreateMembershipPassJob {
-  success(lang = "en") {
+  success(lang = 'en') {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_CREATE_MEMBERSHIP_PASS_SUCCESS",
-        message: messageLang("membership_pass_create_success", lang),
+        mwgCode: 'MWG_CIAM_CREATE_MEMBERSHIP_PASS_SUCCESS',
+        message: messageLang('membership_pass_create_success', lang),
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }
@@ -25,14 +25,14 @@ class UserCreateMembershipPassJob {
 }
 
 class UserUpdateMembershipPassJob {
-  success(lang = "en") {
+  success(lang = 'en') {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_UPDATE_MEMBERSHIP_PASS_SUCCESS",
-        message: messageLang("membership_pass_update_success", lang),
+        mwgCode: 'MWG_CIAM_UPDATE_MEMBERSHIP_PASS_SUCCESS',
+        message: messageLang('membership_pass_update_success', lang),
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }

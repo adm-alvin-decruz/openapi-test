@@ -62,21 +62,21 @@ async function mapImputToImportParams(input, importData) {
   return result;
 }
 
-async function setGlxReqHeader(){
+async function setGlxReqHeader() {
   const glxToken = await galaxyTokenService.useToken();
 
   return constructGlxHeader(glxToken);
 }
 
-async function constructGlxHeader(glxToken){
+async function constructGlxHeader(glxToken) {
   const headers = {
-    'Authorization': `${glxToken.token_type} ${glxToken.access_token}`,
-    'Content-Type': 'application/json'
+    Authorization: `${glxToken.token_type} ${glxToken.access_token}`,
+    'Content-Type': 'application/json',
   };
   return headers;
 }
 
 module.exports = {
   mapImputToImportParams,
-  setGlxReqHeader
+  setGlxReqHeader,
 };

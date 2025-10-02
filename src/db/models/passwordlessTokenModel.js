@@ -1,10 +1,7 @@
-const pool = require("../connections/mysqlConn");
-const {
-  getCurrentUTCTimestamp,
-  formatDateToMySQLDateTime,
-} = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class PasswordlessToken {
   static async create(tokenData) {
@@ -15,17 +12,15 @@ class PasswordlessToken {
     `;
 
     const formattedRequestedAt = formatDateToMySQLDateTime(
-      new Date(tokenData.requestedAt || new Date()) // default to now if not provided
+      new Date(tokenData.requestedAt || new Date()), // default to now if not provided
     );
 
-    const formattedExpiredAt = formatDateToMySQLDateTime(
-      new Date(tokenData.expiredAt)
-    );
+    const formattedExpiredAt = formatDateToMySQLDateTime(new Date(tokenData.expiredAt));
 
     const params = [
       tokenData.email,
       tokenData.hash,
-      tokenData.salt || "",
+      tokenData.salt || '',
       formattedRequestedAt,
       formattedExpiredAt,
       tokenData.attempt || 1,
@@ -49,7 +44,7 @@ class PasswordlessToken {
           },
         },
         {},
-        "[CIAM] passwordlessTokenModel.create - Failed"
+        '[CIAM] passwordlessTokenModel.create - Failed',
       );
     }
   }
@@ -75,7 +70,7 @@ class PasswordlessToken {
           },
         },
         {},
-        "[CIAM] passwordlessTokenModel.findLatestByEmail - Failed"
+        '[CIAM] passwordlessTokenModel.findLatestByEmail - Failed',
       );
     }
   }
@@ -104,7 +99,7 @@ class PasswordlessToken {
           },
         },
         {},
-        "[CIAM] passwordlessTokenModel.incrementAttemptById - Failed"
+        '[CIAM] passwordlessTokenModel.incrementAttemptById - Failed',
       );
       return error;
     }
@@ -130,7 +125,7 @@ class PasswordlessToken {
           },
         },
         {},
-        "[CIAM] passwordlessTokenModel.markTokenById - Failed"
+        '[CIAM] passwordlessTokenModel.markTokenById - Failed',
       );
       return error;
     }

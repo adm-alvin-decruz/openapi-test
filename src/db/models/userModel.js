@@ -1,7 +1,7 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class User {
   static async create(userData) {
@@ -39,13 +39,13 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.create - Failed"
+        '[CIAM] userModel.create - Failed',
       );
     }
   }
 
   static async findById(id) {
-    const sql = "SELECT * FROM users WHERE id = ?";
+    const sql = 'SELECT * FROM users WHERE id = ?';
     try {
       const [rows] = await pool.query(sql, [id]);
       return rows[0];
@@ -58,14 +58,14 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findById - Failed"
+        '[CIAM] userModel.findById - Failed',
       );
     }
   }
 
   static async findByEmail(email) {
     try {
-      const sql = "SELECT * FROM users WHERE email = ?";
+      const sql = 'SELECT * FROM users WHERE email = ?';
       const rows = await pool.query(sql, [email]);
 
       return rows[0];
@@ -78,21 +78,18 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmail - Failed"
+        '[CIAM] userModel.findByEmail - Failed',
       );
       throw error;
     }
   }
 
   static async existsByMandaiId(mandaiId) {
-    const sql = "SELECT * FROM users WHERE mandai_id = ?";
+    const sql = 'SELECT * FROM users WHERE mandai_id = ?';
     const params = [mandaiId];
     try {
       const [rows] = await pool.query(sql, params);
-      loggerService.log(
-        {test: rows},
-        "[CIAM] rows"
-      );
+      loggerService.log({ test: rows }, '[CIAM] rows');
       return rows == undefined ? false : true;
     } catch (error) {
       loggerService.error(
@@ -103,7 +100,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.existsByMandaiId - Failed"
+        '[CIAM] userModel.existsByMandaiId - Failed',
       );
     }
   }
@@ -118,15 +115,16 @@ class User {
    */
   static async findActiveVisualId(visualIds, email, mandaiId) {
     const params = [visualIds];
-    let whereClause = "WHERE um.visual_id IN (?) AND u.status = 1 AND (umd.status IN (0) OR umd.status IS NULL)";
+    let whereClause =
+      'WHERE um.visual_id IN (?) AND u.status = 1 AND (umd.status IN (0) OR umd.status IS NULL)';
 
     if (email) {
-      whereClause += " AND u.email = ?";
+      whereClause += ' AND u.email = ?';
       params.push(email);
     }
 
     if (mandaiId) {
-      whereClause += " AND u.mandai_id = ?";
+      whereClause += ' AND u.mandai_id = ?';
       params.push(mandaiId);
     }
 
@@ -138,8 +136,8 @@ class User {
                 ${whereClause}`;
 
       console.log(
-        "Find pass by email, visualId/s and status needs to be active",
-        commonService.replaceSqlPlaceholders(sql, params)
+        'Find pass by email, visualId/s and status needs to be active',
+        commonService.replaceSqlPlaceholders(sql, params),
       );
 
       return await pool.query(sql, params);
@@ -153,7 +151,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findActiveVisualId - Failed"
+        '[CIAM] userModel.findActiveVisualId - Failed',
       );
       return error;
     }
@@ -180,7 +178,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailMandaiIdVisualId - Failed"
+        '[CIAM] userModel.findByEmailMandaiIdVisualId - Failed',
       );
       return error;
     }
@@ -204,7 +202,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findFullMandaiId - Failed"
+        '[CIAM] userModel.findFullMandaiId - Failed',
       );
       return error;
     }
@@ -233,7 +231,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findWPFullData - Failed"
+        '[CIAM] userModel.findWPFullData - Failed',
       );
     }
   }
@@ -241,16 +239,16 @@ class User {
   /** Find passes belong user */
   static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
     // build the WHERE clause dynamically based on available parameters
-    let whereClause = "WHERE u.status = 1";
+    let whereClause = 'WHERE u.status = 1';
     const params = [passes];
 
     if (email) {
-      whereClause += " AND u.email = ?";
+      whereClause += ' AND u.email = ?';
       params.push(email);
     }
 
     if (mandaiId) {
-      whereClause += " AND u.mandai_id = ?";
+      whereClause += ' AND u.mandai_id = ?';
       params.push(mandaiId);
     }
     const sql = `SELECT u.email, u.mandai_id as mandaiId, um.name as passes,
@@ -261,7 +259,7 @@ class User {
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                    ${whereClause}`;
-    console.log("Find passes belong user", commonService.replaceSqlPlaceholders(sql, params));
+    console.log('Find passes belong user', commonService.replaceSqlPlaceholders(sql, params));
     try {
       return await pool.query(sql, params);
     } catch (error) {
@@ -269,17 +267,17 @@ class User {
         {
           userModel: {
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            error: new Error("userModel.findPassesByUserEmailOrMandaiId error: ", error),
+            error: new Error('userModel.findPassesByUserEmailOrMandaiId error: ', error),
           },
         },
         {},
-        "[CIAM] userModel.findPassesByUserEmailOrMandaiId - Failed"
+        '[CIAM] userModel.findPassesByUserEmailOrMandaiId - Failed',
       );
       throw new Error(
         JSON.stringify({
-          dbProceed: "failed",
+          dbProceed: 'failed',
           error: JSON.stringify(error),
-        })
+        }),
       );
     }
   }
@@ -293,12 +291,12 @@ class User {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE users
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `;
 
@@ -325,12 +323,12 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.update - Failed"
+        '[CIAM] userModel.update - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === "dev" ? error.stack : undefined,
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }
@@ -344,12 +342,12 @@ class User {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE users
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE email = ?
     `;
 
@@ -376,18 +374,18 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.softDeleteUserByEmail - Failed"
+        '[CIAM] userModel.softDeleteUserByEmail - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === "dev" ? error.stack : undefined,
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }
 
   static async deletebyUserID(user_id) {
-    const sql = "DELETE FROM users WHERE id = ?";
+    const sql = 'DELETE FROM users WHERE id = ?';
     try {
       var result = await pool.execute(sql, [user_id]);
 
@@ -404,7 +402,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.deletebyUserID - Failed"
+        '[CIAM] userModel.deletebyUserID - Failed',
       );
       throw error;
     }
@@ -412,7 +410,7 @@ class User {
 
   static async disableByUserID(user_id) {
     const now = getCurrentUTCTimestamp();
-    const sql = "UPDATE users SET status = 0, updated_at = ? WHERE id = ?";
+    const sql = 'UPDATE users SET status = 0, updated_at = ? WHERE id = ?';
     try {
       await pool.execute(sql, [now, user_id]);
 
@@ -429,41 +427,41 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.disableByUserID - Failed"
+        '[CIAM] userModel.disableByUserID - Failed',
       );
       return error;
     }
   }
 
-  static async queryUsersWithPagination(page = 1, pageSize, columns = ["*"], filters = {}) {
+  static async queryUsersWithPagination(page = 1, pageSize, columns = ['*'], filters = {}) {
     const offset = (page - 1) * pageSize;
     try {
       // Validate and sanitize column names
       const validColumns = [
-        "id",
-        "email",
-        "given_name",
-        "family_name",
-        "birthdate",
-        "mandai_id",
-        "source",
-        "status",
-        "created_at",
-        "updated_at",
+        'id',
+        'email',
+        'given_name',
+        'family_name',
+        'birthdate',
+        'mandai_id',
+        'source',
+        'status',
+        'created_at',
+        'updated_at',
       ];
 
       // Ensure columns is an array
       let selectedColumns = Array.isArray(columns) ? columns : [columns];
 
       // Handle '*' case
-      if (selectedColumns.includes("*") || selectedColumns[0] === "*") {
+      if (selectedColumns.includes('*') || selectedColumns[0] === '*') {
         selectedColumns = validColumns;
       } else {
         selectedColumns = selectedColumns.filter((col) => validColumns.includes(col));
       }
 
       if (selectedColumns.length === 0) {
-        throw new Error("No valid columns selected");
+        throw new Error('No valid columns selected');
       }
 
       // Construct WHERE clause based on filters
@@ -475,11 +473,12 @@ class User {
           values.push(value);
         }
       }
-      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
+      const whereClause =
+        whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       // Construct the query
       const query = `
-        SELECT ${selectedColumns.join(", ")}
+        SELECT ${selectedColumns.join(', ')}
         FROM users
         ${whereClause}
         ORDER BY id
@@ -510,7 +509,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.queryUsersWithPagination - Failed"
+        '[CIAM] userModel.queryUsersWithPagination - Failed',
       );
       let logError = new Error(`Error in userModel.queryUsersWithPagination: ${error}`);
 
@@ -548,26 +547,26 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed"
+        '[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed',
       );
     }
   }
 
   static async findByEmailOrMandaiId(email, mandaiId) {
     // Build the WHERE clause dynamically based on available parameters
-    let sql = "SELECT * FROM users WHERE ";
+    let sql = 'SELECT * FROM users WHERE ';
     const params = [];
     if (email !== null) {
-      sql += "email = ?";
+      sql += 'email = ?';
       params.push(email);
 
       if (mandaiId !== null) {
-        sql += " OR mandai_id = ?";
+        sql += ' OR mandai_id = ?';
         params.push(mandaiId);
       }
     } else {
       // Only mid is defined
-      sql += "mandai_id = ?";
+      sql += 'mandai_id = ?';
       params.push(mandaiId);
     }
 
@@ -584,7 +583,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailOrMandaiId - Failed"
+        '[CIAM] userModel.findByEmailOrMandaiId - Failed',
       );
       throw error;
     }
@@ -599,17 +598,22 @@ class User {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE users
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ? AND email = ?
     `;
 
     // Prepare the params array
-    const params = [...Object.values(userData).filter((value) => value !== undefined), now, id, email];
+    const params = [
+      ...Object.values(userData).filter((value) => value !== undefined),
+      now,
+      id,
+      email,
+    ];
 
     try {
       // Execute the query
@@ -630,12 +634,12 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.updateByUserIdAndEmail - Failed"
+        '[CIAM] userModel.updateByUserIdAndEmail - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === "dev" ? error.stack : undefined,
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }
@@ -694,7 +698,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.retrieveMembership - Failed"
+        '[CIAM] userModel.retrieveMembership - Failed',
       );
       return error;
     }

@@ -1,21 +1,21 @@
-const userSignupJob = require("../../../api/users/userSignupJob");
-const UserSignupService = require("../../../api/users/userSignupService");
+const userSignupJob = require('../../../api/users/userSignupJob');
+const UserSignupService = require('../../../api/users/userSignupService');
 
-jest.mock("../../../api/users/userSignupService", () => ({
+jest.mock('../../../api/users/userSignupService', () => ({
   signup: jest.fn(),
 }));
 
-describe("UserSignupJob", () => {
+describe('UserSignupJob', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("execute", () => {
-    it("should call UserSignupService.signup", async () => {
+  describe('execute', () => {
+    it('should call UserSignupService.signup', async () => {
       const req = {
         body: {
-          email: "test-user",
-          password: "password",
+          email: 'test-user',
+          password: 'password',
         },
       };
       await userSignupJob.execute(req);
@@ -23,49 +23,45 @@ describe("UserSignupJob", () => {
     });
   });
 
-  describe("perform", () => {
-    it("should throw error when execute failed", async () => {
+  describe('perform', () => {
+    it('should throw error when execute failed', async () => {
       const req = {
         body: {
-          email: "test-user",
-          password: "password",
+          email: 'test-user',
+          password: 'password',
         },
       };
 
-      jest.spyOn(userSignupJob, "execute").mockRejectedValue(
+      jest.spyOn(userSignupJob, 'execute').mockRejectedValue(
         new Error(
           JSON.stringify({
             statusCode: 400,
-          })
-        )
+          }),
+        ),
       );
 
-      await expect(userSignupJob.perform(req)).rejects.toThrow(
-        '{"statusCode":400}'
-      );
+      await expect(userSignupJob.perform(req)).rejects.toThrow('{"statusCode":400}');
     });
 
-    it("should call success when execute passed", async () => {
+    it('should call success when execute passed', async () => {
       const req = {
         body: {
-          email: "test-user",
-          password: "password",
+          email: 'test-user',
+          password: 'password',
         },
       };
       const result = {
         membership: {
           code: 200,
-          mandaiId: "123",
-          message: "New user signed up successfully.",
-          mwgCode: "MWG_CIAM_USER_SIGNUP_SUCCESS",
+          mandaiId: '123',
+          message: 'New user signed up successfully.',
+          mwgCode: 'MWG_CIAM_USER_SIGNUP_SUCCESS',
         },
-        status: "success",
+        status: 'success',
         statusCode: 200,
       };
 
-      jest
-        .spyOn(userSignupJob, "execute")
-        .mockResolvedValue({ mandaiId: "123" });
+      jest.spyOn(userSignupJob, 'execute').mockResolvedValue({ mandaiId: '123' });
 
       const response = await userSignupJob.perform(req);
 

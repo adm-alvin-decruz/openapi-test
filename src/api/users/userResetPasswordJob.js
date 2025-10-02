@@ -1,16 +1,16 @@
-const UserResetPasswordService = require("./userResetPasswordService");
-const { messageLang } = require("../../utils/common");
+const UserResetPasswordService = require('./userResetPasswordService');
+const { messageLang } = require('../../utils/common');
 
 class UserResetPasswordJob {
   success(email, lang) {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS",
-        message: messageLang("request_reset_password_success", lang),
+        mwgCode: 'MWG_CIAM_USERS_EMAIL_RESET_PASSWORD_SUCCESS',
+        message: messageLang('request_reset_password_success', lang),
         email: email,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }

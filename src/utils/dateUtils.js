@@ -12,7 +12,7 @@ const convertDateFromMySQLToSlash = (dateString) => {
   if (!dateString) return null;
   const [year, month, day] = dateString.split('-');
   return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
-}
+};
 
 function formatDateToMySQLDateTime(date) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
@@ -30,7 +30,7 @@ function convertDateFormat(dateString, additionalHours = 0) {
 
   // Add additional hours if needed
   if (additionalHours !== 0) {
-      date.setHours(date.getHours() + additionalHours);
+    date.setHours(date.getHours() + additionalHours);
   }
 
   return date.toISOString();
@@ -42,5 +42,5 @@ module.exports = {
   formatDateToMySQLDateTime,
   currentDateAddHours,
   convertDateFormat,
-  convertDateFromMySQLToSlash
+  convertDateFromMySQLToSlash,
 };
