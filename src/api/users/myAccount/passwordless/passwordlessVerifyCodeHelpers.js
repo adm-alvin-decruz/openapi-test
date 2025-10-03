@@ -16,6 +16,7 @@ function getTokenError(type, req, isMagicLink) {
   if (type === 'missingToken') {
     return PasswordlessErrors.tokenMissingError(lang);
   }
+
   // default ("invalid", "used", "notFound", "empty")
   return isMagicLink
     ? PasswordlessErrors.verifyMagicLinkError(lang)

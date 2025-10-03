@@ -1,9 +1,17 @@
 const commonService = require('../../../../services/commonService');
 const loggerService = require('../../../../logs/logger');
-const verifyChallenge = require('./verifyChallenge');
-const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
-const { cognitoInitiatePasswordlessLogin } = require('../../../../services/cognitoService');
+const {
+  cognitoInitiatePasswordlessLogin,
+  cognitoVerifyPasswordlessLogin,
+} = require('../../../../services/cognitoService');
 const { messageLang } = require('../../../../utils/common');
+const appConfig = require('../../../../config/appConfig');
+const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
+const { incrementTokenAttemptDB, markTokenAsUsedDB } = require('./passwordlessVerifyCodeServices');
+const { getUserFromDBCognito } = require('../../helpers/userUpdateMembershipPassesHelper');
+const { updateUser } = require('../../userLoginServices');
+const { createEvent } = require('../../userCredentialEventService');
+const { EVENTS } = require('../../../../utils/constants');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
@@ -49,9 +57,11 @@ async function sendCode(req) {
   }
 }
 
-async function verifyCode(req) {
+async function verifyCode(req, tokenId) {
   req.body = commonService.cleanData(req.body || {});
   req.query = commonService.cleanData(req.query || {});
+
+  const { code, session, email } = req.body;
 
   try {
     loggerService.log(
@@ -66,8 +76,67 @@ async function verifyCode(req) {
       '[CIAM] Start Verify Code Request',
     );
 
-    return await verifyChallenge(req);
+    // Increment token attempt in DB
+    await incrementTokenAttemptDB(tokenId);
+
+    const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session);
+
+    if (!cognitoRes.accessToken) {
+      return PasswordlessErrors.verifyOtpError(req.body.email);
+    }
+
+    // If verification succeeds, mark token as used
+    const markSuccess = await markTokenAsUsedDB(tokenId);
+    if (!markSuccess) {
+      return PasswordlessErrors.verifyOtpError(req.body.email);
+    }
+
+    // Get user info from DB & Cognito
+    const { db: userInfoDb, cognito: userInfoCognito } = await getUserFromDBCognito(email);
+    console.log('User info:', JSON.stringify({ userInfoDb, userInfoCognito }));
+
+    // Update user_credentials and user_credential_events tables with login info
+    await updateUser(userInfoDb.id, cognitoRes);
+    await createEvent(
+      {
+        eventType: EVENTS.LOGIN,
+        data: req.body.email,
+        source: 1,
+        status: 1,
+      },
+      userInfoDb.id,
+    );
+
+    // Form AEM callback URL
+    const callbackUrl = `${
+      appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]
+    }${appConfig.AEM_CALLBACK_PATH}`;
+
+    return {
+      auth: {
+        code: 200,
+        mwgCode: 'MWG_CIAM_USERS_LOGIN_SUCCESS',
+        message: messageLang('login_success'),
+        accessToken: cognitoRes.accessToken,
+        mandaiId: userInfoDb.mandai_id,
+        email: userInfoDb.email,
+        callbackURL: callbackUrl,
+      },
+      status: 'success',
+      statusCode: 200,
+    };
   } catch (error) {
+    await createEvent(
+      {
+        eventType: EVENTS.LOGIN,
+        data: req.body.email,
+        source: 1,
+        status: 0,
+      },
+      null,
+      req.body.email,
+    );
+
     loggerService.error(
       {
         user: {
@@ -81,19 +150,7 @@ async function verifyCode(req) {
       {},
       '[CIAM] End Verify Code Request - Failed',
     );
-
-    const errorMessage = safeJsonParse(error.message);
-    if (errorMessage) {
-      throw new Error(JSON.stringify(errorMessage));
-    }
-
-    throw new Error(
-      JSON.stringify({
-        status: 'failed',
-        statusCode: 500,
-        message: error.message || 'Unknown error',
-      }),
-    );
+    throw error;
   }
 }
 

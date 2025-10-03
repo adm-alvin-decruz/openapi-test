@@ -31,12 +31,8 @@ class UserLoginService {
 
     const email = req.body.email;
     const providedPw = req.body.password;
-    const isPasswordless = req.isPasswordless === true;
 
     try {
-      if (isPasswordless) {
-        return await cognitoService.cognitoUserLogin({ email, password: providedPw }, hashSecret);
-      }
       const ok = await this.verifyDBPassword(email, providedPw);
       if (!ok) {
         throw new Error(
@@ -135,7 +131,7 @@ class UserLoginService {
           user: {
             userId: id,
             action: 'login',
-            layer: 'userLoginServices.getUser',
+            layer: 'userLoginServices.updateUser',
             error: new Error(error),
           },
         },

@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
-const PasswordService = require('../../userPasswordService');
 const loggerService = require('../../../../logs/logger');
 const tokenModel = require('../../../../db/models/passwordlessTokenModel');
 const failedJobsModel = require('../../../../db/models/failedJobsModel');
@@ -9,6 +8,60 @@ const { secrets } = require('../../../../services/secretsService');
 const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
 
 class PasswordlessVerifyCodeService {
+  async shouldVerify(req) {
+    const { email, code } = req.body;
+
+    if (!code) {
+      return { proceed: false, reason: 'not_found' };
+    }
+
+    // Check if magic link is provided
+    const isMagicLink = !!req.query?.token?.trim();
+    if (isMagicLink) {
+      const decryptedToken = await PasswordlessVerifyCodeService.decryptMagicToken(req);
+      req.body.email = decryptedToken.email;
+      req.body.code = decryptedToken.otp;
+    }
+
+    // Check if last retrieved token is valid for verification
+    const token = await tokenModel.findLatestTokenByEmail(email);
+
+    if (!token) {
+      return { proceed: false, reason: 'not_found' };
+    }
+
+    if (token.is_used === 1) {
+      return { proceed: false, reason: 'used' };
+    }
+
+    const now = new Date();
+    if (new Date(token.expired_at) < now) {
+      return { proceed: false, reason: 'expired' };
+    }
+
+    const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName(
+      'passwordless-otp',
+      'otp-config',
+      'otp_max_attempt',
+    );
+    if (token.attempt >= MAX_ATTEMPTS) {
+      return { proceed: false, reason: 'rate_limit' };
+    }
+
+    return { proceed: true, tokenId: token.id, isMagic: isMagicLink };
+  }
+
+  async mapToVerifyErrorToHelperKey(reason) {
+    const map = {
+      missing_email: 'invalid',
+      not_found: 'notFound',
+      used: 'used',
+      expired: 'expired',
+      rate_limit: 'rateLimit',
+    };
+    return map[reason] || 'notFound';
+  }
+
   async getTokenDB(email) {
     try {
       const token = await tokenModel.findLatestTokenByEmail(email);
@@ -77,84 +130,6 @@ class PasswordlessVerifyCodeService {
         },
         'error',
       );
-    }
-  }
-
-  async validateToken(req) {
-    // check if validating magic link token
-    const isMagic = !!req.query?.token?.trim();
-
-    const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName(
-      'passwordless-otp',
-      'otp-config',
-      'otp_max_attempt',
-    );
-
-    const email = req.body.email;
-    const otp = req.body.code;
-
-    // otp is empty
-    if (!otp) {
-      throw new Error(
-        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
-      );
-    }
-
-    try {
-      const token = await this.getTokenDB(email);
-
-      // token doesn't exist in token DB
-      if (!token) {
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('notFound', req, isMagic)),
-        );
-      }
-      // token is already used
-      const isUsed = token.is_used === 1;
-      if (isUsed) {
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('used', req, isMagic)),
-        );
-      }
-      // token is epxired
-      const now = new Date();
-      if (new Date(token.expired_at) < now) {
-        await this.markTokenAsUsedDB(token.id);
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('expired', req, isMagic)),
-        );
-      }
-      // too many wrong attempts
-      const tooManyAttempts = (token.attempt || 0) > MAX_ATTEMPTS;
-      if (tooManyAttempts) {
-        await this.markTokenAsUsedDB(token.id);
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('rateLimit', req, isMagic)),
-        );
-      }
-      // check whether OTP matches
-      const isValid = await PasswordService.comparePassword(otp, token.hash);
-      if (!isValid) {
-        await this.incrementTokenAttemptDB(token.id);
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
-        );
-      }
-      // validation passed
-      const markSuccess = await this.markTokenAsUsedDB(token.id);
-      // If the token was already used by a concurrent request
-      // (just before this), treat as a failed attempt.
-      if (!markSuccess) {
-        throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, isMagic)),
-        );
-      }
-      const pw = otp + token.salt;
-
-      return pw;
-    } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      throw new Error(JSON.stringify(errorMessage));
     }
   }
 
