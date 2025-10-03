@@ -20,10 +20,7 @@ const uuid = crypto.randomUUID();
 const {
   isEmptyRequest,
   validateEmail,
-  // AccessTokenAuthGuard,
-  // AccessTokenAuthGuardByAppIdGroupFOSeries,
   lowercaseTrimKeyValueString,
-  // validateAPIKey,
 } = require('../../../../middleware/validationMiddleware');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
 
@@ -36,7 +33,7 @@ router.get('/ping', async (req, res) => {
 });
 
 /**
- * CIAM MyAccount passwordless send otp public endpoint
+ * CIAM MyAccount - Send OTP Email
  */
 router.post(
   '/passwordless/send',

@@ -2,6 +2,8 @@ const axios = require('axios');
 const loggerService = require('../logs/logger');
 const CommonErrors = require('../config/https/errors/commonErrors');
 const { messageLang } = require('../utils/common');
+const { secrets } = require('../services/secretsService');
+const { uuidv4 } = require('uuid');
 
 function captchaError(lang) {
   return {
@@ -40,25 +42,26 @@ function missingSecretKeyError(lang) {
 }
 
 async function verifyTurnstile(req, res, next) {
-  try {
-    const email = req.body.email || req.query.email || 'unknown';
-    const token = req.body.captchaToken;
-    const lang = req.body.language || req.query.language || 'en';
+  const email = req.body.email || req.query.email || 'unknown';
+  const token = req.body.captchaToken;
+  const lang = req.body.language || req.query.language || 'en';
 
-    loggerService.log(
-      {
-        user: {
-          email,
-          layer: 'Middleware.verifyTurnstile',
-          action: 'start',
-          message: 'Starting Turnstile verification',
-        },
+  loggerService.log(
+    {
+      user: {
+        email,
+        layer: 'Middleware.verifyTurnstile',
+        action: 'start',
+        message: 'Starting Turnstile verification',
       },
-      '[CIAM] Captcha Verification Start',
-    );
+    },
+    '[CIAM] Captcha Verification Start',
+  );
 
-    const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
-    if (!secret) {
+  try {
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+    const turnstileSecret = ciamSecrets.CLOUDFLARE_TURNSTILE_SECRET_KEY;
+    if (!turnstileSecret) {
       loggerService.error(
         {
           user: {
@@ -92,20 +95,20 @@ async function verifyTurnstile(req, res, next) {
       (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() ||
       req.socket?.remoteAddress;
 
-    const resp = await axios.post(
+    const res = await axios.post(
       'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      new URLSearchParams({
-        secret,
-        response: token,
-        remoteip: remoteip || '',
-      }),
       {
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        timeout: 5000,
+        secret: turnstileSecret,
+        response: token,
+        remoteip: remoteip,
+        idempotency_key: uuidv4(),
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
       },
     );
 
-    const data = resp.data;
+    const data = res.data;
 
     if (!data?.success) {
       loggerService.error(
