@@ -1,46 +1,6 @@
 const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
-const { switchIsTurnOn } = require('../../../../helpers/dbSwitchesHelpers');
 const tokenModel = require('../../../../db/models/passwordlessTokenModel');
 const PasswordlessVerifyCodeService = require('./passwordlessVerifyCodeServices');
-
-/**
- * Define step before create.
- * Decide whether to issue a challenge.
- */
-async function shouldIssueChallenge(req) {
-  const { email, purpose = 'login' } = req.body || {};
-
-  //check flag for send otp and email
-  const sendEnabled = await switchIsTurnOn('passwordless_enable_send_otp');
-  const signupSendEnabled = await switchIsTurnOn('passwordless_enable_send_sign_up_email');
-
-  if (purpose === 'signup') {
-    if (!signupSendEnabled) {
-      return { proceed: false, reason: 'send_disabled_signup' };
-    }
-  }
-
-  if (!sendEnabled) {
-    return { proceed: false, reason: 'send_disabled_login' };
-  }
-
-  //Cooldown check early from generateCode
-  const OTP_INTERVAL = await PasswordlessSendCodeService.getValueByConfigValueName(
-    'passwordless-otp',
-    'otp-config',
-    'otp_interval',
-  );
-  const allowed = await PasswordlessSendCodeService.shouldGenerateNewToken(email, OTP_INTERVAL);
-
-  if (!allowed) {
-    return {
-      proceed: false,
-      reason: 'too_soon',
-    };
-  }
-
-  return { proceed: true, purpose };
-}
 
 /**
  * Define step before verify.
@@ -84,17 +44,6 @@ async function defineForVerify(req) {
   return { proceed: true, tokenId: token.id };
 }
 
-function mapDefineCreateReasonToHelperKey(reason) {
-  return (
-    {
-      missing_email: 'invalid',
-      too_soon: 'tooSoon',
-      send_disabled_login: 'notSupported',
-      send_disabled_signup: 'notSupported',
-    }[reason] || 'invalid'
-  );
-}
-
 function mapDefineReasonToHelperKey(reason) {
   // defineForVerify reasons
   const map = {
@@ -108,8 +57,6 @@ function mapDefineReasonToHelperKey(reason) {
 }
 
 module.exports = {
-  shouldIssueChallenge,
   defineForVerify,
-  mapDefineCreateReasonToHelperKey,
   mapDefineReasonToHelperKey,
 };

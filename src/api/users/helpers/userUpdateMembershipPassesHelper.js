@@ -33,7 +33,6 @@ async function getUserFromDBCognito(email) {
 
   try {
     const userDB = await userModel.findByEmail(email);
-
     const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
     if (userDB && userDB.id) {
       userInfo.db = userDB;
@@ -43,12 +42,13 @@ async function getUserFromDBCognito(email) {
     }
     return userInfo;
   } catch (error) {
+    console.log('getUserFromDBCognito error: ', error);
     return userInfo;
   }
 }
 
 function isUserExisted(userInfo) {
-  return userInfo && (userInfo.db || userInfo.cognito);
+  return userInfo && userInfo.db && userInfo.cognito;
 }
 
 /**

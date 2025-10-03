@@ -5,13 +5,12 @@ const router = express.Router();
 const passwordlessController = require('../passwordless/passwordlessControllers');
 const passwordlessVerifyCodeHelper = require('../passwordless/passwordlessVerifyCodeHelpers');
 const validationService = require('../../../../services/validationService');
-const processTimer = require('../../../../utils/processTimer');
 const {
-  defineForVerify,
-  mapDefineCreateReasonToHelperKey,
-  mapDefineReasonToHelperKey,
   shouldIssueChallenge,
-} = require('./defineChallenge');
+  mapIssueChallengeReasonToHelperKey,
+} = require('./passwordlessSendCodeServices');
+const processTimer = require('../../../../utils/processTimer');
+const { defineForVerify, mapDefineReasonToHelperKey } = require('./defineChallenge');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
@@ -43,11 +42,11 @@ router.post(
   verifyTurnstile,
   async (req, res) => {
     req['processTimer'] = processTimer;
-    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
     req.body.uuid = uuid;
     const startTimer = process.hrtime();
 
-    // validate req app-id
+    // Validate App ID
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
       req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
@@ -106,11 +105,13 @@ router.post(
       const toIssueChallenge = await shouldIssueChallenge(req);
       if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const helperKey = mapDefineCreateReasonToHelperKey(toIssueChallenge.reason);
+        const helperKey = mapIssueChallengeReasonToHelperKey(toIssueChallenge.reason);
         const errObj =
           helperKey === 'tooSoon'
             ? PasswordlessErrors.sendCodetooSoonFailure(req.body.email, req.body.lang)
-            : PasswordlessErrors.sendCodeError(req.body.email, req.body.lang);
+            : helperKey === 'newUser'
+              ? PasswordlessErrors.newUserError(req.body.email, req.body.lang)
+              : PasswordlessErrors.sendCodeError(req.body.email, req.body.lang);
 
         return res.status(errObj.statusCode || 400).json(errObj);
       }
@@ -118,14 +119,14 @@ router.post(
 
       return res.status(200).json(otpRes);
     } catch (error) {
-      const errorMessage = safeJsonParse(error.message);
-      if (errorMessage) {
-        return res.status(errorMessage.statusCode || 500).json(errorMessage);
-      }
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         status: 'failed',
-        statusCode: 500,
-        message: error.message || 'Unknown error',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.statusCode || 500,
+          message: 'Failed to send OTP email',
+          cause: error,
+        },
       });
     }
   },

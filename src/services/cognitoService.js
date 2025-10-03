@@ -47,6 +47,62 @@ class Cognito {
     return result;
   }
 
+  static async cognitoInitiatePasswordlessLogin(email) {
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+    const userLoginParams = new AdminInitiateAuthCommand({
+      AuthFlow: 'CUSTOM_AUTH',
+      UserPoolId: process.env.USER_POOL_ID,
+      ClientId: ciamSecrets.USER_POOL_CLIENT_ID,
+      AuthParameters: {
+        USERNAME: email,
+      },
+    });
+
+    loggerService.log(
+      {
+        cognitoService: {
+          email,
+          action: 'cognitoInitiatePasswordlessLogin',
+          layer: 'services.cognitoService',
+        },
+      },
+      '[CIAM] Start cognitoInitiatePasswordlessLogin Service',
+    );
+
+    try {
+      const res = await client.send(userLoginParams);
+
+      loggerService.log(
+        {
+          cognitoService: {
+            email,
+            action: 'cognitoInitiatePasswordlessLogin',
+            layer: 'services.cognitoService',
+          },
+        },
+        `[CIAM] End cognitoInitiatePasswordlessLogin Service - Success: ${res}`,
+      );
+      return {
+        challengeName: res.ChallengeName,
+        session: res.Session,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          cognitoService: {
+            email,
+            action: 'cognitoInitiatePasswordlessLogin',
+            layer: 'services.cognitoService',
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] End cognitoInitiatePasswordlessLogin Service - Failed',
+      );
+      throw error;
+    }
+  }
+
   static async cognitoUserLogin({ email, password }, hashSecret) {
     const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
     const userLoginParams = new AdminInitiateAuthCommand({

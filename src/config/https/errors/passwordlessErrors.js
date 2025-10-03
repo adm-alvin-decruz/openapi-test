@@ -5,13 +5,26 @@ class PasswordlessErrors {
   static sendCodeError(email, lang) {
     return {
       auth: {
-        code: 200,
+        code: 500,
         mwgCode: 'MWG_CIAM_SEND_OTP_ERR',
         message: messageLang('sendCode_failed', lang),
         email: validator.escape(email),
       },
       status: 'failed',
-      statusCode: 200,
+      statusCode: 500,
+    };
+  }
+
+  static newUserError(email, lang) {
+    return {
+      auth: {
+        code: 404,
+        mwgCode: 'MWG_CIAM_USERS_SIGNUP_NOT_SUPPORTED',
+        message: messageLang('sendCode_newUser', lang),
+        email: validator.escape(email),
+      },
+      status: 'failed',
+      statusCode: 404,
     };
   }
 

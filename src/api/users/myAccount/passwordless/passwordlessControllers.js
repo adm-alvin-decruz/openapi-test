@@ -1,11 +1,13 @@
 const commonService = require('../../../../services/commonService');
 const loggerService = require('../../../../logs/logger');
-const createChallenge = require('./createChallenge');
 const verifyChallenge = require('./verifyChallenge');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
+const { cognitoInitiatePasswordlessLogin } = require('../../../../services/cognitoService');
+const { messageLang } = require('../../../../utils/common');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
+  const { email } = req.body.email;
 
   try {
     loggerService.log(
@@ -18,7 +20,19 @@ async function sendCode(req) {
       '[CIAM] Start Send OTP Request',
     );
 
-    return await createChallenge(req);
+    const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
+
+    return {
+      auth: {
+        method: 'passwordless',
+        code: 200,
+        mwgCode: 'MWG_CIAM_USERS_OTP_SENT_SUCCESS',
+        message: messageLang('sendCode_success', req.body.language),
+        cognitoRes,
+      },
+      status: 'success',
+      statusCode: 200,
+    };
   } catch (error) {
     loggerService.error(
       {
@@ -31,20 +45,7 @@ async function sendCode(req) {
       {},
       '[CIAM] End Send Code Request - Failed',
     );
-    // const errorMessage = JSON.parse(error.message);
-    // throw new Error(JSON.stringify(errorMessage));
-    const errorMessage = safeJsonParse(error.message);
-
-    if (errorMessage) {
-      throw new Error(JSON.stringify(errorMessage));
-    }
-    throw new Error(
-      JSON.stringify({
-        status: 'failed',
-        statusCode: 500,
-        message: error.message || 'Unknown error',
-      }),
-    );
+    throw error;
   }
 }
 
