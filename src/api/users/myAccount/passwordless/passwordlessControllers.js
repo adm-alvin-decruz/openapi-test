@@ -5,8 +5,7 @@ const verifyChallenge = require('./verifyChallenge');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 
 async function sendCode(req) {
-  // clean the request data for possible white space
-  req['body'] = commonService.cleanData(req.body);
+  req.body = commonService.cleanData(req.body);
 
   try {
     loggerService.log(
@@ -50,7 +49,6 @@ async function sendCode(req) {
 }
 
 async function verifyCode(req) {
-  // Extract and clean the data
   req.body = commonService.cleanData(req.body || {});
   req.query = commonService.cleanData(req.query || {});
 
@@ -83,13 +81,11 @@ async function verifyCode(req) {
       '[CIAM] End Verify Code Request - Failed',
     );
 
-    // const errorMessage = JSON.parse(error.message);
-    // throw new Error(JSON.stringify(errorMessage));
     const errorMessage = safeJsonParse(error.message);
-
     if (errorMessage) {
       throw new Error(JSON.stringify(errorMessage));
     }
+
     throw new Error(
       JSON.stringify({
         status: 'failed',

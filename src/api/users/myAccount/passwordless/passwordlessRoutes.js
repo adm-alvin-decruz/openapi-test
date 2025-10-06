@@ -7,10 +7,10 @@ const passwordlessVerifyCodeHelper = require('../passwordless/passwordlessVerify
 const validationService = require('../../../../services/validationService');
 const processTimer = require('../../../../utils/processTimer');
 const {
-  defineForCreate,
   defineForVerify,
   mapDefineCreateReasonToHelperKey,
   mapDefineReasonToHelperKey,
+  shouldIssueChallenge,
 } = require('./defineChallenge');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
@@ -106,10 +106,10 @@ router.post(
     // //#endregion
 
     try {
-      const decide = await defineForCreate(req);
-      if (!decide.proceed) {
+      const toIssueChallenge = await shouldIssueChallenge(req);
+      if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const helperKey = mapDefineCreateReasonToHelperKey(decide.reason);
+        const helperKey = mapDefineCreateReasonToHelperKey(toIssueChallenge.reason);
         const errObj =
           helperKey === 'tooSoon'
             ? PasswordlessErrors.sendCodetooSoonFailure(req.body.email, req.body.lang)
@@ -147,7 +147,6 @@ router.post(
     req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
     const startTimer = process.hrtime();
 
-    // validate req app-id
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
       req.apiTimer.end('Route CIAM Login User Error 401 Unauthorized', startTimer);

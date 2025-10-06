@@ -1,5 +1,5 @@
 const pool = require('../connections/mysqlConn');
-const { getCurrentUTCTimestamp, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 
@@ -23,7 +23,7 @@ class PasswordlessToken {
       tokenData.salt || '',
       formattedRequestedAt,
       formattedExpiredAt,
-      tokenData.attempt || 1,
+      0,
       tokenData.isUsed || 0,
     ];
 

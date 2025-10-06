@@ -1,6 +1,16 @@
 const axios = require('axios');
 const loggerService = require('../logs/logger');
 require('dotenv').config();
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+
+const client = new SecretsManagerClient({
+  region: process.env.AWS_REGION_NAME || 'ap-southeast-1',
+  endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+  },
+});
 
 class Secrets {
   constructor() {
@@ -40,15 +50,25 @@ class Secrets {
     }
 
     try {
-      const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
-        params: { secretId: secretName },
-        headers: {
-          'X-Aws-Parameters-Secrets-Token': this.awsSessionToken,
-        },
-      });
+      if (process.env.IS_LOCAL) {
+        const command = new GetSecretValueCommand({
+          SecretId: secretName,
+        });
 
-      console.log('Retrieved secrets');
-      return JSON.parse(data.SecretString);
+        const response = await client.send(command);
+
+        return JSON.parse(response.SecretString);
+      } else {
+        const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
+          params: { secretId: secretName },
+          headers: {
+            'X-Aws-Parameters-Secrets-Token': this.awsSessionToken,
+          },
+        });
+
+        console.log('Retrieved secrets');
+        return JSON.parse(data.SecretString);
+      }
     } catch (error) {
       loggerService.error(
         {

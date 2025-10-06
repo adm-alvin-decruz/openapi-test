@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 // use dotenv
 require('dotenv').config();
 
@@ -333,6 +332,7 @@ function convertUserAttrToNormJson(inputJson) {
       value = parsedValue;
     } catch (error) {
       // If parsing fails, keep the original string value
+      console.log(error);
     }
 
     // Convert "null" string to actual null value
@@ -359,12 +359,12 @@ function processUserUpdateErrors(attr, reqBody, mwgCode) {
       });
     }
     if (isJsonNotEmpty(attr.dob)) {
-      Object.keys(attr.dob).forEach(function (key) {
+      Object.keys(attr.dob).forEach(function (_key) {
         errors['dob'] = validationVar['dob'].range_error;
       });
     }
     if (isJsonNotEmpty(attr.newsletter)) {
-      Object.keys(attr.newsletter).forEach(function (key) {
+      Object.keys(attr.newsletter).forEach(function (_key) {
         errors['newletter'] = validationVar['newsletter'].subscribe_error;
       });
     }

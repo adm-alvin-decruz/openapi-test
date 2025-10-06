@@ -3,7 +3,7 @@ require('dotenv').config();
 const appConfig = require('../../config/appConfig');
 const ApiUtils = require('../../utils/apiUtils');
 const logger = require('../../logs/logger');
-const { getCiamSecrets, secrets } = require('../../services/secretsService');
+const { secrets } = require('../../services/secretsService');
 
 async function lambdaSendEmail(req) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();

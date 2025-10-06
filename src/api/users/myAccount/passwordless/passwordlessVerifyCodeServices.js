@@ -4,7 +4,6 @@ const PasswordService = require('../../userPasswordService');
 const loggerService = require('../../../../logs/logger');
 const tokenModel = require('../../../../db/models/passwordlessTokenModel');
 const failedJobsModel = require('../../../../db/models/failedJobsModel');
-const configsModel = require('../../../../db/models/configsModel');
 const passwordlessVerifyCodeHelper = require('./passwordlessVerifyCodeHelpers');
 const { secrets } = require('../../../../services/secretsService');
 const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
@@ -195,7 +194,16 @@ class PasswordlessVerifyCodeService {
       }
 
       return decryptedToken;
-    } catch (err) {
+    } catch (error) {
+      this.loggerWrapper(
+        '[CIAM] End decryptMagicToken at PasswordlessVerifyCode Service - Failed',
+        {
+          layer: 'passwordlessVerifyCodeService.decryptMagicToken',
+          action: 'verifyCode.decryptMagicToken',
+          error: new Error(error),
+        },
+        'error',
+      );
       throw new Error(
         JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, true)),
       );

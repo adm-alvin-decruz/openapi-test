@@ -6,7 +6,6 @@ const appConfig = require('../../../../config/appConfig');
 const { getOrCreateBridgePassword } = require('./passwordlessBridgeService');
 
 /**
- * Verify
  * Validate OTP (mark used, attempts, expiry)
  * Use returned pw to login via Cognito
  */
@@ -16,7 +15,7 @@ module.exports = async function verifyChallenge(req) {
   }${appConfig.AEM_CALLBACK_PATH}`;
 
   try {
-    //Magic link support
+    // Magic link support
     const isMagicLink = !!req.query?.token?.trim();
     if (isMagicLink && !req.body?.email && !req.body?.code) {
       const decryptedToken = await PasswordlessVerifyCodeService.decryptMagicToken(req);
