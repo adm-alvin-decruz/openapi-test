@@ -19,7 +19,7 @@ class UserSignupValidation {
       ? ['email', 'firstName', 'lastName']
       : ['email', 'firstName', 'lastName', 'password', 'confirmPassword', 'dob'];
     requireParams = reqBody.is_passwordless
-      ? ['email', 'firstName', 'lastName', 'dob']
+      ? ['email', 'firstName', 'lastName']
       : requireParams;
 
     const listKeys = Object.keys(reqBody);
