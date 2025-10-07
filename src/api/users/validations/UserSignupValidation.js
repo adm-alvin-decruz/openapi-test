@@ -17,7 +17,7 @@ class UserSignupValidation {
     //validate missing required params
     let requireParams = reqBody.migrations
       ? ['email', 'firstName', 'lastName']
-      : ['email', 'firstName', 'lastName', 'password', 'confirmPassword', 'dob'];
+      : ['email', 'firstName', 'lastName', 'password', 'confirmPassword'];
     requireParams = reqBody.is_passwordless
       ? ['email', 'firstName', 'lastName']
       : requireParams;
