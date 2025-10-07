@@ -10,17 +10,8 @@ const { proceedSetPassword } = require('./helpers/loginHelper');
 const UserCredentialEventService = require('./userCredentialEventService');
 const { EVENTS } = require('../../utils/constants');
 const { secrets } = require('../../services/secretsService');
-const { getBridgePasswordIfAny } = require('./myAccount/passwordless/passwordlessBridgeService');
-const PasswordService = require('./userPasswordService');
 
 class UserLoginService {
-  async verifyDBPassword(email, plaintext) {
-    const cred = await userCredentialModel.findByUserEmail(email);
-    if (!cred.password_hash) {
-      return false;
-    }
-    return PasswordService.comparePassword(plaintext, cred.password_hash);
-  }
   async login(req) {
     const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
     const hashSecret = usersService.genSecretHash(
@@ -28,32 +19,16 @@ class UserLoginService {
       ciamSecrets.USER_POOL_CLIENT_ID,
       ciamSecrets.USER_POOL_CLIENT_SECRET,
     );
+    const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(req.body.email);
 
-    const email = req.body.email;
-    const providedPw = req.body.password;
-
+    const loginData = {
+      email: req.body.email,
+      password: req.body.password,
+    };
     try {
-      const ok = await this.verifyDBPassword(email, providedPw);
-      if (!ok) {
-        throw new Error(
-          JSON.stringify(LoginErrors.ciamLoginEmailOrPasswordInvalid(email, req.body.language)),
-        );
-      }
+      await proceedSetPassword(userHasFirstLogin, req.body.password, req.body.language);
 
-      //bridge password for Cognito if it exists
-      const bridgePw = await getBridgePasswordIfAny(email);
-      const cognitoPassword = bridgePw ?? providedPw;
-
-      //when not using bridge
-      const userHasFirstLogin = await userCredentialModel.findUserHasFirstLogin(email);
-      if (!bridgePw) {
-        await proceedSetPassword(userHasFirstLogin, providedPw, req.body.language);
-      }
-
-      return await cognitoService.cognitoUserLogin(
-        { email, password: cognitoPassword },
-        hashSecret,
-      );
+      return await cognitoService.cognitoUserLogin(loginData, hashSecret);
     } catch (error) {
       loggerService.error(
         {

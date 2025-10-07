@@ -86,7 +86,8 @@ module.exports = {
     verifyML_missingToken: 'The token is missing or empty.',
     verifyOTP_invalid: 'OTP is invalid. Please try again.',
     verifyOTP_expired: 'OTP has expired. Please request a new one.',
-    verifyOTP_tooManyAttempts: 'Too many attempts. Please request a new code.',
+    verifyOTP_tooManyAttempts:
+      'Too many incorrect attempts. You may request for a new OTP after 15 minutes.',
     token_valid: 'Token is valid.',
     unauthorized: 'Unauthorized',
     update_success: 'User info updated successfully.',

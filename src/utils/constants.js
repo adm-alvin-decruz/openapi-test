@@ -35,7 +35,10 @@ const EVENTS = {
   PASSWORD_RESET: 'password_reset',
   PASSWORD_CHANGE: 'password_change',
   REFRESH_TOKEN: 'refresh_token',
+  SEND_OTP: 'send_otp',
+  VERIFY_OTP: 'verify_otp',
 };
+
 module.exports = {
   GROUP,
   LANGUAGE_CODE,
