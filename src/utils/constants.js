@@ -39,6 +39,11 @@ const EVENTS = {
   VERIFY_OTP: 'verify_otp',
 };
 
+const STATUS = {
+  FAILED: 0,
+  SUCCESS: 1,
+};
+
 module.exports = {
   GROUP,
   LANGUAGE_CODE,
@@ -46,4 +51,5 @@ module.exports = {
   COGNITO_ATTRIBUTES,
   EXPIRE_TIME_HOURS,
   EVENTS,
+  STATUS,
 };

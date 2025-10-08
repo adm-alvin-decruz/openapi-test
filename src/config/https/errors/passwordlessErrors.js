@@ -15,6 +15,20 @@ class PasswordlessErrors {
     };
   }
 
+  static loginDisabled(email, resetAt) {
+    return {
+      auth: {
+        code: 429,
+        mwgCode: 'MWG_CIAM_USERS_LOGIN_DISABLED',
+        message: `Too many login attempts. Please try again in ${resetAt.secondsRemaining} seconds.`,
+        email: validator.escape(email),
+        resetAt: resetAt.resetTime,
+      },
+      status: 'failed',
+      statusCode: 500,
+    };
+  }
+
   static newUserError(email, lang) {
     return {
       auth: {
@@ -28,13 +42,14 @@ class PasswordlessErrors {
     };
   }
 
-  static sendCodetooSoonFailure(email, lang) {
+  static sendCodetooSoonFailure(email, lang, remainingSeconds) {
     return {
       auth: {
         code: 429,
         mwgCode: 'MWG_CIAM_USERS_CODE_RATE_LIMIT',
         message: messageLang('sendCode_tooSoon', lang),
         email: validator.escape(email),
+        remainingSeconds,
       },
       status: 'failed',
       statusCode: 429,

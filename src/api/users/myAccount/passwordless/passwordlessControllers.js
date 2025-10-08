@@ -36,7 +36,7 @@ async function sendCode(req) {
         code: 200,
         mwgCode: 'MWG_CIAM_USERS_OTP_SENT_SUCCESS',
         message: messageLang('sendCode_success', req.body.language),
-        cognitoRes,
+        session: cognitoRes.session,
       },
       status: 'success',
       statusCode: 200,
@@ -82,6 +82,7 @@ async function verifyCode(req, tokenId) {
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session);
 
     if (!cognitoRes.accessToken) {
+      // TODO: If attempt is 5, set user status to 2
       return PasswordlessErrors.verifyOtpError(req.body.email);
     }
 

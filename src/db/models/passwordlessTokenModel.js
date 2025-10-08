@@ -1,4 +1,4 @@
-const pool = require('../connections/mysqlConn');
+const { query, execute } = require('../connections/mysqlConn');
 const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
@@ -28,7 +28,7 @@ class PasswordlessToken {
     ];
 
     try {
-      const result = await pool.execute(sql, params);
+      const result = await execute(sql, params);
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
@@ -59,7 +59,7 @@ class PasswordlessToken {
     `;
 
     try {
-      const rows = await pool.query(sql, [email]);
+      const rows = await query(sql, [email]);
       return rows[0];
     } catch (error) {
       loggerService.error(
@@ -75,6 +75,30 @@ class PasswordlessToken {
     }
   }
 
+  static async getTokenById(id) {
+    const sql = `
+      SELECT *
+      FROM passwordless_tokens
+      WHERE id = ?
+    `;
+
+    try {
+      const rows = await query(sql, [id]);
+      return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.getTokenById - Failed',
+      );
+    }
+  }
+
   static async incrementAttemptById(id) {
     const sql = `
       UPDATE passwordless_tokens 
@@ -83,7 +107,7 @@ class PasswordlessToken {
     `;
 
     try {
-      await pool.execute(sql, [id]);
+      await execute(sql, [id]);
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, [id]),
@@ -105,15 +129,15 @@ class PasswordlessToken {
     }
   }
 
-  static async markTokenById(id) {
+  static async markTokenAsInvalid(id) {
     const sql = `
       UPDATE passwordless_tokens 
-      SET is_used = 1 
-      WHERE id = ? AND is_used = 0
+      SET is_valid = 0 
+      WHERE id = ?
     `;
 
     try {
-      const result = await pool.execute(sql, [id]);
+      const result = await execute(sql, [id]);
 
       return result.affectedRows > 0;
     } catch (error) {

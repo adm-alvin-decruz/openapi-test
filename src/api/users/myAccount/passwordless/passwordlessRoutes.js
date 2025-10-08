@@ -7,10 +7,9 @@ const passwordlessVerifyCodeHelper = require('../passwordless/passwordlessVerify
 const validationService = require('../../../../services/validationService');
 const {
   shouldIssueChallenge,
-  mapIssueChallengeReasonToHelperKey,
+  mapIssueChallengeFailureToError,
 } = require('./passwordlessSendCodeServices');
 const processTimer = require('../../../../utils/processTimer');
-const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
 const crypto = require('crypto');
@@ -105,14 +104,8 @@ router.post(
       const toIssueChallenge = await shouldIssueChallenge(req);
       if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const helperKey = mapIssueChallengeReasonToHelperKey(toIssueChallenge.reason);
-        const errObj =
-          helperKey === 'tooSoon'
-            ? PasswordlessErrors.sendCodetooSoonFailure(req.body.email, req.body.lang)
-            : helperKey === 'newUser'
-              ? PasswordlessErrors.newUserError(req.body.email, req.body.lang)
-              : PasswordlessErrors.sendCodeError(req.body.email, req.body.lang);
-
+        const errObj = mapIssueChallengeFailureToError(req, toIssueChallenge.error);
+        console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
       const otpRes = await passwordlessController.sendCode(req);
