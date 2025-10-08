@@ -105,6 +105,7 @@ async function verifyCode(req, tokenId) {
       if (attempts === MAX_ATTEMPTS) {
         const updateResult = await update(userInfoDb.id, { status: 2 });
         console.log('Login is disabled for user account.', updateResult);
+        throw new Error(JSON.stringify(PasswordlessErrors.loginDisabled(email, 900)));
       }
       throw new Error(JSON.stringify(PasswordlessErrors.verifyOtpError(email)));
     }
