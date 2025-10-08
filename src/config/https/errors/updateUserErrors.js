@@ -8,7 +8,7 @@ class UpdateUserErrors {
         mwgCode: 'MWG_CIAM_USER_UPDATE_ERR',
         message: messageLang('update_user_error', lang),
       },
-      status: 'success',
+      status: 'failed',
       statusCode: 400,
     };
   }
@@ -20,7 +20,7 @@ class UpdateUserErrors {
         message: messageLang('email_not_being_used', lang),
         email: email,
       },
-      status: 'success',
+      status: 'failed',
       statusCode: 400,
     };
   }
@@ -32,7 +32,7 @@ class UpdateUserErrors {
         message: messageLang('newEmail_being_used', lang),
         email: email,
       },
-      status: 'success',
+      status: 'failed',
       statusCode: 400,
     };
   }
