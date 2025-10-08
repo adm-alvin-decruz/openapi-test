@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router();
 
 const passwordlessController = require('../passwordless/passwordlessControllers');
-const passwordlessVerifyCodeHelper = require('../passwordless/passwordlessVerifyCodeHelpers');
 const validationService = require('../../../../services/validationService');
 const {
   shouldIssueChallenge,
@@ -20,7 +19,7 @@ const {
   lowercaseTrimKeyValueString,
 } = require('../../../../middleware/validationMiddleware');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
-const { shouldVerify, mapToVerifyErrorToHelperKey } = require('./passwordlessVerifyCodeServices');
+const { shouldVerify, mapVerifyFailureToError } = require('./passwordlessVerifyCodeServices');
 
 const pong = { pong: 'pang' };
 
@@ -148,9 +147,8 @@ router.post(
       const toVerify = await shouldVerify(req);
       if (!toVerify.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
-        const helperKey = mapToVerifyErrorToHelperKey(toVerify.reason);
-        const errObj = passwordlessVerifyCodeHelper.getTokenError(helperKey, req, toVerify.isMagic);
-
+        const errObj = mapVerifyFailureToError(req, toVerify.error, toVerify.isMagic);
+        console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
       const data = await passwordlessController.verifyCode(req, toVerify.tokenId);

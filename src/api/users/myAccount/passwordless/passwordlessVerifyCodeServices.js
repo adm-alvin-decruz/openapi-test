@@ -1,20 +1,13 @@
 const crypto = require('crypto');
-const CommonErrors = require('../../../../config/https/errors/commonErrors');
 const loggerService = require('../../../../logs/logger');
 const tokenModel = require('../../../../db/models/passwordlessTokenModel');
-const failedJobsModel = require('../../../../db/models/failedJobsModel');
-const passwordlessVerifyCodeHelper = require('./passwordlessVerifyCodeHelpers');
 const { secrets } = require('../../../../services/secretsService');
 const PasswordlessSendCodeService = require('./passwordlessSendCodeServices');
+const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
+const { getUserFromDBCognito } = require('../../helpers/userUpdateMembershipPassesHelper');
 
 class PasswordlessVerifyCodeService {
   async shouldVerify(req) {
-    const { email, code } = req.body;
-
-    if (!code) {
-      return { proceed: false, reason: 'not_found' };
-    }
-
     // Check if magic link is provided
     const isMagicLink = !!req.query?.token?.trim();
     if (isMagicLink) {
@@ -23,114 +16,39 @@ class PasswordlessVerifyCodeService {
       req.body.code = decryptedToken.otp;
     }
 
-    // Check if last retrieved token is valid for verification
-    const token = await tokenModel.findLatestTokenByEmail(email);
+    const { email, code } = req.body;
 
-    if (!token) {
-      return { proceed: false, reason: 'not_found' };
+    // Check if verification token is provided
+    if (!code) {
+      return { proceed: false, error: { reason: 'missing_token' } };
     }
 
-    if (token.is_used === 1) {
-      return { proceed: false, reason: 'used' };
+    // Check user status. If status = 2 (login disabled), reject verify OTP request
+    const userInfo = await getUserFromDBCognito(email);
+    const isLoginDisabled = await PasswordlessSendCodeService.checkLoginDisabled(userInfo.db);
+    if (isLoginDisabled.disabled) {
+      return {
+        proceed: false,
+        error: { reason: 'login_disabled', secondsRemaining: isLoginDisabled.secondsRemaining },
+      };
+    }
+
+    // Check if last retrieved token is valid for verification
+    const token = await tokenModel.findLatestTokenByEmail(email);
+    if (!token) {
+      return { proceed: false, error: { reason: 'not_found' } };
+    }
+
+    if (token.is_valid === 0) {
+      return { proceed: false, error: { reason: 'invalid' } };
     }
 
     const now = new Date();
-    if (new Date(token.expired_at) < now) {
-      return { proceed: false, reason: 'expired' };
-    }
-
-    const MAX_ATTEMPTS = await PasswordlessSendCodeService.getValueByConfigValueName(
-      'passwordless-otp',
-      'otp-config',
-      'otp_max_attempt',
-    );
-    if (token.attempt >= MAX_ATTEMPTS) {
-      return { proceed: false, reason: 'rate_limit' };
+    if (new Date(token.expires_at) < now) {
+      return { proceed: false, error: { reason: 'expired' } };
     }
 
     return { proceed: true, tokenId: token.id, isMagic: isMagicLink };
-  }
-
-  async mapToVerifyErrorToHelperKey(reason) {
-    const map = {
-      missing_email: 'invalid',
-      not_found: 'notFound',
-      used: 'used',
-      expired: 'expired',
-      rate_limit: 'rateLimit',
-    };
-    return map[reason] || 'notFound';
-  }
-
-  async getTokenDB(email) {
-    try {
-      const token = await tokenModel.findLatestTokenByEmail(email);
-
-      this.loggerWrapper('[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Success', {
-        layer: 'passwordlessVerifyCodeService.validateOTP',
-        action: 'performVerifyOTP.getTokenDB',
-        email: email,
-      });
-
-      return token;
-    } catch (error) {
-      this.loggerWrapper(
-        '[CIAM] End getValidTokenDB at PasswordlessVerifyCode Service - Failed',
-        {
-          layer: 'passwordlessVerifyCodeService.validateOTP',
-          action: 'performVerifyOTP.getTokenDB',
-          error: new Error(error),
-          email: email,
-        },
-        'error',
-      );
-      await failedJobsModel.create({
-        uuid: crypto.randomUUID(),
-        name: 'failedGettingOTPTokenInformation',
-        action: 'failed',
-        data: {
-          email: email,
-        },
-        source: 2,
-        triggered_at: null,
-        status: 0,
-      });
-    }
-  }
-
-  async incrementTokenAttemptDB(id) {
-    try {
-      await tokenModel.incrementAttemptById(id);
-    } catch (error) {
-      this.loggerWrapper(
-        '[CIAM] End incrementTokenAttempt at PasswordlessVerifyCode Service - Failed',
-        {
-          layer: 'passwordlessVerifyCodeService.validateOTP',
-          action: 'incrementTokenAttempt',
-          error: new Error(error),
-          tokenId: id,
-        },
-        'error',
-      );
-      throw new Error(JSON.stringify(CommonErrors.NotImplemented()));
-    }
-  }
-
-  async markTokenAsUsedDB(id) {
-    try {
-      return await tokenModel.markTokenById(id); // Returns true or false
-    } catch (error) {
-      this.loggerWrapper(
-        '[CIAM] End markTokenAsUsed at PasswordlessVerifyCode Service - Failed',
-        {
-          layer: 'passwordlessVerifyCodeService.validateOTP',
-          action: 'markTokenAsUsed',
-          error: new Error(error),
-          tokenId: id,
-        },
-        'error',
-      );
-    }
   }
 
   async decryptMagicToken(req) {
@@ -138,7 +56,7 @@ class PasswordlessVerifyCodeService {
 
     if (!base64token) {
       throw new Error(
-        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('missing', req, true)),
+        JSON.stringify(this.mapVerifyFailureToError(req, { reason: 'missing_token' }, true)),
       );
     }
 
@@ -164,7 +82,7 @@ class PasswordlessVerifyCodeService {
 
       if (Date.now() > decryptedToken.expiredAt) {
         throw new Error(
-          JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('expired', req, true)),
+          JSON.stringify(this.mapVerifyFailureToError(req, { reason: 'expired' }, true)),
         );
       }
 
@@ -180,9 +98,32 @@ class PasswordlessVerifyCodeService {
         'error',
       );
       throw new Error(
-        JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('invalid', req, true)),
+        JSON.stringify(this.mapVerifyFailureToError(req, { reason: 'invalid' }, true)),
       );
     }
+  }
+
+  mapVerifyFailureToError(req, error, isMagicLink) {
+    const { email, lang } = req.body;
+    const { reason } = error;
+    const errorMap = {
+      expired: isMagicLink
+        ? PasswordlessErrors.verifyMagicLinkError(lang)
+        : PasswordlessErrors.expiredError(email, lang),
+      missing_token: PasswordlessErrors.tokenMissingError(lang),
+      invalid: isMagicLink
+        ? PasswordlessErrors.verifyMagicLinkError(lang)
+        : PasswordlessErrors.verifyOtpError(email, lang),
+      not_found: isMagicLink
+        ? PasswordlessErrors.verifyMagicLinkError(lang)
+        : PasswordlessErrors.verifyOtpError(email, lang),
+      missing_email: isMagicLink
+        ? PasswordlessErrors.verifyMagicLinkError(lang)
+        : PasswordlessErrors.verifyOtpError(email, lang),
+      login_disabled: PasswordlessErrors.loginDisabled(email, error.secondsRemaining),
+    };
+
+    return errorMap[reason];
   }
 
   loggerWrapper(action, loggerObj, type = 'logInfo') {

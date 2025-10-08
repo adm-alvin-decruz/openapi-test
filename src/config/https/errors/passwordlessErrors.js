@@ -15,17 +15,16 @@ class PasswordlessErrors {
     };
   }
 
-  static loginDisabled(email, resetAt) {
+  static loginDisabled(email, secondsRemaining) {
     return {
       auth: {
         code: 429,
         mwgCode: 'MWG_CIAM_USERS_LOGIN_DISABLED',
-        message: `Too many login attempts. Please try again in ${resetAt.secondsRemaining} seconds.`,
+        message: `Too many login attempts. Please try again in ${secondsRemaining} seconds.`,
         email: validator.escape(email),
-        resetAt: resetAt.resetTime,
       },
       status: 'failed',
-      statusCode: 500,
+      statusCode: 429,
     };
   }
 
@@ -78,19 +77,6 @@ class PasswordlessErrors {
       },
       status: 'failed',
       statusCode: 401,
-    };
-  }
-
-  static verifyRateLimitError(email, lang) {
-    return {
-      auth: {
-        code: 429,
-        mwgCode: 'MWG_CIAM_USERS_OTP_ATTEMPT_EXCEEDED',
-        message: messageLang('verifyOTP_tooManyAttempts', lang),
-        email: validator.escape(email),
-      },
-      status: 'failed',
-      statusCode: 429,
     };
   }
 

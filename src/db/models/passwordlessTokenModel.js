@@ -125,7 +125,7 @@ class PasswordlessToken {
         {},
         '[CIAM] passwordlessTokenModel.incrementAttemptById - Failed',
       );
-      return error;
+      throw error;
     }
   }
 
@@ -151,7 +151,7 @@ class PasswordlessToken {
         {},
         '[CIAM] passwordlessTokenModel.markTokenById - Failed',
       );
-      return error;
+      throw error;
     }
   }
 }

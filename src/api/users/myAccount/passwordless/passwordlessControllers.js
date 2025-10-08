@@ -7,11 +7,17 @@ const {
 const { messageLang } = require('../../../../utils/common');
 const appConfig = require('../../../../config/appConfig');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
-const { incrementTokenAttemptDB, markTokenAsUsedDB } = require('./passwordlessVerifyCodeServices');
 const { getUserFromDBCognito } = require('../../helpers/userUpdateMembershipPassesHelper');
 const { updateUser } = require('../../userLoginServices');
 const { createEvent } = require('../../userCredentialEventService');
-const { EVENTS } = require('../../../../utils/constants');
+const { EVENTS, STATUS } = require('../../../../utils/constants');
+const {
+  incrementAttemptById,
+  markTokenAsInvalid,
+  getTokenById,
+} = require('../../../../db/models/passwordlessTokenModel');
+const { getValueByConfigValueName } = require('./passwordlessSendCodeServices');
+const { update } = require('../../../../db/models/userModel');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
@@ -76,34 +82,53 @@ async function verifyCode(req, tokenId) {
       '[CIAM] Start Verify Code Request',
     );
 
+    // Get user info from DB & Cognito
+    const { db: userInfoDb, cognito: userInfoCognito } = await getUserFromDBCognito(email);
+    console.log('User info:', JSON.stringify({ userInfoDb, userInfoCognito }));
+
     // Increment token attempt in DB
-    await incrementTokenAttemptDB(tokenId);
+    await incrementAttemptById(tokenId);
+
+    // If token attempt reaches max no. of attempts, invalidate token (block further verification attempts on this token)
+    const MAX_ATTEMPTS = await getValueByConfigValueName(
+      'passwordless-otp',
+      'otp-config',
+      'otp_max_attempt',
+    );
+    const { verification_attempts: attempts } = await getTokenById(tokenId);
+    if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
 
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session);
 
     if (!cognitoRes.accessToken) {
-      // TODO: If attempt is 5, set user status to 2
-      return PasswordlessErrors.verifyOtpError(req.body.email);
+      // If verification fails on last available attempt, disable login for 15 min
+      if (attempts === MAX_ATTEMPTS) {
+        const updateResult = await update(userInfoDb.id, { status: 2 });
+        console.log('Login is disabled for user account.', updateResult);
+      }
+      throw new Error(JSON.stringify(PasswordlessErrors.verifyOtpError(email)));
     }
 
-    // If verification succeeds, mark token as used
-    const markSuccess = await markTokenAsUsedDB(tokenId);
-    if (!markSuccess) {
-      return PasswordlessErrors.verifyOtpError(req.body.email);
-    }
-
-    // Get user info from DB & Cognito
-    const { db: userInfoDb, cognito: userInfoCognito } = await getUserFromDBCognito(email);
-    console.log('User info:', JSON.stringify({ userInfoDb, userInfoCognito }));
+    // If verification succeeds, mark token as invalid (used)
+    await markTokenAsInvalid(tokenId);
 
     // Update user_credentials and user_credential_events tables with login info
     await updateUser(userInfoDb.id, cognitoRes);
     await createEvent(
       {
+        eventType: EVENTS.VERIFY_OTP,
+        data: { tokenId, code, session },
+        source: 7,
+        status: STATUS.SUCCESS,
+      },
+      userInfoDb.id,
+    );
+    await createEvent(
+      {
         eventType: EVENTS.LOGIN,
         data: req.body.email,
         source: 1,
-        status: 1,
+        status: STATUS.SUCCESS,
       },
       userInfoDb.id,
     );
@@ -127,12 +152,13 @@ async function verifyCode(req, tokenId) {
       statusCode: 200,
     };
   } catch (error) {
+    // Log failed verification attempt in user_credential_events table
     await createEvent(
       {
-        eventType: EVENTS.LOGIN,
-        data: req.body.email,
-        source: 1,
-        status: 0,
+        eventType: EVENTS.VERIFY_OTP,
+        data: { code, session },
+        source: 7,
+        status: STATUS.FAILED,
       },
       null,
       req.body.email,
@@ -151,6 +177,7 @@ async function verifyCode(req, tokenId) {
       {},
       '[CIAM] End Verify Code Request - Failed',
     );
+
     throw error;
   }
 }
