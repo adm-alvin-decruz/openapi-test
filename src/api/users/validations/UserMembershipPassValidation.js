@@ -2,6 +2,7 @@ const MembershipPassErrors = require('../../../config/https/errors/membershipPas
 const { validateDOBiso } = require('../../../services/validationService');
 const configsModel = require('../../../db/models/configsModel');
 const commonService = require('../../../services/commonService');
+const usersDBService = require('../usersDBService');
 
 class UserMembershipPassValidation {
   constructor() {
@@ -126,6 +127,16 @@ class UserMembershipPassValidation {
         req.body.language,
       ));
     }
+
+    // Check mandaiId matches user found by email
+    const mandaiIdMatch = await this.isMandaiIdMatchEmail(req.body.email, req.body.mandaiId);
+
+    if (!mandaiIdMatch) {
+      return (this.error = MembershipPassErrors.emailMismatchMandaiId(
+        req.body.email,
+        req.body.language,
+      ));
+    }
   }
 
   static async validateUpdateUserMembershipPass(req) {
@@ -245,6 +256,32 @@ class UserMembershipPassValidation {
         req.body.language,
       ));
     }
+
+    const isMandaiIdMatchWithEmailPayload = await this.isMandaiIdMatchEmail(
+      req.body.email,
+      req.body.mandaiId,
+    );
+
+    if (!isMandaiIdMatchWithEmailPayload) {
+      return (this.error = MembershipPassErrors.emailMismatchMandaiId(
+        req.body.email,
+        req.body.language,
+      ));
+    }
+  }
+
+  /**
+   * Check if the mandaiId matches the user found by email
+   * @param {string} email
+   * @param {string} mandaiId
+   * @returns {Promise<boolean>} true if matched, false otherwise
+   */
+  static async isMandaiIdMatchEmail(email, mandaiId) {
+    if (!email || !mandaiId) return false;
+    const user = await usersDBService.getDBUserByEmail({ email });
+
+    if (!user) return false;
+    return user.mandai_id === mandaiId;
   }
 }
 
