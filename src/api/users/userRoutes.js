@@ -259,7 +259,7 @@ router.post('/users/sessions', isEmptyRequest, validateEmail, async (req, res) =
     const data = await userController.userLogin(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    let errorMessage = JSON.parse(error.message);
+    const errorMessage = JSON.parse(error.message);
     return res.status(errorMessage.statusCode).send(errorMessage);
   }
 });
@@ -291,7 +291,7 @@ router.delete(
       const data = await userController.userLogout(accessToken, req.body);
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      let errorMessage = JSON.parse(error.message);
+      const errorMessage = JSON.parse(error.message);
       return res.status(errorMessage.statusCode).send(errorMessage);
     }
   },

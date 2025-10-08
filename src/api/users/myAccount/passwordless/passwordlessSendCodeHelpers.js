@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const PasswordService = require('../../userPasswordService');
 const loggerService = require('../../../../logs/logger');
 const { secrets } = require('../../../../services/secretsService');
+const { getValueByConfigValueName } = require('./passwordlessSendCodeServices');
 
 async function generateMagicLinkToken(email, otp, expiredAt) {
   const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
@@ -70,6 +71,7 @@ function loggerWrapper(action, loggerObj, type = 'logInfo') {
 
   return loggerService.log({ passwordlessSendCodeService: { ...loggerObj } }, action);
 }
+
 function safeJsonParse(str) {
   try {
     return JSON.parse(str);
@@ -78,8 +80,36 @@ function safeJsonParse(str) {
   }
 }
 
+async function getResetTimeRemaining(lastLoginEventTime) {
+  const OTP_LOGIN_DISABLED_SECONDS = await getValueByConfigValueName(
+    'passwordless-otp',
+    'otp-config',
+    'otp_login_disabled',
+  );
+
+  const resetTime = new Date(
+    lastLoginEventTime.getTime() + Number(OTP_LOGIN_DISABLED_SECONDS) * 1000,
+  );
+  const now = new Date();
+
+  const diffMs = resetTime - now;
+
+  if (diffMs > 0) {
+    return {
+      resetTime,
+      secondsRemaining: Math.max(0, Math.ceil(diffMs / 1000)),
+    };
+  } else {
+    return {
+      resetTime: now,
+      secondsRemaining: 0,
+    };
+  }
+}
+
 module.exports = {
   generateMagicLinkToken,
   generateOTP,
   safeJsonParse,
+  getResetTimeRemaining,
 };

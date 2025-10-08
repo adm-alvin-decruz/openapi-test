@@ -35,7 +35,15 @@ const EVENTS = {
   PASSWORD_RESET: 'password_reset',
   PASSWORD_CHANGE: 'password_change',
   REFRESH_TOKEN: 'refresh_token',
+  SEND_OTP: 'send_otp',
+  VERIFY_OTP: 'verify_otp',
 };
+
+const STATUS = {
+  FAILED: 0,
+  SUCCESS: 1,
+};
+
 module.exports = {
   GROUP,
   LANGUAGE_CODE,
@@ -43,4 +51,5 @@ module.exports = {
   COGNITO_ATTRIBUTES,
   EXPIRE_TIME_HOURS,
   EVENTS,
+  STATUS,
 };
