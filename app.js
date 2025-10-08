@@ -34,7 +34,7 @@ app.use('/private', userPrivateRoutes);
 app.use('/v2/ciam/auth/membership', membershipMyAccountRoutes);
 app.use('/v2/ciam/auth/', passwordlessRoutes);
 
-if (process.env.IS_LOCAL) {
+if (process.env.IS_LOCAL === true) {
   app.listen(3000, () => console.log('Running on port 3000'));
 }
 
