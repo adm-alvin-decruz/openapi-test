@@ -84,8 +84,8 @@ class UserCredential {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');
@@ -151,8 +151,8 @@ class UserCredential {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');
@@ -199,16 +199,12 @@ class UserCredential {
   }
 
   static async deletebyUserID(user_id) {
-    try {
-      const sql = 'DELETE FROM user_credentials WHERE user_id = ?';
-      var result = await pool.execute(sql, [user_id]);
+    const sql = 'DELETE FROM user_credentials WHERE user_id = ?';
+    await pool.execute(sql, [user_id]);
 
-      return JSON.stringify({
-        sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
-      });
-    } catch (error) {
-      throw error;
-    }
+    return JSON.stringify({
+      sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
+    });
   }
 
   static async updateByUserIdAndEmail(email, userId, data) {
@@ -216,8 +212,8 @@ class UserCredential {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(data)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
     updateFields.push('updated_at = ?');

@@ -3,7 +3,11 @@ const loggerService = require('../logs/logger');
 const CommonErrors = require('../config/https/errors/commonErrors');
 const { messageLang } = require('../utils/common');
 const { secrets } = require('../services/secretsService');
-const { uuidv4 } = require('uuid');
+
+async function generateUUID() {
+  const { v4: uuidv4 } = await import('uuid');
+  return uuidv4();
+}
 
 function captchaError(lang) {
   return {
@@ -101,7 +105,7 @@ async function verifyTurnstile(req, res, next) {
         secret: turnstileSecret,
         response: token,
         remoteip: remoteip,
-        idempotency_key: uuidv4(),
+        idempotency_key: generateUUID(),
       },
       {
         headers: { 'Content-Type': 'application/json' },
