@@ -154,6 +154,57 @@ class PasswordlessToken {
       throw error;
     }
   }
+
+  static async addSessionToToken(id, session) {
+    const sql = `
+      UPDATE passwordless_tokens
+      SET aws_session = ?
+      WHERE id = ?
+    `;
+
+    try {
+      const result = await execute(sql, [session, id]);
+
+      return result.affectedRows > 0;
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.addSessionToToken - Failed',
+      );
+      throw error;
+    }
+  }
+
+  static async getSession(id) {
+    const sql = `
+      SELECT aws_session
+      FROM passwordless_tokens
+      WHERE id = ?
+    `;
+
+    try {
+      const rows = await query(sql, [id]);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.getSession - Failed',
+      );
+      throw error;
+    }
+  }
 }
 
 module.exports = PasswordlessToken;
