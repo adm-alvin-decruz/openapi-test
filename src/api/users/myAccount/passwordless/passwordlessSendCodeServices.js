@@ -6,7 +6,7 @@ const {
   getUserFromDBCognito,
   isUserExisted,
 } = require('../../helpers/userUpdateMembershipPassesHelper');
-const { update } = require('../../../../db/models/userModel');
+const { update, findByEmail } = require('../../../../db/models/userModel');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const {
   getLastLoginEvent,
@@ -227,6 +227,26 @@ class PasswordlessSendCodeService {
         {
           layer: 'passwordlessSendCodeService.checkWithinCooldownInterval',
           action: 'sendCode.checkWithinCooldownInterval',
+          error,
+        },
+        'error',
+      );
+      throw error;
+    }
+  }
+
+  async updateTokenSession(email, session) {
+    try {
+      const { id } = await findByEmail(email);
+      const { data } = await getLastSendOTPEvent(id);
+      const tokenId = data.tokenId;
+      await tokenModel.addSessionToToken(tokenId, session);
+    } catch (error) {
+      this.loggerWrapper(
+        '[CIAM] updateTokenSession at PasswordlessSendCode Service - Failed',
+        {
+          layer: 'passwordlessSendCodeService.updateTokenSession',
+          action: 'sendCode.updateTokenSession',
           error,
         },
         'error',

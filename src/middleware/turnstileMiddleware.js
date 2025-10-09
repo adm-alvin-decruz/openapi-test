@@ -47,7 +47,7 @@ function missingSecretKeyError(lang) {
 
 async function verifyTurnstile(req, res, next) {
   const email = req.body.email || req.query.email || 'unknown';
-  const token = req.body.captchaToken;
+  const token = req.body.token;
   const lang = req.body.language || req.query.language || 'en';
 
   loggerService.log(
@@ -143,7 +143,7 @@ async function verifyTurnstile(req, res, next) {
     );
 
     req.turnstile = { ok: true, meta: data };
-    return next();
+    next();
   } catch (e) {
     loggerService.log(
       {

@@ -5,7 +5,6 @@ const {
   cognitoVerifyPasswordlessLogin,
 } = require('../../../../services/cognitoService');
 const { messageLang } = require('../../../../utils/common');
-const appConfig = require('../../../../config/appConfig');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const { getUserFromDBCognito } = require('../../helpers/userUpdateMembershipPassesHelper');
 const { updateUser } = require('../../userLoginServices');
@@ -15,8 +14,9 @@ const {
   incrementAttemptById,
   markTokenAsInvalid,
   getTokenById,
+  getSession,
 } = require('../../../../db/models/passwordlessTokenModel');
-const { getValueByConfigValueName } = require('./passwordlessSendCodeServices');
+const { getValueByConfigValueName, updateTokenSession } = require('./passwordlessSendCodeServices');
 const { update } = require('../../../../db/models/userModel');
 
 async function sendCode(req) {
@@ -35,6 +35,9 @@ async function sendCode(req) {
     );
 
     const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
+
+    // Update passwordless_tokens table with AWS session
+    await updateTokenSession(email, cognitoRes.session);
 
     return {
       auth: {
@@ -67,7 +70,7 @@ async function verifyCode(req, tokenId) {
   req.body = commonService.cleanData(req.body || {});
   req.query = commonService.cleanData(req.query || {});
 
-  const { code, session, email } = req.body;
+  const { code, email } = req.body;
 
   try {
     loggerService.log(
@@ -98,6 +101,7 @@ async function verifyCode(req, tokenId) {
     const { verification_attempts: attempts } = await getTokenById(tokenId);
     if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
 
+    const { aws_session: session } = await getSession(tokenId);
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session);
 
     if (!cognitoRes.accessToken) {
@@ -134,11 +138,6 @@ async function verifyCode(req, tokenId) {
       userInfoDb.id,
     );
 
-    // Form AEM callback URL
-    const callbackUrl = `${
-      appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]
-    }${appConfig.AEM_CALLBACK_PATH}`;
-
     return {
       auth: {
         code: 200,
@@ -147,7 +146,6 @@ async function verifyCode(req, tokenId) {
         accessToken: cognitoRes.accessToken,
         mandaiId: userInfoDb.mandai_id,
         email: userInfoDb.email,
-        callbackURL: callbackUrl,
       },
       status: 'success',
       statusCode: 200,
@@ -157,7 +155,7 @@ async function verifyCode(req, tokenId) {
     await createEvent(
       {
         eventType: EVENTS.VERIFY_OTP,
-        data: { code, session },
+        data: { tokenId },
         source: 7,
         status: STATUS.FAILED,
       },
