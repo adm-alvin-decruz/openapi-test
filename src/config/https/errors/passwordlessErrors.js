@@ -22,6 +22,7 @@ class PasswordlessErrors {
         mwgCode: 'MWG_CIAM_USERS_LOGIN_DISABLED',
         message: `Too many login attempts. Please try again in ${secondsRemaining} seconds.`,
         email: validator.escape(email),
+        remainingSeconds: secondsRemaining,
       },
       status: 'failed',
       statusCode: 429,
