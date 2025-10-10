@@ -18,6 +18,7 @@ const {
 } = require('../../../../db/models/passwordlessTokenModel');
 const { getValueByConfigValueName, updateTokenSession } = require('./passwordlessSendCodeServices');
 const { update } = require('../../../../db/models/userModel');
+const appConfig = require('../../../../config/appConfig');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
@@ -138,6 +139,9 @@ async function verifyCode(req, tokenId) {
       userInfoDb.id,
     );
 
+    // Form AEM callback URL
+    const callbackUrl = `${appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.AEM_CALLBACK_PATH}`;
+
     return {
       auth: {
         code: 200,
@@ -145,6 +149,7 @@ async function verifyCode(req, tokenId) {
         message: messageLang('login_success'),
         accessToken: cognitoRes.accessToken,
         mandaiId: userInfoDb.mandai_id,
+        callbackUrl,
         email: userInfoDb.email,
       },
       status: 'success',
