@@ -153,6 +153,7 @@ async function refreshToken(credentialInfo) {
     });
     return refreshTokenRs.AuthenticationResult.AccessToken;
   } catch (error) {
+    console.log(error);
     return undefined;
   }
 }

@@ -3,16 +3,12 @@ const express = require('express');
 const router = express.Router();
 
 const passwordlessController = require('../passwordless/passwordlessControllers');
-const passwordlessVerifyCodeHelper = require('../passwordless/passwordlessVerifyCodeHelpers');
 const validationService = require('../../../../services/validationService');
-const processTimer = require('../../../../utils/processTimer');
 const {
-  defineForVerify,
-  mapDefineCreateReasonToHelperKey,
-  mapDefineReasonToHelperKey,
   shouldIssueChallenge,
-} = require('./defineChallenge');
-const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
+  mapIssueChallengeFailureToError,
+} = require('./passwordlessSendCodeServices');
+const processTimer = require('../../../../utils/processTimer');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
 const crypto = require('crypto');
@@ -20,12 +16,10 @@ const uuid = crypto.randomUUID();
 const {
   isEmptyRequest,
   validateEmail,
-  // AccessTokenAuthGuard,
-  // AccessTokenAuthGuardByAppIdGroupFOSeries,
   lowercaseTrimKeyValueString,
-  // validateAPIKey,
 } = require('../../../../middleware/validationMiddleware');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
+const { shouldVerify, mapVerifyFailureToError } = require('./passwordlessVerifyCodeServices');
 
 const pong = { pong: 'pang' };
 
@@ -36,7 +30,7 @@ router.get('/ping', async (req, res) => {
 });
 
 /**
- * CIAM MyAccount passwordless send otp public endpoint
+ * CIAM MyAccount - Send OTP Email
  */
 router.post(
   '/passwordless/send',
@@ -46,11 +40,11 @@ router.post(
   verifyTurnstile,
   async (req, res) => {
     req['processTimer'] = processTimer;
-    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
     req.body.uuid = uuid;
     const startTimer = process.hrtime();
 
-    // validate req app-id
+    // Validate App ID
     const valAppID = validationService.validateAppID(req.headers);
     if (!valAppID) {
       req.apiTimer.end('Route CIAM Signup User Error Unauthorized', startTimer);
@@ -109,33 +103,29 @@ router.post(
       const toIssueChallenge = await shouldIssueChallenge(req);
       if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const helperKey = mapDefineCreateReasonToHelperKey(toIssueChallenge.reason);
-        const errObj =
-          helperKey === 'tooSoon'
-            ? PasswordlessErrors.sendCodetooSoonFailure(req.body.email, req.body.lang)
-            : PasswordlessErrors.sendCodeError(req.body.email, req.body.lang);
-
+        const errObj = mapIssueChallengeFailureToError(req, toIssueChallenge.error);
+        console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
       const otpRes = await passwordlessController.sendCode(req);
 
       return res.status(200).json(otpRes);
     } catch (error) {
-      const errorMessage = safeJsonParse(error.message);
-      if (errorMessage) {
-        return res.status(errorMessage.statusCode || 500).json(errorMessage);
-      }
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         status: 'failed',
-        statusCode: 500,
-        message: error.message || 'Unknown error',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.statusCode || 500,
+          message: 'Failed to send OTP email',
+          cause: error,
+        },
       });
     }
   },
 );
 
 /**
- * CIAM MyAccount passwordless verify otp public endpoint
+ * CIAM MyAccount - Verify OTP
  */
 router.post(
   '/passwordless/session',
@@ -144,7 +134,7 @@ router.post(
   lowercaseTrimKeyValueString,
   async (req, res) => {
     req['processTimer'] = processTimer;
-    req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
     const startTimer = process.hrtime();
 
     const valAppID = validationService.validateAppID(req.headers);
@@ -154,26 +144,30 @@ router.post(
     }
 
     try {
-      const decide = await defineForVerify(req);
-      if (!decide.proceed) {
+      const toVerify = await shouldVerify(req);
+      if (!toVerify.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
-        const helperKey = mapDefineReasonToHelperKey(decide.reason);
-        const isMagic = !!req.query?.token?.trim();
-        const errObj = passwordlessVerifyCodeHelper.getTokenError(helperKey, req, isMagic);
-
+        const errObj = mapVerifyFailureToError(req, toVerify.error, toVerify.isMagic);
+        console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
-      const data = await passwordlessController.verifyCode(req);
+      const data = await passwordlessController.verifyCode(req, toVerify.tokenId);
+
       return res.status(data.statusCode).json(data);
     } catch (error) {
       const errorMessage = safeJsonParse(error.message);
       if (errorMessage) {
         return res.status(errorMessage.statusCode || 500).json(errorMessage);
       }
-      return res.status(500).json({
+
+      return res.status(error.statusCode || 500).json({
         status: 'failed',
-        statusCode: 500,
-        message: error.message || 'Unknown error',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.statusCode || 500,
+          message: 'Failed to send OTP email',
+          cause: error,
+        },
       });
     }
   },
@@ -182,37 +176,37 @@ router.post(
 /**
  * CIAM MyAccount passwordless verify magic link public endpoint
  */
-router.get('/passwordless/session', lowercaseTrimKeyValueString, async (req, res) => {
-  req['processTimer'] = processTimer;
-  req['apiTimer'] = req.processTimer.apiRequestTimer(true);
-  const startTimer = process.hrtime();
+// router.get('/passwordless/session', lowercaseTrimKeyValueString, async (req, res) => {
+//   req['processTimer'] = processTimer;
+//   req['apiTimer'] = req.processTimer.apiRequestTimer(true);
+//   const startTimer = process.hrtime();
 
-  const token = req.query?.token;
-  if (!token || !token.trim()) {
-    req.apiTimer.end('Route CIAM Magic Link Error 400 Token Missing', startTimer);
-    const errorMessage = JSON.parse(
-      JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('missingToken', req, true)),
-    );
-    return res.status(errorMessage.statusCode).send(errorMessage);
-  }
+//   const token = req.query?.token;
+//   if (!token || !token.trim()) {
+//     req.apiTimer.end('Route CIAM Magic Link Error 400 Token Missing', startTimer);
+//     const errorMessage = JSON.parse(
+//       JSON.stringify(passwordlessVerifyCodeHelper.getTokenError('missingToken', req, true)),
+//     );
+//     return res.status(errorMessage.statusCode).send(errorMessage);
+//   }
 
-  try {
-    const decide = await defineForVerify(req);
-    if (!decide.proceed) {
-      req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
-      const helperKey = mapDefineReasonToHelperKey(decide.reason);
-      const isMagic = !!req.query?.token?.trim();
-      const errObj = passwordlessVerifyCodeHelper.getTokenError(helperKey, req, isMagic);
+//   try {
+//     const decide = await defineForVerify(req);
+//     if (!decide.proceed) {
+//       req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
+//       const helperKey = mapDefineReasonToHelperKey(decide.reason);
+//       const isMagic = !!req.query?.token?.trim();
+//       const errObj = passwordlessVerifyCodeHelper.getTokenError(helperKey, req, isMagic);
 
-      return res.status(errObj.statusCode || 400).json(errObj);
-    }
+//       return res.status(errObj.statusCode || 400).json(errObj);
+//     }
 
-    const data = await passwordlessController.verifyCode(req);
-    return res.status(data.statusCode).json(data);
-  } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).json(errorMessage);
-  }
-});
+//     const data = await passwordlessController.verifyCode(req);
+//     return res.status(data.statusCode).json(data);
+//   } catch (error) {
+//     const errorMessage = JSON.parse(error.message);
+//     return res.status(errorMessage.statusCode).json(errorMessage);
+//   }
+// });
 
 module.exports = router;

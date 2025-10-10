@@ -75,6 +75,18 @@ class MembershipPassErrors {
       statusCode: 500,
     };
   }
+  static emailMismatchMandaiId(email, lang = 'en') {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: 'MWG_MEMBERSHIP_EMAIL_MISMATCH_MANDAIID',
+        message: messageLang('membership_pass_email_mismatch_mandaiid', lang),
+        email: email,
+      },
+      status: 'failed',
+      statusCode: 400,
+    };
+  }
 
   static membershipPassExistedError(email, lang = 'en') {
     return {

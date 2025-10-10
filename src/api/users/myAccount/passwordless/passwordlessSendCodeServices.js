@@ -1,14 +1,19 @@
-const crypto = require('crypto');
-const lambdaService = require('../../../../services/lambdaService');
 const loggerService = require('../../../../logs/logger');
 const tokenModel = require('../../../../db/models/passwordlessTokenModel');
-const failedJobsModel = require('../../../../db/models/failedJobsModel');
-const { maskKeyRandomly } = require('../../../../utils/common');
-const passwordlessSendCodeHelper = require('./passwordlessSendCodeHelpers');
-const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const configsModel = require('../../../../db/models/configsModel');
-const { response } = require('express');
 const { switchIsTurnOn } = require('../../../../helpers/dbSwitchesHelpers');
+const {
+  getUserFromDBCognito,
+  isUserExisted,
+} = require('../../helpers/userUpdateMembershipPassesHelper');
+const { update, findByEmail } = require('../../../../db/models/userModel');
+const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
+const {
+  getLastLoginEvent,
+  getLastSendOTPEvent,
+  countOtpGenerationsSinceLastSuccess,
+} = require('../../../../db/models/userCredentialEventsModel');
+const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
 
 class PasswordlessSendCodeService {
   async getValueByConfigValueName(config, key, valueName) {
@@ -35,81 +40,194 @@ class PasswordlessSendCodeService {
       throw err;
     }
   }
-  async saveTokenDB(tokenData) {
-    const hash = tokenData.hash;
-    const salt = tokenData.salt;
-    const expiredAt = tokenData.expiredAt;
 
+  /**
+   * Decide whether to issue a challenge.
+   */
+  async shouldIssueChallenge(req) {
+    const { email, purpose = 'login' } = req.body || {};
+
+    // Check if passwordless switches are enabled
+    const sendEnabled = await switchIsTurnOn('passwordless_enable_send_otp');
+    const signupSendEnabled = await switchIsTurnOn('passwordless_enable_send_sign_up_email');
+
+    if (purpose === 'signup') {
+      if (!signupSendEnabled) {
+        return { proceed: false, error: { reason: 'send_disabled_signup' } };
+      }
+    }
+
+    if (!sendEnabled) {
+      return { proceed: false, error: { reason: 'send_disabled_login' } };
+    }
+
+    // Check if user currently exists in Cognito & DB; if does not exist, direct user to sign up (sign up currently unsupported)
+    const userInfo = await getUserFromDBCognito(email);
+    const isNewUser = !isUserExisted(userInfo);
+    if (isNewUser) return { proceed: false, reason: 'new_user' };
+
+    // Check how many OTPs without successful logins before current request
+    const OTP_MAX_GENERATIONS = await this.getValueByConfigValueName(
+      'passwordless-otp',
+      'otp-config',
+      'otp_max_generate',
+    );
+    const isMoreThanMaxGenerations = await this.checkOtpGenerationsWithoutSuccessfulLogin(
+      userInfo.db.id,
+      OTP_MAX_GENERATIONS,
+    );
+    if (!isMoreThanMaxGenerations.allow) {
+      return {
+        proceed: false,
+        error: {
+          reason: 'login_disabled',
+          secondsRemaining: isMoreThanMaxGenerations.secondsRemaining,
+        },
+      };
+    }
+
+    // Check user status. If status = 2 (login disabled), reject send OTP request
+    const isLoginDisabled = await this.checkLoginDisabled(userInfo.db);
+    if (isLoginDisabled.disabled) {
+      return {
+        proceed: false,
+        error: { reason: 'login_disabled', secondsRemaining: isLoginDisabled.secondsRemaining },
+      };
+    }
+
+    // Check if new OTP should be generated
+    const OTP_INTERVAL = await this.getValueByConfigValueName(
+      'passwordless-otp',
+      'otp-config',
+      'otp_cooldown_interval',
+    );
+    const { withinCooldown, remainingSeconds } = await this.checkWithinCooldownInterval(
+      userInfo.db.id,
+      OTP_INTERVAL,
+    );
+    if (withinCooldown)
+      return { proceed: false, error: { reason: 'too_soon', secondsRemaining: remainingSeconds } };
+
+    return { proceed: true, purpose };
+  }
+
+  mapIssueChallengeFailureToError(req, error) {
+    const { email, lang } = req.body;
+    const { reason } = error;
+    const errorMap = {
+      login_disabled: PasswordlessErrors.loginDisabled(email, error.remainingSeconds),
+      too_soon: PasswordlessErrors.sendCodetooSoonFailure(email, lang, error.remainingSeconds),
+      new_user: PasswordlessErrors.newUserError(email, lang),
+      send_disabled_login: PasswordlessErrors.sendCodeError(email, lang),
+      send_disabled_signup: PasswordlessErrors.sendCodeError(email, lang),
+      missing_email: PasswordlessErrors.sendCodeError(email, lang),
+    };
+
+    return errorMap[reason];
+  }
+
+  async checkOtpGenerationsWithoutSuccessfulLogin(userId, maxOtpGenerations) {
     try {
-      const tokenDB = await tokenModel.create(tokenData);
+      const otpCount = await countOtpGenerationsSinceLastSuccess(userId);
 
-      this.loggerWrapper('[CIAM] End saveTokenDB at PasswordlessSendCode Service - Success', {
-        layer: 'passwordlessSendCodeService.generateCode',
-        action: 'sendCode.saveTokenDB',
-        hash: maskKeyRandomly(hash),
-        salt,
-        expiredAt,
-      });
+      if (otpCount >= maxOtpGenerations) {
+        // Check if current time is 15 min after last OTP generation
+        const lastSendOtpEvent = await getLastSendOTPEvent(userId);
+        const { resetTime, secondsRemaining } = await getResetTimeRemaining(
+          lastSendOtpEvent.created_at,
+        );
 
-      return tokenDB;
+        if (secondsRemaining > 0) {
+          // If still within 15 min block-out period, deny send OTP request
+          console.log('Login will be reset at:', JSON.stringify(resetTime));
+          const updateResult = await update(userId, { status: 2 });
+          console.log('Login is disabled for user account.', updateResult);
+          return { allow: false, secondsRemaining };
+        } else {
+          const updateResult = await update(userId, { status: 1 });
+          console.log('User account has been reset. Login enabled.', updateResult);
+          return { allow: true };
+        }
+      }
+
+      return { allow: true };
     } catch (error) {
       this.loggerWrapper(
-        '[CIAM] End saveUserDB at PasswordlessSendCode Service - Failed',
+        '[CIAM] checkOtpGenerationsWithoutSuccessfulLogin at PasswordlessSendCode Service - Failed',
         {
-          layer: 'passwordlessSendCodeService.generateCode',
-          action: 'sendCode.saveTokenDB',
+          layer: 'passwordlessSendCodeService.checkOtpGenerationsWithoutSuccessfulLogin',
+          action: 'sendCode.checkOtpGenerationsWithoutSuccessfulLogin',
           error: new Error(error),
-          hash: maskKeyRandomly(hash),
-          salt,
-          expiredAt,
+          userId,
         },
         'error',
       );
-      await failedJobsModel.create({
-        uuid: crypto.randomUUID(),
-        name: 'failedSavingTokenInformation',
-        action: 'failed',
-        data: {
-          hash: maskKeyRandomly(hash),
-          salt,
-          expiredAt,
-        },
-        source: 2,
-        triggered_at: null,
-        status: 0,
-      });
       throw error;
     }
   }
 
-  async shouldGenerateNewToken(email, otpInterval) {
+  async checkLoginDisabled(userData) {
+    const { id, status } = userData;
     try {
-      const token = await tokenModel.findLatestTokenByEmail(email);
-
-      if (!token) {
-        return true;
+      // If status !== 2, check how many OTP generations since last successful login
+      if (status !== 2) {
+        return { disabled: false };
       }
+
+      // If status = 2 (login disabled), check if it is already 15 min past the last login event
+      const lastLoginEvent = await getLastLoginEvent(id);
+      const { resetTime, secondsRemaining } = await getResetTimeRemaining(lastLoginEvent);
+
+      if (secondsRemaining > 0) {
+        console.log('Login will be reset at:', JSON.stringify(resetTime));
+        return { disabled: true, secondsRemaining };
+      } else {
+        const updateResult = await update(id, { status: 1 });
+        console.log('User account has been reset. Login enabled.', updateResult);
+        return { disabled: false };
+      }
+    } catch (error) {
+      this.loggerWrapper(
+        '[CIAM] checkLoginDisabled at PasswordlessSendCode Service - Failed',
+        {
+          layer: 'passwordlessSendCodeService.checkLoginDisabled',
+          action: 'sendCode.checkLoginDisabled',
+          error: new Error(error),
+          userId: id,
+        },
+        'error',
+      );
+      throw error;
+    }
+  }
+
+  async checkWithinCooldownInterval(userId, otpInterval) {
+    try {
+      // Check when the last 'send OTP' event was; if no such event, ok to generate OTP
+      const lastSendOTPEvent = await getLastSendOTPEvent(userId);
+      if (!lastSendOTPEvent) return { shouldGenerate: true, reason: null };
+
+      const token = await tokenModel.getTokenById(lastSendOTPEvent.token_id);
+      if (!token) throw new Error('Token does not exist in DB');
+
       const now = new Date();
-      const tokenRequestedAt = new Date(token.requested_at);
+      const tokenRequestedAt = new Date(token.created_at);
       const elapsedMs = now - tokenRequestedAt;
       const intervalMs = Number(otpInterval) * 1000;
 
       if (elapsedMs >= intervalMs) {
-        await tokenModel.markTokenById(token.id);
-        return true;
+        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.token_id); // Mark token as invalid because new token will be generated
+        return { withinCooldown: false, remainingSeconds: 0 };
       }
 
-      // Too soon to resend — return remaining wait time
-      return false;
+      return { withinCooldown: true, remainingSeconds: Math.ceil((intervalMs - elapsedMs) / 1000) };
     } catch (error) {
       this.loggerWrapper(
-        '[CIAM] End shouldGenerateNewToken at PasswordlessSendCode Service - Failed',
+        '[CIAM] checkWithinCooldownInterval at PasswordlessSendCode Service - Failed',
         {
-          layer: 'passwordlessSendCodeService.generateCode',
-          action: 'sendCode.shouldGenerateNewToken',
-          error: new Error(error),
-          email: email,
-          otpInterval: otpInterval,
+          layer: 'passwordlessSendCodeService.checkWithinCooldownInterval',
+          action: 'sendCode.checkWithinCooldownInterval',
+          error,
         },
         'error',
       );
@@ -117,165 +235,23 @@ class PasswordlessSendCodeService {
     }
   }
 
-  // param: purpose: "signup" or "login"
-  async generateCode(req, purpose) {
-    const email = req.body.email;
-    const lang = req.body.lang;
-
-    const sendEnabled = await switchIsTurnOn('passwordless_enable_send_otp');
-    const signupSendEnabled = await switchIsTurnOn('passwordless_enable_send_sign_up_email');
-    if ((purpose === 'signup' && !signupSendEnabled) || (purpose !== 'signup' && !sendEnabled)) {
-      throw new Error(JSON.stringify(PasswordlessErrors.sendCodeError(email, lang)));
-    }
-
-    // read from configs
-    // check if should generate new token
-    //otp in seconds
-
-    const OTP_INTERVAL = await this.getValueByConfigValueName(
-      'passwordless-otp',
-      'otp-config',
-      'otp_interval',
-    );
-    const allowed = await this.shouldGenerateNewToken(email, OTP_INTERVAL);
-    if (!allowed) {
-      throw new Error(JSON.stringify(PasswordlessErrors.sendCodetooSoonFailure(email, lang)));
-    }
-
+  async updateTokenSession(email, session) {
     try {
-      //move to config and switches
-
-      const OTP_LENGTH = await this.getValueByConfigValueName(
-        'passwordless-otp',
-        'otp-config',
-        'otp_length',
-      );
-
-      const OTP_USE_ALPHANUMERIC_SWITCH = await switchIsTurnOn(
-        'passwordless_enable_otp_use_alphanumeric',
-      );
-
-      let EXPIRY_SECONDS;
-      if (purpose === 'signup') {
-        EXPIRY_SECONDS = await this.getValueByConfigValueName(
-          'passwordless-otp',
-          'otp-config',
-          'otp_signup_expiry',
-        );
-      } else {
-        EXPIRY_SECONDS = await this.getValueByConfigValueName(
-          'passwordless-otp',
-          'otp-config',
-          'otp_login_expiry',
-        );
-      }
-
-      const expiryMs = Number(EXPIRY_SECONDS) * 1000;
-      const expiredAt = new Date(Date.now() + expiryMs).toISOString();
-
-      const otpData = await passwordlessSendCodeHelper.generateOTP(
-        OTP_USE_ALPHANUMERIC_SWITCH,
-        OTP_LENGTH,
-      );
-
-      const magicToken = await passwordlessSendCodeHelper.generateMagicLinkToken(
-        email,
-        otpData.otp,
-        expiredAt,
-      );
-
-      const salt = crypto.randomBytes(32).toString('base64');
-
-      // Save token to the DB
-      await this.saveTokenDB({
-        email: email,
-        hash: otpData.otpHash,
-        salt: salt,
-        expiredAt: expiredAt,
-        isUsed: 0,
-      });
-
-      // Save token to Cognito - need to enhance
-      // not needed to replace password to cognito
-
-      // const newPassword = otpData.otp + salt;
-      // await cognitoService.cognitoAdminSetUserPassword(email, newPassword);
-
-      return {
-        otp: otpData.otp,
-        magicToken: magicToken,
-        expiredAt: expiredAt,
-      };
+      const { id } = await findByEmail(email);
+      const { data } = await getLastSendOTPEvent(id);
+      const tokenId = data.tokenId;
+      await tokenModel.addSessionToToken(tokenId, session);
     } catch (error) {
       this.loggerWrapper(
-        '[CIAM] End sendEmail at PasswordlessSendCode Service - Failed',
+        '[CIAM] updateTokenSession at PasswordlessSendCode Service - Failed',
         {
-          layer: 'passwordlessSendCodeService.generateCode',
-          action: 'sendCode.generateCode',
-          email: email,
+          layer: 'passwordlessSendCodeService.updateTokenSession',
+          action: 'sendCode.updateTokenSession',
           error,
         },
         'error',
       );
-      throw new Error(JSON.stringify(PasswordlessErrors.sendCodeError(email, lang)));
-    }
-  }
-
-  async sendEmail(req, codeData) {
-    const email = req.body.email;
-    const lang = req.body.lang;
-    const otp = codeData.otp;
-    const magicToken = codeData.magicToken;
-
-    const magicLink =
-      'http://localhost:3010/public/v2/ciam/auth/passwordless/session?token=' + magicToken;
-
-    // purpose: "signup" | "login"
-    req['apiTimer'] = req.processTimer.apiRequestTimer();
-    req.apiTimer.log('passwordlessSendCodeServices.sendEmail start'); // log process time
-
-    const functionName = process.env.LAMBDA_EMAIL_TRIGGER_SERVICE_FUNCTION;
-    const emailTriggerCustomData = {
-      emailFrom: `Mandai Wildlife Reserve <no-reply@mandai.com>`,
-      emailTo: email,
-      emailTemplateId: 'd-ce7103f8f3de4bddbba29d38631d1061',
-      customData: {
-        otp,
-        magicLink,
-      },
-    };
-
-    try {
-      // lambda invoke
-      let response = await lambdaService.lambdaInvokeFunction(emailTriggerCustomData, functionName);
-
-      if (response.statusCode === 200) {
-        this.loggerWrapper('[CIAM] End sendEmail at PasswordlessSendCode Service - Success', {
-          layer: 'passwordlessSendCodeService.sendEmail',
-          action: 'sendCode.sendEmail',
-          email: email,
-        });
-
-        req.apiTimer.end('passwordlessSendCodeServices.sendEmail end');
-        return response;
-      }
-
-      if ([400, 500].includes(response.statusCode) || response.errorType === 'Error') {
-        throw new Error();
-      }
-    } catch (error) {
-      this.loggerWrapper(
-        '[CIAM] End sendEmail at PasswordlessSendCode Service - Failed',
-        {
-          layer: 'passwordlessSendCodeService.validateOTP',
-          action: 'sendEmail',
-          lambdaResponse: response.statusCode,
-          error,
-        },
-        'error',
-      );
-      req.apiTimer.end('passwordlessSendCodeServices.sendEmail failed');
-      throw new Error(JSON.stringify(PasswordlessErrors.sendCodeError(email, lang)));
+      throw error;
     }
   }
 

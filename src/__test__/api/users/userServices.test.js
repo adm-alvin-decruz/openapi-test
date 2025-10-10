@@ -50,12 +50,12 @@ describe('UserService', () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 400,
               mwgCode: 'MWG_CIAM_USER_UPDATE_ERR',
               message: 'This email address does not have a Mandai Account.',
             },
             status: 'success',
-            statusCode: 200,
+            statusCode: 400,
           }),
         ),
       );
@@ -87,12 +87,12 @@ describe('UserService', () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 400,
               mwgCode: 'MWG_CIAM_USER_UPDATE_ERR',
               message: 'This email address does not have a Mandai Account.',
             },
             status: 'success',
-            statusCode: 200,
+            statusCode: 400,
           }),
         ),
       );
@@ -132,12 +132,12 @@ describe('UserService', () => {
         new Error(
           JSON.stringify({
             membership: {
-              code: 200,
+              code: 400,
               mwgCode: 'MWG_CIAM_USER_UPDATE_ERR',
               message: 'This email address does not have a Mandai Account.',
             },
             status: 'success',
-            statusCode: 200,
+            statusCode: 400,
           }),
         ),
       );
