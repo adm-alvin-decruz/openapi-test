@@ -73,6 +73,16 @@ const uploadThumbnailToS3 = async (req) => {
 };
 
 const preSignedURLS3 = async (path) => {
+  if (!path) {
+    throw new Error(
+      JSON.stringify({
+        status: 'failed',
+        isFrom: 's3',
+        message: 'Empty S3 path',
+      }),
+    );
+  }
+
   try {
     const s3Client = new S3Client({});
     const command = new GetObjectCommand({
@@ -92,6 +102,7 @@ const preSignedURLS3 = async (path) => {
     );
   }
 };
+
 module.exports = {
   uploadThumbnailToS3,
   preSignedURLS3,

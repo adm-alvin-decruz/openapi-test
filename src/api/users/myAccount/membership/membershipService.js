@@ -26,7 +26,9 @@ async function retrieveMembership(data) {
     const rs = await userModel.retrieveMembership(email);
     const memberships = await Promise.all(
       rs.memberships.map(async (ele) => {
-        const signedURL = await preSignedURLS3(ele.photoUrl);
+        // Generate signed URL for photoUrl if it exists ,otherwise set it to an empty string
+        const signedURL = ele.photoUrl ? await preSignedURLS3(ele.photoUrl) : '';
+
         return {
           ...ele,
           photoUrl: signedURL,
