@@ -1,5 +1,5 @@
 const userModel = require('../../../../db/models/userModel');
-const { messageLang, omit } = require('../../../../utils/common');
+const { messageLang } = require('../../../../utils/common');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
 const { preSignedURLS3 } = require('../../../../services/s3Service');
@@ -70,11 +70,12 @@ async function deleteUserMembership(data) {
 
     if (rs.memberships.length > 0) {
       const membershipExpireDateHasValue = rs.memberships.filter((ele) => !!ele.expires_at);
-      const membershipExpireDate =
-        membershipExpireDateHasValue.length > 0
-          ? membershipExpireDateHasValue.map((ele) => ele.expires_at.split(' ')[0])
-          : [];
-      if (membershipExpireDate.some((ele) => ele < getCurrentUTCTimestamp().split(' ')[0])) {
+
+      const hasActiveMembership = membershipExpireDateHasValue.some((ele) => {
+        return ele.expires_at.split(' ')[0] >= getCurrentUTCTimestamp().split(' ')[0];
+      });
+
+      if (hasActiveMembership) {
         await Promise.reject(
           new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language))),
         );
