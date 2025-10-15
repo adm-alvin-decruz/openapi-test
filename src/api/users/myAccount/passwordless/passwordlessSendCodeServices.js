@@ -60,7 +60,7 @@ class PasswordlessSendCodeService {
     // Check if user currently exists in Cognito & DB; if does not exist, direct user to sign up (sign up currently unsupported)
     const userInfo = await getUserFromDBCognito(email);
     const isNewUser = !isUserExisted(userInfo);
-    if (isNewUser) return { proceed: false, reason: 'new_user' };
+    if (isNewUser) return { proceed: false, error: { reason: 'new_user' } };
 
     // Check how many OTPs without successful logins before current request
     const OTP_MAX_GENERATIONS = await this.getValueByConfigValueName(
