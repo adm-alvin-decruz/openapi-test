@@ -105,7 +105,7 @@ async function verifyTurnstile(req, res, next) {
         secret: turnstileSecret,
         response: token,
         remoteip: remoteip,
-        idempotency_key: generateUUID(),
+        idempotency_key: await generateUUID(),
       },
       {
         headers: { 'Content-Type': 'application/json' },

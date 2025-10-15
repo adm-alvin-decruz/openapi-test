@@ -4,10 +4,7 @@ const router = express.Router();
 
 const passwordlessController = require('../passwordless/passwordlessControllers');
 const validationService = require('../../../../services/validationService');
-const {
-  shouldIssueChallenge,
-  mapIssueChallengeFailureToError,
-} = require('./passwordlessSendCodeServices');
+const passwordlessSendCodeService = require('./passwordlessSendCodeServices');
 const processTimer = require('../../../../utils/processTimer');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
 const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
@@ -19,7 +16,7 @@ const {
   lowercaseTrimKeyValueString,
 } = require('../../../../middleware/validationMiddleware');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
-const { shouldVerify, mapVerifyFailureToError } = require('./passwordlessVerifyCodeServices');
+const passwordlessVerifyCodeService = require('./passwordlessVerifyCodeServices');
 
 const pong = { pong: 'pang' };
 
@@ -100,10 +97,10 @@ router.post(
     // //#endregion
 
     try {
-      const toIssueChallenge = await shouldIssueChallenge(req);
+      const toIssueChallenge = await passwordlessSendCodeService.shouldIssueChallenge(req);
       if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const errObj = mapIssueChallengeFailureToError(req, toIssueChallenge.error);
+        const errObj = passwordlessSendCodeService.mapIssueChallengeFailureToError(req, toIssueChallenge.error);
         console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
@@ -144,10 +141,10 @@ router.post(
     }
 
     try {
-      const toVerify = await shouldVerify(req);
+      const toVerify = await passwordlessVerifyCodeService.shouldVerify(req);
       if (!toVerify.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
-        const errObj = mapVerifyFailureToError(req, toVerify.error, toVerify.isMagic);
+        const errObj = passwordlessVerifyCodeService.mapVerifyFailureToError(req, toVerify.error, toVerify.isMagic);
         console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
