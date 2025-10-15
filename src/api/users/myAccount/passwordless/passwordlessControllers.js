@@ -22,7 +22,7 @@ const appConfig = require('../../../../config/appConfig');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
-  const { email } = req.body.email;
+  const { email } = req.body;
 
   try {
     loggerService.log(
