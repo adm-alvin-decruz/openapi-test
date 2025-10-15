@@ -41,7 +41,7 @@ const serializeError = (error) => {
   return serialized;
 };
 
-const errorHandler = (err, req, res) => {
+const errorHandler = (err, req, res, _next) => {
   // log the full error for debugging (to your server logs, not to the client)
   console.error(err);
 

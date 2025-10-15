@@ -1,60 +1,14 @@
 const { query, execute } = require('../connections/mysqlConn');
-const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 
 class PasswordlessToken {
-  static async create(tokenData) {
-    const sql = `
-      INSERT INTO passwordless_tokens
-      (email, hash, salt, requested_at, expired_at, attempt, is_used)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const formattedRequestedAt = formatDateToMySQLDateTime(
-      new Date(tokenData.requestedAt || new Date()), // default to now if not provided
-    );
-
-    const formattedExpiredAt = formatDateToMySQLDateTime(new Date(tokenData.expiredAt));
-
-    const params = [
-      tokenData.email,
-      tokenData.hash,
-      tokenData.salt || '',
-      formattedRequestedAt,
-      formattedExpiredAt,
-      0,
-      tokenData.isUsed || 0,
-    ];
-
-    try {
-      const result = await execute(sql, params);
-
-      return {
-        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        token_id: result.insertId,
-      };
-    } catch (error) {
-      loggerService.error(
-        {
-          passwordlessTokenModel: {
-            tokenData,
-            error: `${error}`,
-            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-          },
-        },
-        {},
-        '[CIAM] passwordlessTokenModel.create - Failed',
-      );
-    }
-  }
-
   static async findLatestTokenByEmail(email) {
     const sql = `
       SELECT * 
       FROM passwordless_tokens 
       WHERE email = ?
-      ORDER BY expired_at DESC 
+      ORDER BY expires_at DESC 
       LIMIT 1
     `;
 
@@ -102,7 +56,7 @@ class PasswordlessToken {
   static async incrementAttemptById(id) {
     const sql = `
       UPDATE passwordless_tokens 
-      SET attempt = attempt + 1 
+      SET verification_attempts = verification_attempts + 1 
       WHERE id = ?
     `;
 

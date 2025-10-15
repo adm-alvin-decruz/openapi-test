@@ -16,7 +16,8 @@ const {
   getTokenById,
   getSession,
 } = require('../../../../db/models/passwordlessTokenModel');
-const { getValueByConfigValueName, updateTokenSession } = require('./passwordlessSendCodeServices');
+const { updateTokenSession } = require('./passwordlessSendCodeServices');
+const configsModel = require('../../../../db/models/configsModel');
 const { update } = require('../../../../db/models/userModel');
 const appConfig = require('../../../../config/appConfig');
 
@@ -94,7 +95,7 @@ async function verifyCode(req, tokenId) {
     await incrementAttemptById(tokenId);
 
     // If token attempt reaches max no. of attempts, invalidate token (block further verification attempts on this token)
-    const MAX_ATTEMPTS = await getValueByConfigValueName(
+    const MAX_ATTEMPTS = await configsModel.getValueByConfigValueName(
       'passwordless-otp',
       'otp-config',
       'otp_max_attempt',
