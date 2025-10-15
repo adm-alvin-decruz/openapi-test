@@ -103,7 +103,7 @@ async function verifyCode(req, tokenId) {
     if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
 
     const { aws_session: session } = await getSession(tokenId);
-    const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session);
+    const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session, email);
 
     if (!cognitoRes.accessToken) {
       // If verification fails on last available attempt, disable login for 15 min

@@ -38,6 +38,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.create - Failed',
       );
+      throw error;
     }
   }
 
@@ -73,6 +74,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastSuccessfulLogin - Failed',
       );
+      throw error;
     }
   }
 
@@ -107,7 +109,7 @@ class UserCredentialEventsModel {
       }
 
       const [rows] = await query(sql, params);
-      return rows[0].count;
+      return rows.length > 0 ? rows[0].count : 0;
     } catch (error) {
       loggerService.error(
         {
@@ -119,6 +121,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.countOtpGenerationsSinceLastSuccess - Failed',
       );
+      throw error;
     }
   }
 
@@ -151,6 +154,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastLoginEvent - Failed',
       );
+      throw error;
     }
   }
 
@@ -184,6 +188,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastSendOTPEvent - Failed',
       );
+      throw error;
     }
   }
 }
