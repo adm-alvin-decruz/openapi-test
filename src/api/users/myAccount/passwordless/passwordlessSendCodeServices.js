@@ -12,31 +12,6 @@ const UserCredentialEventsModel = require('../../../../db/models/userCredentialE
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
 
 class PasswordlessSendCodeService {
-  async getValueByConfigValueName(config, key, valueName) {
-    try {
-      const cfg = await configsModel.findByConfigKey(config, key);
-
-      let value;
-      value = cfg.value;
-      if (!(valueName in value)) {
-        throw new Error(`Value name '${valueName}' not found in config ${config}/${key}`);
-      }
-
-      return value[valueName];
-    } catch (err) {
-      this.loggerWrapper(
-        '[CIAM] getValueByConfigValueName - Failed',
-        {
-          layer: 'passwordlessSendCodeService',
-          action: 'getValueByConfigValueName',
-          error: err.message,
-        },
-        'error',
-      );
-      throw err;
-    }
-  }
-
   /**
    * Decide whether to issue a challenge.
    */
@@ -63,7 +38,7 @@ class PasswordlessSendCodeService {
     if (isNewUser) return { proceed: false, error: { reason: 'new_user' } };
 
     // Check how many OTPs without successful logins before current request
-    const OTP_MAX_GENERATIONS = await this.getValueByConfigValueName(
+    const OTP_MAX_GENERATIONS = await configsModel.getValueByConfigValueName(
       'passwordless-otp',
       'otp-config',
       'otp_max_generate',
@@ -92,7 +67,7 @@ class PasswordlessSendCodeService {
     }
 
     // Check if new OTP should be generated
-    const OTP_INTERVAL = await this.getValueByConfigValueName(
+    const OTP_INTERVAL = await configsModel.getValueByConfigValueName(
       'passwordless-otp',
       'otp-config',
       'otp_cooldown_interval',
@@ -203,7 +178,7 @@ class PasswordlessSendCodeService {
       const lastSendOTPEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
       if (!lastSendOTPEvent) return { shouldGenerate: true, reason: null };
 
-      const token = await tokenModel.getTokenById(lastSendOTPEvent.token_id);
+      const token = await tokenModel.getTokenById(lastSendOTPEvent.data.token_id);
       if (!token) throw new Error('Token does not exist in DB');
 
       const now = new Date();
@@ -212,7 +187,7 @@ class PasswordlessSendCodeService {
       const intervalMs = Number(otpInterval) * 1000;
 
       if (elapsedMs >= intervalMs) {
-        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.token_id); // Mark token as invalid because new token will be generated
+        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.data.token_id); // Mark token as invalid because new token will be generated
         return { withinCooldown: false, remainingSeconds: 0 };
       }
 
@@ -235,7 +210,7 @@ class PasswordlessSendCodeService {
     try {
       const { id } = await findByEmail(email);
       const { data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
-      const tokenId = data.tokenId;
+      const tokenId = data.token_id;
       await tokenModel.addSessionToToken(tokenId, session);
     } catch (error) {
       this.loggerWrapper(
