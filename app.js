@@ -15,8 +15,6 @@ const membershipMyAccountRoutes = require('./src/api/users/myAccount/membership/
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-// fix Express.js Stack Trace Disclosure in Error Response. VAPT
-app.use(errorHandler);
 app.use(helmetMiddleware);
 //permission policy
 app.use(permissionsPolicyMiddleware);
@@ -33,6 +31,9 @@ app.use('/private', userPrivateRoutes);
 
 app.use('/v2/ciam/auth/membership', membershipMyAccountRoutes);
 app.use('/v2/ciam/auth/', passwordlessRoutes);
+
+// Error handler
+app.use(errorHandler);
 
 if (process.env.IS_LOCAL === true) {
   app.listen(3000, () => console.log('Running on port 3000'));

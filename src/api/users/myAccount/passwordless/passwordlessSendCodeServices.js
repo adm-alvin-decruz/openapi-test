@@ -8,11 +8,7 @@ const {
 } = require('../../helpers/userUpdateMembershipPassesHelper');
 const { update, findByEmail } = require('../../../../db/models/userModel');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
-const {
-  getLastLoginEvent,
-  getLastSendOTPEvent,
-  countOtpGenerationsSinceLastSuccess,
-} = require('../../../../db/models/userCredentialEventsModel');
+const UserCredentialEventsModel = require('../../../../db/models/userCredentialEventsModel');
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
 
 class PasswordlessSendCodeService {
@@ -128,11 +124,11 @@ class PasswordlessSendCodeService {
 
   async checkOtpGenerationsWithoutSuccessfulLogin(userId, maxOtpGenerations) {
     try {
-      const otpCount = await countOtpGenerationsSinceLastSuccess(userId);
+      const otpCount = await UserCredentialEventsModel.countOtpGenerationsSinceLastSuccess(userId);
 
       if (otpCount >= maxOtpGenerations) {
         // Check if current time is 15 min after last OTP generation
-        const lastSendOtpEvent = await getLastSendOTPEvent(userId);
+        const lastSendOtpEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
         const { resetTime, secondsRemaining } = await getResetTimeRemaining(
           lastSendOtpEvent.created_at,
         );
@@ -175,7 +171,7 @@ class PasswordlessSendCodeService {
       }
 
       // If status = 2 (login disabled), check if it is already 15 min past the last login event
-      const lastLoginEvent = await getLastLoginEvent(id);
+      const lastLoginEvent = await UserCredentialEventsModel.getLastLoginEvent(id);
       const { resetTime, secondsRemaining } = await getResetTimeRemaining(lastLoginEvent);
 
       if (secondsRemaining > 0) {
@@ -204,7 +200,7 @@ class PasswordlessSendCodeService {
   async checkWithinCooldownInterval(userId, otpInterval) {
     try {
       // Check when the last 'send OTP' event was; if no such event, ok to generate OTP
-      const lastSendOTPEvent = await getLastSendOTPEvent(userId);
+      const lastSendOTPEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
       if (!lastSendOTPEvent) return { shouldGenerate: true, reason: null };
 
       const token = await tokenModel.getTokenById(lastSendOTPEvent.token_id);
@@ -238,7 +234,7 @@ class PasswordlessSendCodeService {
   async updateTokenSession(email, session) {
     try {
       const { id } = await findByEmail(email);
-      const { data } = await getLastSendOTPEvent(id);
+      const { data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
       const tokenId = data.tokenId;
       await tokenModel.addSessionToToken(tokenId, session);
     } catch (error) {

@@ -17,6 +17,7 @@ const {
 } = require('../../../../middleware/validationMiddleware');
 const CommonErrors = require('../../../../config/https/errors/commonErrors');
 const passwordlessVerifyCodeService = require('./passwordlessVerifyCodeServices');
+const { serializeError } = require('../../../../utils/errorHandler');
 
 const pong = { pong: 'pang' };
 
@@ -108,13 +109,16 @@ router.post(
 
       return res.status(200).json(otpRes);
     } catch (error) {
+      req.apiTimer.end('Route CIAM Passwordless Send Error', startTimer);
+      console.error('Error in passwordless send:', error);
+
       return res.status(error.statusCode || 500).json({
         status: 'failed',
         statusCode: error.statusCode || 500,
         error: {
-          code: error.statusCode || 500,
-          message: 'Failed to send OTP email',
-          cause: error,
+          code: error.code || error.statusCode || 500,
+          message: error.message || 'Failed to send OTP email',
+          ...(process.env.APP_ENV !== 'prod' && { details: serializeError(error) }),
         },
       });
     }
@@ -152,6 +156,9 @@ router.post(
 
       return res.status(data.statusCode).json(data);
     } catch (error) {
+      req.apiTimer.end('Route CIAM Passwordless Session Error', startTimer);
+      console.error('Error in passwordless verify:', error);
+
       const errorMessage = safeJsonParse(error.message);
       if (errorMessage) {
         return res.status(errorMessage.statusCode || 500).json(errorMessage);
@@ -161,9 +168,9 @@ router.post(
         status: 'failed',
         statusCode: error.statusCode || 500,
         error: {
-          code: error.statusCode || 500,
-          message: 'Failed to send OTP email',
-          cause: error,
+          code: error.code || error.statusCode || 500,
+          message: error.message || 'Failed to verify OTP',
+          ...(process.env.APP_ENV !== 'prod' && { details: serializeError(error) }),
         },
       });
     }
