@@ -163,7 +163,7 @@ class Configs {
         throw new Error(`Config not found: ${config}/${key}`);
       }
 
-      const value = cfg[0].value;
+      const value = cfg.value;
       if (!(valueName in value)) {
         throw new Error(`Value name '${valueName}' not found in config ${config}/${key}`);
       }
