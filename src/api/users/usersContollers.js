@@ -50,12 +50,20 @@ async function adminCreateUser(req) {
     try {
       let response;
       // check if user exist
-      let membershipData = await usersService.getUserMembership(req);
+      let membershipData;
+      try {
+        membershipData = await usersService.getUserMembership(req);
+      } catch {
+        membershipData = null;
+      }
 
       let responseSource = 'ciam';
 
       // if member already has wildpass
-      if (membershipData.status === 'hasWildpass' || membershipData.status === 'success') {
+      if (
+        membershipData &&
+        (membershipData.status === 'hasWildpass' || membershipData.status === 'success')
+      ) {
         // prepare response
         let errorConfig = usersService.processError(req.body, 'MWG_CIAM_USER_SIGNUP_ERR', 'email');
 

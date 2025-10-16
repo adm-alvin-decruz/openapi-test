@@ -59,7 +59,6 @@ const {
 } = require('./helpers/userUpdateMembershipPassesHelper');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
-const UserSignupService = require('./userSignupService');
 const userSignupService = require('./userSignupService');
 
 /**
@@ -75,12 +74,12 @@ async function userSignup(req, membershipData) {
   req['body']['source'] = commonService.setSource(req);
 
   // if user has membership passes account, handle signup for wildpass. MP - membership-passes, WP-wildpass
-  if (membershipData.status === 'hasMembershipPasses') {
+  if (membershipData && membershipData.status === 'hasMembershipPasses') {
     return handleMPAccountSignupWP(req, membershipData.data);
   }
   // generate Mandai ID
   let idCounter = 0;
-  let mandaiId = userSignupService.generateMandaiId(req, idCounter);
+  let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
 
