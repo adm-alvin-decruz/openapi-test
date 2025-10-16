@@ -50,7 +50,7 @@ class Secrets {
     }
 
     try {
-      if (process.env.IS_LOCAL) {
+      if (process.env.IS_LOCAL === 'true') {
         const command = new GetSecretValueCommand({
           SecretId: secretName,
         });
