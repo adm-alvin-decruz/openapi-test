@@ -10,6 +10,7 @@ const { update, findByEmail } = require('../../../../db/models/userModel');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const UserCredentialEventsModel = require('../../../../db/models/userCredentialEventsModel');
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
+const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
 
 class PasswordlessSendCodeService {
   /**
@@ -211,7 +212,10 @@ class PasswordlessSendCodeService {
       const { id } = await findByEmail(email);
       const { data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
       const tokenId = data.token_id;
-      await tokenModel.addSessionToToken(tokenId, session);
+
+      // Encrypt session before storing in DB
+      const encryptedSession = await cryptoEnvelope.encrypt(session);
+      await tokenModel.addSessionToToken(tokenId, encryptedSession);
     } catch (error) {
       this.loggerWrapper(
         '[CIAM] updateTokenSession at PasswordlessSendCode Service - Failed',
