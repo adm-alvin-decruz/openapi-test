@@ -20,6 +20,7 @@ const { updateTokenSession } = require('./passwordlessSendCodeServices');
 const configsModel = require('../../../../db/models/configsModel');
 const { update } = require('../../../../db/models/userModel');
 const appConfig = require('../../../../config/appConfig');
+const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
@@ -47,7 +48,6 @@ async function sendCode(req) {
         code: 200,
         mwgCode: 'MWG_CIAM_USERS_OTP_SENT_SUCCESS',
         message: messageLang('sendCode_success', req.body.language),
-        session: cognitoRes.session,
       },
       status: 'success',
       statusCode: 200,
@@ -103,7 +103,9 @@ async function verifyCode(req, tokenId) {
     const { verification_attempts: attempts } = await getTokenById(tokenId);
     if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
 
-    const { aws_session: session } = await getSession(tokenId);
+    // Retrieve and decrypt session from DB
+    const { aws_session: encryptedSession } = await getSession(tokenId);
+    const session = await cryptoEnvelope.decrypt(encryptedSession);
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session, email);
 
     if (!cognitoRes.accessToken) {
