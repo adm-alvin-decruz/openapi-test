@@ -20,7 +20,7 @@ const resConfig = {
 
   // users
   USERS_SIGNUP_API_RESPONSE_CONFIG:
-    '{"MWG_CIAM_USER_SIGNUP_SUCCESS":{"mwgCode":"MWG_CIAM_USER_SIGNUP_SUCCESS","code":200,"message":"New user signup successfully.","status":"success"},"MWG_CIAM_USER_SIGNUP_ERR":{"mwgCode":"MWG_CIAM_USER_SIGNUP_ACCOUNT_EXIST_ERR","code":200,"message":"New user signup error.","status":"failed"},"MWG_CIAM_PARAMS_ERR":{"mwgCode":"MWG_CIAM_PARAMS_ERR","code":400,"message":"Wrong parameters.","status":"failed"},"MWG_CIAM_501_ERR":{"mwgCode":"MWG_CIAM_501_ERR","code":501,"message":"Not implemented.","status":"failed"}}',
+    '{"MWG_CIAM_USER_SIGNUP_SUCCESS":{"mwgCode":"MWG_CIAM_USER_SIGNUP_SUCCESS","code":200,"message":"New user signup successfully.","status":"success"},"MWG_CIAM_USER_SIGNUP_ERR":{"mwgCode":"MWG_CIAM_USER_SIGNUP_ACCOUNT_EXIST_ERR","code":400,"message":"New user signup error.","status":"failed"},"MWG_CIAM_PARAMS_ERR":{"mwgCode":"MWG_CIAM_PARAMS_ERR","code":400,"message":"Wrong parameters.","status":"failed"},"MWG_CIAM_501_ERR":{"mwgCode":"MWG_CIAM_501_ERR","code":501,"message":"Not implemented.","status":"failed"}}',
   USERS_UPDATE_API_RESPONSE_CONFIG:
     '{"MWG_CIAM_USER_UPDATE_SUCCESS":{"mwgCode":"MWG_CIAM_USER_UPDATE_SUCCESS","code":200,"message":"User info updated successfully.","status":"success"},"MWG_CIAM_USER_UPDATE_ERR":{"mwgCode":"MWG_CIAM_USER_UPDATE_ERR","code":200,"message":"User info update error.","status":"failed"},"MWG_CIAM_PARAMS_ERR":{"mwgCode":"MWG_CIAM_PARAMS_ERR","code":400,"message":"Wrong parameters.","status":"failed"},"MWG_CIAM_501_ERR":{"mwgCode":"MWG_CIAM_501_ERR","code":501,"message":"Not implemented.","status":"failed"}}',
   RESEND_MEMBERSHIP_API_RESPONSE_CONFIG:
