@@ -22,6 +22,9 @@ class PasswordlessVerifyCodeService {
     if (!code) {
       return { proceed: false, error: { reason: 'missing_token' } };
     }
+    console.log(
+      '[PasswordlessVerifyCodeService.shouldVerify] Checked token in payload - ok to proceed',
+    );
 
     // Check user status. If status = 2 (login disabled), reject verify OTP request
     const userInfo = await getUserFromDBCognito(email);
@@ -32,6 +35,9 @@ class PasswordlessVerifyCodeService {
         error: { reason: 'login_disabled', secondsRemaining: isLoginDisabled.secondsRemaining },
       };
     }
+    console.log(
+      '[PasswordlessVerifyCodeService.shouldVerify] Checked if login is disabled - ok to proceed',
+    );
 
     // Check if last retrieved token is valid for verification
     const token = await tokenModel.findLatestTokenByEmail(email);
@@ -47,6 +53,9 @@ class PasswordlessVerifyCodeService {
     if (new Date(token.expires_at) < now) {
       return { proceed: false, error: { reason: 'expired' } };
     }
+    console.log(
+      '[PasswordlessVerifyCodeService.shouldVerify] Checked if token is valid - ok to proceed',
+    );
 
     return { proceed: true, tokenId: token.id, isMagic: isMagicLink };
   }

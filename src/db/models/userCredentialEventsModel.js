@@ -42,6 +42,33 @@ class UserCredentialEventsModel {
     }
   }
 
+  static async updateAwsSession(id, eventData) {
+    const sql = `UPDATE user_credential_events
+      SET data = ?
+      WHERE id = ?`;
+    const params = [JSON.stringify(eventData), id];
+    try {
+      await execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        id,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          UserCredentialEventsModel: {
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        '[CIAM] UserCredentialEventsModel.updateAwsSession - Failed',
+      );
+      throw error;
+    }
+  }
+
   /**
    * Get the most recent successful login for a user
    * @param {*} userId
@@ -131,7 +158,7 @@ class UserCredentialEventsModel {
    * @returns timestamp of last login event
    */
   static async getLastLoginEvent(userId) {
-    const sql = `SELECT created_at
+    const sql = `SELECT data, created_at
       FROM user_credential_events
       WHERE user_id = ?
         AND event_type IN (?, ?)
@@ -164,7 +191,7 @@ class UserCredentialEventsModel {
    * @returns timestamp of last send OTP event
    */
   static async getLastSendOTPEvent(userId) {
-    const sql = `SELECT data, created_at
+    const sql = `SELECT id, data, created_at
       FROM user_credential_events
       WHERE user_id = ?
         AND event_type = ?
