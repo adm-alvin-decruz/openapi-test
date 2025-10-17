@@ -1,5 +1,5 @@
 const userModel = require('../../../../db/models/userModel');
-const { messageLang, omit } = require('../../../../utils/common');
+const { messageLang } = require('../../../../utils/common');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
 const { preSignedURLS3 } = require('../../../../services/s3Service');
@@ -21,12 +21,29 @@ function loggerWrapper(action, obj, type = 'logInfo') {
 async function retrieveMembership(data) {
   const language = data.language;
   const email = data.email;
+
+  //define query for model
+  const rs = await userModel.retrieveMembership(email);
+
+  if (!rs || !rs.email) {
+    await Promise.reject(
+      new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
+    );
+  }
+
   try {
-    //define query for model
-    const rs = await userModel.retrieveMembership(email);
+    const today = getCurrentUTCTimestamp().split(' ')[0];
+
+    //Get active memberships ( Active = expires_at >= today  )
+    const activeMemberships = rs.memberships.filter(
+      (ele) => ele.expires_at && ele.expires_at.split(' ')[0] >= today,
+    );
+
     const memberships = await Promise.all(
-      rs.memberships.map(async (ele) => {
-        const signedURL = await preSignedURLS3(ele.photoUrl);
+      activeMemberships.map(async (ele) => {
+        // Generate signed URL for photoUrl if it exists ,otherwise set it to an empty string
+        const signedURL = ele.photoUrl ? await preSignedURLS3(ele.photoUrl) : '';
+
         return {
           ...ele,
           photoUrl: signedURL,
@@ -70,11 +87,12 @@ async function deleteUserMembership(data) {
 
     if (rs.memberships.length > 0) {
       const membershipExpireDateHasValue = rs.memberships.filter((ele) => !!ele.expires_at);
-      const membershipExpireDate =
-        membershipExpireDateHasValue.length > 0
-          ? membershipExpireDateHasValue.map((ele) => ele.expires_at.split(' ')[0])
-          : [];
-      if (membershipExpireDate.some((ele) => ele < getCurrentUTCTimestamp().split(' ')[0])) {
+
+      const hasActiveMembership = membershipExpireDateHasValue.some((ele) => {
+        return ele.expires_at.split(' ')[0] >= getCurrentUTCTimestamp().split(' ')[0];
+      });
+
+      if (hasActiveMembership) {
         await Promise.reject(
           new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language))),
         );
