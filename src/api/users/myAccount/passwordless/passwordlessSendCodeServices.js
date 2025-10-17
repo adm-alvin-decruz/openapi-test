@@ -33,10 +33,18 @@ class PasswordlessSendCodeService {
       return { proceed: false, error: { reason: 'send_disabled_login' } };
     }
 
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked passwordless switches - ok to proceed',
+    );
+
     // Check if user currently exists in Cognito & DB; if does not exist, direct user to sign up (sign up currently unsupported)
     const userInfo = await getUserFromDBCognito(email);
     const isNewUser = !isUserExisted(userInfo);
     if (isNewUser) return { proceed: false, error: { reason: 'new_user' } };
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] User info from DB/Cognito:',
+      JSON.stringify(userInfo),
+    );
 
     // Check how many OTPs without successful logins before current request
     const OTP_MAX_GENERATIONS = await configsModel.getValueByConfigValueName(
@@ -57,6 +65,9 @@ class PasswordlessSendCodeService {
         },
       };
     }
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked no. of unsuccessful OTP generations - ok to proceed',
+    );
 
     // Check user status. If status = 2 (login disabled), reject send OTP request
     const isLoginDisabled = await this.checkLoginDisabled(userInfo.db);
@@ -79,6 +90,9 @@ class PasswordlessSendCodeService {
     );
     if (withinCooldown)
       return { proceed: false, error: { reason: 'too_soon', secondsRemaining: remainingSeconds } };
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked within cooldown interval - ok to proceed',
+    );
 
     return { proceed: true, purpose };
   }

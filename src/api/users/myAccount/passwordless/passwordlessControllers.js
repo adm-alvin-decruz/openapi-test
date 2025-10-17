@@ -38,9 +38,14 @@ async function sendCode(req) {
     );
 
     const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
+    console.log(
+      '[passwordlessControllers.sendCode] Run Cognito AdminInitiateAuth:',
+      JSON.stringify(cognitoRes),
+    );
 
     // Update user_credential_events table with AWS session
     await updateTokenSession(email, cognitoRes.session);
+    console.log('[passwordlessControllers.sendCode] updated token session in DB');
 
     return {
       auth: {
@@ -90,10 +95,14 @@ async function verifyCode(req, tokenId) {
 
     // Get user info from DB & Cognito
     const { db: userInfoDb, cognito: userInfoCognito } = await getUserFromDBCognito(email);
-    console.log('User info:', JSON.stringify({ userInfoDb, userInfoCognito }));
+    console.log(
+      '[passwordlessControllers.verifyCode] User info:',
+      JSON.stringify({ userInfoDb, userInfoCognito }),
+    );
 
     // Increment token attempt in DB
     await incrementAttemptById(tokenId);
+    console.log('[passwordlessControllers.verifyCode] Incremented token attempt');
 
     // If token attempt reaches max no. of attempts, invalidate token (block further verification attempts on this token)
     const MAX_ATTEMPTS = await configsModel.getValueByConfigValueName(
@@ -102,20 +111,34 @@ async function verifyCode(req, tokenId) {
       'otp_max_attempt',
     );
     const { verification_attempts: attempts } = await getTokenById(tokenId);
-    if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
+    console.log(
+      `[passwordlessControllers.verifyCode] max attempts: ${MAX_ATTEMPTS} / current attempts: ${attempts}`,
+    );
+    if (attempts === MAX_ATTEMPTS) {
+      await markTokenAsInvalid(tokenId);
+      console.log('[passwordlessControllers.verifyCode] Invalidated token since 5th attempt');
+    }
 
     // Retrieve and decrypt session from DB
     const { data } = await getLastLoginEvent(userInfoDb.id);
     const encryptedSession = data.aws_session;
     const session = await cryptoEnvelope.decrypt(encryptedSession);
+    console.log('[passwordlessControllers.verifyCode] Retrieved decrypted AWS session from DB');
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session, email);
+    console.log(
+      '[passwordlessControllers.verifyCode] Run Cognito AdminRespondToAuth:',
+      JSON.stringify(cognitoRes),
+    );
 
     if (!cognitoRes.accessToken) {
       newAwsSession = cognitoRes.session;
       // If verification fails on last available attempt, disable login for 15 min
       if (attempts === MAX_ATTEMPTS) {
         const updateResult = await update(userInfoDb.id, { status: 2 });
-        console.log('Login is disabled for user account.', updateResult);
+        console.log(
+          '[passwordlessControllers.verifyCode] Login is disabled for user account.',
+          updateResult,
+        );
         throw new Error(JSON.stringify(PasswordlessErrors.loginDisabled(email, 900)));
       }
       throw new Error(JSON.stringify(PasswordlessErrors.verifyOtpError(email)));
@@ -123,6 +146,9 @@ async function verifyCode(req, tokenId) {
 
     // If verification succeeds, mark token as invalid (used)
     await markTokenAsInvalid(tokenId);
+    console.log(
+      '[passwordlessControllers.verifyCode] Verification succeeded - token marked as invalid',
+    );
 
     // Update user_credentials and user_credential_events tables with login info
     await updateUser(userInfoDb.id, cognitoRes);

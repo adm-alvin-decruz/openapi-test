@@ -49,59 +49,14 @@ router.post(
       return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
     }
 
-    // TODO call signup job instead?
-
-    // if (!req.body.group || !GROUPS_SUPPORTS.includes(req.body.group)) {
-    //   return res
-    //     .status(400)
-    //     .json(
-    //       CommonErrors.BadRequest("group", "group_invalid", req.body.language)
-    //     );
-    // }
-
-    // //#region Signup Membership Passes
-    // if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
-    //   try {
-    //     const signupRs = await userController.adminCreateMPUser(req);
-    //     req.apiTimer.end("Route CIAM Signup New User Success", startTimer);
-    //     return res.status(signupRs.statusCode).send(signupRs);
-    //   } catch (error) {
-    //     req.apiTimer.end("Route CIAM Signup New User Error", startTimer);
-    //     const errorMessage = JSON.parse(error.message);
-    //     return res.status(errorMessage.statusCode).send(errorMessage);
-    //   }
-    // }
-    // //#endregion
-
-    // //#region Signup Wildpass
-    // // validate request params is listed, NOTE: listedParams doesn't have email
-    // const listedParams = commonService.mapCognitoJsonObj(
-    //   userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-    //   req.body
-    // );
-
-    // if (commonService.isJsonNotEmpty(listedParams) === false) {
-    //   return res.status(400).json({ error: "Bad Requests" });
-    // }
-    // req.body.uuid = uuid;
-    // let newUser = await userController.adminCreateUser(req);
-
-    // req.apiTimer.end("Route CIAM Signup User", startTimer);
-    // if (newUser.error) {
-    //   return res.status(400).json(newUser);
-    // }
-
-    // if ("membership" in newUser && "code" in newUser.membership) {
-    //   return res.status(newUser.membership.code).json(newUser);
-    // }
-
-    // //#endregion
-
     try {
       const toIssueChallenge = await passwordlessSendCodeService.shouldIssueChallenge(req);
       if (!toIssueChallenge.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Send Denied', startTimer);
-        const errObj = passwordlessSendCodeService.mapIssueChallengeFailureToError(req, toIssueChallenge.error);
+        const errObj = passwordlessSendCodeService.mapIssueChallengeFailureToError(
+          req,
+          toIssueChallenge.error,
+        );
         console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
@@ -148,7 +103,11 @@ router.post(
       const toVerify = await passwordlessVerifyCodeService.shouldVerify(req);
       if (!toVerify.proceed) {
         req.apiTimer.end('Route CIAM Passwordless Session Denied', startTimer);
-        const errObj = passwordlessVerifyCodeService.mapVerifyFailureToError(req, toVerify.error, toVerify.isMagic);
+        const errObj = passwordlessVerifyCodeService.mapVerifyFailureToError(
+          req,
+          toVerify.error,
+          toVerify.isMagic,
+        );
         console.log(JSON.stringify(errObj));
         return res.status(errObj.statusCode || 400).json(errObj);
       }
