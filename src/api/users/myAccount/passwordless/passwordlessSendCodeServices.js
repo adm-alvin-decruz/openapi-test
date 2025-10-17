@@ -101,8 +101,8 @@ class PasswordlessSendCodeService {
     const { email, lang } = req.body;
     const { reason } = error;
     const errorMap = {
-      login_disabled: PasswordlessErrors.loginDisabled(email, error.remainingSeconds),
-      too_soon: PasswordlessErrors.sendCodetooSoonFailure(email, lang, error.remainingSeconds),
+      login_disabled: PasswordlessErrors.loginDisabled(email, error.secondsRemaining),
+      too_soon: PasswordlessErrors.sendCodetooSoonFailure(email, lang, error.secondsRemaining),
       new_user: PasswordlessErrors.newUserError(email, lang),
       send_disabled_login: PasswordlessErrors.sendCodeError(email, lang),
       send_disabled_signup: PasswordlessErrors.sendCodeError(email, lang),
