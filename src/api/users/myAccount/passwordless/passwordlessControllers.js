@@ -14,13 +14,13 @@ const {
   incrementAttemptById,
   markTokenAsInvalid,
   getTokenById,
-  getSession,
 } = require('../../../../db/models/passwordlessTokenModel');
 const { updateTokenSession } = require('./passwordlessSendCodeServices');
 const configsModel = require('../../../../db/models/configsModel');
 const { update } = require('../../../../db/models/userModel');
 const appConfig = require('../../../../config/appConfig');
 const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
+const { getLastLoginEvent } = require('../../../../db/models/userCredentialEventsModel');
 
 async function sendCode(req) {
   req.body = commonService.cleanData(req.body);
@@ -39,7 +39,7 @@ async function sendCode(req) {
 
     const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
 
-    // Update passwordless_tokens table with AWS session
+    // Update user_credential_events table with AWS session
     await updateTokenSession(email, cognitoRes.session);
 
     return {
@@ -73,6 +73,7 @@ async function verifyCode(req, tokenId) {
   req.query = commonService.cleanData(req.query || {});
 
   const { code, email } = req.body;
+  let newAwsSession; // To hold new Cognito session for further attempts if current verification fails
 
   try {
     loggerService.log(
@@ -104,11 +105,13 @@ async function verifyCode(req, tokenId) {
     if (attempts === MAX_ATTEMPTS) await markTokenAsInvalid(tokenId);
 
     // Retrieve and decrypt session from DB
-    const { aws_session: encryptedSession } = await getSession(tokenId);
+    const { data } = await getLastLoginEvent(userInfoDb.id);
+    const encryptedSession = data.aws_session;
     const session = await cryptoEnvelope.decrypt(encryptedSession);
     const cognitoRes = await cognitoVerifyPasswordlessLogin(code, session, email);
 
     if (!cognitoRes.accessToken) {
+      newAwsSession = cognitoRes.session;
       // If verification fails on last available attempt, disable login for 15 min
       if (attempts === MAX_ATTEMPTS) {
         const updateResult = await update(userInfoDb.id, { status: 2 });
@@ -163,7 +166,7 @@ async function verifyCode(req, tokenId) {
     await createEvent(
       {
         eventType: EVENTS.VERIFY_OTP,
-        data: { tokenId },
+        data: { tokenId, aws_session: newAwsSession },
         source: 7,
         status: STATUS.FAILED,
       },

@@ -141,7 +141,6 @@ class PasswordlessSendCodeService {
   async checkLoginDisabled(userData) {
     const { id, status } = userData;
     try {
-      // If status !== 2, check how many OTP generations since last successful login
       if (status !== 2) {
         return { disabled: false };
       }
@@ -210,12 +209,15 @@ class PasswordlessSendCodeService {
   async updateTokenSession(email, session) {
     try {
       const { id } = await findByEmail(email);
-      const { data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
-      const tokenId = data.token_id;
+      const { id: eventId, data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
 
       // Encrypt session before storing in DB
       const encryptedSession = await cryptoEnvelope.encrypt(session);
-      await tokenModel.addSessionToToken(tokenId, encryptedSession);
+      const newEventData = {
+        ...data,
+        aws_session: encryptedSession,
+      };
+      await UserCredentialEventsModel.updateAwsSession(eventId, newEventData);
     } catch (error) {
       this.loggerWrapper(
         '[CIAM] updateTokenSession at PasswordlessSendCode Service - Failed',
