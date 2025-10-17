@@ -3,28 +3,27 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 
 class PasswordlessToken {
-  static async findLatestTokenByEmail(email) {
+  static async findLatestTokenByUserId(userId) {
     const sql = `
       SELECT * 
       FROM passwordless_tokens 
-      WHERE email = ?
+      WHERE user_id = ?
       ORDER BY expires_at DESC 
       LIMIT 1
     `;
 
     try {
-      const rows = await query(sql, [email]);
+      const rows = await query(sql, [userId]);
       return rows[0];
     } catch (error) {
       loggerService.error(
         {
           passwordlessTokenModel: {
-            email,
             error: `${error}`,
           },
         },
         {},
-        '[CIAM] passwordlessTokenModel.findLatestByEmail - Failed',
+        '[CIAM] passwordlessTokenModel.findLatestTokenByUserId - Failed',
       );
     }
   }

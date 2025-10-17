@@ -40,7 +40,7 @@ class PasswordlessVerifyCodeService {
     );
 
     // Check if last retrieved token is valid for verification
-    const token = await tokenModel.findLatestTokenByEmail(email);
+    const token = await tokenModel.findLatestTokenByUserId(userInfo.db.id);
     if (!token) {
       return { proceed: false, error: { reason: 'not_found' } };
     }
