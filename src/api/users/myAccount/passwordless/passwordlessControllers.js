@@ -131,7 +131,7 @@ async function verifyCode(req, tokenId) {
     );
 
     if (!cognitoRes.accessToken) {
-      newAwsSession = cognitoRes.session;
+      newAwsSession = await cryptoEnvelope.encrypt(cognitoRes.session);
       // If verification fails on last available attempt, disable login for 15 min
       if (attempts === MAX_ATTEMPTS) {
         const updateResult = await update(userInfoDb.id, { status: 2 });

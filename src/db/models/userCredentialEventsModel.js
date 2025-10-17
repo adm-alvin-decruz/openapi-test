@@ -169,7 +169,7 @@ class UserCredentialEventsModel {
     try {
       const rows = await query(sql, params);
 
-      return rows.length > 0 ? rows[0].created_at : null;
+      return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       loggerService.error(
         {

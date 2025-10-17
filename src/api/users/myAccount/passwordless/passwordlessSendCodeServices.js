@@ -160,7 +160,7 @@ class PasswordlessSendCodeService {
       }
 
       // If status = 2 (login disabled), check if it is already 15 min past the last login event
-      const lastLoginEvent = await UserCredentialEventsModel.getLastLoginEvent(id);
+      const { created_at: lastLoginEvent } = await UserCredentialEventsModel.getLastLoginEvent(id);
       const { resetTime, secondsRemaining } = await getResetTimeRemaining(lastLoginEvent);
 
       if (secondsRemaining > 0) {
