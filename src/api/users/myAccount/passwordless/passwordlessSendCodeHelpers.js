@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const PasswordService = require('../../userPasswordService');
 const loggerService = require('../../../../logs/logger');
 const { secrets } = require('../../../../services/secretsService');
-const { getValueByConfigValueName } = require('./passwordlessSendCodeServices');
+const configsModel = require('../../../../db/models/configsModel');
 
 async function generateMagicLinkToken(email, otp, expiredAt) {
   const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
@@ -81,7 +81,7 @@ function safeJsonParse(str) {
 }
 
 async function getResetTimeRemaining(lastLoginEventTime) {
-  const OTP_LOGIN_DISABLED_SECONDS = await getValueByConfigValueName(
+  const OTP_LOGIN_DISABLED_SECONDS = await configsModel.getValueByConfigValueName(
     'passwordless-otp',
     'otp-config',
     'otp_login_disabled',

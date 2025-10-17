@@ -1,6 +1,5 @@
 const axios = require('axios');
 const loggerService = require('../logs/logger');
-const CommonErrors = require('../config/https/errors/commonErrors');
 const { messageLang } = require('../utils/common');
 const { secrets } = require('../services/secretsService');
 
@@ -99,20 +98,20 @@ async function verifyTurnstile(req, res, next) {
       (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() ||
       req.socket?.remoteAddress;
 
-    const res = await axios.post(
+    const response = await axios.post(
       'https://challenges.cloudflare.com/turnstile/v0/siteverify',
       {
         secret: turnstileSecret,
         response: token,
         remoteip: remoteip,
-        idempotency_key: generateUUID(),
+        idempotency_key: await generateUUID(),
       },
       {
         headers: { 'Content-Type': 'application/json' },
       },
     );
 
-    const data = res.data;
+    const data = response.data;
 
     if (!data?.success) {
       loggerService.error(
@@ -155,7 +154,7 @@ async function verifyTurnstile(req, res, next) {
       },
       '[CIAM] Captcha Verification Exception',
     );
-    return res.status(500).json(CommonErrors.InternalServerError());
+    return res.status(500).json(captchaError(lang));
   }
 }
 

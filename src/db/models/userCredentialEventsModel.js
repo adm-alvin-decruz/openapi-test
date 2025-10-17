@@ -38,6 +38,34 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.create - Failed',
       );
+      throw error;
+    }
+  }
+
+  static async updateAwsSession(id, eventData) {
+    const sql = `UPDATE user_credential_events
+      SET data = ?
+      WHERE id = ?`;
+    const params = [JSON.stringify(eventData), id];
+    try {
+      await execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        id,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          UserCredentialEventsModel: {
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        '[CIAM] UserCredentialEventsModel.updateAwsSession - Failed',
+      );
+      throw error;
     }
   }
 
@@ -73,6 +101,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastSuccessfulLogin - Failed',
       );
+      throw error;
     }
   }
 
@@ -107,7 +136,7 @@ class UserCredentialEventsModel {
       }
 
       const [rows] = await query(sql, params);
-      return rows[0].count;
+      return rows.length > 0 ? rows[0].count : 0;
     } catch (error) {
       loggerService.error(
         {
@@ -119,6 +148,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.countOtpGenerationsSinceLastSuccess - Failed',
       );
+      throw error;
     }
   }
 
@@ -128,7 +158,7 @@ class UserCredentialEventsModel {
    * @returns timestamp of last login event
    */
   static async getLastLoginEvent(userId) {
-    const sql = `SELECT created_at
+    const sql = `SELECT data, created_at
       FROM user_credential_events
       WHERE user_id = ?
         AND event_type IN (?, ?)
@@ -139,7 +169,7 @@ class UserCredentialEventsModel {
     try {
       const rows = await query(sql, params);
 
-      return rows.length > 0 ? rows[0].created_at : null;
+      return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       loggerService.error(
         {
@@ -151,6 +181,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastLoginEvent - Failed',
       );
+      throw error;
     }
   }
 
@@ -160,7 +191,7 @@ class UserCredentialEventsModel {
    * @returns timestamp of last send OTP event
    */
   static async getLastSendOTPEvent(userId) {
-    const sql = `SELECT data, created_at
+    const sql = `SELECT id, data, created_at
       FROM user_credential_events
       WHERE user_id = ?
         AND event_type = ?
@@ -184,6 +215,7 @@ class UserCredentialEventsModel {
         {},
         '[CIAM] UserCredentialEventsModel.getLastSendOTPEvent - Failed',
       );
+      throw error;
     }
   }
 }

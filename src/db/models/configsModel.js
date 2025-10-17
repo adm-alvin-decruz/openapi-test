@@ -154,6 +154,37 @@ class Configs {
       throw new Error(`Error update configs: ${error}`);
     }
   }
+
+  static async getValueByConfigValueName(config, key, valueName) {
+    try {
+      const cfg = await this.findByConfigKey(config, key);
+
+      if (!cfg || cfg.length === 0) {
+        throw new Error(`Config not found: ${config}/${key}`);
+      }
+
+      const value = cfg.value;
+      if (!(valueName in value)) {
+        throw new Error(`Value name '${valueName}' not found in config ${config}/${key}`);
+      }
+
+      return value[valueName];
+    } catch (err) {
+      loggerService.error(
+        {
+          configModel: {
+            config,
+            key,
+            valueName,
+            error: new Error(err),
+          },
+        },
+        {},
+        '[CIAM] ConfigsModel.getValueByConfigValueName - Failed',
+      );
+      throw err;
+    }
+  }
 }
 
 module.exports = Configs;

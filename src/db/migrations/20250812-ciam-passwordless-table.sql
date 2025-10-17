@@ -1,16 +1,16 @@
 -- introduce passwordless table
 CREATE TABLE `passwordless_tokens` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `email` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `user_id` int NOT NULL,
   `hash` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `salt` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `expires_at` TIMESTAMP NULL DEFAULT NULL,
   `verification_attempts` INT NOT NULL DEFAULT 0,
   `is_valid` TINYINT NOT NULL DEFAULT 1 COMMENT '0: invalid; 1: valid',
-  `aws_session` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `switches` (`name`, `switch`, `description`, `created_at`, `updated_at`)

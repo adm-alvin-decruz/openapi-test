@@ -51,13 +51,29 @@ class Cognito {
   static async cognitoInitiatePasswordlessLogin(email) {
     try {
       const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+
+      // Calculate SECRET_HASH if client secret is configured
+      const secretHash = ciamSecrets.USER_POOL_CLIENT_SECRET
+        ? crypto
+            .createHmac('sha256', ciamSecrets.USER_POOL_CLIENT_SECRET)
+            .update(`${email}${ciamSecrets.USER_POOL_CLIENT_ID}`)
+            .digest('base64')
+        : undefined;
+
+      const authParameters = {
+        USERNAME: email,
+      };
+
+      // Only add SECRET_HASH if it was calculated
+      if (secretHash) {
+        authParameters.SECRET_HASH = secretHash;
+      }
+
       const userLoginParams = new AdminInitiateAuthCommand({
         AuthFlow: 'CUSTOM_AUTH',
         UserPoolId: process.env.USER_POOL_ID,
         ClientId: ciamSecrets.USER_POOL_CLIENT_ID,
-        AuthParameters: {
-          USERNAME: email,
-        },
+        AuthParameters: authParameters,
       });
 
       loggerService.log(
@@ -103,14 +119,26 @@ class Cognito {
     }
   }
 
-  static async cognitoVerifyPasswordlessLogin(code, session) {
+  static async cognitoVerifyPasswordlessLogin(code, session, email = null) {
     try {
       const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+
+      const challengeResponses = {
+        ANSWER: code,
+      };
+
+      // Calculate SECRET_HASH if client secret is configured and email is provided
+      if (ciamSecrets.USER_POOL_CLIENT_SECRET && email) {
+        challengeResponses.SECRET_HASH = crypto
+          .createHmac('sha256', ciamSecrets.USER_POOL_CLIENT_SECRET)
+          .update(`${email}${ciamSecrets.USER_POOL_CLIENT_ID}`)
+          .digest('base64');
+        challengeResponses.USERNAME = email;
+      }
+
       const userLoginParams = new AdminRespondToAuthChallengeCommand({
         ChallengeName: 'CUSTOM_CHALLENGE',
-        ChallengeResponses: {
-          ANSWER: code,
-        },
+        ChallengeResponses: challengeResponses,
         UserPoolId: process.env.USER_POOL_ID,
         ClientId: ciamSecrets.USER_POOL_CLIENT_ID,
         Session: session,

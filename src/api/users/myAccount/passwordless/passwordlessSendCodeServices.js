@@ -8,39 +8,11 @@ const {
 } = require('../../helpers/userUpdateMembershipPassesHelper');
 const { update, findByEmail } = require('../../../../db/models/userModel');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
-const {
-  getLastLoginEvent,
-  getLastSendOTPEvent,
-  countOtpGenerationsSinceLastSuccess,
-} = require('../../../../db/models/userCredentialEventsModel');
+const UserCredentialEventsModel = require('../../../../db/models/userCredentialEventsModel');
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
+const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
 
 class PasswordlessSendCodeService {
-  async getValueByConfigValueName(config, key, valueName) {
-    try {
-      const cfg = await configsModel.findByConfigKey(config, key);
-
-      let value;
-      value = cfg.value;
-      if (!(valueName in value)) {
-        throw new Error(`Value name '${valueName}' not found in config ${config}/${key}`);
-      }
-
-      return value[valueName];
-    } catch (err) {
-      this.loggerWrapper(
-        '[CIAM] getValueByConfigValueName - Failed',
-        {
-          layer: 'passwordlessSendCodeService',
-          action: 'getValueByConfigValueName',
-          error: err.message,
-        },
-        'error',
-      );
-      throw err;
-    }
-  }
-
   /**
    * Decide whether to issue a challenge.
    */
@@ -61,13 +33,21 @@ class PasswordlessSendCodeService {
       return { proceed: false, error: { reason: 'send_disabled_login' } };
     }
 
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked passwordless switches - ok to proceed',
+    );
+
     // Check if user currently exists in Cognito & DB; if does not exist, direct user to sign up (sign up currently unsupported)
     const userInfo = await getUserFromDBCognito(email);
     const isNewUser = !isUserExisted(userInfo);
-    if (isNewUser) return { proceed: false, reason: 'new_user' };
+    if (isNewUser) return { proceed: false, error: { reason: 'new_user' } };
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] User info from DB/Cognito:',
+      JSON.stringify(userInfo),
+    );
 
     // Check how many OTPs without successful logins before current request
-    const OTP_MAX_GENERATIONS = await this.getValueByConfigValueName(
+    const OTP_MAX_GENERATIONS = await configsModel.getValueByConfigValueName(
       'passwordless-otp',
       'otp-config',
       'otp_max_generate',
@@ -85,6 +65,9 @@ class PasswordlessSendCodeService {
         },
       };
     }
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked no. of unsuccessful OTP generations - ok to proceed',
+    );
 
     // Check user status. If status = 2 (login disabled), reject send OTP request
     const isLoginDisabled = await this.checkLoginDisabled(userInfo.db);
@@ -96,7 +79,7 @@ class PasswordlessSendCodeService {
     }
 
     // Check if new OTP should be generated
-    const OTP_INTERVAL = await this.getValueByConfigValueName(
+    const OTP_INTERVAL = await configsModel.getValueByConfigValueName(
       'passwordless-otp',
       'otp-config',
       'otp_cooldown_interval',
@@ -107,6 +90,9 @@ class PasswordlessSendCodeService {
     );
     if (withinCooldown)
       return { proceed: false, error: { reason: 'too_soon', secondsRemaining: remainingSeconds } };
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked within cooldown interval - ok to proceed',
+    );
 
     return { proceed: true, purpose };
   }
@@ -115,8 +101,8 @@ class PasswordlessSendCodeService {
     const { email, lang } = req.body;
     const { reason } = error;
     const errorMap = {
-      login_disabled: PasswordlessErrors.loginDisabled(email, error.remainingSeconds),
-      too_soon: PasswordlessErrors.sendCodetooSoonFailure(email, lang, error.remainingSeconds),
+      login_disabled: PasswordlessErrors.loginDisabled(email, error.secondsRemaining),
+      too_soon: PasswordlessErrors.sendCodetooSoonFailure(email, lang, error.secondsRemaining),
       new_user: PasswordlessErrors.newUserError(email, lang),
       send_disabled_login: PasswordlessErrors.sendCodeError(email, lang),
       send_disabled_signup: PasswordlessErrors.sendCodeError(email, lang),
@@ -128,11 +114,11 @@ class PasswordlessSendCodeService {
 
   async checkOtpGenerationsWithoutSuccessfulLogin(userId, maxOtpGenerations) {
     try {
-      const otpCount = await countOtpGenerationsSinceLastSuccess(userId);
+      const otpCount = await UserCredentialEventsModel.countOtpGenerationsSinceLastSuccess(userId);
 
       if (otpCount >= maxOtpGenerations) {
         // Check if current time is 15 min after last OTP generation
-        const lastSendOtpEvent = await getLastSendOTPEvent(userId);
+        const lastSendOtpEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
         const { resetTime, secondsRemaining } = await getResetTimeRemaining(
           lastSendOtpEvent.created_at,
         );
@@ -169,13 +155,12 @@ class PasswordlessSendCodeService {
   async checkLoginDisabled(userData) {
     const { id, status } = userData;
     try {
-      // If status !== 2, check how many OTP generations since last successful login
       if (status !== 2) {
         return { disabled: false };
       }
 
       // If status = 2 (login disabled), check if it is already 15 min past the last login event
-      const lastLoginEvent = await getLastLoginEvent(id);
+      const { created_at: lastLoginEvent } = await UserCredentialEventsModel.getLastLoginEvent(id);
       const { resetTime, secondsRemaining } = await getResetTimeRemaining(lastLoginEvent);
 
       if (secondsRemaining > 0) {
@@ -204,10 +189,10 @@ class PasswordlessSendCodeService {
   async checkWithinCooldownInterval(userId, otpInterval) {
     try {
       // Check when the last 'send OTP' event was; if no such event, ok to generate OTP
-      const lastSendOTPEvent = await getLastSendOTPEvent(userId);
+      const lastSendOTPEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
       if (!lastSendOTPEvent) return { shouldGenerate: true, reason: null };
 
-      const token = await tokenModel.getTokenById(lastSendOTPEvent.token_id);
+      const token = await tokenModel.getTokenById(lastSendOTPEvent.data.token_id);
       if (!token) throw new Error('Token does not exist in DB');
 
       const now = new Date();
@@ -216,7 +201,7 @@ class PasswordlessSendCodeService {
       const intervalMs = Number(otpInterval) * 1000;
 
       if (elapsedMs >= intervalMs) {
-        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.token_id); // Mark token as invalid because new token will be generated
+        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.data.token_id); // Mark token as invalid because new token will be generated
         return { withinCooldown: false, remainingSeconds: 0 };
       }
 
@@ -238,9 +223,15 @@ class PasswordlessSendCodeService {
   async updateTokenSession(email, session) {
     try {
       const { id } = await findByEmail(email);
-      const { data } = await getLastSendOTPEvent(id);
-      const tokenId = data.tokenId;
-      await tokenModel.addSessionToToken(tokenId, session);
+      const { id: eventId, data } = await UserCredentialEventsModel.getLastSendOTPEvent(id);
+
+      // Encrypt session before storing in DB
+      const encryptedSession = await cryptoEnvelope.encrypt(session);
+      const newEventData = {
+        ...data,
+        aws_session: encryptedSession,
+      };
+      await UserCredentialEventsModel.updateAwsSession(eventId, newEventData);
     } catch (error) {
       this.loggerWrapper(
         '[CIAM] updateTokenSession at PasswordlessSendCode Service - Failed',

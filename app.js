@@ -6,7 +6,7 @@ const galaxyRoutes = require('./src/api/components/galaxy/galaxyRoutes');
 const supportRoutes = require('./src/api/supports/supportRoutes');
 const userPrivateRoutes = require('./src/api/users/userPrivateRoutes');
 const passwordlessRoutes = require('./src/api/users/myAccount/passwordless/passwordlessRoutes');
-const errorHandler = require('./src/utils/errorHandler');
+const { errorHandler } = require('./src/utils/errorHandler');
 const app = express();
 const serverless = require('serverless-http');
 const helmetMiddleware = require('./src/config/helmetConfig');
@@ -15,8 +15,6 @@ const membershipMyAccountRoutes = require('./src/api/users/myAccount/membership/
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-// fix Express.js Stack Trace Disclosure in Error Response. VAPT
-app.use(errorHandler);
 app.use(helmetMiddleware);
 //permission policy
 app.use(permissionsPolicyMiddleware);
@@ -34,7 +32,10 @@ app.use('/private', userPrivateRoutes);
 app.use('/v2/ciam/auth/membership', membershipMyAccountRoutes);
 app.use('/v2/ciam/auth/', passwordlessRoutes);
 
-if (process.env.IS_LOCAL === true) {
+// Error handler
+app.use(errorHandler);
+
+if (process.env.IS_LOCAL === 'true') {
   app.listen(3000, () => console.log('Running on port 3000'));
 }
 
