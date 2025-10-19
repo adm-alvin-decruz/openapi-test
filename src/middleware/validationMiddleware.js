@@ -211,8 +211,11 @@ async function AccessTokenAuthGuard(req, res, next) {
     tokenUse: 'access',
     clientId: ciamSecrets.USER_POOL_CLIENT_ID,
   });
+
+  //verify access token
+  let payloadAccessToken;
   try {
-    const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
+    payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
@@ -238,6 +241,8 @@ async function AccessTokenAuthGuard(req, res, next) {
     );
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
+
+  req.headers.user_perform_action = payloadAccessToken.username;
   next();
 }
 

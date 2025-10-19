@@ -54,6 +54,24 @@ class GalaxyWPService {
     }
   }
 
+  async callMembershipUpdateStatus(requiredFields, status) {
+    try {
+      const headers = await galaxyCmnService.setGlxReqHeader();
+      const requiredBody = await this.createRequestBody(requiredFields, galaxyConf.updateWPParams);
+      const body = {
+        ...requiredBody,
+        status,
+      };
+
+      // makeRequest already calls ApiUtils.handleResponse so we should not call it again
+      const data = await ApiUtils.makeRequest(this.apiUpdateEndpoint, 'post', headers, body);
+
+      return data;
+    } catch (error) {
+      throw new Error(`GalaxyWPService.callMembershipUpdateStatus error: ${error.message}`);
+    }
+  }
+
   async galaxyToSQS(req, action) {
     try {
       req['apiTimer'] = req.processTimer.apiRequestTimer();
