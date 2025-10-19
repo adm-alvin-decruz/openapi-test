@@ -107,34 +107,32 @@ async function deleteUserMembership(data, user_perform_action) {
 
     // proceed update membership's WildPass status to 1 (void) in galaxy with error handling
     try {
-      const membershipBelongWPs = await userModel.findWPFullData(email);
-      const visualIdWpToUpdate = membershipBelongWPs.data.visual_id;
+      const { data: wpData } = await userModel.findWPFullData(email);
+      const visualIdWpToUpdate = wpData?.visual_id;
+
       if (!visualIdWpToUpdate) {
         loggerWrapper('[CIAM-MYACCOUNT] No Wild Pass Memberships found to Update in Galaxy', {
           email,
           layer: 'service.deleteUserMembership.galaxyUpdate',
         });
+      } else {
+        const requiredFields = {
+          visualId: visualIdWpToUpdate,
+          firstName: rs.familyName,
+          middleName: rs.givenName,
+          lastName: rs.familyName,
+          email: rs.email,
+          // Format DOB to 'DD/MM/YYYY' for fit with galaxy input requirement
+          dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
+        };
 
-        return;
+        await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.VOID);
+
+        loggerWrapper('[CIAM-MYACCOUNT] Successfully Update Membership Status to Void in Galaxy', {
+          email,
+          layer: 'service.deleteUserMembership.galaxyUpdate',
+        });
       }
-
-      //update each membership's pass status to VOID
-      const requiredFields = {
-        visualId: visualIdWpToUpdate,
-        firstName: rs.familyName,
-        middleName: rs.givenName,
-        lastName: rs.familyName,
-        email: rs.email,
-        // Format DOB to 'DD/MM/YYYY' for fit with input requirement
-        dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
-      };
-
-      await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.VOID);
-
-      loggerWrapper('[CIAM-MYACCOUNT] Successfully Update Membership Status to Void in Galaxy', {
-        email,
-        layer: 'service.deleteUserMembership.galaxyUpdate',
-      });
     } catch (error) {
       loggerWrapper(
         '[CIAM-MYACCOUNT] Error Update Membership Status to Void in Galaxy',
@@ -187,10 +185,10 @@ async function deleteUserMembership(data, user_perform_action) {
       { email, error: new Error(error), layer: 'service.deleteUserMembership' },
       'error',
     );
-    throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
+
+    throw new Error(error.message);
   }
 }
-
 /** export the module */
 module.exports = {
   retrieveMembership,
