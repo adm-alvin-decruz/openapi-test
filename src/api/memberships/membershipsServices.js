@@ -12,6 +12,7 @@ const { GROUP } = require('../../utils/constants');
 const userModel = require('../../db/models/userModel');
 const configsModel = require('../../db/models/configsModel');
 const loggerService = require('../../logs/logger');
+const escape = require('escape-html');
 
 function success({ mid, email, group, isMatchedGroup, mandaiId, lang }) {
   return mid === true
@@ -108,6 +109,19 @@ async function checkUserMembership(reqBody) {
             : checkMatchedGroup(userPasses),
       });
     }
+    // Handle case user not found in user_memberships
+    if (!userInfo || !userInfo.email) {
+      return Promise.resolve({
+        membership: {
+          code: 200,
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL',
+          message: messageLang('email_no_record', reqBody.language),
+          email: escape(reqBody.email),
+        },
+        status: 'failed',
+        statusCode: 200,
+      });
+    }
 
     //cover for case user signup with membership-passes only - 2nd priority check group on Cognito
     const groups = await getCognitoGroups(userInfo, reqBody);
@@ -143,13 +157,6 @@ async function checkUserMembership(reqBody) {
 async function getCognitoGroups(userInfo, reqBody) {
   try {
     //push this error to catch wrapper if user not found
-    if (!userInfo || !userInfo.email) {
-      await Promise.reject(
-        JSON.stringify(
-          MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language),
-        ),
-      );
-    }
 
     //2nd priority check membership group: Cognito phase2 (user signup is added into Cognito group)
     const groupsCognitoInfo = await cognitoService.cognitoAdminListGroupsForUser(userInfo.email);
@@ -157,7 +164,7 @@ async function getCognitoGroups(userInfo, reqBody) {
     return groupsCognitoInfo.Groups && groupsCognitoInfo.Groups.length > 0
       ? groupsCognitoInfo.Groups
       : [];
-  } catch (error) {
+  } catch {
     throw new Error(
       JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(reqBody.email, reqBody.language)),
     );
