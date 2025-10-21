@@ -213,12 +213,14 @@ async function AccessTokenAuthGuard(req, res, next) {
   });
 
   //verify access token
-  let payloadAccessToken;
   try {
-    payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
+    const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
+
+    req.headers.user_perform_action = payloadAccessToken.username;
+    return next();
   } catch (error) {
     if (error && error.message && error.message.includes('Token expired at')) {
       const newAccessToken = await refreshToken(userCredentials);
@@ -241,9 +243,6 @@ async function AccessTokenAuthGuard(req, res, next) {
     );
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
-
-  req.headers.user_perform_action = payloadAccessToken.username;
-  next();
 }
 
 async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {

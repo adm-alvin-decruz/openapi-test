@@ -143,10 +143,8 @@ async function deleteUserMembership(data, user_perform_action) {
     }
 
     //proceed soft-delete in CIAM
-    const SOFT_DELETE_FLAG = 1;
     await userModel.softDeleteUserByEmail(email, {
       email: `deleted-${email}`,
-      is_soft_delete: SOFT_DELETE_FLAG,
     });
 
     await cognitoService.cognitoDisabledUser(email);

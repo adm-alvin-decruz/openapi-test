@@ -1,2 +1,0 @@
-ALTER TABLE users
-ADD COLUMN is_soft_delete TINYINT(1) NOT NULL DEFAULT 0;
