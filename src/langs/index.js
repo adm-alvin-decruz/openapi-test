@@ -85,7 +85,7 @@ module.exports = {
     sendCode_tooSoon: 'Please wait before requesting another code.',
     verifyML_invalid: 'Link is invalid or expired. Please request a new one.',
     verifyML_missingToken: 'The token is missing or empty.',
-    verifyOTP_invalid: 'OTP is invalid. Please try again.',
+    verifyOTP_invalid: 'The code you entered is incorrect. Please try again.',
     verifyOTP_expired: 'OTP has expired. Please request a new one.',
     verifyOTP_tooManyAttempts:
       'Too many incorrect attempts. You may request for a new OTP after 15 minutes.',
