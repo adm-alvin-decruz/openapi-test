@@ -28,6 +28,19 @@ class PasswordlessErrors {
     };
   }
 
+  static wildpassLoginDisallowed(email) {
+    return {
+      auth: {
+        code: 403,
+        mwgCode: 'MWG_CIAM_WILDPASS_LOGIN_DISALLOWED',
+        message: `The email address you have entered is invalid. Please try again.`,
+        email: validator.escape(email),
+      },
+      status: 'failed',
+      statusCode: 403,
+    };
+  }
+
   static loginDisabled(email, secondsRemaining) {
     return {
       auth: {
