@@ -143,13 +143,18 @@ async function deleteUserMembership(req, user_perform_action) {
     }
 
     const deletedEmail = `deleted-${email}`;
-    // disable user in cognito
-    await cognitoService.cognitoDisabledUser(email);
     // update email user in cognito
-    const ciamUpdateEmailParam = [{ Name: 'email', Value: deletedEmail }];
-    await cognitoService.cognitoAdminUpdateUser(req, ciamUpdateEmailParam);
+    await cognitoService.cognitoAdminUpdateNewUser(
+      [
+        { Name: 'email', Value: deletedEmail },
+        { Name: 'preferred_username', Value: deletedEmail },
+      ],
+      email
+    );
+    // disable user in cognito
+    await cognitoService.cognitoDisabledUser(deletedEmail);
 
-    //proceed soft-delete in CIAM
+    //proceed soft-delete in CIAM DB
     await userModel.softDeleteUserByEmail(email, {
       email: deletedEmail,
     });
