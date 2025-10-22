@@ -11,13 +11,14 @@ const PasswordlessErrors = require('../../../../config/https/errors/passwordless
 const UserCredentialEventsModel = require('../../../../db/models/userCredentialEventsModel');
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
 const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
+const { findByUserId } = require('../../../../db/models/userMembershipModel');
 
 class PasswordlessSendCodeService {
   /**
    * Decide whether to issue a challenge.
    */
   async shouldIssueChallenge(req) {
-    const { email, purpose = 'login' } = req.body || {};
+    const { email, type, purpose = 'login' } = req.body;
 
     // Check if passwordless switches are enabled
     const sendEnabled = await switchIsTurnOn('passwordless_enable_send_otp');
@@ -44,6 +45,22 @@ class PasswordlessSendCodeService {
     console.log(
       '[PasswordlessSendCodeService.shouldIssueChallenge] User info from DB/Cognito:',
       JSON.stringify(userInfo),
+    );
+
+    // Check for request type (e.g., WildPass login or membership login)
+    const userMemberships = await findByUserId(userInfo.db.id);
+    console.log('user memberships:', userMemberships);
+    if (type === 'membership-passes') {
+      if (userMemberships.length === 1 && userMemberships[0].name === 'wildpass') {
+        return { proceed: false, error: { reason: 'membership_login_disallowed' } };
+      }
+    } else if (type === 'wildpass') {
+      if (!userMemberships.some((membership) => membership.name === 'wildpass')) {
+        return { proceed: false, error: { reason: 'wildpass_login_disallowed' } };
+      }
+    }
+    console.log(
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked for request type - ok to proceed',
     );
 
     // Check how many OTPs without successful logins before current request
@@ -107,6 +124,8 @@ class PasswordlessSendCodeService {
       send_disabled_login: PasswordlessErrors.sendCodeError(email, lang),
       send_disabled_signup: PasswordlessErrors.sendCodeError(email, lang),
       missing_email: PasswordlessErrors.sendCodeError(email, lang),
+      membership_login_disallowed: PasswordlessErrors.membershipLoginDisallowed(email, lang),
+      wildpass_login_disallowed: PasswordlessErrors.wildpassLoginDisallowed(email, lang),
     };
 
     return errorMap[reason];
