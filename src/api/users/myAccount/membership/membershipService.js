@@ -73,14 +73,14 @@ async function retrieveMembership(data) {
 }
 
 //Delete users
-async function deleteUserMembership(data, user_perform_action) {
+async function deleteUserMembership(req, user_perform_action) {
   const STATUS_WILD_PASS = {
     VOID: '1',
     VALID: '0',
   };
 
-  const language = data.language;
-  const email = data.email;
+  const language = req.body.language;
+  const email = req.body.email;
   //define query for model
   const rs = await userModel.retrieveMembership(email);
 
@@ -142,12 +142,17 @@ async function deleteUserMembership(data, user_perform_action) {
       throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
     }
 
+    const deletedEmail = `deleted-${email}`;
+    // disable user in cognito
+    await cognitoService.cognitoDisabledUser(email);
+    // update email user in cognito
+    const ciamUpdateEmailParam = [{ Name: 'email', Value: deletedEmail }];
+    await cognitoService.cognitoAdminUpdateUser(req, ciamUpdateEmailParam);
+
     //proceed soft-delete in CIAM
     await userModel.softDeleteUserByEmail(email, {
-      email: `deleted-${email}`,
+      email: deletedEmail,
     });
-
-    await cognitoService.cognitoDisabledUser(email);
 
     await userEventAuditTrailService.createEvent(
       email,
