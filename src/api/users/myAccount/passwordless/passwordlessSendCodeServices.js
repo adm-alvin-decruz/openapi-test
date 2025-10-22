@@ -48,15 +48,19 @@ class PasswordlessSendCodeService {
     );
 
     // Check for request type (e.g., WildPass login or membership login)
+    const userMemberships = await findByUserId(userInfo.db.id);
+    console.log('user memberships:', userMemberships);
     if (type === 'membership-passes') {
-      const userMemberships = await findByUserId(userInfo.db.id);
-      console.log('user memberships:', userMemberships);
       if (userMemberships.length === 1 && userMemberships[0].name === 'wildpass') {
         return { proceed: false, error: { reason: 'membership_login_disallowed' } };
       }
+    } else if (type === 'wildpass') {
+      if (!userMemberships.some((membership) => membership.name === 'wildpass')) {
+        return { proceed: false, error: { reason: 'wildpass_login_disallowed' } };
+      }
     }
     console.log(
-      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked not WildPass-only member - ok to proceed',
+      '[PasswordlessSendCodeService.shouldIssueChallenge] Checked for request type - ok to proceed',
     );
 
     // Check how many OTPs without successful logins before current request
@@ -121,6 +125,7 @@ class PasswordlessSendCodeService {
       send_disabled_signup: PasswordlessErrors.sendCodeError(email, lang),
       missing_email: PasswordlessErrors.sendCodeError(email, lang),
       membership_login_disallowed: PasswordlessErrors.membershipLoginDisallowed(email, lang),
+      wildpass_login_disallowed: PasswordlessErrors.wildpassLoginDisallowed(email, lang),
     };
 
     return errorMap[reason];
