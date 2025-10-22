@@ -30,7 +30,6 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const responseHelper = require('../../helpers/responseHelpers');
 const usersUpdateHelpers = require('./usersUpdateHelpers');
-const lambdaService = require('../../services/lambdaService');
 const cognitoService = require('../../services/cognitoService');
 const usersSignupHelper = require('./usersSignupHelper');
 const userConfig = require('../../config/usersConfig');
@@ -59,8 +58,8 @@ const {
 } = require('./helpers/userUpdateMembershipPassesHelper');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
-const UserSignupService = require('./userSignupService');
 const userSignupService = require('./userSignupService');
+const { serializeError } = require('../../utils/errorHandler');
 
 /**
  * Function User signup service
@@ -80,13 +79,13 @@ async function userSignup(req, membershipData) {
   }
   // generate Mandai ID
   let idCounter = 0;
-  let mandaiId = userSignupService.generateMandaiId(req, idCounter);
+  let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
 
     let found = false;
     for (let c = 1; c <= 5; c++) {
-      const tryId = userSignupService.generateMandaiId(req, c);
+      const tryId = await userSignupService.generateMandaiId(req, c);
       loggerService.log({ mandaiId, tryId, counter: c }, '[CIAM] New MandaiId generated');
 
       if (!(await userModel.existsByMandaiId(tryId))) {
@@ -107,7 +106,7 @@ async function userSignup(req, membershipData) {
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // call cognitoCreateUser function
-  return cognitoCreateUser(req);
+  return await cognitoCreateUser(req);
 }
 
 async function handleMPAccountSignupWP(req, membershipData) {
@@ -372,7 +371,7 @@ async function cognitoCreateUser(req, membershipData) {
       req,
       'MWG_CIAM_USER_SIGNUP_ERR',
       newUserArray,
-      error,
+      serializeError(error),
     );
     await userEventAuditTrailService.createEvent(
       req.body.email,
@@ -380,7 +379,7 @@ async function cognitoCreateUser(req, membershipData) {
       'signup',
       {
         ...req.body,
-        error: JSON.stringify(error),
+        error: JSON.stringify(serializeError(error)),
       },
       1,
     );
@@ -392,7 +391,10 @@ async function cognitoCreateUser(req, membershipData) {
       'USERS_SIGNUP',
       logObj,
     );
-    console.log('usersServices.createUserService', new Error(`[CIAM-MAIN] Signup Error: ${error}`));
+    console.log(
+      'usersServices.createUserService',
+      new Error(`[CIAM-MAIN] Signup Error: ${JSON.stringify(serializeError(error))}`),
+    );
     return responseErrorToClient;
   }
 }
@@ -453,7 +455,7 @@ async function getUserMembership(req) {
     return responseToInternal;
   } catch (error) {
     if (error.name === 'UserNotFoundException') {
-      response = { status: 'not found', data: error };
+      response = { status: 'not found', data: serializeError(error) };
     } else {
       //read db for query user membership passes active
       const userMembershipPasses = await userModel.queryUserMembershipPassesActiveByEmail(
@@ -474,7 +476,7 @@ async function getUserMembership(req) {
             userMembershipPasses && userMembershipPasses.hasWildpass === 0
               ? 'hasWildpass'
               : 'noWildpass',
-          data: error,
+          data: serializeError(error),
         };
       }
     }
@@ -565,7 +567,7 @@ async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareD
       req,
       'MWG_CIAM_USER_UPDATE_ERR',
       response,
-      error,
+      serializeError(error),
     );
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse(
@@ -671,7 +673,7 @@ async function adminUpdateMPUser(body) {
       'update',
       {
         ...body,
-        error: JSON.stringify(error),
+        error: JSON.stringify(serializeError(error)),
       },
       ncRequest ? 2 : 1,
     );
@@ -728,12 +730,12 @@ function processErrors(attr, reqBody, mwgCode) {
       });
     }
     if (commonService.isJsonNotEmpty(attr.dob)) {
-      Object.keys(attr.dob).forEach(function (key) {
+      Object.keys(attr.dob).forEach(function (_key) {
         errors['dob'] = validationVar['dob'].range_error;
       });
     }
     if (commonService.isJsonNotEmpty(attr.newsletter)) {
-      Object.keys(attr.newsletter).forEach(function (key) {
+      Object.keys(attr.newsletter).forEach(function (_key) {
         errors['newletter'] = validationVar['newsletter'].subscribe_error;
       });
     }
@@ -791,7 +793,7 @@ async function resendUserMembership(req, memberAttributes) {
       req,
       'MWG_CIAM_RESEND_MEMBERSHIPS_ERR',
       memberAttributes,
-      error,
+      serializeError(error),
     );
     // prepare response to client
     return responseHelper.craftUsersApiResponse(
@@ -799,81 +801,6 @@ async function resendUserMembership(req, memberAttributes) {
       req.body,
       'MWG_CIAM_RESEND_MEMBERSHIPS_ERR',
       'RESEND_MEMBERSHIP',
-      logObj,
-    );
-  }
-}
-
-/**
- * Generate WP cardface
- *
- * @param {json} req
- * @returns
- */
-async function prepareWPCardfaceInvoke(req) {
-  req['apiTimer'] = req.processTimer.apiRequestTimer();
-  req.apiTimer.log('usersServices.prepareWPCardfaceInvoke start'); // log process time
-  // integrate with cardface lambda
-  let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
-
-  let dob = commonService.convertDateHyphenFormat(req.body.dob);
-  // event data
-  const event = {
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    dateOfBirth: dob,
-    mandaiId: req.body.mandaiID,
-    visualId: req.body.visualID,
-    passType: 'wildpass',
-  };
-
-  try {
-    // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
-
-    req.apiTimer.end('usersServices.prepareWPCardfaceInvoke'); // log end time
-
-    if (response.statusCode === 200) {
-      console.log('[CIAM MAIN] Generate cardface', response);
-      return response;
-    }
-    if ([400, 500].includes(response.statusCode) || response.errorType === 'Error') {
-      // prepare logs
-      let logObj = loggerService.build(
-        'user',
-        'usersServices.prepareWPCardfaceInvoke',
-        req,
-        'MWG_CIAM_USER_SIGNUP_ERR',
-        event,
-        response,
-      );
-      // prepare response to client
-      return responseHelper.craftUsersApiResponse(
-        '',
-        req.body,
-        'MWG_CIAM_USER_SIGNUP_ERR',
-        'USERS_SIGNUP',
-        logObj,
-      );
-    }
-  } catch (error) {
-    error = new Error(`lambda invoke error: ${error}`);
-    req.apiTimer.end('usersServices.prepareWPCardfaceInvoke error'); // log end time
-    // prepare logs
-    let logObj = loggerService.build(
-      'user',
-      'usersServices.prepareWPCardfaceInvoke',
-      req,
-      'MWG_CIAM_USER_SIGNUP_ERR',
-      event,
-      error,
-    );
-    // prepare log response
-    return responseHelper.craftUsersApiResponse(
-      '',
-      req.body,
-      'MWG_CIAM_USER_SIGNUP_ERR',
-      'USERS_SIGNUP',
       logObj,
     );
   }
@@ -950,7 +877,7 @@ async function deleteMembership(req, membershipData) {
       req,
       'MWG_CIAM_USER_DELETE_ERR',
       deleteUserArray,
-      error,
+      serializeError(error),
     );
     // prepare response to client
     let responseErrorToClient = responseHelper.craftUsersApiResponse(
@@ -1011,7 +938,7 @@ async function getUserCustomisable(req) {
         req,
         '',
         getMemberJson,
-        error,
+        serializeError(error),
       );
       // prepare response to client
       let responseToInternal = responseHelper.craftGetUserApiInternalRes(
@@ -1030,7 +957,7 @@ async function getUserCustomisable(req) {
         req,
         '',
         getMemberJson,
-        error,
+        serializeError(error),
       );
       // prepare response to client
       let responseToInternal = responseHelper.craftGetUserApiInternalRes(
@@ -1042,66 +969,6 @@ async function getUserCustomisable(req) {
       );
       return responseToInternal;
     }
-  }
-}
-
-async function prepareGenPasskitInvoke(req) {
-  // integrate with cardface lambda
-  let functionName = process.env.LAMBDA_CIAM_SIGNUP_CREATE_WILDPASS_FUNCTION;
-
-  let dob = commonService.convertDateHyphenFormat(req.body.dob);
-  // event data
-  const event = {
-    name: req.body.lastName + ' ' + req.body.firstName,
-    dateOfBirth: dob,
-    mandaiId: req.body.mandaiID,
-  };
-
-  try {
-    // lambda invoke
-    const response = await lambdaService.lambdaInvokeFunction(event, functionName);
-    if (response.statusCode === 200) {
-      return response;
-    }
-    if ([400, 500].includes(response.statusCode)) {
-      // prepare logs
-      let logObj = loggerService.build(
-        'user',
-        'usersServices.prepareGenPasskitInvoke',
-        req,
-        'MWG_CIAM_USER_SIGNUP_ERR',
-        event,
-        response,
-      );
-      // prepare response to client
-      return responseHelper.craftUsersApiResponse(
-        '',
-        req.body,
-        'MWG_CIAM_USER_SIGNUP_ERR',
-        'USERS_SIGNUP',
-        logObj,
-      );
-    }
-  } catch (error) {
-    // prepare logs
-    let logObj = loggerService.build(
-      'user',
-      'usersServices.prepareGenPasskitInvoke',
-      req,
-      'MWG_CIAM_USER_SIGNUP_ERR',
-      event,
-      error,
-    );
-    // prepare log response
-    responseHelper.craftUsersApiResponse(
-      '',
-      req.body,
-      'MWG_CIAM_USER_SIGNUP_ERR',
-      'USERS_SIGNUP',
-      logObj,
-    );
-
-    return error;
   }
 }
 
