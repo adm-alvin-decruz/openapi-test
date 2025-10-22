@@ -23,16 +23,16 @@ async function retrieveMembership(data) {
   const language = data.language;
   const email = data.email;
 
-  //define query for model
-  const rs = await userModel.retrieveMembership(email);
-
-  if (!rs || !rs.email) {
-    await Promise.reject(
-      new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
-    );
-  }
-
   try {
+    //define query for model
+    const rs = await userModel.retrieveMembership(email);
+
+    if (!rs || !rs.email) {
+      await Promise.reject(
+        new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
+      );
+    }
+
     const today = getCurrentUTCTimestamp().split(' ')[0];
 
     //Get active memberships ( Active = expires_at >= today  )
@@ -149,7 +149,7 @@ async function deleteUserMembership(req, user_perform_action) {
         { Name: 'email', Value: deletedEmail },
         { Name: 'preferred_username', Value: deletedEmail },
       ],
-      email
+      email,
     );
     // disable user in cognito
     await cognitoService.cognitoDisabledUser(deletedEmail);
