@@ -223,7 +223,11 @@ async function AccessTokenAuthGuard(req, res, next) {
   } catch (error) {
     if (error && error.message && error.message.includes('Token expired at')) {
       const newAccessToken = await refreshToken(userCredentials);
+
       if (newAccessToken) {
+        const payload = await verifierAccessToken.verify(newAccessToken);
+        req.headers.user_perform_action = payload.username;
+        req.headers.authorization = newAccessToken;
         res.newAccessToken = newAccessToken;
         return next();
       } else {
