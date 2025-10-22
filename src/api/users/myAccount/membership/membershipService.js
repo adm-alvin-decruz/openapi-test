@@ -81,10 +81,10 @@ async function deleteUserMembership(req, user_perform_action) {
 
   const language = req.body.language;
   const email = req.body.email;
-  //define query for model
-  const rs = await userModel.retrieveMembership(email);
 
   try {
+    //define query for model
+    const rs = await userModel.retrieveMembership(email);
     if (!rs || !rs.email) {
       await Promise.reject(
         new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
