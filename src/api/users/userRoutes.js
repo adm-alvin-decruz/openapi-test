@@ -34,7 +34,6 @@ router.get('/ping', async (req, res) => {
  * User signup, create new CIAM user
  */
 router.post(
-  '/users',
   isEmptyRequest,
   validateEmail,
   lowercaseTrimKeyValueString,
