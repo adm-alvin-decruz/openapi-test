@@ -212,7 +212,6 @@ async function AccessTokenAuthGuard(req, res, next) {
     clientId: ciamSecrets.USER_POOL_CLIENT_ID,
   });
 
-  //verify access token
   try {
     const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
