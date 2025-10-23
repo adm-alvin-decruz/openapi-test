@@ -57,9 +57,14 @@ class GalaxyWPService {
   async callMembershipUpdateStatus(requiredFields, status) {
     try {
       const headers = await galaxyCmnService.setGlxReqHeader();
-      const requiredBody = await this.createRequestBody(requiredFields, galaxyConf.updateWPParams);
+      // Remove validFrom from the request body as it's not needed for status update
+      //eslint-disable-next-line no-unused-vars
+      const { validFrom: _validFrom, ...restRequiredBody } = await this.createRequestBody(
+        requiredFields,
+        galaxyConf.updateWPParams,
+      );
       const body = {
-        ...requiredBody,
+        ...restRequiredBody,
         status,
       };
 

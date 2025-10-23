@@ -210,9 +210,10 @@ class User {
 
   /** Find wild pass user full data */
   static async findWPFullData(email) {
+    // using LEFT JOIN with tbl user_newsletters to ensure newsletter subscription data is included even if the user has no record in user_newsletters
     const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  INNER JOIN user_newsletters un ON un.user_id = u.id
+                  LEFT JOIN user_newsletters un ON un.user_id = u.id
                   WHERE u.email = ? AND u.status = 1 AND um.name = 'wildpass'`;
     try {
       const rows = await pool.query(sql, [email]);
