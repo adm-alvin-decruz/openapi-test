@@ -35,9 +35,11 @@ async function retrieveMembership(data) {
 
     const today = getCurrentUTCTimestamp().split(' ')[0];
 
-    //Get active memberships ( Active = expires_at >= today  )
+    // Filter memberships to include only active ones:
+    // - Lifetime memberships (expires_at is null)
+    // - Memberships that expire today or in the future (expires_at >= today)
     const activeMemberships = rs.memberships.filter(
-      (ele) => ele.expires_at && ele.expires_at.split(' ')[0] >= today,
+      (ele) => !ele.expires_at || ele.expires_at.split(' ')[0] >= today,
     );
 
     const memberships = await Promise.all(
