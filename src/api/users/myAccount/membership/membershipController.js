@@ -13,9 +13,9 @@ async function retrieveMembership(body) {
   }
 }
 
-async function deleteUserMembership(body) {
+async function deleteUserMembership(req) {
   try {
-    return await membershipService.deleteUserMembership(body);
+    return await membershipService.deleteUserMembership(req);
   } catch (error) {
     const errorMessage = error && error.message ? JSON.parse(error.message) : '';
     if (errorMessage) {

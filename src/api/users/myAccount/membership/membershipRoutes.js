@@ -53,7 +53,7 @@ router.delete('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
     return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
   try {
-    const membership = await membershipsController.deleteUserMembership(req.body);
+    const membership = await membershipsController.deleteUserMembership(req);
     req.apiTimer.end('Route CIAM Delete Membership ended', startTimer);
     return res.status(200).send(membership);
   } catch (error) {

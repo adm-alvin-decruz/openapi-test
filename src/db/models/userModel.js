@@ -342,6 +342,7 @@ class User {
       .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
+    updateFields.push('delete_at = ?');
     updateFields.push('updated_at = ?');
 
     // Construct the SQL query
@@ -352,7 +353,12 @@ class User {
     `;
 
     // Prepare the params array
-    const params = [...Object.values(userData).filter((value) => value !== undefined), now, email];
+    const params = [
+      ...Object.values(userData).filter((value) => value !== undefined),
+      now,
+      now,
+      email,
+    ];
 
     try {
       // Execute the query

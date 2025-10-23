@@ -8,6 +8,7 @@ const DeleteUserErrors = require('../../../../config/https/errors/deleteUserErro
 const cognitoService = require('../../../../services/cognitoService');
 const MembershipErrors = require('../../../../config/https/errors/membershipErrors');
 const userEventAuditTrailService = require('../../userEventAuditTrailService');
+const galaxyWPService = require('../../../components/galaxy/services/galaxyWPService');
 
 function loggerWrapper(action, obj, type = 'logInfo') {
   if (type === 'error') {
@@ -22,16 +23,16 @@ async function retrieveMembership(data) {
   const language = data.language;
   const email = data.email;
 
-  //define query for model
-  const rs = await userModel.retrieveMembership(email);
-
-  if (!rs || !rs.email) {
-    await Promise.reject(
-      new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
-    );
-  }
-
   try {
+    //define query for model
+    const rs = await userModel.retrieveMembership(email);
+
+    if (!rs || !rs.email) {
+      await Promise.reject(
+        new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
+      );
+    }
+
     const today = getCurrentUTCTimestamp().split(' ')[0];
 
     //Get active memberships ( Active = expires_at >= today  )
@@ -72,13 +73,18 @@ async function retrieveMembership(data) {
 }
 
 //Delete users
-async function deleteUserMembership(data) {
-  const language = data.language;
-  const email = data.email;
+async function deleteUserMembership(req, user_perform_action) {
+  const STATUS_WILD_PASS = {
+    VOID: '1',
+    VALID: '0',
+  };
+
+  const language = req.body.language;
+  const email = req.body.email;
+
   try {
     //define query for model
     const rs = await userModel.retrieveMembership(email);
-
     if (!rs || !rs.email) {
       await Promise.reject(
         new Error(JSON.stringify(MembershipErrors.ciamMembershipUserNotFound(email, language))),
@@ -98,22 +104,72 @@ async function deleteUserMembership(data) {
         );
       }
     }
-    //proceed delete
+
+    // proceed update membership's WildPass status to 1 (void) in galaxy with error handling
+    try {
+      const { data: wpData } = await userModel.findWPFullData(email);
+      const visualIdWpToUpdate = wpData?.visual_id;
+
+      if (!visualIdWpToUpdate) {
+        loggerWrapper('[CIAM-MYACCOUNT] No Wild Pass Memberships found to Update in Galaxy', {
+          email,
+          layer: 'service.deleteUserMembership.galaxyUpdate',
+        });
+      } else {
+        const requiredFields = {
+          visualId: visualIdWpToUpdate,
+          firstName: rs.familyName,
+          middleName: rs.givenName,
+          lastName: rs.familyName,
+          email: rs.email,
+          // Format DOB to 'DD/MM/YYYY' for fit with galaxy input requirement
+          dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
+        };
+
+        await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.VOID);
+
+        loggerWrapper('[CIAM-MYACCOUNT] Successfully Update Membership Status to Void in Galaxy', {
+          email,
+          layer: 'service.deleteUserMembership.galaxyUpdate',
+        });
+      }
+    } catch (error) {
+      loggerWrapper(
+        '[CIAM-MYACCOUNT] Error Update Membership Status to Void in Galaxy',
+        { email, error: new Error(error), layer: 'service.deleteUserMembership.galaxyUpdate' },
+        'error',
+      );
+      throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
+    }
+
+    const deletedEmail = `deleted-${email}`;
+    // update email user in cognito
+    await cognitoService.cognitoAdminUpdateNewUser(
+      [
+        { Name: 'email', Value: deletedEmail },
+        { Name: 'preferred_username', Value: deletedEmail },
+      ],
+      email,
+    );
+    // disable user in cognito
+    await cognitoService.cognitoDisabledUser(deletedEmail);
+
+    //proceed soft-delete in CIAM DB
     await userModel.softDeleteUserByEmail(email, {
-      email: `deleted-${email}`,
-      status: 2,
+      email: deletedEmail,
     });
 
-    await cognitoService.cognitoDisabledUser(email);
     await userEventAuditTrailService.createEvent(
       email,
       'success',
-      'deleteUser',
+      'AccountSoftDeletedByUser',
       {
         email,
+        user_perform_action: user_perform_action ?? '',
       },
       1,
     );
+
     return {
       user_memberships: rs,
       mwgCode: 'MWG_CIAM_DELETE_USER_SUCCESS',
@@ -125,9 +181,10 @@ async function deleteUserMembership(data) {
     await userEventAuditTrailService.createEvent(
       email,
       'failed',
-      'deleteUser',
+      'AccountSoftDeletedByUser',
       {
         email,
+        user_perform_action,
       },
       1,
     );
@@ -136,10 +193,10 @@ async function deleteUserMembership(data) {
       { email, error: new Error(error), layer: 'service.deleteUserMembership' },
       'error',
     );
-    throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
+
+    throw new Error(error.message);
   }
 }
-
 /** export the module */
 module.exports = {
   retrieveMembership,

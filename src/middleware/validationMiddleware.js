@@ -211,15 +211,23 @@ async function AccessTokenAuthGuard(req, res, next) {
     tokenUse: 'access',
     clientId: ciamSecrets.USER_POOL_CLIENT_ID,
   });
+
   try {
     const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
+
+    req.headers.user_perform_action = payloadAccessToken.username;
+    return next();
   } catch (error) {
     if (error && error.message && error.message.includes('Token expired at')) {
       const newAccessToken = await refreshToken(userCredentials);
+
       if (newAccessToken) {
+        const payload = await verifierAccessToken.verify(newAccessToken);
+        req.headers.user_perform_action = payload.username;
+        req.headers.authorization = newAccessToken;
         res.newAccessToken = newAccessToken;
         return next();
       } else {
@@ -238,7 +246,6 @@ async function AccessTokenAuthGuard(req, res, next) {
     );
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  next();
 }
 
 async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
