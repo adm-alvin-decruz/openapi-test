@@ -15,12 +15,12 @@ class PasswordlessErrors {
     };
   }
 
-  static membershipLoginDisallowed(email) {
+  static membershipLoginDisallowed(email, lang = 'en') {
     return {
       auth: {
         code: 403,
         mwgCode: 'MWG_CIAM_MEMBERSHIP_LOGIN_DISALLOWED',
-        message: `You are a WildPass-only member. You are not allowed to login to the membership portal.`,
+        message: messageLang('passwordless_login_disallowed', lang),
         email: validator.escape(email),
       },
       status: 'failed',
@@ -28,12 +28,12 @@ class PasswordlessErrors {
     };
   }
 
-  static wildpassLoginDisallowed(email) {
+  static wildpassLoginDisallowed(email, lang = 'en') {
     return {
       auth: {
         code: 403,
         mwgCode: 'MWG_CIAM_WILDPASS_LOGIN_DISALLOWED',
-        message: `The email address you have entered is invalid. Please try again.`,
+        message: messageLang('passwordless_login_disallowed', lang),
         email: validator.escape(email),
       },
       status: 'failed',
@@ -41,12 +41,12 @@ class PasswordlessErrors {
     };
   }
 
-  static loginDisabled(email, secondsRemaining) {
+  static loginDisabled(email, secondsRemaining, lang = 'en') {
     return {
       auth: {
         code: 429,
         mwgCode: 'MWG_CIAM_USERS_LOGIN_DISABLED',
-        message: `Too many login attempts. Please try again in ${secondsRemaining} seconds.`,
+        message: messageLang('passwordless_login_disabled', lang),
         email: validator.escape(email),
         remainingSeconds: secondsRemaining,
       },
