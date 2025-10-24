@@ -215,7 +215,7 @@ class PasswordlessSendCodeService {
       if (!token) throw new Error('Token does not exist in DB');
 
       const now = new Date();
-      const tokenRequestedAt = new Date(token.created_at);
+      const tokenRequestedAt = new Date(lastSendOTPEvent.created_at);
       const elapsedMs = now - tokenRequestedAt;
       const intervalMs = Number(otpInterval) * 1000;
 
