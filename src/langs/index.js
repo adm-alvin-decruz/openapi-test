@@ -71,6 +71,10 @@ module.exports = {
       'Incorrect password or your password does not meet the security requirements. It must include at least one uppercase and one lowercase letter. Please try again or reset your password if needed.',
     password_has_same_with_old_password:
       'New password should not be the same as previous passwords.',
+    passwordless_login_disallowed:
+      'The email address you have entered is invalid. Please try again.',
+    passwordless_login_disabled:
+      'Your account has been temporarily disabled due to multiple invalid OTP attempts. Please try again later.',
     phoneNumber_invalid: 'Phone number is invalid.',
     request_body_is_empty: 'Request body is empty',
     request_reset_password_success: 'Password reset link sent to your email',
@@ -86,7 +90,7 @@ module.exports = {
     verifyML_invalid: 'Link is invalid or expired. Please request a new one.',
     verifyML_missingToken: 'The token is missing or empty.',
     verifyOTP_invalid: 'The code you entered is incorrect. Please try again.',
-    verifyOTP_expired: 'OTP has expired. Please request a new one.',
+    verifyOTP_expired: 'The code you entered is incorrect. Please try again.',
     verifyOTP_tooManyAttempts:
       'Too many incorrect attempts. You may request for a new OTP after 15 minutes.',
     token_valid: 'Token is valid.',
