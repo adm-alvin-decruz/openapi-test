@@ -43,13 +43,19 @@ async function retrieveMembership(data) {
     );
 
     const memberships = await Promise.all(
-      activeMemberships.map(async (ele) => {
-        // Generate signed URL for photoUrl if it exists ,otherwise set it to an empty string
-        const signedURL = ele.photoUrl ? await preSignedURLS3(ele.photoUrl) : '';
+      activeMemberships.map(async ({ membershipType, photoUrl, ...restItem }) => {
+        // generate signed URL for photoUrl if exists
+        const signedURL = photoUrl ? await preSignedURLS3(photoUrl) : '';
 
         return {
-          ...ele,
+          ...restItem,
           photoUrl: signedURL,
+          // if membershipType is 'wildpass', set categoryType and itemName to indicate a Wildpass membership
+          ...(membershipType === 'wildpass' && {
+            categoryType: 'wildpass',
+            // itemName must start with an uppercase 'W' for 'Wildpass'; do not modify this format
+            itemName: 'Wildpass',
+          }),
         };
       }),
     );

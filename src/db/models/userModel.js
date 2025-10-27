@@ -664,6 +664,7 @@ class User {
                              JSON_OBJECT(
                                      'visual_id', um.visual_id,
                                      'expires_at', um.expires_at,
+                                     'membershipType', um.name,
                                      'categoryType', umd.category_type,
                                      'itemName', umd.item_name,
                                      'adultQty', umd.adult_qty,
