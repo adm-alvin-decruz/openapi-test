@@ -137,7 +137,7 @@ class UserCredentialEventsModel {
         params = [userId, EVENTS.SEND_OTP, STATUS.SUCCESS];
       }
 
-      const [rows] = await query(sql, params);
+      const rows = await query(sql, params);
       return rows.length > 0 ? rows[0].count : 0;
     } catch (error) {
       loggerService.error(
