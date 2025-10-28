@@ -88,6 +88,7 @@ class UserCredentialEventsModel {
 
     try {
       const rows = await query(sql, params);
+      console.log('last successful login: ', rows[0]);
 
       return rows.length > 0 ? rows[0].created_at : null;
     } catch (error) {
@@ -107,6 +108,7 @@ class UserCredentialEventsModel {
 
   static async countOtpGenerationsSinceLastSuccess(userId) {
     const lastSuccess = await this.getLastSuccessfulLogin(userId);
+    console.log('lastSuccess:', lastSuccess);
 
     let sql, params;
 
