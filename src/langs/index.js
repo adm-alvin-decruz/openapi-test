@@ -84,7 +84,7 @@ module.exports = {
     signup_success: 'New user signed up successfully.',
     token_reset_password_being_used: 'Token has already been used.',
     sendCode_failed: 'Failed to send verification code',
-    sendCode_newUser: 'New user. Please sign up before trying to log in.',
+    sendCode_newUser: 'The email address you have entered is invalid. Please try again.',
     sendCode_success: 'Verification code sent successfully.',
     sendCode_tooSoon: 'Please wait before requesting another code.',
     verifyML_invalid: 'Link is invalid or expired. Please request a new one.',

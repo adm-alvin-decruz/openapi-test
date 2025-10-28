@@ -134,13 +134,18 @@ class PasswordlessSendCodeService {
   async checkOtpGenerationsWithoutSuccessfulLogin(userId, maxOtpGenerations) {
     try {
       const otpCount = await UserCredentialEventsModel.countOtpGenerationsSinceLastSuccess(userId);
+      console.log('otpCount:', otpCount);
+      console.log('maxOtpGenerations:', maxOtpGenerations);
 
       if (otpCount >= maxOtpGenerations) {
         // Check if current time is 15 min after last OTP generation
         const lastSendOtpEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
+        console.log('lastSendOtpEvent:', lastSendOtpEvent);
         const { resetTime, secondsRemaining } = await getResetTimeRemaining(
           lastSendOtpEvent.created_at,
         );
+        console.log('resetTime:', resetTime);
+        console.log('secondsRemaining:', secondsRemaining);
 
         if (secondsRemaining > 0) {
           // If still within 15 min block-out period, deny send OTP request
