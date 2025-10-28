@@ -172,7 +172,7 @@ async function verifyCode(req, tokenId) {
     );
 
     // Form AEM callback URL
-    const callbackUrl = `${appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.AEM_CALLBACK_PATH}`;
+    const callbackURL = `${appConfig[`AEM_CALLBACK_URL_${process.env.APP_ENV.toUpperCase()}`]}${appConfig.AEM_CALLBACK_PATH}`;
 
     return {
       auth: {
@@ -181,7 +181,7 @@ async function verifyCode(req, tokenId) {
         message: messageLang('login_success'),
         accessToken: cognitoRes.accessToken,
         mandaiId: userInfoDb.mandai_id,
-        callbackUrl,
+        callbackURL,
         email: userInfoDb.email,
       },
       status: 'success',
