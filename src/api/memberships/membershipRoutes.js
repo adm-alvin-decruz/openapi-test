@@ -40,9 +40,9 @@ router.post('/users/memberships', isEmptyRequest, validateEmailDisposable, async
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
     if (errorMessage.statusCode !== 500) {
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      return res.status(errorMessage.statusCode).json(errorMessage);
     }
-    return res.status(500).send(CommonErrors.InternalServerError());
+    return res.status(500).json(CommonErrors.InternalServerError());
   }
 });
 
