@@ -21,6 +21,8 @@ const { GROUP, GROUPS_SUPPORTS } = require('../../utils/constants');
 const CommonErrors = require('../../config/https/errors/commonErrors');
 const loggerService = require('../../logs/logger');
 const { maskKeyRandomly } = require('../../utils/common');
+const { safeJsonParse } = require('./myAccount/passwordless/passwordlessSendCodeHelpers');
+const { serializeError } = require('../../utils/errorHandler');
 
 const pong = { pong: 'pang' };
 
@@ -64,8 +66,20 @@ router.post(
         return res.status(signupRs.statusCode).send(signupRs);
       } catch (error) {
         req.apiTimer.end('Route CIAM Signup New User Error', startTimer);
-        const errorMessage = JSON.parse(error.message);
-        return res.status(errorMessage.statusCode).send(errorMessage);
+        const errorMessage = safeJsonParse(error.message);
+        if (errorMessage) {
+          return res.status(errorMessage.statusCode || 500).json(errorMessage);
+        }
+
+        return res.status(error.statusCode || 500).json({
+          status: 'failed',
+          statusCode: error.statusCode || 500,
+          error: {
+            code: error.code || error.statusCode || 500,
+            message: error.message,
+            ...{ details: serializeError(error) },
+          },
+        });
       }
     }
     //#endregion
@@ -259,8 +273,20 @@ router.post('/users/sessions', isEmptyRequest, validateEmail, async (req, res) =
     const data = await userController.userLogin(req);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    const errorMessage = safeJsonParse(error.message);
+    if (errorMessage) {
+      return res.status(errorMessage.statusCode || 500).json(errorMessage);
+    }
+
+    return res.status(error.statusCode || 500).json({
+      status: 'failed',
+      statusCode: error.statusCode || 500,
+      error: {
+        code: error.code || error.statusCode || 500,
+        message: error.message,
+        ...{ details: serializeError(error) },
+      },
+    });
   }
 });
 
@@ -291,8 +317,20 @@ router.delete(
       const data = await userController.userLogout(accessToken, req.body);
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      const errorMessage = safeJsonParse(error.message);
+      if (errorMessage) {
+        return res.status(errorMessage.statusCode || 500).json(errorMessage);
+      }
+
+      return res.status(error.statusCode || 500).json({
+        status: 'failed',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.code || error.statusCode || 500,
+          message: error.message,
+          ...{ details: serializeError(error) },
+        },
+      });
     }
   },
 );
@@ -320,8 +358,20 @@ router.post(
       const data = await userController.userResetPassword(req);
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      const errorMessage = safeJsonParse(error.message);
+      if (errorMessage) {
+        return res.status(errorMessage.statusCode || 500).json(errorMessage);
+      }
+
+      return res.status(error.statusCode || 500).json({
+        status: 'failed',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.code || error.statusCode || 500,
+          message: error.message,
+          ...{ details: serializeError(error) },
+        },
+      });
     }
   },
 );
@@ -347,8 +397,20 @@ router.get('/users/reset-password', async (req, res) => {
     );
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    const errorMessage = safeJsonParse(error.message);
+    if (errorMessage) {
+      return res.status(errorMessage.statusCode || 500).json(errorMessage);
+    }
+
+    return res.status(error.statusCode || 500).json({
+      status: 'failed',
+      statusCode: error.statusCode || 500,
+      error: {
+        code: error.code || error.statusCode || 500,
+        message: error.message,
+        ...{ details: serializeError(error) },
+      },
+    });
   }
 });
 
@@ -370,8 +432,20 @@ router.put('/users/reset-password', isEmptyRequest, async (req, res) => {
     const data = await userController.userConfirmResetPassword(req.body);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    const errorMessage = safeJsonParse(error.message);
+    if (errorMessage) {
+      return res.status(errorMessage.statusCode || 500).json(errorMessage);
+    }
+
+    return res.status(error.statusCode || 500).json({
+      status: 'failed',
+      statusCode: error.statusCode || 500,
+      error: {
+        code: error.code || error.statusCode || 500,
+        message: error.message,
+        ...{ details: serializeError(error) },
+      },
+    });
   }
 });
 
@@ -401,8 +475,20 @@ router.post(
       }
       return res.status(data.statusCode).json(data);
     } catch (error) {
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      const errorMessage = safeJsonParse(error.message);
+      if (errorMessage) {
+        return res.status(errorMessage.statusCode || 500).json(errorMessage);
+      }
+
+      return res.status(error.statusCode || 500).json({
+        status: 'failed',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.code || error.statusCode || 500,
+          message: error.message,
+          ...{ details: serializeError(error) },
+        },
+      });
     }
   },
 );
@@ -429,8 +515,20 @@ router.post('/token/verify', isEmptyRequest, async (req, res) => {
     const data = await userController.userVerifyToken(accessToken, req.body);
     return res.status(data.statusCode).json(data);
   } catch (error) {
-    const errorMessage = JSON.parse(error.message);
-    return res.status(errorMessage.statusCode).send(errorMessage);
+    const errorMessage = safeJsonParse(error.message);
+    if (errorMessage) {
+      return res.status(errorMessage.statusCode || 500).json(errorMessage);
+    }
+
+    return res.status(error.statusCode || 500).json({
+      status: 'failed',
+      statusCode: error.statusCode || 500,
+      error: {
+        code: error.code || error.statusCode || 500,
+        message: error.message,
+        ...{ details: serializeError(error) },
+      },
+    });
   }
 });
 
@@ -516,8 +614,20 @@ router.post(
         { url: '/token/refresh' },
         '[CIAM] userRefreshAccessToken End Request - Failed',
       );
-      const errorMessage = JSON.parse(error.message);
-      return res.status(errorMessage.statusCode).send(errorMessage);
+      const errorMessage = safeJsonParse(error.message);
+      if (errorMessage) {
+        return res.status(errorMessage.statusCode || 500).json(errorMessage);
+      }
+
+      return res.status(error.statusCode || 500).json({
+        status: 'failed',
+        statusCode: error.statusCode || 500,
+        error: {
+          code: error.code || error.statusCode || 500,
+          message: error.message,
+          ...{ details: serializeError(error) },
+        },
+      });
     }
   },
 );
