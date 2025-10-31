@@ -85,6 +85,7 @@ async function deleteUserMembership(req, user_perform_action) {
   const STATUS_WILD_PASS = {
     VOID: '1',
     VALID: '0',
+    EXPIRED: '5'
   };
 
   const language = req.body.language;
@@ -134,7 +135,8 @@ async function deleteUserMembership(req, user_perform_action) {
           dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
         };
 
-        await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.VOID);
+        //temporary set status to EXPIRED due to galaxy WP API not support VOIDED status update
+        await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.EXPIRED);
 
         loggerWrapper('[CIAM-MYACCOUNT] Successfully Update Membership Status to Void in Galaxy', {
           email,
