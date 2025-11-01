@@ -15,12 +15,8 @@ class UserCreateMembershipPassJob {
   }
 
   async perform(req) {
-    try {
-      await UserMembershipPassService.create(req);
-      return this.success(req.body.language);
-    } catch (error) {
-      throw error;
-    }
+    await UserMembershipPassService.create(req);
+    return this.success(req.body.language);
   }
 }
 
