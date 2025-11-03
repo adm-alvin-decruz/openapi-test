@@ -144,6 +144,7 @@ router.post(
           newUser.error || newUser,
           'adminCreateUser',
           res,
+          newUser.statusCode || newUser.code || 400,
         );
       }
 
