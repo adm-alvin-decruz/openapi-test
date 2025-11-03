@@ -158,14 +158,7 @@ router.post(
         '[CIAM] Signup User Exception',
       );
 
-      return res.status(500).json({
-        status: 'failed',
-        statusCode: 500,
-        error: {
-          code: 500,
-          message: 'An unexpected error occurred',
-        },
-      });
+      return res.status(500).send(CommonErrors.InternalServerError());
     }
 
     //#endregion
