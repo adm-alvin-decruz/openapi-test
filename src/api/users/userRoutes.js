@@ -66,18 +66,32 @@ router.post(
         return res.status(signupRs.statusCode).send(signupRs);
       } catch (error) {
         req.apiTimer.end('Route CIAM Signup New User Error', startTimer);
+
+        // Log full error details server-side for debugging
+        loggerService.error(
+          {
+            user: {
+              action: 'adminCreateMPUser',
+              error: serializeError(error),
+            },
+          },
+          '[CIAM] Signup MP User Failed',
+        );
+
         const errorMessage = safeJsonParse(error.message);
         if (errorMessage) {
           return res.status(errorMessage.statusCode || 500).json(errorMessage);
         }
 
+        // Return sanitized error without stack trace in production
         return res.status(error.statusCode || 500).json({
           status: 'failed',
           statusCode: error.statusCode || 500,
           error: {
             code: error.code || error.statusCode || 500,
-            message: error.message,
-            ...{ details: serializeError(error) },
+            message: error.message || 'An error occurred during signup',
+            // Only include details in non-production environments
+            ...(process.env.APP_ENV !== 'prod' && { details: serializeError(error) }),
           },
         });
       }
@@ -94,18 +108,58 @@ router.post(
     if (commonService.isJsonNotEmpty(listedParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
+
     req.body.uuid = uuid;
-    let newUser = await userController.adminCreateUser(req);
 
-    req.apiTimer.end('Route CIAM Signup User', startTimer);
-    if (newUser.error) {
-      return res.status(400).json(newUser);
-    }
+    try {
+      let newUser = await userController.adminCreateUser(req);
 
-    if ('membership' in newUser && 'code' in newUser.membership) {
-      return res.status(newUser.membership.code).json(newUser);
+      req.apiTimer.end('Route CIAM Signup User', startTimer);
+
+      if (newUser.error) {
+        // Log error details in server
+        loggerService.error(
+          {
+            user: {
+              action: 'adminCreateUser',
+              error: newUser.error,
+            },
+          },
+          '[CIAM] Signup User Failed',
+        );
+
+        return res.status(400).json({
+          status: 'failed',
+          statusCode: 400,
+          error: {
+            code: 400,
+            message: typeof newUser.error === 'string' ? newUser.error : 'Signup failed',
+          },
+        });
+      }
+
+      if ('membership' in newUser && 'code' in newUser.membership) {
+        return res.status(newUser.membership.code).json(newUser);
+      }
+
+      return res.status(200).json(newUser);
+
+    } catch (error) {
+      req.apiTimer.end('Route CIAM Signup User Error', startTimer);
+
+      // Log full error server-side
+      loggerService.error(
+        {
+          user: {
+            action: 'adminCreateUser',
+            error: serializeError(error),
+          },
+        },
+        '[CIAM] Signup User Exception',
+      );
+
+      return res.status(500).send(CommonErrors.InternalServerError());
     }
-    return res.status(200).json(newUser);
 
     //#endregion
   },
