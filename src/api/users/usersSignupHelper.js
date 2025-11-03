@@ -12,6 +12,7 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const cognitoService = require('../../services/cognitoService');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
+const errorHandler = require('../../utils/errorHandler');
 
 /**
  * Generate mandaiID
@@ -473,6 +474,56 @@ async function updatePasswordCredential(email, passwordCredential) {
   await userCredentialModel.updateByUserEmail(email, dataUpdated);
 }
 
+const handleSignupError = (error, action, res, statusCode = 400) => {
+  loggerService.error(
+    {
+      user: {
+        action,
+        error: errorHandler.serializeError(error),
+      },
+    },
+    '[CIAM] Signup User Failed',
+  );
+
+  let errorMessage;
+  if (typeof error === 'string') {
+    // Check if the error string contains 'stack'
+    errorMessage = error.toLowerCase().includes('stack') ? 'Signup failed' : error;
+  } else {
+    errorMessage = error?.message || 'Signup failed';
+  }
+
+  // Use status code from error if available, otherwise fallback
+  const upstreamStatusCode =
+    (typeof error === 'object' && (error.statusCode || error.code)) || statusCode;
+
+  return res.status(statusCode).json({
+    status: 'failed',
+    statusCode,
+    error: {
+      code: upstreamStatusCode,
+      message: errorMessage,
+    },
+  });
+};
+
+// Helper functions for error handling
+const isErrorResponse = (newUser) => {
+  // Add truthiness and type checks to prevent crashes
+  if (!newUser || typeof newUser !== 'object') {
+    // Handle null, undefined, or primitive values
+    return newUser instanceof Error || !!newUser === false;
+  }
+
+  return (
+    newUser instanceof Error ||
+    (newUser.code !== undefined && newUser.code >= 400) ||
+    (newUser.error &&
+      (typeof newUser.error === 'object' ||
+        (typeof newUser.error === 'string' && newUser.error.toLowerCase().includes('stack'))))
+  );
+};
+
 module.exports = {
   generateMandaiID,
   generateVisualID,
@@ -481,4 +532,6 @@ module.exports = {
   insertUserNewletter,
   signupMPWithUpdateIfExist,
   updatePasswordCredential,
+  handleSignupError,
+  isErrorResponse,
 };

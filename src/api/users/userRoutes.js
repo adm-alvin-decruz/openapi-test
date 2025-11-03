@@ -23,6 +23,7 @@ const loggerService = require('../../logs/logger');
 const { maskKeyRandomly } = require('../../utils/common');
 const { safeJsonParse } = require('./myAccount/passwordless/passwordlessSendCodeHelpers');
 const { serializeError } = require('../../utils/errorHandler');
+const userSignupHelpers = require('./usersSignupHelper');
 
 const pong = { pong: 'pang' };
 
@@ -138,12 +139,20 @@ router.post(
         });
       }
 
+      if (userSignupHelpers.isErrorResponse(newUser)) {
+        return userSignupHelpers.handleSignupError(
+          newUser.error || newUser,
+          'adminCreateUser',
+          res,
+          newUser.statusCode || newUser.code || 400,
+        );
+      }
+
       if ('membership' in newUser && 'code' in newUser.membership) {
         return res.status(newUser.membership.code).json(newUser);
       }
 
       return res.status(200).json(newUser);
-
     } catch (error) {
       req.apiTimer.end('Route CIAM Signup User Error', startTimer);
 
