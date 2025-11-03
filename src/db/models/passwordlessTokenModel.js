@@ -1,0 +1,112 @@
+const { query, execute } = require('../connections/mysqlConn');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
+
+class PasswordlessToken {
+  static async findLatestTokenByUserId(userId) {
+    const sql = `
+      SELECT * 
+      FROM passwordless_tokens 
+      WHERE user_id = ?
+      ORDER BY expires_at DESC 
+      LIMIT 1
+    `;
+
+    try {
+      const rows = await query(sql, [userId]);
+      return rows[0];
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.findLatestTokenByUserId - Failed',
+      );
+    }
+  }
+
+  static async getTokenById(id) {
+    const sql = `
+      SELECT *
+      FROM passwordless_tokens
+      WHERE id = ?
+    `;
+
+    try {
+      const rows = await query(sql, [id]);
+      return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.getTokenById - Failed',
+      );
+    }
+  }
+
+  static async incrementAttemptById(id) {
+    const sql = `
+      UPDATE passwordless_tokens 
+      SET verification_attempts = verification_attempts + 1 
+      WHERE id = ?
+    `;
+
+    try {
+      await execute(sql, [id]);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, [id]),
+        token_id: id,
+        success: true,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.incrementAttemptById - Failed',
+      );
+      throw error;
+    }
+  }
+
+  static async markTokenAsInvalid(id) {
+    const sql = `
+      UPDATE passwordless_tokens 
+      SET is_valid = 0 
+      WHERE id = ?
+    `;
+
+    try {
+      const result = await execute(sql, [id]);
+
+      return result.affectedRows > 0;
+    } catch (error) {
+      loggerService.error(
+        {
+          passwordlessTokenModel: {
+            id,
+            error: `${error}`,
+          },
+        },
+        {},
+        '[CIAM] passwordlessTokenModel.markTokenById - Failed',
+      );
+      throw error;
+    }
+  }
+}
+
+module.exports = PasswordlessToken;

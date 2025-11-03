@@ -4,29 +4,28 @@ on:
   workflow_dispatch:
 
 jobs:
-
   sonarqube:
     if: ${{contains(github.repository, 'MandaiWildlifeReserves')}}
     name: SonarQube scan
     runs-on: shared-runner
     steps:
-    - name: Checking out
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checking out
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-#    - name: create coverage folder
-#      run: mkdir -p coverage
+      #    - name: create coverage folder
+      #      run: mkdir -p coverage
 
-#    - name: download coverage report
-#      uses: actions/download-artifact@v2
-#      with:
-#        name: coverage
-#        path: ./coverage/
+      #    - name: download coverage report
+      #      uses: actions/download-artifact@v2
+      #      with:
+      #        name: coverage
+      #        path: ./coverage/
 
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      env:
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
           SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONARQUBE_HOST }}
           SONAR_ROOT_CERT: ${{ secrets.SONAR_ROOT_CERT }}
@@ -43,7 +42,7 @@ jobs:
         id: grype-scan-repo
         uses: anchore/scan-action@v4
         with:
-          path: "."
+          path: '.'
           fail-build: true
           only-fixed: true
 
@@ -145,4 +144,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-config-scan-results.sarif'
-

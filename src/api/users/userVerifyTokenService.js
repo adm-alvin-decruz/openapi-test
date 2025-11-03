@@ -1,19 +1,19 @@
-require("dotenv").config();
-const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
-const cognitoService = require("../../services/cognitoService");
-const { getOrCheck } = require("../../utils/cognitoAttributes");
-const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const loggerService = require("../../logs/logger");
-const { secrets } = require("../../services/secretsService");
+require('dotenv').config();
+const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const cognitoService = require('../../services/cognitoService');
+const { getOrCheck } = require('../../utils/cognitoAttributes');
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const loggerService = require('../../logs/logger');
+const { secrets } = require('../../services/secretsService');
 
 class UserVerifyTokenService {
   async verifyToken(accessToken, body) {
     try {
       const userCognito = await cognitoService.cognitoAdminGetUserByAccessToken(accessToken);
-      const cognitoUserEmail = getOrCheck(userCognito, "email");
-      const cognitoMandaiId = getOrCheck(userCognito, "custom:mandai_id");
+      const cognitoUserEmail = getOrCheck(userCognito, 'email');
+      const cognitoMandaiId = getOrCheck(userCognito, 'custom:mandai_id');
       const isMatchedInfo = this.userVerifyMatchedInfo(body, cognitoUserEmail, cognitoMandaiId);
-      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+      const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
 
       if (!isMatchedInfo) {
         return {
@@ -22,7 +22,7 @@ class UserVerifyTokenService {
             valid: false,
             expired_at: null,
           },
-          status: "failed",
+          status: 'failed',
           statusCode: 200,
         };
       }
@@ -30,19 +30,20 @@ class UserVerifyTokenService {
       // Verifier that expects valid access tokens:
       const verifier = CognitoJwtVerifier.create({
         userPoolId: process.env.USER_POOL_ID,
-        tokenUse: "access",
+        tokenUse: 'access',
         clientId: ciamSecrets.USER_POOL_CLIENT_ID,
       });
       const payload = await verifier.verify(accessToken);
-      const exp = payload && payload.exp ? payload.exp : "";
+      const exp = payload && payload.exp ? payload.exp : '';
       return {
         token: {
           code: 200,
           valid: !!payload && !!payload.username,
-          expired_at: !!exp ? formatDateToMySQLDateTime(new Date(exp * 1000)) : null,
-          [`${body.email && body.email.trim().length > 0 ? "email" : "mandaiId"}`]: body.email || body.mandaiId,
+          expired_at: exp ? formatDateToMySQLDateTime(new Date(exp * 1000)) : null,
+          [`${body.email && body.email.trim().length > 0 ? 'email' : 'mandaiId'}`]:
+            body.email || body.mandaiId,
         },
-        status: "success",
+        status: 'success',
         statusCode: 200,
       };
     } catch (error) {
@@ -50,14 +51,14 @@ class UserVerifyTokenService {
         {
           userVerifyToken: {
             email: body.email,
-            mandaiId: body.mandaiId || "",
-            action: "verifyToken",
-            layer: "userVerifyTokenService.verifyToken",
+            mandaiId: body.mandaiId || '',
+            action: 'verifyToken',
+            layer: 'userVerifyTokenService.verifyToken',
             error: new Error(error),
           },
         },
         {},
-        "End Verify Token Service - Failed"
+        'End Verify Token Service - Failed',
       );
       throw new Error(
         JSON.stringify({
@@ -66,9 +67,9 @@ class UserVerifyTokenService {
             valid: false,
             expired_at: null,
           },
-          status: "failed",
+          status: 'failed',
           statusCode: 200,
-        })
+        }),
       );
     }
   }
@@ -82,9 +83,9 @@ class UserVerifyTokenService {
    * @returns {boolean} - Check is matched or not
    */
   userVerifyMatchedInfo(body, emailFromCognito, mandaiIdFromCognito) {
-    const email = body.email ? body.email.trim().toLowerCase() : "";
-    const mandaiId = body.mandaiId ? body.mandaiId.trim() : "";
-    const cognitoEmail = emailFromCognito ? emailFromCognito.trim().toLowerCase() : "";
+    const email = body.email ? body.email.trim().toLowerCase() : '';
+    const mandaiId = body.mandaiId ? body.mandaiId.trim() : '';
+    const cognitoEmail = emailFromCognito ? emailFromCognito.trim().toLowerCase() : '';
 
     if (body.email && body.mandaiId) {
       return cognitoEmail === email && mandaiId === mandaiIdFromCognito;

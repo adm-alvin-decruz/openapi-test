@@ -1,8 +1,5 @@
-const { switchIsTurnOn } = require("../../../helpers/dbSwitchesHelpers");
-const {
-  passwordPattern,
-  passwordPatternComplexity,
-} = require("../../../utils/common");
+const { switchIsTurnOn } = require('../../../helpers/dbSwitchesHelpers');
+const { passwordPattern, passwordPatternComplexity } = require('../../../utils/common');
 
 async function checkPasswordHasValidPattern(password, flag) {
   const enableCheckingPasswordComplexity = await switchIsTurnOn(flag);

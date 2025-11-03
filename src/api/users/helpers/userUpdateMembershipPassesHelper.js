@@ -1,21 +1,21 @@
-const cognitoService = require("../../../services/cognitoService");
-const { getOrCheck } = require("../../../utils/cognitoAttributes");
-const UpdateUserErrors = require("../../../config/https/errors/updateUserErrors");
-const userModel = require("../../../db/models/userModel");
-const passwordService = require("../userPasswordService");
-const loggerService = require("../../../logs/logger");
-const { COGNITO_ATTRIBUTES } = require("../../../utils/constants");
-const userDBService = require("../usersDBService");
-const userCredentialModel = require("../../../db/models/userCredentialModel");
-const { convertDateToMySQLFormat } = require("../../../utils/dateUtils");
-const { parseCognitoAttributeObject } = require("../../../helpers/cognitoHelpers");
+const cognitoService = require('../../../services/cognitoService');
+const { getOrCheck } = require('../../../utils/cognitoAttributes');
+const UpdateUserErrors = require('../../../config/https/errors/updateUserErrors');
+const userModel = require('../../../db/models/userModel');
+const passwordService = require('../userPasswordService');
+const loggerService = require('../../../logs/logger');
+const { COGNITO_ATTRIBUTES } = require('../../../utils/constants');
+const userDBService = require('../usersDBService');
+const userCredentialModel = require('../../../db/models/userCredentialModel');
+const { convertDateToMySQLFormat } = require('../../../utils/dateUtils');
+const { parseCognitoAttributeObject } = require('../../../helpers/cognitoHelpers');
 
 async function errorWrapper(errObj) {
   await Promise.reject(JSON.stringify(errObj));
 }
 
-function loggerWrapper(action, loggerObj, type = "logInfo") {
-  if (type === "error") {
+function loggerWrapper(action, loggerObj, type = 'logInfo') {
+  if (type === 'error') {
     return loggerService.error({ userUpdateHelper: { ...loggerObj } }, {}, action);
   }
 
@@ -33,22 +33,22 @@ async function getUserFromDBCognito(email) {
 
   try {
     const userDB = await userModel.findByEmail(email);
-
     const userCognito = await cognitoService.cognitoAdminGetUserByEmail(email);
     if (userDB && userDB.id) {
       userInfo.db = userDB;
     }
-    if (userCognito && getOrCheck(userCognito, "email")) {
+    if (userCognito && getOrCheck(userCognito, 'email')) {
       userInfo.cognito = parseCognitoAttributeObject(userCognito);
     }
     return userInfo;
   } catch (error) {
+    console.log('getUserFromDBCognito error: ', error);
     return userInfo;
   }
 }
 
 function isUserExisted(userInfo) {
-  return userInfo && (userInfo.db || userInfo.cognito);
+  return userInfo && userInfo.db && userInfo.cognito;
 }
 
 /**
@@ -63,21 +63,23 @@ function isUserExisted(userInfo) {
  * @param {string} language - The language preference for verification messages.
  * @returns {Promise<boolean>} - A promise that resolves to `true` if verification is successful, otherwise `false`.
  */
-async function verifyCurrentAndNewEmail({ originalEmail, userInfoOriginal, newEmail, userInfoNewEmail, language }) {
+async function verifyCurrentAndNewEmail({
+  originalEmail,
+  userInfoOriginal,
+  newEmail,
+  userInfoNewEmail,
+  language,
+}) {
   try {
     // If original email not existed - throw error record not found
     if (!isUserExisted(userInfoOriginal)) {
-      await errorWrapper(
-        UpdateUserErrors.ciamEmailNotExists(originalEmail, language)
-      );
+      await errorWrapper(UpdateUserErrors.ciamEmailNotExists(originalEmail, language));
     }
 
     // If new email is existed - throw error account being user by other
     if (newEmail) {
       if (isUserExisted(userInfoNewEmail)) {
-        await errorWrapper(
-          UpdateUserErrors.ciamNewEmailBeingUsedErr(newEmail, language)
-        );
+        await errorWrapper(UpdateUserErrors.ciamNewEmailBeingUsedErr(newEmail, language));
       }
     }
   } catch (error) {
@@ -98,21 +100,21 @@ async function updateCognitoUserPassword({ email, password, language }) {
   try {
     await cognitoService.cognitoAdminSetUserPassword(email, password.cognito);
     loggerWrapper(
-      "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+      '[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success',
       {
         userEmail: email,
-        layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
-      }
+        layer: 'userUpdateMembershipPassesHelper.updateCognitoUserPassword',
+      },
     );
   } catch (error) {
     loggerWrapper(
-      "[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success",
+      '[CIAM-MAIN] userUpdateMembershipPassesHelper.updateCognitoUserPassword Update Password Success',
       {
         userEmail: email,
-        layer: "userUpdateMembershipPassesHelper.updateCognitoUserPassword",
+        layer: 'userUpdateMembershipPassesHelper.updateCognitoUserPassword',
         error: new Error(error),
       },
-      "error"
+      'error',
     );
     //throw error moving to top try catch block
     throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
@@ -122,14 +124,12 @@ async function updateCognitoUserPassword({ email, password, language }) {
 async function manipulatePassword(
   ncRequest,
   passwordFromNC = undefined,
-  passwordFromRequest = undefined
+  passwordFromRequest = undefined,
 ) {
   let passwordHash = undefined;
 
   if (ncRequest && passwordFromNC) {
-    passwordHash = await passwordService.hashPassword(
-        passwordFromNC.toString()
-    );
+    passwordHash = await passwordService.hashPassword(passwordFromNC.toString());
     return {
       db: passwordHash,
       cognito: passwordFromNC,
@@ -137,9 +137,7 @@ async function manipulatePassword(
   }
 
   if (passwordFromRequest) {
-    passwordHash = await passwordService.hashPassword(
-        passwordFromRequest.toString()
-    );
+    passwordHash = await passwordService.hashPassword(passwordFromRequest.toString());
     return {
       db: passwordHash,
       cognito: passwordFromRequest,
@@ -148,8 +146,8 @@ async function manipulatePassword(
 
   return {
     db: passwordHash,
-    cognito: undefined
-  }
+    cognito: undefined,
+  };
 }
 
 /**
@@ -185,24 +183,16 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
   const cognitoParams = Object.keys(data)
     .map((key) => {
       //ignore params which not being used for update data
-      if (
-        [
-          "uuid",
-          "newPassword",
-          "confirmPassword",
-          "oldPassword",
-          "group",
-        ].includes(key)
-      ) {
+      if (['uuid', 'newPassword', 'confirmPassword', 'oldPassword', 'group'].includes(key)) {
         return;
       }
-      if (key === "newsletter") {
+      if (key === 'newsletter') {
         return {
           Name: COGNITO_ATTRIBUTES[key],
           Value: JSON.stringify(data.newsletter),
         };
       }
-      if (key === "phoneNumber") {
+      if (key === 'phoneNumber') {
         return {
           Name: COGNITO_ATTRIBUTES[key],
           Value: data.phoneNumber,
@@ -219,50 +209,47 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
   try {
     let cognitoUpdateParams = [
       ...cognitoParams,
-      { Name: "name", Value: userName },
+      { Name: 'name', Value: userName },
       {
-        Name: "email",
+        Name: 'email',
         Value: emailReplicate,
       },
     ];
     if (
       data.phoneNumber === null ||
       data.phoneNumber === undefined ||
-      data.phoneNumber.trim() === ""
+      data.phoneNumber.trim() === ''
     ) {
       // find the index of the phone_number parameter
       const phoneIndex = cognitoUpdateParams.findIndex(
-        (cognitoUpdateParams) => cognitoUpdateParams.Name === "phone_number"
+        (cognitoUpdateParams) => cognitoUpdateParams.Name === 'phone_number',
       );
       // remove the phone_number parameter if found
       if (phoneIndex !== -1) {
         cognitoUpdateParams.splice(phoneIndex, 1);
       }
     }
-    loggerWrapper("[CIAM-MAIN] Process Update User At Cognito - Start", {
+    loggerWrapper('[CIAM-MAIN] Process Update User At Cognito - Start', {
       userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
+      layer: 'userUpdateMembershipPassesHelper.updateCognitoUserInfo',
       cognitoUpdateParams: JSON.stringify(cognitoUpdateParams),
     });
     await cognitoService.cognitoAdminUpdateNewUser(cognitoUpdateParams, email);
-    loggerWrapper(
-      "[CIAM-MAIN] Process Update User At Cognito - Start - Success",
-      {
-        userEmail: email,
-        layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
-      }
-    );
+    loggerWrapper('[CIAM-MAIN] Process Update User At Cognito - Start - Success', {
+      userEmail: email,
+      layer: 'userUpdateMembershipPassesHelper.updateCognitoUserInfo',
+    });
   } catch (error) {
     loggerWrapper(
-      "[CIAM-MAIN] Process Update User At Cognito - Start - Failed",
+      '[CIAM-MAIN] Process Update User At Cognito - Start - Failed',
       {
         userEmail: email,
-        layer: "userUpdateMembershipPassesHelper.updateCognitoUserInfo",
+        layer: 'userUpdateMembershipPassesHelper.updateCognitoUserInfo',
         error: new Error(error),
       },
-      "error"
+      'error',
     );
-    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)))
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
   }
 }
 
@@ -282,9 +269,9 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
   const latestEmail = newEmail || email;
 
   try {
-    loggerWrapper("[CIAM-MAIN] Update User table", {
+    loggerWrapper('[CIAM-MAIN] Update User table', {
       userEmail: latestEmail,
-      layer: "userUpdateMembershipPassesHelper.updateDB",
+      layer: 'userUpdateMembershipPassesHelper.updateDB',
       data: JSON.stringify({
         given_name: data.firstName,
         family_name: data.lastName,
@@ -294,16 +281,16 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
     });
     //1st - Update user table - step is always proceed
     await userDBService.userModelExecuteUpdate(
-        userId,
-        data.firstName,
-        data.lastName,
-        data.dob,
-        latestEmail
+      userId,
+      data.firstName,
+      data.lastName,
+      data.dob,
+      latestEmail,
     );
 
-    loggerWrapper("[CIAM-MAIN] Update User Credentials table", {
+    loggerWrapper('[CIAM-MAIN] Update User Credentials table', {
       userEmail: latestEmail,
-      layer: "userUpdateMembershipPassesHelper.updateDB",
+      layer: 'userUpdateMembershipPassesHelper.updateDB',
       data: JSON.stringify({
         password_hash: password.db,
         username: latestEmail,
@@ -318,25 +305,22 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
 
     //3rd - Update user newsletter table - step is need condition newsletter available
     if (data.newsletter && data.newsletter.name) {
-      loggerWrapper("[CIAM-MAIN] Update User Newsletter table", {
+      loggerWrapper('[CIAM-MAIN] Update User Newsletter table', {
         userEmail: latestEmail,
-        layer: "userUpdateMembershipPassesHelper.updateDB",
+        layer: 'userUpdateMembershipPassesHelper.updateDB',
         data: JSON.stringify({
           userId: userId,
           newsletter: data.newsletter,
         }),
       });
-      await userDBService.userNewsletterModelExecuteUpdate(
-          userId,
-          data.newsletter
-      );
+      await userDBService.userNewsletterModelExecuteUpdate(userId, data.newsletter);
     }
 
     //4th - Update user details table - step is need condition phoneNumber/address/country available
     if (data.phoneNumber || data.address || data.country) {
-      loggerWrapper("[CIAM-MAIN] Update User Details table", {
+      loggerWrapper('[CIAM-MAIN] Update User Details table', {
         userEmail: email,
-        layer: "userUpdateMembershipPassesHelper.updateDB",
+        layer: 'userUpdateMembershipPassesHelper.updateDB',
         data: JSON.stringify({
           userId: userId,
           phone_number: data.phoneNumber ? data.phoneNumber : undefined,
@@ -345,21 +329,21 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
         }),
       });
       await userDBService.userDetailsModelExecuteUpdate(
-          userId,
-          data.phoneNumber,
-          data.address,
-          data.country
+        userId,
+        data.phoneNumber,
+        data.address,
+        data.country,
       );
     }
     // await updateDB(data, userId, latestEmail, password, language);
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Success", {
+    loggerWrapper('[CIAM-MAIN] Process update user at DB - Success', {
       userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+      layer: 'userUpdateMembershipPassesHelper.updateDBUserInfo',
     });
   } catch (error) {
-    loggerWrapper("[CIAM-MAIN] Process update user at DB - Failed", {
+    loggerWrapper('[CIAM-MAIN] Process update user at DB - Failed', {
       userEmail: email,
-      layer: "userUpdateMembershipPassesHelper.updateDBUserInfo",
+      layer: 'userUpdateMembershipPassesHelper.updateDBUserInfo',
       error: new Error(error),
     });
     //throw error for service handle
@@ -374,4 +358,5 @@ module.exports = {
   updateDBUserInfo,
   manipulatePassword,
   updateCognitoUserInfo,
+  isUserExisted,
 };

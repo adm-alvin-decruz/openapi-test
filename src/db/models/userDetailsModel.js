@@ -1,7 +1,7 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class UserDetail {
   static async create(detailData) {
@@ -35,18 +35,18 @@ class UserDetail {
           userDetailsModel: {
             data: detailData,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            layer: "userDetailsModel.create",
+            layer: 'userDetailsModel.create',
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] create DB - Failed"
+        '[CIAM] create DB - Failed',
       );
     }
   }
 
   static async findByUserId(userId) {
-    const sql = "SELECT * FROM user_details WHERE user_id = ?";
+    const sql = 'SELECT * FROM user_details WHERE user_id = ?';
     const rows = await pool.query(sql, [userId]);
     return rows;
   }
@@ -79,12 +79,12 @@ class UserDetail {
             userId: id,
             data: detailData,
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            layer: "userDetailsModel.update",
+            layer: 'userDetailsModel.update',
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] update DB - Failed"
+        '[CIAM] update DB - Failed',
       );
     }
   }
@@ -98,21 +98,17 @@ class UserDetail {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE user_details
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE user_id = ?
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(data).filter((value) => value !== undefined),
-      now,
-      userId,
-    ];
+    const params = [...Object.values(data).filter((value) => value !== undefined), now, userId];
 
     try {
       // Execute the query
@@ -129,23 +125,23 @@ class UserDetail {
             userId,
             data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
-            layer: "userDetailsModel.updateByUserId",
+            layer: 'userDetailsModel.updateByUserId',
             error: new Error(error),
           },
         },
         {},
-        "[CIAM] updateByUserId DB - Failed"
+        '[CIAM] updateByUserId DB - Failed',
       );
     }
   }
 
   static async delete(id) {
-    const sql = "DELETE FROM user_details WHERE id = ?";
+    const sql = 'DELETE FROM user_details WHERE id = ?';
     await pool.execute(sql, [id]);
   }
 
   static async deletebyUserID(user_id) {
-    const sql = "DELETE FROM user_details WHERE user_id = ?";
+    const sql = 'DELETE FROM user_details WHERE user_id = ?';
     try {
       await pool.execute(sql, [user_id]);
       return JSON.stringify({
@@ -158,12 +154,12 @@ class UserDetail {
             userId: user_id,
             data,
             sql_statement: commonService.replaceSqlPlaceholders(sql, [email]),
-            layer: "userDetailsModel.deletebyUserID",
+            layer: 'userDetailsModel.deletebyUserID',
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] deletebyUserID DB - Failed"
+        '[CIAM] deletebyUserID DB - Failed',
       );
       throw error;
     }
@@ -202,16 +198,15 @@ class UserDetail {
       if ('extra' in userData) data.extra = userData.extra ? JSON.stringify(userData.extra) : null;
 
       // First check if a record with this user_id exists
-      const existingRows = await pool.query(
-        `SELECT id FROM user_details WHERE user_id = ?`,
-        [userData.user_id]
-      );
+      const existingRows = await pool.query(`SELECT id FROM user_details WHERE user_id = ?`, [
+        userData.user_id,
+      ]);
 
       if (existingRows.length > 0) {
         // Update existing record - only update fields that were provided
-        const updateData = { ...Object.fromEntries(
-              Object.entries(data).filter(([_, value]) => value !== undefined)
-        )};
+        const updateData = {
+          ...Object.fromEntries(Object.entries(data).filter(([_, value]) => value !== undefined)),
+        };
         delete updateData.user_id; // Remove user_id from update data
 
         // If there are no fields to update, just return the existing record
@@ -219,11 +214,13 @@ class UserDetail {
           return {
             success: true,
             data: await this.findByUserId(userData.user_id),
-            operation: 'no-change'
+            operation: 'no-change',
           };
         }
 
-        const updateFields = Object.keys(updateData).map(key => `${key} = ?`).join(', ');
+        const updateFields = Object.keys(updateData)
+          .map((key) => `${key} = ?`)
+          .join(', ');
         const updateValues = Object.values(updateData);
         const sql = `
           UPDATE user_details
@@ -236,12 +233,14 @@ class UserDetail {
         return {
           success: true,
           // data: await this.findByUserId(userData.user_id),
-          operation: 'update'
+          operation: 'update',
         };
       } else {
         // Insert new record
         const columns = Object.keys(data).join(', ');
-        const placeholders = Object.keys(data).map(() => '?').join(', ');
+        const placeholders = Object.keys(data)
+          .map(() => '?')
+          .join(', ');
 
         const query = `
           INSERT INTO user_details (${columns})
@@ -253,14 +252,14 @@ class UserDetail {
         return {
           success: true,
           // data: await this.findByUserId(userData.user_id),
-          operation: 'insert'
+          operation: 'insert',
         };
       }
     } catch (error) {
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }

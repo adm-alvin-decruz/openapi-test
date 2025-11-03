@@ -1,23 +1,23 @@
-const resHelper = require("../helpers/responseHelpers");
-const EmailDomainService = require("../services/emailDomainsService");
-const loggerService = require("../logs/logger");
-const CommonErrors = require("../config/https/errors/commonErrors");
-const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const userCredentialModel = require("../db/models/userCredentialModel");
-const configsModel = require("../db/models/configsModel");
-const cognitoService = require("../services/cognitoService");
-const { GROUP } = require("../utils/constants");
-const switchService = require("../services/switchService");
-const { maskKeyRandomly } = require("../utils/common");
-const commonService = require("../services/commonService");
-const { messageLang } = require("../utils/common");
-const { shouldIgnoreEmailDisposable } = require("../helpers/validationHelpers");
-const emailSensitiveHelper = require("../helpers/emailSensitiveHelper");
-const { getAppIdConfiguration } = require("../helpers/getAppIdConfigHelpers");
-const UpdateUserErrors = require("../config/https/errors/updateUserErrors");
-const validator = require("validator");
-const { jwtDecode } = require("jwt-decode");
-const { secrets } = require("../services/secretsService");
+const resHelper = require('../helpers/responseHelpers');
+const EmailDomainService = require('../services/emailDomainsService');
+const loggerService = require('../logs/logger');
+const CommonErrors = require('../config/https/errors/commonErrors');
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const userCredentialModel = require('../db/models/userCredentialModel');
+const configsModel = require('../db/models/configsModel');
+const cognitoService = require('../services/cognitoService');
+const { GROUP } = require('../utils/constants');
+const switchService = require('../services/switchService');
+const { maskKeyRandomly } = require('../utils/common');
+const commonService = require('../services/commonService');
+const { messageLang } = require('../utils/common');
+const { shouldIgnoreEmailDisposable } = require('../helpers/validationHelpers');
+const emailSensitiveHelper = require('../helpers/emailSensitiveHelper');
+const { getAppIdConfiguration } = require('../helpers/getAppIdConfigHelpers');
+const UpdateUserErrors = require('../config/https/errors/updateUserErrors');
+const validator = require('validator');
+const { jwtDecode } = require('jwt-decode');
+const { secrets } = require('../services/secretsService');
 
 /**
  * Validate empty request
@@ -27,12 +27,17 @@ const { secrets } = require("../services/secretsService");
  * @returns
  */
 function isEmptyRequest(req, res, next) {
-  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
+  if (
+    req.method === 'POST' ||
+    req.method === 'PUT' ||
+    req.method === 'PATCH' ||
+    req.method === 'DELETE'
+  ) {
     if (
       Object.keys(req.body).length === 0 ||
-      (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === "language")
+      (Object.keys(req.body).length === 1 && Object.keys(req.body)[0] === 'language')
     ) {
-      return resStatusFormatter(res, 400, "Request body is empty");
+      return resStatusFormatter(res, 400, 'Request body is empty');
     }
   }
   next();
@@ -40,14 +45,14 @@ function isEmptyRequest(req, res, next) {
 
 async function validateEmail(req, res, next) {
   const { email } = req.body;
-  let msg = "The email is invalid";
+  let msg = 'The email is invalid';
 
   if (!email) {
     return resStatusFormatter(res, 400, msg);
   }
   await emailSensitiveHelper.findEmailInCognito(email);
   //handle adhook for newEmail property - If newEmail is existed in request payload
-  const newEmail = req.body.data && req.body.data.newEmail ? req.body.data.newEmail : "";
+  const newEmail = req.body.data && req.body.data.newEmail ? req.body.data.newEmail : '';
   if (newEmail) {
     req.body.data.newEmail = await emailSensitiveHelper.findEmailInCognito(newEmail);
   }
@@ -72,15 +77,15 @@ async function validateEmailDisposable(req, res, next) {
   // optional: You can add more robust email validation here
   if (!(await EmailDomainService.emailFormatTest(normalizedEmail))) {
     loggerWrapper(
-      "ValidateEmailDisposable - Failed",
+      'ValidateEmailDisposable - Failed',
       {
         email: req.body.email,
-        error: "Invalid Email - Domain Service has blocked",
-        layer: "validationMiddleware.validateEmailDisposable",
+        error: 'Invalid Email - Domain Service has blocked',
+        layer: 'validationMiddleware.validateEmailDisposable',
       },
-      "error"
+      'error',
     );
-    return resStatusFormatter(res, 400, "The email is invalid");
+    return resStatusFormatter(res, 400, 'The email is invalid');
   }
 
   // if check domain switch turned on ( 1 )
@@ -88,7 +93,7 @@ async function validateEmailDisposable(req, res, next) {
     // validate email domain to DB
     const validDomain = await EmailDomainService.validateEmailDomain(normalizedEmail);
     if (!validDomain) {
-      return resStatusFormatterCustom(req, res, 400, "The email is invalid");
+      return resStatusFormatterCustom(req, res, 400, 'The email is invalid');
     }
   }
 
@@ -123,11 +128,11 @@ function resStatusFormatterCustom(req, res, status, msg) {
   // custom mwg code
   if (requestFromAEM) {
     // custom for user signup
-    if (req.method.toLowerCase() === "post" && req.originalUrl === "/v1/ciam/users") {
-      let signupConfig = resHelper.responseConfigHelper("users_signup", "MWG_CIAM_USER_SIGNUP_ERR");
+    if (req.method.toLowerCase() === 'post' && req.originalUrl === '/v1/ciam/users') {
+      let signupConfig = resHelper.responseConfigHelper('users_signup', 'MWG_CIAM_USER_SIGNUP_ERR');
       mwgCode = signupConfig.mwgCode;
       status = signupConfig.code;
-      msg = messageLang("email_is_invalid", req.body.language);
+      msg = messageLang('email_is_invalid', req.body.language);
     }
   }
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg, mwgCode));
@@ -137,7 +142,7 @@ async function refreshToken(credentialInfo) {
   try {
     const refreshTokenRs = await cognitoService.cognitoRefreshToken(
       credentialInfo.tokens.refreshToken,
-      credentialInfo.tokens.userSubId
+      credentialInfo.tokens.userSubId,
     );
     await userCredentialModel.updateByUserId(credentialInfo.user_id, {
       tokens: JSON.stringify({
@@ -148,6 +153,7 @@ async function refreshToken(credentialInfo) {
     });
     return refreshTokenRs.AuthenticationResult.AccessToken;
   } catch (error) {
+    console.log(error);
     return undefined;
   }
 }
@@ -162,20 +168,20 @@ async function AccessTokenAuthGuard(req, res, next) {
   }
 
   const userCredentials = await userCredentialModel.findByUserEmailOrMandaiId(
-    req.body.email || "",
-    req.body.mandaiId || ""
+    req.body.email || '',
+    req.body.mandaiId || '',
   );
 
   if (!userCredentials) {
     loggerWrapper(
-      "AccessTokenAuthGuard Middleware Failed",
+      'AccessTokenAuthGuard Middleware Failed',
       {
-        email: req.body.email || "",
-        mandaiId: req.body.mandaiId || "",
-        error: "Account has no record!",
-        layer: "validationMiddleware.AccessTokenAuthGuard",
+        email: req.body.email || '',
+        mandaiId: req.body.mandaiId || '',
+        error: 'Account has no record!',
+        layer: 'validationMiddleware.AccessTokenAuthGuard',
       },
-      "error"
+      'error',
     );
     return res.status(400).json(UpdateUserErrors.ciamEmailNotExists(req.body.language));
   }
@@ -187,33 +193,41 @@ async function AccessTokenAuthGuard(req, res, next) {
     userCredentials.tokens.accessToken !== req.headers.authorization
   ) {
     loggerWrapper(
-      "AccessTokenAuthGuard Middleware Failed",
+      'AccessTokenAuthGuard Middleware Failed',
       {
-        email: req.body.email || "",
-        mandaiId: req.body.mandaiId || "",
-        error: "Token Credentials Information can not found!",
-        layer: "validationMiddleware.AccessTokenAuthGuard",
+        email: req.body.email || '',
+        mandaiId: req.body.mandaiId || '',
+        error: 'Token Credentials Information can not found!',
+        layer: 'validationMiddleware.AccessTokenAuthGuard',
       },
-      "error"
+      'error',
     );
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
-  const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+  const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
   const verifierAccessToken = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
-    tokenUse: "access",
+    tokenUse: 'access',
     clientId: ciamSecrets.USER_POOL_CLIENT_ID,
   });
+
   try {
     const payloadAccessToken = await verifierAccessToken.verify(req.headers.authorization);
     if (!payloadAccessToken || !payloadAccessToken.username) {
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
+
+    req.headers.user_perform_action = payloadAccessToken.username;
+    return next();
   } catch (error) {
-    if (error && error.message && error.message.includes("Token expired at")) {
+    if (error && error.message && error.message.includes('Token expired at')) {
       const newAccessToken = await refreshToken(userCredentials);
+
       if (newAccessToken) {
+        const payload = await verifierAccessToken.verify(newAccessToken);
+        req.headers.user_perform_action = payload.username;
+        req.headers.authorization = newAccessToken;
         res.newAccessToken = newAccessToken;
         return next();
       } else {
@@ -222,78 +236,77 @@ async function AccessTokenAuthGuard(req, res, next) {
     }
 
     loggerWrapper(
-      "AccessTokenAuthGuard Middleware Failed",
+      'AccessTokenAuthGuard Middleware Failed',
       {
         email: req.body.email,
         error: new Error(error),
-        layer: "validationMiddleware.AccessTokenAuthGuard",
+        layer: 'validationMiddleware.AccessTokenAuthGuard',
       },
-      "error"
+      'error',
     );
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
-  next();
 }
 
 async function AccessTokenAuthGuardByAppIdGroupFOSeries(req, res, next) {
-  const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  if (mwgAppID.includes("aem") && req.body.group === GROUP.MEMBERSHIP_PASSES) {
+  const mwgAppID = req.headers && req.headers['mwg-app-id'] ? req.headers['mwg-app-id'] : '';
+  if (mwgAppID.includes('aem') && req.body.group === GROUP.MEMBERSHIP_PASSES) {
     return await AccessTokenAuthGuard(req, res, next);
   }
   next();
 }
 
 async function validateAPIKey(req, res, next) {
-  const validateAPIKeySwitch = await switchService.findByName("api_key_validation");
-  const mwgAppID = req.headers && req.headers["mwg-app-id"] ? req.headers["mwg-app-id"] : "";
-  const reqHeaderAPIKey = req.headers && req.headers["x-api-key"] ? req.headers["x-api-key"] : "";
+  const validateAPIKeySwitch = await switchService.findByName('api_key_validation');
+  const mwgAppID = req.headers && req.headers['mwg-app-id'] ? req.headers['mwg-app-id'] : '';
+  const reqHeaderAPIKey = req.headers && req.headers['x-api-key'] ? req.headers['x-api-key'] : '';
 
   // log variables
-  let action = "CIAM] Validate Api Key Middleware";
+  let action = 'CIAM] Validate Api Key Middleware';
   let logObj = {
-    layer: "middleware.validateAPIKey",
+    layer: 'middleware.validateAPIKey',
     validateAPIKeySwitch: JSON.stringify(validateAPIKeySwitch),
     mwgAppID: maskKeyRandomly(mwgAppID),
     incomingApiKey: maskKeyRandomly(reqHeaderAPIKey),
   };
 
-  loggerWrapper(action + " - Process", logObj);
+  loggerWrapper(action + ' - Process', logObj);
 
   try {
     // get App ID from db config table
-    const dbConfigAppId = await configsModel.findByConfigKey("app_id", "app_id_key_binding");
+    const dbConfigAppId = await configsModel.findByConfigKey('app_id', 'app_id_key_binding');
     if (!dbConfigAppId || !dbConfigAppId.key) {
       logObj.appIdConfiguration = undefined;
-      loggerWrapper(action + " - Process", logObj);
+      loggerWrapper(action + ' - Process', logObj);
       return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
     }
 
     logObj.appIdConfiguration = JSON.stringify(dbConfigAppId);
-    loggerWrapper(action + " - Process", logObj);
+    loggerWrapper(action + ' - Process', logObj);
     if (validateAPIKeySwitch.switch === 1) {
-      logObj.error = "configuration app id not found!";
+      logObj.error = 'configuration app id not found!';
       if (!dbConfigAppId.value || !dbConfigAppId.value.length) {
-        loggerWrapper(action + "  - Failed validation", logObj);
+        loggerWrapper(action + '  - Failed validation', logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
       const appIdConfigFromDB = getAppIdConfiguration(dbConfigAppId.value, mwgAppID);
       if (!appIdConfigFromDB) {
-        loggerWrapper(action + "  - Failed validation", logObj);
+        loggerWrapper(action + '  - Failed validation', logObj);
         return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
       }
 
       const apiKeyConfig = appIdConfigFromDB.lambda_api_key;
       const bindingCheck = appIdConfigFromDB.binding;
-      const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+      const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
       const apiKeyEnv = ciamSecrets[`${apiKeyConfig}`];
       if (!bindingCheck) {
-        loggerWrapper(action + " - Completed validation - binding is false", logObj);
+        loggerWrapper(action + ' - Completed validation - binding is false', logObj);
         return next();
       }
       if (bindingCheck && apiKeyEnv && apiKeyEnv === reqHeaderAPIKey) {
-        logObj.error = "";
-        loggerWrapper(action + " - Completed validation - binding is true", logObj);
+        logObj.error = '';
+        loggerWrapper(action + ' - Completed validation - binding is true', logObj);
         return next();
       }
     }
@@ -301,12 +314,12 @@ async function validateAPIKey(req, res, next) {
       return next();
     }
 
-    loggerWrapper(action + " - Finished validation", logObj);
+    loggerWrapper(action + ' - Finished validation', logObj);
 
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   } catch (error) {
     logObj.error = new Error(error);
-    loggerWrapper(action + " - Failed Exception", logObj);
+    loggerWrapper(action + ' - Failed Exception', logObj);
 
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
@@ -318,25 +331,33 @@ async function validateAPIKey(req, res, next) {
  * @param {Object} reqBodyObj - The user information associated with the original email.
  */
 function transformObject(reqBodyObj) {
-  const keysAcceptedLower = ["passType"];
-  const keysAcceptedTrim = ["mandaiId", "visualId", "firstName", "lastName", "first_name", "last_name", "member"];
-  const keysAcceptedTrimAndLower = ["email", "newEmail"];
-  const transformArrayException = ["coMembers"];
+  const keysAcceptedLower = ['passType'];
+  const keysAcceptedTrim = [
+    'mandaiId',
+    'visualId',
+    'firstName',
+    'lastName',
+    'first_name',
+    'last_name',
+    'member',
+  ];
+  const keysAcceptedTrimAndLower = ['email', 'newEmail'];
+  const transformArrayException = ['coMembers'];
 
-  if (typeof reqBodyObj !== "object" || reqBodyObj === null) return reqBodyObj; // Skip non-objects
+  if (typeof reqBodyObj !== 'object' || reqBodyObj === null) return reqBodyObj; // Skip non-objects
 
   return Object.entries(reqBodyObj).reduce((rs, [key, value]) => {
-    if (keysAcceptedLower.includes(key) && value && typeof value === "string") {
+    if (keysAcceptedLower.includes(key) && value && typeof value === 'string') {
       rs[key] = value.toLowerCase();
       return rs;
     }
 
-    if (keysAcceptedTrim.includes(key) && value && typeof value === "string") {
+    if (keysAcceptedTrim.includes(key) && value && typeof value === 'string') {
       rs[key] = value.trim();
       return rs;
     }
 
-    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === "string") {
+    if (keysAcceptedTrimAndLower.includes(key) && value && typeof value === 'string') {
       rs[key] = value.toLowerCase().trim();
       return rs;
     }
@@ -348,7 +369,7 @@ function transformObject(reqBodyObj) {
       return rs;
     }
 
-    if (typeof value === "object" && value !== null) {
+    if (typeof value === 'object' && value !== null) {
       rs[key] = transformObject(value);
       return rs;
     }
@@ -358,8 +379,8 @@ function transformObject(reqBodyObj) {
   }, {});
 }
 
-function loggerWrapper(action, loggerObj, type = "logInfo") {
-  if (type === "error") {
+function loggerWrapper(action, loggerObj, type = 'logInfo') {
+  if (type === 'error') {
     return loggerService.error({ middlewareValidation: { ...loggerObj } }, {}, action);
   }
 
@@ -372,34 +393,34 @@ function validateQueryParameters(req, res, next) {
   const page = queryRaw.page;
   const limit = queryRaw.limit;
   if (queryRaw) {
-    const parts = queryRaw.query.split(",");
+    const parts = queryRaw.query.split(',');
 
     if (parts.length > 0) {
       const [email, name, visualID, mandaiID] = parts;
       if (email && !validator.isEmail(email)) {
-        errors.push({ msg: "Email is incorrect format!" });
+        errors.push({ msg: 'Email is incorrect format!' });
       }
 
       if (name && !validator.isAlphanumeric(name)) {
-        errors.push({ msg: "Name is incorrect format!" });
+        errors.push({ msg: 'Name is incorrect format!' });
       }
 
       if (visualID && !validator.isNumber(name)) {
-        errors.push({ msg: "visualID is incorrect format!" });
+        errors.push({ msg: 'visualID is incorrect format!' });
       }
 
       if (mandaiID && !validator.isAlphanumeric(mandaiID)) {
-        errors.push({ msg: "MandaiId is incorrect format!" });
+        errors.push({ msg: 'MandaiId is incorrect format!' });
       }
     }
   }
 
   if (!!page && !validator.isInt(page, { min: 1 })) {
-    errors.push({ msg: "page must be a positive integer" });
+    errors.push({ msg: 'page must be a positive integer' });
   }
 
   if (!!limit && !validator.isInt(limit, { min: 1, max: 100 })) {
-    errors.push({ msg: "limit must be between 1 and 100" });
+    errors.push({ msg: 'limit must be between 1 and 100' });
   }
 
   if (errors.length > 0) {
@@ -410,14 +431,17 @@ function validateQueryParameters(req, res, next) {
 }
 
 async function CookiesAuthGuard(req, res, next) {
-  if (!req.headers || !req.headers["mwg-csp-auth-cookie"]) {
+  if (!req.headers || !req.headers['mwg-csp-auth-cookie']) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
 
   const rawPath = req.route.path;
-  const accessToken = req.headers["mwg-csp-auth-cookie"];
+  const accessToken = req.headers['mwg-csp-auth-cookie'];
   const accessTokenDecode = jwtDecode(accessToken);
-  const permissionConfig = await configsModel.findByConfigKey("siam_api_access_control", "path_permission");
+  const permissionConfig = await configsModel.findByConfigKey(
+    'siam_api_access_control',
+    'path_permission',
+  );
   if (!permissionConfig || !permissionConfig.value) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
@@ -434,7 +458,9 @@ async function CookiesAuthGuard(req, res, next) {
     return res.status(401).json(CommonErrors.UnauthorizedException(req.body.language));
   }
   const permissionFromJWT =
-    accessTokenDecode.permissions && accessTokenDecode.permissions.CSP && accessTokenDecode.permissions.CSP.CSP
+    accessTokenDecode.permissions &&
+    accessTokenDecode.permissions.CSP &&
+    accessTokenDecode.permissions.CSP.CSP
       ? accessTokenDecode.permissions.CSP.CSP
       : null;
   if (!permissionFromJWT) {

@@ -1,10 +1,10 @@
 // db
-const userModel = require("../../db/models/userModel");
-const userNewsletterModel = require("../../db/models/userNewletterModel");
-const userDetailModel = require("../../db/models/userDetailsModel");
-const userMigrationsModel = require("../../db/models/userMigrationsModel");
-const userConfig = require("../../config/usersConfig");
-const { convertDateToMySQLFormat } = require("../../utils/dateUtils");
+const userModel = require('../../db/models/userModel');
+const userNewsletterModel = require('../../db/models/userNewletterModel');
+const userDetailModel = require('../../db/models/userDetailsModel');
+const userMigrationsModel = require('../../db/models/userMigrationsModel');
+const userConfig = require('../../config/usersConfig');
+const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
 
 /**
  * Get User By Email
@@ -18,7 +18,7 @@ async function getDBUserByEmail(reqBody) {
 
 async function queryWPUserByEmail(reqBody) {
   let result = await userModel.findWPFullData(reqBody.email);
-  if (JSON.stringify(result.data) == "[]" || !result.data) {
+  if (JSON.stringify(result.data) == '[]' || !result.data) {
     throw new Error(`DB result is empty: ${result.sql_statement}`);
   }
   return result.data;
@@ -37,12 +37,12 @@ function prepareDBUpdateData(ciamAttrInput) {
     if (USER_CFG_MAP.hasOwnProperty(item.Name)) {
       result.updateUsersModel[item.Name] = item.Value;
     }
-    if (item.Name === "birthdate") {
+    if (item.Name === 'birthdate') {
       result.updateUsersModel[item.Name] = convertDateToMySQLFormat(item.Value);
     }
 
     // handle custom:newsletter separately
-    if (item.Name === "custom:newsletter") {
+    if (item.Name === 'custom:newsletter') {
       try {
         let newsletterData = JSON.parse(item.Value);
         Object.keys(USER_NEWS_CFG_MAP).forEach(function (key) {
@@ -51,7 +51,7 @@ function prepareDBUpdateData(ciamAttrInput) {
           }
         });
       } catch (e) {
-        console.error("Error parsing custom:newsletter:", e);
+        console.error('Error parsing custom:newsletter:', e);
       }
     }
   });
@@ -71,10 +71,10 @@ async function updateUserMigration(req, param1, param2) {
   let reqBody = req.body;
   reqBody.signup = false;
   reqBody.signup_sqs = false;
-  if (param1 === "signup") {
+  if (param1 === 'signup') {
     reqBody.signup = true;
   }
-  if (param2 === "signupSQS") {
+  if (param2 === 'signupSQS') {
     reqBody.signup_sqs = true;
   }
 
@@ -102,12 +102,7 @@ async function userNewsletterModelExecuteUpdate(userId, newsletter) {
   return await userNewsletterModel.updateByUserId(userId, updateFields);
 }
 
-async function userDetailsModelExecuteUpdate(
-  userId,
-  phoneNumber,
-  address,
-  country
-) {
+async function userDetailsModelExecuteUpdate(userId, phoneNumber, address, country) {
   //enhance other params
   const updateFields = {
     phone_number: phoneNumber ? phoneNumber : undefined,

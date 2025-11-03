@@ -1,6 +1,6 @@
-const MembershipCheckValidation = require("../../../../api/memberships/validations/MembershipCheckValidation");
+const MembershipCheckValidation = require('../../../../api/memberships/validations/MembershipCheckValidation');
 
-describe("MembershipCheckValidation", () => {
+describe('MembershipCheckValidation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -8,50 +8,50 @@ describe("MembershipCheckValidation", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-  describe("execute", () => {
-    it("should throw an error when email is required", () => {
+  describe('execute', () => {
+    it('should throw an error when email is required', () => {
       const failedMessage = MembershipCheckValidation.execute({});
       expect(failedMessage).toEqual({
         membership: {
           code: 200,
-          message: "Requested email is invalid or empty.",
+          message: 'Requested email is invalid or empty.',
           email: undefined,
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR',
         },
-        status: "success",
+        status: 'success',
         statusCode: 200,
       });
     });
-    it("should throw an error when email is empty", () => {
+    it('should throw an error when email is empty', () => {
       const failedMessage = MembershipCheckValidation.execute({
-        email: "",
+        email: '',
       });
       expect(failedMessage).toEqual({
         membership: {
           code: 200,
-          message: "Requested email is invalid or empty.",
-          email: "",
-          mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
+          message: 'Requested email is invalid or empty.',
+          email: '',
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR',
         },
-        status: "success",
+        status: 'success',
         statusCode: 200,
       });
     });
-    it("should throw an error when group is not support", () => {
+    it('should throw an error when group is not support', () => {
       const failedMessage = MembershipCheckValidation.execute({
-        email: "test@gmail.com",
-        group: "",
+        email: 'test@gmail.com',
+        group: '',
       });
       expect(failedMessage).toEqual({
         membership: {
           code: 400,
-          message: "Wrong parameters",
+          message: 'Wrong parameters',
           error: {
-            group: "The group is invalid.",
+            group: 'The group is invalid.',
           },
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
+          mwgCode: 'MWG_CIAM_PARAMS_ERR',
         },
-        status: "failed",
+        status: 'failed',
         statusCode: 400,
       });
     });

@@ -1,8 +1,8 @@
-const pool = require("../connections/mysqlConn");
-const commonService = require("../../services/commonService");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const loggerService = require("../../logs/logger");
-const CommonErrors = require("../../config/https/errors/commonErrors");
+const pool = require('../connections/mysqlConn');
+const commonService = require('../../services/commonService');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const loggerService = require('../../logs/logger');
+const CommonErrors = require('../../config/https/errors/commonErrors');
 
 class EmpMembershipUserPassesModel {
   static async updatePassState(reqBody, data) {
@@ -14,11 +14,11 @@ class EmpMembershipUserPassesModel {
       .map(([key, value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `UPDATE emp_membership_user_passes
-                  SET ${updateFields.join(", ")}
+                  SET ${updateFields.join(', ')}
                   WHERE email = ? AND pass_id = ?`;
 
     // Prepare the params array
@@ -26,7 +26,7 @@ class EmpMembershipUserPassesModel {
       ...Object.values(data).filter((value) => value !== undefined),
       now,
       reqBody.email,
-      reqBody.passId
+      reqBody.passId,
     ];
 
     // Execute the query
@@ -46,7 +46,7 @@ class EmpMembershipUserPassesModel {
           },
         },
         {},
-        "EmpMembershipUserPassesModel.updatePassState"
+        'EmpMembershipUserPassesModel.updatePassState',
       );
       throw new Error(JSON.stringify(CommonErrors.InternalServerError()));
     }

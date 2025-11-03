@@ -1,6 +1,16 @@
-const axios = require("axios");
-const loggerService = require("../logs/logger");
-require("dotenv").config();
+const axios = require('axios');
+const loggerService = require('../logs/logger');
+require('dotenv').config();
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+
+const client = new SecretsManagerClient({
+  region: process.env.AWS_REGION_NAME || 'ap-southeast-1',
+  endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+  },
+});
 
 class Secrets {
   constructor() {
@@ -9,63 +19,73 @@ class Secrets {
   }
 
   async getSecrets(secretName) {
-    console.log("Getting secrets: ", secretName);
+    console.log('Getting secrets: ', secretName);
     loggerService.log(
       {
         secretsService: {
-          action: "getSecrets",
-          layer: "services.secretsService",
+          action: 'getSecrets',
+          layer: 'services.secretsService',
         },
       },
-      "[CIAM] Start getSecrets Service"
+      '[CIAM] Start getSecrets Service',
     );
 
     if (!secretName) {
       loggerService.error(
         {
           secretsService: {
-            action: "getSecrets",
-            layer: "services.secretsService",
-            error: "Secret name not defined",
+            action: 'getSecrets',
+            layer: 'services.secretsService',
+            error: 'Secret name not defined',
           },
         },
         {},
-        "[CIAM] End getSecrets Service - Failed"
+        '[CIAM] End getSecrets Service - Failed',
       );
       throw new Error(
         JSON.stringify({
-          status: "failed",
-        })
+          status: 'failed',
+        }),
       );
     }
 
     try {
-      const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
-        params: { secretId: secretName },
-        headers: {
-          "X-Aws-Parameters-Secrets-Token": this.awsSessionToken,
-        },
-      });
+      if (process.env.IS_LOCAL === 'true') {
+        const command = new GetSecretValueCommand({
+          SecretId: secretName,
+        });
 
-      console.log("Retrieved secrets");
-      return JSON.parse(data.SecretString);
+        const response = await client.send(command);
+
+        return JSON.parse(response.SecretString);
+      } else {
+        const { data } = await axios.get(`${this.baseUrl}/secretsmanager/get`, {
+          params: { secretId: secretName },
+          headers: {
+            'X-Aws-Parameters-Secrets-Token': this.awsSessionToken,
+          },
+        });
+
+        console.log('Retrieved secrets');
+        return JSON.parse(data.SecretString);
+      }
     } catch (error) {
       loggerService.error(
         {
           secretsService: {
-            action: "getSecrets",
-            layer: "services.secretsService",
+            action: 'getSecrets',
+            layer: 'services.secretsService',
             error: `${error.message}`,
           },
         },
         {},
-        "[CIAM] End getSecrets Service - Failed"
+        '[CIAM] End getSecrets Service - Failed',
       );
       throw new Error(
         JSON.stringify({
-          status: "failed",
+          status: 'failed',
           data: error,
-        })
+        }),
       );
     }
   }

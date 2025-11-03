@@ -1,36 +1,36 @@
-require('dotenv').config()
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 
 const processTimer = require('../../utils/processTimer');
 const membershipsController = require('./membershipsControllers');
 const validationService = require('../../services/validationService');
-const CommonErrors = require("../../config/https/errors/commonErrors");
-const { isEmptyRequest, validateEmailDisposable } = require("../../middleware/validationMiddleware");
+const CommonErrors = require('../../config/https/errors/commonErrors');
+const {
+  isEmptyRequest,
+  validateEmailDisposable,
+} = require('../../middleware/validationMiddleware');
 
-const pong = {'pong': 'pang'};
+const pong = { pong: 'pang' };
 
 router.use(express.json());
 
 router.get('/ping', async (req, res) => {
-    res.json(pong);
+  res.json(pong);
 });
 
 /**
  * Get membership by email
  * Response
  */
-router.post("/users/memberships", isEmptyRequest, validateEmailDisposable, async (req, res) => {
-  req["processTimer"] = processTimer;
-  req["apiTimer"] = req.processTimer.apiRequestTimer(true); // log time durations
+router.post('/users/memberships', isEmptyRequest, validateEmailDisposable, async (req, res) => {
+  req['processTimer'] = processTimer;
+  req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
   // validate req app-id
   const valAppID = validationService.validateAppID(req.headers);
   if (!valAppID) {
-    req.apiTimer.end(
-        "Route CIAM Check Membership User Error 401 Unauthorized",
-        startTimer
-    );
+    req.apiTimer.end('Route CIAM Check Membership User Error 401 Unauthorized', startTimer);
     return res.status(401).send(CommonErrors.UnauthorizedException(req.body.language));
   }
   try {
@@ -40,9 +40,9 @@ router.post("/users/memberships", isEmptyRequest, validateEmailDisposable, async
   } catch (error) {
     const errorMessage = JSON.parse(error.message);
     if (errorMessage.statusCode !== 500) {
-      return res.status(errorMessage.statusCode).send(errorMessage)
+      return res.status(errorMessage.statusCode).json(errorMessage);
     }
-    return res.status(500).send(CommonErrors.InternalServerError());
+    return res.status(500).json(CommonErrors.InternalServerError());
   }
 });
 

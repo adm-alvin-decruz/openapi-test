@@ -1,5 +1,5 @@
-require("dotenv").config();
-const userEventAuditTrailModel = require("../../db/models/userEventAuditTrailModel");
+require('dotenv').config();
+const userEventAuditTrailModel = require('../../db/models/userEventAuditTrailModel');
 
 class UserEventAuditTrailService {
   async createEvent(email, status, eventType, eventData, source, userId = null) {
@@ -8,23 +8,23 @@ class UserEventAuditTrailService {
   }
 
   generateEventModel(status, eventType, eventData, source) {
-    if (status === "success") {
+    if (status === 'success') {
       return {
         eventType: eventType,
         data: eventData,
         source: source,
-        status: 1
-      }
+        status: 1,
+      };
     }
-    if (status === "failed") {
+    if (status === 'failed') {
       return {
         eventType: eventType,
         data: eventData,
         source: source,
-        status: 0
-      }
+        status: 0,
+      };
     }
-    return null
+    return null;
   }
 }
 

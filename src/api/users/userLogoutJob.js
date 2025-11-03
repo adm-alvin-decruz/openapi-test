@@ -1,17 +1,17 @@
-const UserLogoutService = require("./userLogoutServices");
-const { messageLang } = require("../../utils/common");
+const UserLogoutService = require('./userLogoutServices');
+const { messageLang } = require('../../utils/common');
 
 class UserLogoutJob {
   success(body) {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_USERS_LOGOUT_SUCCESS",
-        message: messageLang("logout_success", body.language),
+        mwgCode: 'MWG_CIAM_USERS_LOGOUT_SUCCESS',
+        message: messageLang('logout_success', body.language),
         email: body.email,
-        mandaiId: body.mandaiId
+        mandaiId: body.mandaiId,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }

@@ -1,6 +1,6 @@
-const UserGetMembershipPassesValidation = require("../../../../api/users/validations/UserGetMembershipPassesValidation");
+const UserGetMembershipPassesValidation = require('../../../../api/users/validations/UserGetMembershipPassesValidation');
 
-describe("UserGetMembershipPassesValidation", () => {
+describe('UserGetMembershipPassesValidation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -8,39 +8,39 @@ describe("UserGetMembershipPassesValidation", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-  describe("execute", () => {
-    it("should throw an error when visual exists but empty string", () => {
+  describe('execute', () => {
+    it('should throw an error when visual exists but empty string', () => {
       const failedMessage = UserGetMembershipPassesValidation.execute({
-        visualId: "",
+        visualId: '',
       });
       expect(failedMessage).toEqual({
         membership: {
           code: 400,
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-          message: "Wrong parameters",
+          mwgCode: 'MWG_CIAM_PARAMS_ERR',
+          message: 'Wrong parameters',
           error: {
-            visualId: "Visual id is invalid",
+            visualId: 'Visual id is invalid',
           },
         },
-        status: "failed",
+        status: 'failed',
         statusCode: 400,
       });
     });
-    it("should throw an error when visual exists but empty string - multiple language", () => {
+    it('should throw an error when visual exists but empty string - multiple language', () => {
       const failedMessage = UserGetMembershipPassesValidation.execute({
-        visualId: "",
-        language: "kr",
+        visualId: '',
+        language: 'kr',
       });
       expect(failedMessage).toEqual({
         membership: {
           code: 400,
-          mwgCode: "MWG_CIAM_PARAMS_ERR",
-          message: "Wrong parameters",
+          mwgCode: 'MWG_CIAM_PARAMS_ERR',
+          message: 'Wrong parameters',
           error: {
-            visualId: "시각 ID가 유효하지 않습니다",
+            visualId: '시각 ID가 유효하지 않습니다',
           },
         },
-        status: "failed",
+        status: 'failed',
         statusCode: 400,
       });
     });

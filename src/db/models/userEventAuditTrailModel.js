@@ -1,7 +1,7 @@
-const pool = require("../connections/mysqlConn");
-const { getCurrentUTCTimestamp } = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class UserEvenAuditTrailModel {
   static async create(email, userId, eventData) {
@@ -36,7 +36,7 @@ class UserEvenAuditTrailModel {
           },
         },
         {},
-        "[CIAM] UserEvenAuditTrailModel.create - Failed"
+        '[CIAM] UserEvenAuditTrailModel.create - Failed',
       );
     }
   }

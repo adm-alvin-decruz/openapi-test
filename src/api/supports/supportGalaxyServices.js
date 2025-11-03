@@ -13,7 +13,7 @@ class supportGalaxyServices {
   // dynamic function caller using string method name
   async execute(methodName, ...args) {
     if (typeof this[methodName] === 'function') {
-        return this[methodName](...args);
+      return this[methodName](...args);
     }
     throw new Error(`Method ${methodName} not found`);
   }
@@ -26,7 +26,7 @@ class supportGalaxyServices {
   async triggerGalaxyImportSvc(req) {
     let result = [];
     let reqAccounts;
-    if(req.body.type === 'manual'){
+    if (req.body.type === 'manual') {
       reqAccounts = req.body.accounts;
       let isReqAcc = commonService.valJsonObjOrArray(reqAccounts, req);
 
@@ -35,8 +35,7 @@ class supportGalaxyServices {
         loggerService.error(msg, req);
         return msg;
       }
-    }
-    else if(req.body.type === 'batch'){
+    } else if (req.body.type === 'batch') {
       // find user with empty visual ID
       reqAccounts = await supportDBService.findUserWithEmptyVisualID(req);
     }
@@ -54,7 +53,7 @@ class supportGalaxyServices {
 
       const params = {
         action: req.body.action,
-        migrations: account.migrations ? account.migrations : false
+        migrations: account.migrations ? account.migrations : false,
       };
       result.push(await this.retriggerGalaxyTask(req, params));
     }
@@ -72,7 +71,7 @@ class supportGalaxyServices {
       // push to queue for Galaxy Import Pass
       const params = {
         action: failedJob.data.action,
-        migrations: failedJob.data.body.migrations ? failedJob.data.body.migrations : false
+        migrations: failedJob.data.body.migrations ? failedJob.data.body.migrations : false,
       };
       return await this.retriggerGalaxyTask(req, params);
     }
@@ -85,21 +84,24 @@ class supportGalaxyServices {
    * @param {json} params
    * @returns
    */
-  async retriggerGalaxyTask (req, params) {
+  async retriggerGalaxyTask(req, params) {
     // push to queue for Galaxy Import Pass
     const galaxySQS = await galaxyWPService.galaxyToSQS(req, params.action);
 
     // user migration - update user_migrations table for signup & sqs status
     let dbUpdate = false;
-    if(params.migrations === true){
-      if(galaxySQS.$metadata.httpStatusCode === 200) {
+    if (params.migrations === true) {
+      if (galaxySQS.$metadata.httpStatusCode === 200) {
         dbUpdate = await userDBService.updateUserMigration(req, 'signup', 'signupSQS');
       }
     }
 
     return {
-      sqs: {status: galaxySQS.$metadata.httpStatusCode === 200 ? 'success' : 'failed', email: req.body.email},
-      db: dbUpdate ? dbUpdate : 'Not require migration update'
+      sqs: {
+        status: galaxySQS.$metadata.httpStatusCode === 200 ? 'success' : 'failed',
+        email: req.body.email,
+      },
+      db: dbUpdate ? dbUpdate : 'Not require migration update',
     };
   }
 }

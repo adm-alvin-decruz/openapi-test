@@ -1,17 +1,14 @@
-const pool = require("../connections/mysqlConn");
-const {
-  getCurrentUTCTimestamp,
-  convertDateToMySQLFormat,
-} = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class User {
   static async create(userData) {
     const now = getCurrentUTCTimestamp();
     const sql = `
       INSERT INTO users
-      (email, given_name, family_name, birthdate, mandai_id, source, active, created_at, updated_at)
+      (email, given_name, family_name, birthdate, mandai_id, source, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
@@ -21,7 +18,7 @@ class User {
       convertDateToMySQLFormat(userData.birthdate),
       userData.mandai_id,
       userData.source,
-      userData.active,
+      userData.status,
       userData.created_at,
       now,
     ];
@@ -42,13 +39,13 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.create - Failed"
+        '[CIAM] userModel.create - Failed',
       );
     }
   }
 
   static async findById(id) {
-    const sql = "SELECT * FROM users WHERE id = ?";
+    const sql = 'SELECT * FROM users WHERE id = ?';
     try {
       const [rows] = await pool.query(sql, [id]);
       return rows[0];
@@ -61,14 +58,14 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findById - Failed"
+        '[CIAM] userModel.findById - Failed',
       );
     }
   }
 
   static async findByEmail(email) {
     try {
-      const sql = "SELECT * FROM users WHERE email = ?";
+      const sql = 'SELECT * FROM users WHERE email = ?';
       const rows = await pool.query(sql, [email]);
 
       return rows[0];
@@ -81,32 +78,29 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmail - Failed"
+        '[CIAM] userModel.findByEmail - Failed',
       );
       throw error;
     }
   }
 
   static async existsByMandaiId(mandaiId) {
-    const sql = "SELECT * FROM users WHERE mandai_id = ?";
+    const sql = 'SELECT * FROM users WHERE mandai_id = ?';
     const params = [mandaiId];
     try {
       const [rows] = await pool.query(sql, params);
-      loggerService.log(
-        {test: rows},
-        "[CIAM] rows"
-      );
+      loggerService.log({ test: rows }, '[CIAM] rows');
       return rows == undefined ? false : true;
     } catch (error) {
       loggerService.error(
         {
           userModel: {
-            userId: id,
+            userId: mandaiId,
             error: `${error}`,
           },
         },
         {},
-        "[CIAM] userModel.existsByMandaiId - Failed"
+        '[CIAM] userModel.existsByMandaiId - Failed',
       );
     }
   }
@@ -121,7 +115,8 @@ class User {
    */
   static async findActiveVisualId(visualIds, email, mandaiId) {
     const params = [visualIds];
-    let whereClause = 'WHERE um.visual_id IN (?) AND u.active = 1 AND (umd.status IN (0) OR umd.status IS NULL)';
+    let whereClause =
+      'WHERE um.visual_id IN (?) AND u.status = 1 AND (umd.status IN (0) OR umd.status IS NULL)';
 
     if (email) {
       whereClause += ' AND u.email = ?';
@@ -140,7 +135,10 @@ class User {
                   INNER JOIN user_membership_details umd ON umd.user_membership_id = um.id
                 ${whereClause}`;
 
-      console.log("Find pass by email, visualId/s and status needs to be active", commonService.replaceSqlPlaceholders(sql, params))
+      console.log(
+        'Find pass by email, visualId/s and status needs to be active',
+        commonService.replaceSqlPlaceholders(sql, params),
+      );
 
       return await pool.query(sql, params);
     } catch (error) {
@@ -153,7 +151,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findActiveVisualId - Failed"
+        '[CIAM] userModel.findActiveVisualId - Failed',
       );
       return error;
     }
@@ -165,7 +163,7 @@ class User {
       const sql = `SELECT u.email, u.id as userId, um.id as membershipId, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE um.visual_id = ? AND u.active = 1 AND u.email = ? AND u.mandai_id = ? AND um.name = ?`;
+                  WHERE um.visual_id = ? AND u.status = 1 AND u.email = ? AND u.mandai_id = ? AND um.name = ?`;
 
       const rows = await pool.query(sql, [visualIds, email, mandaiId, passType]);
       return rows[0];
@@ -180,7 +178,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findByEmailMandaiIdVisualId - Failed"
+        '[CIAM] userModel.findByEmailMandaiIdVisualId - Failed',
       );
       return error;
     }
@@ -192,7 +190,7 @@ class User {
       const sql = `SELECT u.id, u.birthdate, u.given_name, u.family_name, u.email, u.mandai_id as mandaiId, um.name as membership, um.visual_id as visualId
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  WHERE u.active = 1 AND u.email = ?`;
+                  WHERE u.status = 1 AND u.email = ?`;
 
       return await pool.query(sql, [email]);
     } catch (error) {
@@ -204,7 +202,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findFullMandaiId - Failed"
+        '[CIAM] userModel.findFullMandaiId - Failed',
       );
       return error;
     }
@@ -212,10 +210,11 @@ class User {
 
   /** Find wild pass user full data */
   static async findWPFullData(email) {
+    // using LEFT JOIN with tbl user_newsletters to ensure newsletter subscription data is included even if the user has no record in user_newsletters
     const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
-                  INNER JOIN user_newsletters un ON un.user_id = u.id
-                  WHERE u.email = ? AND u.active=1 AND um.name = 'wildpass'`;
+                  LEFT JOIN user_newsletters un ON un.user_id = u.id
+                  WHERE u.email = ? AND u.status = 1 AND um.name = 'wildpass'`;
     try {
       const rows = await pool.query(sql, [email]);
 
@@ -233,7 +232,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.findWPFullData - Failed"
+        '[CIAM] userModel.findWPFullData - Failed',
       );
     }
   }
@@ -241,7 +240,7 @@ class User {
   /** Find passes belong user */
   static async findPassesByUserEmailOrMandaiId(passes, email, mandaiId) {
     // build the WHERE clause dynamically based on available parameters
-    let whereClause = 'WHERE u.active = 1';
+    let whereClause = 'WHERE u.status = 1';
     const params = [passes];
 
     if (email) {
@@ -261,7 +260,7 @@ class User {
                   FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                    ${whereClause}`;
-    console.log("Find passes belong user", commonService.replaceSqlPlaceholders(sql, params))
+    console.log('Find passes belong user', commonService.replaceSqlPlaceholders(sql, params));
     try {
       return await pool.query(sql, params);
     } catch (error) {
@@ -269,20 +268,17 @@ class User {
         {
           userModel: {
             sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            error: new Error(
-              "userModel.findPassesByUserEmailOrMandaiId error: ",
-              error
-            ),
+            error: new Error('userModel.findPassesByUserEmailOrMandaiId error: ', error),
           },
         },
         {},
-        "[CIAM] userModel.findPassesByUserEmailOrMandaiId - Failed"
+        '[CIAM] userModel.findPassesByUserEmailOrMandaiId - Failed',
       );
       throw new Error(
         JSON.stringify({
-          dbProceed: "failed",
+          dbProceed: 'failed',
           error: JSON.stringify(error),
-        })
+        }),
       );
     }
   }
@@ -292,25 +288,21 @@ class User {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-      .filter(([key, value]) => value !== undefined)
-      .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE users
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `;
 
     // Prepare the params array
-    const params = [
-      ...Object.values(userData).filter((value) => value !== undefined),
-      now,
-      id,
-    ];
+    const params = [...Object.values(userData).filter((value) => value !== undefined), now, id];
 
     try {
       // Execute the query
@@ -319,7 +311,7 @@ class User {
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         user_id: id,
-        success: true
+        success: true,
       };
     } catch (error) {
       loggerService.error(
@@ -332,26 +324,77 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.update - Failed"
+        '[CIAM] userModel.update - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
     }
   }
 
-  static async delete(id) {
+  static async softDeleteUserByEmail(email, userData) {
     const now = getCurrentUTCTimestamp();
-    const sql = "UPDATE users SET active = false, updated_at = ? WHERE id = ?";
-    await pool.execute(sql, [now, id]);
+
+    // Filter out undefined values and create SET clauses
+    const updateFields = Object.entries(userData)
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
+
+    // Add updated_at to the SET clauses
+    updateFields.push('delete_at = ?');
+    updateFields.push('updated_at = ?');
+
+    // Construct the SQL query
+    const sql = `
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE email = ?
+    `;
+
+    // Prepare the params array
+    const params = [
+      ...Object.values(userData).filter((value) => value !== undefined),
+      now,
+      now,
+      email,
+    ];
+
+    try {
+      // Execute the query
+      await pool.execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        email: email,
+        success: true,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          userModel: {
+            email: email,
+            userData,
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        '[CIAM] userModel.softDeleteUserByEmail - Failed',
+      );
+      return {
+        success: false,
+        error: error,
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
+      };
+    }
   }
 
   static async deletebyUserID(user_id) {
-    const sql = "DELETE FROM users WHERE id = ?";
+    const sql = 'DELETE FROM users WHERE id = ?';
     try {
-      var result = await pool.execute(sql, [user_id]);
+      await pool.execute(sql, [user_id]);
 
       return JSON.stringify({
         sql_statement: commonService.replaceSqlPlaceholders(sql, [user_id]),
@@ -366,7 +409,7 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.deletebyUserID - Failed"
+        '[CIAM] userModel.deletebyUserID - Failed',
       );
       throw error;
     }
@@ -374,15 +417,12 @@ class User {
 
   static async disableByUserID(user_id) {
     const now = getCurrentUTCTimestamp();
-    const sql = "UPDATE users SET active = false, updated_at = ? WHERE id = ?";
+    const sql = 'UPDATE users SET status = 0, updated_at = ? WHERE id = ?';
     try {
       await pool.execute(sql, [now, user_id]);
 
       return JSON.stringify({
-        sql_statement: commonService.replaceSqlPlaceholders(sql, [
-          now,
-          user_id,
-        ]),
+        sql_statement: commonService.replaceSqlPlaceholders(sql, [now, user_id]),
       });
     } catch (error) {
       loggerService.error(
@@ -390,55 +430,45 @@ class User {
           userModel: {
             userId: user_id,
             error: `${error}`,
-            sql_statement: commonService.replaceSqlPlaceholders(sql, [
-              now,
-              user_id,
-            ]),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, [now, user_id]),
           },
         },
         {},
-        "[CIAM] userModel.disableByUserID - Failed"
+        '[CIAM] userModel.disableByUserID - Failed',
       );
       return error;
     }
   }
 
-  static async queryUsersWithPagination(
-    page = 1,
-    pageSize,
-    columns = ["*"],
-    filters = {}
-  ) {
+  static async queryUsersWithPagination(page = 1, pageSize, columns = ['*'], filters = {}) {
     const offset = (page - 1) * pageSize;
     try {
       // Validate and sanitize column names
       const validColumns = [
-        "id",
-        "email",
-        "given_name",
-        "family_name",
-        "birthdate",
-        "mandai_id",
-        "source",
-        "active",
-        "created_at",
-        "updated_at",
+        'id',
+        'email',
+        'given_name',
+        'family_name',
+        'birthdate',
+        'mandai_id',
+        'source',
+        'status',
+        'created_at',
+        'updated_at',
       ];
 
       // Ensure columns is an array
       let selectedColumns = Array.isArray(columns) ? columns : [columns];
 
       // Handle '*' case
-      if (selectedColumns.includes("*") || selectedColumns[0] === "*") {
+      if (selectedColumns.includes('*') || selectedColumns[0] === '*') {
         selectedColumns = validColumns;
       } else {
-        selectedColumns = selectedColumns.filter((col) =>
-          validColumns.includes(col)
-        );
+        selectedColumns = selectedColumns.filter((col) => validColumns.includes(col));
       }
 
       if (selectedColumns.length === 0) {
-        throw new Error("No valid columns selected");
+        throw new Error('No valid columns selected');
       }
 
       // Construct WHERE clause based on filters
@@ -451,13 +481,11 @@ class User {
         }
       }
       const whereClause =
-        whereConditions.length > 0
-          ? `WHERE ${whereConditions.join(" AND ")}`
-          : "";
+        whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       // Construct the query
       const query = `
-        SELECT ${selectedColumns.join(", ")}
+        SELECT ${selectedColumns.join(', ')}
         FROM users
         ${whereClause}
         ORDER BY id
@@ -488,11 +516,9 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.queryUsersWithPagination - Failed"
+        '[CIAM] userModel.queryUsersWithPagination - Failed',
       );
-      let logError = new Error(
-        `Error in userModel.queryUsersWithPagination: ${error}`
-      );
+      let logError = new Error(`Error in userModel.queryUsersWithPagination: ${error}`);
 
       return { error: logError };
     }
@@ -512,7 +538,7 @@ class User {
                  FROM users u
                  LEFT JOIN user_memberships um ON um.user_id = u.id
                  LEFT JOIN user_membership_details umd ON umd.user_membership_id = um.id
-                 WHERE u.email = ? AND u.active = 1
+                 WHERE u.email = ? AND u.status = 1
                  GROUP BY u.email, u.given_name, u.family_name, u.birthdate, u.mandai_id`;
     try {
       const rows = await pool.query(sql, [email]);
@@ -528,13 +554,13 @@ class User {
           },
         },
         {},
-        "[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed"
+        '[CIAM] userModel.queryUserMembershipPassesActiveByEmail - Failed',
       );
     }
   }
 
   static async findByEmailOrMandaiId(email, mandaiId) {
-     // Build the WHERE clause dynamically based on available parameters
+    // Build the WHERE clause dynamically based on available parameters
     let sql = 'SELECT * FROM users WHERE ';
     const params = [];
     if (email !== null) {
@@ -556,15 +582,15 @@ class User {
       return rows[0];
     } catch (error) {
       loggerService.error(
-          {
-            userModel: {
-              email,
-              error: `${error}`,
-              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            },
+        {
+          userModel: {
+            email,
+            error: `${error}`,
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
-          {},
-          "[CIAM] userModel.findByEmailOrMandaiId - Failed"
+        },
+        {},
+        '[CIAM] userModel.findByEmailOrMandaiId - Failed',
       );
       throw error;
     }
@@ -575,16 +601,16 @@ class User {
 
     // Filter out undefined values and create SET clauses
     const updateFields = Object.entries(userData)
-        .filter(([key, value]) => value !== undefined)
-        .map(([key, value]) => `${key} = ?`);
+      .filter(([_key, value]) => value !== undefined)
+      .map(([key, _value]) => `${key} = ?`);
 
     // Add updated_at to the SET clauses
-    updateFields.push("updated_at = ?");
+    updateFields.push('updated_at = ?');
 
     // Construct the SQL query
     const sql = `
       UPDATE users
-      SET ${updateFields.join(", ")}
+      SET ${updateFields.join(', ')}
       WHERE id = ? AND email = ?
     `;
 
@@ -593,7 +619,7 @@ class User {
       ...Object.values(userData).filter((value) => value !== undefined),
       now,
       id,
-      email
+      email,
     ];
 
     try {
@@ -602,26 +628,87 @@ class User {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-        success: true
+        success: true,
       };
     } catch (error) {
       loggerService.error(
-          {
-            userModel: {
-              userId: id,
-              userData,
-              error: new Error(error),
-              sql_statement: commonService.replaceSqlPlaceholders(sql, params),
-            },
+        {
+          userModel: {
+            userId: id,
+            userData,
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
           },
-          {},
-          "[CIAM] userModel.updateByUserIdAndEmail - Failed"
+        },
+        {},
+        '[CIAM] userModel.updateByUserIdAndEmail - Failed',
       );
       return {
         success: false,
         error: error,
-        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined
+        stack: process.env.APP_ENV === 'dev' ? error.stack : undefined,
       };
+    }
+  }
+
+  static async retrieveMembership(email) {
+    const sql = `SELECT
+                     u.email AS email,
+                     u.given_name AS givenName,
+                     u.family_name AS familyName,
+                     u.birthdate AS birthdate,
+                     u.mandai_id AS mandaiId,
+                     u.created_at AS createdAt,
+                     u.updated_at AS updatedAt,
+                     JSON_ARRAYAGG(
+                             JSON_OBJECT(
+                                     'visual_id', um.visual_id,
+                                     'expires_at', um.expires_at,
+                                     'membershipType', um.name,
+                                     'categoryType', umd.category_type,
+                                     'itemName', umd.item_name,
+                                     'adultQty', umd.adult_qty,
+                                     'childQty', umd.child_qty,
+                                     'parking', umd.parking,
+                                     'validFrom', umd.valid_from,
+                                     'validUntil', umd.valid_until,
+                                     'photoUrl', umd.membership_photo,
+                                     'cardFace', '',
+                                     'member', JSON_OBJECT(
+                                             'firstName', umd.member_first_name,
+                                             'lastName', umd.member_last_name,
+                                             'email', umd.member_email,
+                                             'dob', umd.member_dob,
+                                             'country', umd.member_country,
+                                             'phoneNumber', umd.member_phone_number
+                                               ),
+                                     'coMembers', umd.co_member,
+                                     'created_at', umd.created_at,
+                                     'updated_at', umd.updated_at
+                             )
+                     ) AS memberships
+                 FROM users u
+                          LEFT JOIN user_memberships um ON u.id = um.user_id
+                          LEFT JOIN user_membership_details umd ON um.id = umd.user_membership_id
+                 WHERE u.email = ? AND u.status = 1
+                 GROUP BY u.id;`;
+    const params = [email];
+    try {
+      const [rows] = await pool.query(sql, params);
+      return rows;
+    } catch (error) {
+      loggerService.error(
+        {
+          userModel: {
+            params,
+            queryStatement: sql,
+            error: new Error(error),
+          },
+        },
+        {},
+        '[CIAM] userModel.retrieveMembership - Failed',
+      );
+      return error;
     }
   }
 }

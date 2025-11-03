@@ -7,7 +7,11 @@
   },
   "scripts": {
     "test": "jest",
-    "watch": "nodemon app.js"
+    "dev": "nodemon --env-file=.env app.js",
+    "prepare": "node .husky/install.mjs",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write ."
   },
   "author": "",
   "license": "ISC",
@@ -16,14 +20,20 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.609.0",
     "@aws-sdk/client-lambda": "^3.624.0",
     "@aws-sdk/client-s3": "^3.729.0",
+    "@aws-sdk/client-secrets-manager": "^3.896.0",
     "@aws-sdk/client-sqs": "^3.654.0",
+    "@aws-sdk/s3-request-presigner": "^3.888.0",
     "argon2": "^0.40.3",
     "aws-jwt-verify": "^5.0.0",
     "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "escape-html": "^1.0.3",
     "express": "^4.19.2",
     "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.0.1",
+    "form-data": "^4.0.0",
+    "he": "^1.2.0",
     "helmet": "^8.1.0",
     "jest": "^29.7.0",
     "jwt-decode": "^4.0.0",
@@ -31,13 +41,30 @@
     "mysql2": "^3.11.0",
     "serverless-http": "^3.2.0",
     "supertest": "^7.0.0",
-    "form-data": "^4.0.0",
-    "express-validator": "^7.0.1",
-    "validator": "^13.11.0",
-    "escape-html": "^1.0.3",
-    "he": "^1.2.0"
+    "uuid": "^13.0.0",
+    "validator": "^13.15.15"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ],
+    "**/*.{json,css,md}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
-    "prettier": "^3.6.2"
+    "@eslint/js": "^9.36.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^17.23.1",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.45.0"
   }
 }

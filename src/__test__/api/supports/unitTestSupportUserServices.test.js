@@ -30,7 +30,7 @@ describe('SupportUserServices', () => {
 
       expect(result).toEqual({
         db: dbInfo,
-        cognito: cognitoInfo
+        cognito: cognitoInfo,
       });
       expect(supportDBService.getUserFullInfoByEmail).toHaveBeenCalledWith(req);
       expect(supportCognitoService.getUserCognitoInfo).toHaveBeenCalledWith(req);
@@ -42,8 +42,11 @@ describe('SupportUserServices', () => {
     it('should return paginated user data', async () => {
       const req = { body: { page: 1, limit: 10 } };
       const paginatedData = {
-        users: [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }],
-        totalCount: 100
+        users: [
+          { id: 1, name: 'User 1' },
+          { id: 2, name: 'User 2' },
+        ],
+        totalCount: 100,
       };
 
       supportDBService.getUserPageCustomField.mockResolvedValue(paginatedData);
@@ -52,7 +55,10 @@ describe('SupportUserServices', () => {
 
       expect(result).toEqual(paginatedData);
       expect(supportDBService.getUserPageCustomField).toHaveBeenCalledWith(req);
-      expect(console.log).toHaveBeenCalledWith("SupportUserServices getUsersPaginationCustomService", paginatedData);
+      expect(console.log).toHaveBeenCalledWith(
+        'SupportUserServices getUsersPaginationCustomService',
+        paginatedData,
+      );
     });
   });
 
@@ -62,14 +68,14 @@ describe('SupportUserServices', () => {
         body: {
           limit: 5,
           // other patch data
-        }
+        },
       };
       const affectedEmails = ['user1@example.com', 'user2@example.com'];
 
       userConfig.DEFAULT_PAGE_SIZE = 10;
       const mockPatchData = jest.fn().mockResolvedValue(affectedEmails);
       DataPatcher.mockImplementation(() => ({
-        patchData: mockPatchData
+        patchData: mockPatchData,
       }));
 
       const result = await SupportUserServices.batchPatchUserService(req);
@@ -84,14 +90,14 @@ describe('SupportUserServices', () => {
       const req = {
         body: {
           // no limit provided
-        }
+        },
       };
       const affectedEmails = ['user1@example.com', 'user2@example.com'];
 
       userConfig.DEFAULT_PAGE_SIZE = 10;
       const mockPatchData = jest.fn().mockResolvedValue(affectedEmails);
       DataPatcher.mockImplementation(() => ({
-        patchData: mockPatchData
+        patchData: mockPatchData,
       }));
 
       await SupportUserServices.batchPatchUserService(req);
@@ -103,14 +109,14 @@ describe('SupportUserServices', () => {
       const req = {
         body: {
           limit: 5,
-        }
+        },
       };
       const error = new Error('Patching failed');
 
       userConfig.DEFAULT_PAGE_SIZE = 10;
       const mockPatchData = jest.fn().mockRejectedValue(error);
       DataPatcher.mockImplementation(() => ({
-        patchData: mockPatchData
+        patchData: mockPatchData,
       }));
 
       await SupportUserServices.batchPatchUserService(req);

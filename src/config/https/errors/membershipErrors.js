@@ -1,52 +1,52 @@
-const { messageLang } = require("../../../utils/common");
-const escape = require("escape-html");
+const { messageLang } = require('../../../utils/common');
+const escape = require('escape-html');
 
 class MembershipErrors {
   static ciamMembershipUserNotFound(email, lang) {
     return {
       membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL",
-        message: messageLang("email_no_record", lang),
+        code: 404,
+        mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL',
+        message: messageLang('email_no_record', lang),
         email: escape(email),
       },
-      status: "success",
-      statusCode: 200,
+      status: 'failed',
+      statusCode: 404,
     };
   }
   static ciamMembershipEmailInvalid(email, lang) {
     return {
       membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR",
-        message: messageLang("membership_email_invalid", lang),
+        code: 400,
+        mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR',
+        message: messageLang('membership_email_invalid', lang),
         email: escape(email),
       },
-      status: "success",
-      statusCode: 200,
+      status: 'failed',
+      statusCode: 400,
     };
   }
   static ciamMembershipGetPassesInvalid(lang) {
     return {
       membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_MY_MEMBERSHIPS_ERR",
-        message: messageLang("get_membership_failed", lang),
+        code: 404,
+        mwgCode: 'MWG_CIAM_USERS_MY_MEMBERSHIPS_ERR',
+        message: messageLang('get_membership_failed', lang),
       },
-      status: "success",
-      statusCode: 200,
+      status: 'failed',
+      statusCode: 404,
     };
   }
   static ciamMembershipRequestAccountInvalid(email, lang) {
     return {
       membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_WILDPASS_RESET_PASSWORD_ERR",
-        message: messageLang("wildpass_account_request_invalid", lang),
+        code: 404,
+        mwgCode: 'MWG_CIAM_WILDPASS_RESET_PASSWORD_ERR',
+        message: messageLang('wildpass_account_request_invalid', lang),
         email: escape(email),
       },
-      status: "failed",
-      statusCode: 200,
+      status: 'failed',
+      statusCode: 404,
     };
   }
   /**
@@ -59,16 +59,15 @@ class MembershipErrors {
   static ciamMembershipRequestNoMPAccount(email, lang) {
     return {
       membership: {
-        code: 200,
-        mwgCode: "MWG_CIAM_USERS_MEMBERSHIPS_NULL_ERR",
-        message: messageLang("wildpass_not_having_membership_account_error", lang),
+        code: 404,
+        mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL_ERR',
+        message: messageLang('wildpass_not_having_membership_account_error', lang),
         email: escape(email),
       },
-      status: "failed",
-      statusCode: 200,
+      status: 'failed',
+      statusCode: 404,
     };
   }
-
 }
 
 module.exports = MembershipErrors;

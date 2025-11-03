@@ -1,14 +1,11 @@
-const pool = require("../connections/mysqlConn");
-const {
-  getCurrentUTCTimestamp,
-  formatDateToMySQLDateTime,
-} = require("../../utils/dateUtils");
-const commonService = require("../../services/commonService");
+const pool = require('../connections/mysqlConn');
+const { getCurrentUTCTimestamp, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const commonService = require('../../services/commonService');
 
 class AppTokenModel {
   static async saveToken(tokenData) {
     return new Promise((resolve, reject) => {
-      const query = "INSERT INTO app_tokens SET ?";
+      const query = 'INSERT INTO app_tokens SET ?';
       pool.query(query, tokenData, (err) => {
         if (err) reject(err);
         else resolve();
@@ -18,7 +15,7 @@ class AppTokenModel {
 
   static async getLatestToken(client) {
     try {
-      const sql = "SELECT * FROM app_tokens WHERE client = ?";
+      const sql = 'SELECT * FROM app_tokens WHERE client = ?';
       const rows = await pool.query(sql, [client]);
       return rows[0];
     } catch (error) {
@@ -47,7 +44,7 @@ class AppTokenModel {
       const result = await pool.execute(sql, params);
 
       if (result.affectedRows === 0) {
-        throw new Error("No rows updated. Invalid id or client.");
+        throw new Error('No rows updated. Invalid id or client.');
       }
 
       return {

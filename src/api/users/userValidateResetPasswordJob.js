@@ -1,17 +1,17 @@
-const UserValidateResetPasswordService = require("./userValidateResetPasswordService");
-const { messageLang } = require("../../utils/common");
+const UserValidateResetPasswordService = require('./userValidateResetPasswordService');
+const { messageLang } = require('../../utils/common');
 
 class UserValidateResetPasswordJob {
   success(token, lang) {
     return {
       membership: {
         code: 200,
-        mwgCode: "MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS",
-        message: messageLang("token_valid", lang),
+        mwgCode: 'MWG_CIAM_VALIDATE_PASSWORD_TOKEN_SUCCESS',
+        message: messageLang('token_valid', lang),
         isValid: true,
         passwordToken: token,
       },
-      status: "success",
+      status: 'success',
       statusCode: 200,
     };
   }

@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 
@@ -7,7 +7,7 @@ router.use(express.json());
 const galaxyTokenService = require('./services/galaxyTokenService');
 const galaxyWPService = require('./services/galaxyWPService');
 
-if(['dev', 'uat'].includes(process.env.APP_ENV) ){
+if (['dev', 'uat'].includes(process.env.APP_ENV)) {
   /**
    * Test generate tokens
    * Response

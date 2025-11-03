@@ -1,21 +1,21 @@
-require("dotenv").config();
-const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const loggerService = require("../../logs/logger");
-const userModel = require("../../db/models/userModel");
-const { formatDateToMySQLDateTime } = require("../../utils/dateUtils");
-const UserCredentialEventService = require("./userCredentialEventService");
-const { EVENTS } = require("../../utils/constants");
-const { secrets } = require("../../services/secretsService");
+require('dotenv').config();
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const loggerService = require('../../logs/logger');
+const userModel = require('../../db/models/userModel');
+const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const UserCredentialEventService = require('./userCredentialEventService');
+const { EVENTS } = require('../../utils/constants');
+const { secrets } = require('../../services/secretsService');
 
 class UserRefreshTokenService {
   async execute(accessToken, body) {
-    const ciamSecrets = await secrets.getSecrets("ciam-microservice-lambda-config");
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
     const verifierAccessToken = CognitoJwtVerifier.create({
       userPoolId: process.env.USER_POOL_ID,
-      tokenUse: "access",
+      tokenUse: 'access',
       clientId: ciamSecrets.USER_POOL_CLIENT_ID,
     });
-    let email = body.email ? body.email : "";
+    let email = body.email ? body.email : '';
     if (body.includeEmail) {
       const userInfo = await userModel.findByEmailOrMandaiId(email, body.mandaiId);
       email = userInfo.email;
@@ -30,8 +30,8 @@ class UserRefreshTokenService {
           status: 1,
         },
         null,
-        body.email || "",
-        body.mandaiId || ""
+        body.email || '',
+        body.mandaiId || '',
       );
       return {
         expired_at: formatDateToMySQLDateTime(new Date(payloadAccessToken.exp * 1000)) || null,
@@ -44,12 +44,12 @@ class UserRefreshTokenService {
           email: email,
           mandaiId: body.mandaiId,
           error: new Error(error),
-          layer: "UserRefreshTokenService.execute",
+          layer: 'UserRefreshTokenService.execute',
         },
         {},
-        "UserRefreshTokenService Failed"
+        'UserRefreshTokenService Failed',
       );
-      if (error && error.message && error.message.includes("Token expired at")) {
+      if (error && error.message && error.message.includes('Token expired at')) {
         return {
           expired_at: formatDateToMySQLDateTime(new Date()) || null,
           valid: false,
@@ -67,8 +67,8 @@ class UserRefreshTokenService {
           status: 0,
         },
         null,
-        body.email || "",
-        body.mandaiId || ""
+        body.email || '',
+        body.mandaiId || '',
       );
       return {
         expired_at: null,

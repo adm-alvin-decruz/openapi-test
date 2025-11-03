@@ -6,10 +6,10 @@ require('dotenv').config();
 const awsRegion = () => {
   const env = process.env.PRODUCTION;
   if (!env) return 'ap-southeast-1';
-  if (env === "false") return 'ap-southeast-1';
+  if (env === 'false') return 'ap-southeast-1';
   return env;
-}
-const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+};
+const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 const sqsClient = new SQSClient({ region: awsRegion });
 
 class GalaxyWPService {
@@ -18,7 +18,7 @@ class GalaxyWPService {
     this.apiUpdateEndpoint = process.env.GALAXY_URL + process.env.GALAXY_UPDATE_PASS_PATH;
   }
 
-  async callMembershipPassApi (req) {
+  async callMembershipPassApi(req) {
     req['apiTimer'] = req.processTimer.apiRequestTimer();
     req.apiTimer.log('GalaxyWPService.callMembershipPassApi starts');
     const inputData = req.body;
@@ -33,7 +33,7 @@ class GalaxyWPService {
     } catch (error) {
       console.log(new Error(`GalaxyWPService.callMembershipPassApi Error ${error}`));
       req.apiTimer.end('GalaxyWPService.callMembershipPassApi Error'); // log end time
-      return error
+      return error;
     }
   }
 
@@ -41,7 +41,7 @@ class GalaxyWPService {
     return galaxyCmnService.mapImputToImportParams(inputData, galaxyParams);
   }
 
-  async callMembershipUpdatePassApi (inputData) {
+  async callMembershipUpdatePassApi(inputData) {
     try {
       const headers = await galaxyCmnService.setGlxReqHeader();
       const body = await this.createRequestBody(inputData, galaxyConf.updateWPParams);
@@ -50,16 +50,39 @@ class GalaxyWPService {
 
       return ApiUtils.handleResponse(response);
     } catch (error) {
-      return error
+      return error;
     }
   }
 
-  async galaxyToSQS (req, action) {
+  async callMembershipUpdateStatus(requiredFields, status) {
+    try {
+      const headers = await galaxyCmnService.setGlxReqHeader();
+      // Remove validFrom from the request body as it's not needed for status update
+      //eslint-disable-next-line no-unused-vars
+      const { validFrom: _validFrom, ...restRequiredBody } = await this.createRequestBody(
+        requiredFields,
+        galaxyConf.updateWPParams,
+      );
+      const body = {
+        ...restRequiredBody,
+        status,
+      };
+
+      // makeRequest already calls ApiUtils.handleResponse so we should not call it again
+      const data = await ApiUtils.makeRequest(this.apiUpdateEndpoint, 'post', headers, body);
+
+      return data;
+    } catch (error) {
+      throw new Error(`GalaxyWPService.callMembershipUpdateStatus error: ${error.message}`);
+    }
+  }
+
+  async galaxyToSQS(req, action) {
     try {
       req['apiTimer'] = req.processTimer.apiRequestTimer();
       req.apiTimer.log('GalaxyWPService.galaxyToSQS starts');
 
-      let data = {"action":action,"body":req.body};
+      let data = { action: action, body: req.body };
 
       const queueUrl = process.env.SQS_QUEUE_URL;
       // send SQS
@@ -81,7 +104,7 @@ class GalaxyWPService {
    * testing only
    * TODO: remove when test done
    */
-  async importWPToGlx(inputData){
+  async importWPToGlx(inputData) {
     return this.createRequestBody(inputData);
   }
 }

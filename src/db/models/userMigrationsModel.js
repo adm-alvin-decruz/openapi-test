@@ -1,10 +1,10 @@
-const pool = require("../connections/mysqlConn");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class UserMigrationsModel {
   constructor() {
-    this.tableName = "user_migrations";
+    this.tableName = 'user_migrations';
   }
 
   static async create(data) {
@@ -48,7 +48,7 @@ class UserMigrationsModel {
           },
         },
         {},
-        "[CIAM] userMigrationsModel.update - Failed"
+        '[CIAM] userMigrationsModel.update - Failed',
       );
       throw new Error(`UserMigrationModel: ${error}`);
     }
@@ -76,7 +76,7 @@ class UserMigrationsModel {
           },
         },
         {},
-        "[CIAM] userMigrationsModel.updateMembershipUserAccounts - Failed"
+        '[CIAM] userMigrationsModel.updateMembershipUserAccounts - Failed',
       );
       throw new Error(`UserMigrationModel: ${error}`);
     }
@@ -86,10 +86,10 @@ class UserMigrationsModel {
     let index = 0;
     return sql.replace(/\?/g, () => {
       const value = params[index++];
-      if (typeof value === "string") {
+      if (typeof value === 'string') {
         return `'${value.replace(/'/g, "''")}'`;
       } else if (value === null) {
-        return "NULL";
+        return 'NULL';
       } else {
         return value;
       }

@@ -1,6 +1,6 @@
-const pool = require("../connections/mysqlConn");
-const commonService = require("../../services/commonService");
-const loggerService = require("../../logs/logger");
+const pool = require('../connections/mysqlConn');
+const commonService = require('../../services/commonService');
+const loggerService = require('../../logs/logger');
 
 class UserMigrationsMembershipPassesModel {
   static async updateByEmailAndBatchNo(email, batchNo, data) {
@@ -30,11 +30,9 @@ class UserMigrationsMembershipPassesModel {
           },
         },
         {},
-        "UserMigrationsMembershipPassesModel.updateByEmailAndBatchNo"
+        'UserMigrationsMembershipPassesModel.updateByEmailAndBatchNo',
       );
-      throw new Error(
-        `UserMigrationsMembershipPassesModel.updateByEmailAndBatchNo: ${error}`
-      );
+      throw new Error(`UserMigrationsMembershipPassesModel.updateByEmailAndBatchNo: ${error}`);
     }
   }
 }

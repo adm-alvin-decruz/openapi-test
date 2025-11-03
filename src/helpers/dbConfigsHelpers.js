@@ -1,12 +1,9 @@
-const configsModel = require("../db/models/configsModel");
+const configsModel = require('../db/models/configsModel');
 
 async function getPassType(data) {
   const passTypeMapping =
     data.migrations &&
-    (await configsModel.findByConfigKey(
-      "membership-passes",
-      "pass-type-mapping"
-    ));
+    (await configsModel.findByConfigKey('membership-passes', 'pass-type-mapping'));
 
   return !!passTypeMapping && passTypeMapping.value
     ? passTypeMapping.value[`${data.passType.toLowerCase()}`]

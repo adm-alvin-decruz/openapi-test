@@ -1,5 +1,5 @@
-const cognitoService = require("../services/cognitoService");
-const userModel = require("../db/models/userModel");
+const cognitoService = require('../services/cognitoService');
+const userModel = require('../db/models/userModel');
 
 /**
  * Should Ignore Email Disposable validation

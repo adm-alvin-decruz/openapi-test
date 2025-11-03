@@ -1,6 +1,6 @@
- const loggerService = require('../logs/logger');
- const userConfig = require('../config/usersConfig');
- const commonService = require('../services/commonService');
+const loggerService = require('../logs/logger');
+const userConfig = require('../config/usersConfig');
+const commonService = require('../services/commonService');
 
 /**
  *
@@ -13,7 +13,15 @@
  * @param {json} clientResObj json obj or array response from client - Galaxy, Cognito, Passkit etc
  * @returns
  */
-function responseHandle(module='user', moduleFunc, configModulePrefix, req, mwgCode, clientReqObj='', clientResObj='') {
+function responseHandle(
+  module = 'user',
+  moduleFunc,
+  configModulePrefix,
+  req,
+  mwgCode,
+  clientReqObj = '',
+  clientResObj = '',
+) {
   const logObj = loggerService.build(module, moduleFunc, req, mwgCode, clientReqObj, clientResObj);
 
   return craftUsersApiResponse('', req.body, mwgCode, configModulePrefix, logObj);
@@ -28,23 +36,23 @@ function responseHandle(module='user', moduleFunc, configModulePrefix, req, mwgC
  * @param {int} statusCode status code 200 | 400 | 501
  * @returns
  */
-function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
+function craftUsersApiResponse(attr = '', reqBody, mwgCode, module, logObj) {
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
-  let resConfigVar = JSON.parse(userConfig[module+'_API_RESPONSE_CONFIG']);
+  let resConfigVar = JSON.parse(userConfig[module + '_API_RESPONSE_CONFIG']);
   let resConfig = resConfigVar[mwgCode];
 
   // step3: craft response JSON
   let responseToClient = {
-        "membership": {
-          "code": resConfig.code,
-          "mwgCode": resConfig.mwgCode,
-          "message": resConfig.message
-        },
-        "status": resConfig.status,
-        "statusCode": resConfig.code
+    membership: {
+      code: resConfig.code,
+      mwgCode: resConfig.mwgCode,
+      message: resConfig.message,
+    },
+    status: resConfig.status,
+    statusCode: resConfig.code,
   };
 
-  if(mwgCode === 'MWG_CIAM_PARAMS_ERR' || mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR'){
+  if (mwgCode === 'MWG_CIAM_PARAMS_ERR' || mwgCode === 'MWG_CIAM_USER_SIGNUP_ERR') {
     // add error params
     responseToClient['membership']['error'] = reqBody;
   }
@@ -66,12 +74,12 @@ function craftUsersApiResponse(attr='', reqBody, mwgCode, module, logObj){
  * @param {*} logObj
  * @returns
  */
-function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logObj){
+function craftGetMemberShipInternalRes(attr = '', reqBody, status, response, logObj) {
   // craft response JSON
-  let responseToInternal = {"status": status, "data": response};
+  let responseToInternal = { status: status, data: response };
 
   // prepare logs
-  logObj['response_to_internal']= JSON.stringify(responseToInternal);
+  logObj['response_to_internal'] = JSON.stringify(responseToInternal);
   loggerService.log(logObj);
 
   return responseToInternal;
@@ -87,35 +95,41 @@ function craftGetMemberShipInternalRes(attr='', reqBody, status, response, logOb
  * @param {*} logObj
  * @returns
  */
-function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
+function craftGetUserApiInternalRes(attr = '', req, mwgCode, response, logObj) {
   // step1: read env var for MEMBERSHIPS_API_RESPONSE_CONFIG
   let resConfigVar = JSON.parse(userConfig['GET_USER_MEMBERSHIPS_API_RESPONSE_CONFIG']);
   let resConfig = resConfigVar[mwgCode];
 
   // response JSON
   let responseStructure = {
-    "membership": {
-      "code": resConfig.code,
-      "mwgCode": mwgCode,
-      "message": resConfig.message
+    membership: {
+      code: resConfig.code,
+      mwgCode: mwgCode,
+      message: resConfig.message,
     },
-    "status": resConfig.status,
-    "statusCode": resConfig.code
+    status: resConfig.status,
+    statusCode: resConfig.code,
   };
 
   let responseToInternal = responseStructure;
 
   // craft response JSON
-  if(req.body.group = 'wildpass'){
-    if(response !== ''){
+  if ((req.body.group = 'wildpass')) {
+    if (response !== '') {
       // let stringDBUser = JSON.stringify(response.db_user);
-      if(response.db_user != undefined){
+      if (response.db_user != undefined) {
         // if db user not exist
-        memberInfo = formatGetUserAPIResData(req, response.db_user, 'GET_USER_API_RESPONSE_MAPPING');
+        memberInfo = formatGetUserAPIResData(
+          req,
+          response.db_user,
+          'GET_USER_API_RESPONSE_MAPPING',
+        );
         responseToInternal = mergeJson(memberInfo, responseStructure);
-      }else{
+      } else {
         // re-format cognito user attributes to key:value for next mapping process
-        let cognitoUserJson = commonService.convertUserAttrToNormJson(response.cognitoUser.UserAttributes);
+        let cognitoUserJson = commonService.convertUserAttrToNormJson(
+          response.cognitoUser.UserAttributes,
+        );
         cognitoUserJson['visualId'] = cognitoUserJson['custom:membership'];
 
         memberInfo = formatGetUserAPIResData(req, cognitoUserJson, 'GET_USER_API_RESPONSE_MAPPING');
@@ -125,7 +139,7 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
   }
 
   // prepare logs
-  logObj['response_to_internal']= JSON.stringify(responseToInternal);
+  logObj['response_to_internal'] = JSON.stringify(responseToInternal);
   loggerService.log(logObj);
 
   return responseToInternal;
@@ -138,24 +152,24 @@ function craftGetUserApiInternalRes(attr='', req, mwgCode, response, logObj){
  * @param {string} msg
  * @returns
  */
-function formatMiddlewareRes(status, msg, mwgCode=null){
-  mwgCode  = mwgCode || 'MWG_CIAM_PARAMS_ERR';
+function formatMiddlewareRes(status, msg, mwgCode = null) {
+  mwgCode = mwgCode || 'MWG_CIAM_PARAMS_ERR';
   return {
-    "membership": {
-      "code": status,
-      "mwgCode": mwgCode,
-      "message": msg
+    membership: {
+      code: status,
+      mwgCode: mwgCode,
+      message: msg,
     },
-    "status": 'failed',
-    "statusCode": status
-}
+    status: 'failed',
+    statusCode: status,
+  };
 }
 
-function formatGetUserAPIResData(req, memberInfo, config){
+function formatGetUserAPIResData(req, memberInfo, config) {
   // set response data using mapping
   requester = commonService.extractStringPart(req.headers['mwg-app-id'], 0);
   group = req.body.group;
-  configName = config+'_'+group.toUpperCase()+'_'+requester.toUpperCase();
+  configName = config + '_' + group.toUpperCase() + '_' + requester.toUpperCase();
   // map obj
   resObj = commonService.mapJsonObjects(userConfig[configName], memberInfo);
   // format DOB
@@ -169,15 +183,15 @@ function mergeJson(jsonA, jsonB) {
   // Merge jsonA fields into the nested 'membership' object in jsonB
   jsonB.membership = {
     ...jsonB.membership,
-    ...jsonA
+    ...jsonA,
   };
 
   return jsonB;
 }
 
-function responseConfigHelper(module, mwgCode){
+function responseConfigHelper(module, mwgCode) {
   // step1: read api response config for MEMBERSHIPS_API_RESPONSE_CONFIG
-  let resConfigVar = JSON.parse(userConfig[module.toUpperCase()+'_API_RESPONSE_CONFIG']);
+  let resConfigVar = JSON.parse(userConfig[module.toUpperCase() + '_API_RESPONSE_CONFIG']);
   let resConfig = resConfigVar[mwgCode];
 
   return resConfig;
@@ -189,5 +203,5 @@ module.exports = {
   craftGetUserApiInternalRes,
   formatMiddlewareRes,
   responseHandle,
-  responseConfigHelper
-}
+  responseConfigHelper,
+};

@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       where-clause:
-        description: "Optional WHERE clause for data filtering"
+        description: 'Optional WHERE clause for data filtering'
         required: false
         type: string
 
@@ -60,7 +60,7 @@ jobs:
               exit 1
             fi
           fi
-      
+
       - name: Set Timestamp
         env:
           TZ: Asia/Singapore
@@ -135,7 +135,7 @@ jobs:
               $MYSQLDUMP_OPTS \
               ciam "${TABLES[@]}" >> "./dumps/dump-report-${{ env.TIMESTAMP }}.sql"
           fi
-      
+
       - name: Generate Report
         uses: actions/upload-artifact@v4
         with:
@@ -150,7 +150,7 @@ jobs:
             echo "Error: Report file does not exist"
             exit 1
           fi
-          
+
           # Check file size
           file_size=$(stat -f%z "./dumps/dump-report-${{ env.TIMESTAMP }}.sql" 2>/dev/null || stat -c%s "./dumps/dump-report-${{ env.TIMESTAMP }}.sql")
           echo "File size: $file_size bytes"
@@ -158,4 +158,3 @@ jobs:
             echo "Warning: Report file is larger than 1GB"
             exit 1
           fi
-

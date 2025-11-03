@@ -1,19 +1,12 @@
-
-
 const pool = require('../../db/connections/mysqlConn');
 const userModel = require('../../db/models/userModel');
-const userMembershipModel = require('../../db/models/userMembershipModel');
-const userNewsletterModel = require('../../db/models/userNewletterModel');
-const userCredentialModel = require('../../db/models/userCredentialModel');
-const userDetailModel = require('../../db/models/userDetailsModel');
 const userConfig = require('../../config/usersConfig');
-const { getCurrentUTCTimestamp, convertDateToMySQLFormat } = require('../../utils/dateUtils');
 
 async function getUserFullInfoByEmail(req) {
   const query = `
     SELECT
       u.id AS user_id, u.email, u.given_name, u.family_name, u.birthdate,
-      u.mandai_id, u.source, u.active, u.created_at AS user_created_at,
+      u.mandai_id, u.source, u.status, u.created_at AS user_created_at,
       u.updated_at AS user_updated_at,
 
       um.id AS membership_id, ud.user_id, um.name AS membership_name, um.visual_id AS membership_visual_id,
@@ -57,11 +50,11 @@ async function getUserFullInfoByEmail(req) {
       memberships: [],
       newsletters: [],
       details: {},
-      credentials: {}
+      credentials: {},
     };
 
     // Process the results
-    results.forEach(row => {
+    results.forEach((row) => {
       // User info (only need to do this once)
       if (Object.keys(response.user).length === 0) {
         response.user = {
@@ -72,9 +65,9 @@ async function getUserFullInfoByEmail(req) {
           birthdate: row.birthdate,
           mandai_id: row.mandai_id,
           source: row.source,
-          active: row.active,
+          status: row.status,
           created_at: row.user_created_at,
-          updated_at: row.user_updated_at
+          updated_at: row.user_updated_at,
         };
       }
 
@@ -82,12 +75,12 @@ async function getUserFullInfoByEmail(req) {
       if (row.membership_id) {
         response.memberships.push({
           id: row.membership_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           name: row.membership_name,
           visual_id: row.membership_visual_id,
           expires_at: row.membership_expires_at,
           created_at: row.membership_created_at,
-          updated_at: row.membership_updated_at
+          updated_at: row.membership_updated_at,
         });
       }
 
@@ -95,12 +88,12 @@ async function getUserFullInfoByEmail(req) {
       if (row.newsletter_id) {
         response.newsletters.push({
           id: row.newsletter_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           name: row.newsletter_name,
           type: row.newsletter_type,
           subscribed: row.newsletter_subscribed,
           created_at: row.newsletter_created_at,
-          updated_at: row.newsletter_updated_at
+          updated_at: row.newsletter_updated_at,
         });
       }
 
@@ -108,7 +101,7 @@ async function getUserFullInfoByEmail(req) {
       if (Object.keys(response.details).length === 0 && row.details_id) {
         response.details = {
           id: row.details_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           phone_number: row.phone_number,
           zoneinfo: row.zoneinfo,
           address: row.address,
@@ -117,7 +110,7 @@ async function getUserFullInfoByEmail(req) {
           vehicle_plate: row.vehicle_plate,
           extra: row.user_extra,
           created_at: row.details_created_at,
-          updated_at: row.details_updated_at
+          updated_at: row.details_updated_at,
         };
       }
 
@@ -125,12 +118,12 @@ async function getUserFullInfoByEmail(req) {
       if (Object.keys(response.credentials).length === 0 && row.credentials_id) {
         response.credentials = {
           id: row.credentials_id,
-          user_id:row.user_id,
+          user_id: row.user_id,
           username: row.username,
           tokens: row.tokens,
           last_login: row.last_login,
           created_at: row.credentials_created_at,
-          updated_at: row.credentials_updated_at
+          updated_at: row.credentials_updated_at,
         };
       }
     });
@@ -142,7 +135,7 @@ async function getUserFullInfoByEmail(req) {
   }
 }
 
-async function getUserPageCustomField(req){
+async function getUserPageCustomField(req) {
   try {
     const data = req.method === 'POST' ? req.body : req.query;
     // Parse parameters
@@ -152,13 +145,13 @@ async function getUserPageCustomField(req){
 
     const maxPageSize = userConfig.DEFAULT_PAGE_SIZE;
     let pageSize = parseInt(data.pageSize) || maxPageSize;
-    pageSize = (pageSize < maxPageSize) ? pageSize : maxPageSize;
+    pageSize = pageSize < maxPageSize ? pageSize : maxPageSize;
 
     const result = await userModel.queryUsersWithPagination(page, pageSize, columns, filters);
 
     return result;
   } catch (error) {
-    let logError = (new Error(`Error in suppportDBServices.getUserPageCustomField: ${error}`));
+    let logError = new Error(`Error in suppportDBServices.getUserPageCustomField: ${error}`);
     console.log(logError);
     return { error: logError };
   }
@@ -169,7 +162,7 @@ function parseColumns(columns) {
     return columns;
   }
   if (typeof columns === 'string') {
-    return columns.split(',').map(col => col.trim());
+    return columns.split(',').map((col) => col.trim());
   }
   return ['*'];
 }
@@ -189,10 +182,10 @@ function parseFilters(filters) {
   return {};
 }
 
-async function findUserWithEmptyVisualID (req) {
+async function findUserWithEmptyVisualID(req) {
   const maxLimit = 90;
   let limit = req.body.limit || maxLimit;
-  if(req.body.limit > maxLimit){
+  if (req.body.limit > maxLimit) {
     limit = maxLimit;
   }
 
@@ -217,5 +210,7 @@ async function findUserWithEmptyVisualID (req) {
 }
 
 module.exports = {
-  getUserFullInfoByEmail, getUserPageCustomField, findUserWithEmptyVisualID
-}
+  getUserFullInfoByEmail,
+  getUserPageCustomField,
+  findUserWithEmptyVisualID,
+};
