@@ -120,6 +120,16 @@ const existsCapitalizePattern = (keyword) => {
   return regexEmailValid.test(keyword.toString());
 };
 
+const randomizeDeletedEmail = (email) => {
+  const [localPart, domain] = email.split("@");
+
+  // Generate random 5-character string (letters + numbers)
+  const randomStr = Math.random().toString(36).substring(2, 7);
+
+  // Insert prefix "delete-" and random string before '@'
+  return `delete-${localPart}~${randomStr}@${domain}`;
+}
+
 module.exports = {
   messageLang,
   getSource,
@@ -134,4 +144,5 @@ module.exports = {
   emailPattern,
   existsCapitalizePattern,
   passwordPatternComplexity,
+  randomizeDeletedEmail
 };

@@ -1,5 +1,5 @@
 const userModel = require('../../../../db/models/userModel');
-const { messageLang } = require('../../../../utils/common');
+const { messageLang, randomizeDeletedEmail } = require('../../../../utils/common');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
 const { preSignedURLS3 } = require('../../../../services/s3Service');
@@ -9,7 +9,6 @@ const cognitoService = require('../../../../services/cognitoService');
 const MembershipErrors = require('../../../../config/https/errors/membershipErrors');
 const userEventAuditTrailService = require('../../userEventAuditTrailService');
 const galaxyWPService = require('../../../components/galaxy/services/galaxyWPService');
-const crypto = require('crypto');
 
 function loggerWrapper(action, obj, type = 'logInfo') {
   if (type === 'error') {
@@ -153,7 +152,7 @@ async function deleteUserMembership(req, user_perform_action) {
       throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
     }
 
-    const deletedEmail = `deleted-${email}${crypto.randomUUID()}`;
+    const deletedEmail = randomizeDeletedEmail(email);
     // update email user in cognito
     await cognitoService.cognitoAdminUpdateNewUser(
       [
