@@ -139,23 +139,16 @@ router.post(
         });
       }
 
-      if ('membership' in newUser && 'code' in newUser.membership) {
-        if (userSignupHelpers.isErrorResponse(newUser)) {
-          return userSignupHelpers.handleSignupError(
-            newUser.error || newUser,
-            'adminCreateUser',
-            res,
-          );
-        }
-        return res.status(newUser.membership.code).json(newUser);
-      }
-
       if (userSignupHelpers.isErrorResponse(newUser)) {
         return userSignupHelpers.handleSignupError(
           newUser.error || newUser,
           'adminCreateUser',
           res,
         );
+      }
+
+      if ('membership' in newUser && 'code' in newUser.membership) {
+        return res.status(newUser.membership.code).json(newUser);
       }
 
       return res.status(200).json(newUser);
