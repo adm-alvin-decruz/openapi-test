@@ -1,3 +1,4 @@
+require('dotenv').config();
 const crypto = require('crypto');
 // db
 const userModel = require('../../db/models/userModel');
@@ -12,6 +13,7 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const cognitoService = require('../../services/cognitoService');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
+const errorHandler = require('../../utils/errorHandler');
 
 /**
  * Generate mandaiID
@@ -473,6 +475,41 @@ async function updatePasswordCredential(email, passwordCredential) {
   await userCredentialModel.updateByUserEmail(email, dataUpdated);
 }
 
+const handleSignupError = (error, action, res, statusCode = 400) => {
+  loggerService.error(
+    {
+      user: {
+        action,
+        error:
+          process.env.APP_ENV === 'prod'
+            ? { message: 'Signup operation failed' }
+            : errorHandler.serializeError(error),
+      },
+    },
+    '[CIAM] Signup User Failed',
+  );
+
+  return res.status(statusCode).json({
+    status: 'failed',
+    statusCode,
+    error: {
+      code: statusCode,
+      message: typeof error === 'string' ? error : 'Signup failed',
+    },
+  });
+};
+
+// Helper functions for error handling
+const isErrorResponse = (newUser) => {
+  return (
+    newUser instanceof Error ||
+    newUser.code !== undefined && newUser.code !== 200 ||
+    (newUser.error &&
+      (typeof newUser.error === 'object' ||
+        (typeof newUser.error === 'string' && newUser.error.toLowerCase().includes('stack'))))
+  );
+};
+
 module.exports = {
   generateMandaiID,
   generateVisualID,
@@ -481,4 +518,6 @@ module.exports = {
   insertUserNewletter,
   signupMPWithUpdateIfExist,
   updatePasswordCredential,
+  handleSignupError,
+  isErrorResponse,
 };
