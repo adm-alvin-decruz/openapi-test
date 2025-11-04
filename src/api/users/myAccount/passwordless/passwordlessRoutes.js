@@ -7,7 +7,7 @@ const validationService = require('../../../../services/validationService');
 const passwordlessSendCodeService = require('./passwordlessSendCodeServices');
 const processTimer = require('../../../../utils/processTimer');
 const { safeJsonParse } = require('../passwordless/passwordlessSendCodeHelpers');
-const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
+// const { verifyTurnstile } = require('../../../../middleware/turnstileMiddleware');
 const crypto = require('crypto');
 const uuid = crypto.randomUUID();
 const {
@@ -35,7 +35,7 @@ router.post(
   isEmptyRequest,
   validateEmail,
   lowercaseTrimKeyValueString,
-  verifyTurnstile,
+  // verifyTurnstile,
   async (req, res) => {
     req['processTimer'] = processTimer;
     req['apiTimer'] = req.processTimer.apiRequestTimer(true);
