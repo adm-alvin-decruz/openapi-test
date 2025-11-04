@@ -127,14 +127,17 @@ async function deleteUserMembership(req, user_perform_action) {
       } else {
         const requiredFields = {
           visualId: visualIdWpToUpdate,
-          firstName: rs.familyName,
-          middleName: rs.givenName,
+          firstName: rs.givenName,
           lastName: rs.familyName,
           email: rs.email,
           // Format DOB to 'DD/MM/YYYY' for fit with galaxy input requirement
           dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
         };
 
+        loggerWrapper('[CIAM-MYACCOUNT] Sending request to Update in Galaxy', {
+          body: JSON.stringify(requiredFields),
+          layer: 'service.deleteUserMembership.galaxyUpdate',
+        });
         //temporary set status to EXPIRED due to galaxy WP API not support VOIDED status update
         await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.EXPIRED);
 
