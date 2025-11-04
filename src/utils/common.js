@@ -120,14 +120,22 @@ const existsCapitalizePattern = (keyword) => {
   return regexEmailValid.test(keyword.toString());
 };
 
+// Generate random 5-character string (letters + numbers)
+const generateRandomString = (length = 5) => {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const bytes = crypto.randomBytes(length);
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return result;
+}
+
 const randomizeDeletedEmail = (email) => {
   const [localPart, domain] = email.split("@");
 
-  // Generate random 5-character string (letters + numbers)
-  const randomStr = Math.random().toString(36).substring(2, 7);
-
   // Insert prefix "delete-" and random string before '@'
-  return `delete-${localPart}~${randomStr}@${domain}`;
+  return `delete-${localPart}~${generateRandomString()}@${domain}`;
 }
 
 module.exports = {
