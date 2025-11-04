@@ -622,8 +622,7 @@ class UserSignupService {
         'success',
         'signup',
         req.body,
-        1,
-        null,
+        1
       );
       return {
         mandaiId,
