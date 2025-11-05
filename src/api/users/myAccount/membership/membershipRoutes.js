@@ -42,7 +42,7 @@ router.post('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
 /**
  * CIAM MyAccount delete user account
  */
-router.delete('/', AccessTokenAuthGuard, async (req, res) => {
+router.delete('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations
   const startTimer = process.hrtime();
