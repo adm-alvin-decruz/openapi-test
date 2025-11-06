@@ -4,6 +4,12 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 
 class User {
+  static UserStatus = {
+    INACTIVE: 0,
+    ACTIVE: 1,
+    TEMPORARILY_DISABLED: 2,
+  }
+
   static async create(userData) {
     const now = getCurrentUTCTimestamp();
     const sql = `
@@ -211,10 +217,11 @@ class User {
   /** Find wild pass user full data */
   static async findWPFullData(email) {
     // using LEFT JOIN with tbl user_newsletters to ensure newsletter subscription data is included even if the user has no record in user_newsletters
+    // Status: 1 = active, 2 = temporarily disabled (will be re-activated after 15 mins)
     const sql = `SELECT u.*, um.name, um.visual_id, un.type, un.subscribe FROM users u
                   INNER JOIN user_memberships um ON um.user_id = u.id
                   LEFT JOIN user_newsletters un ON un.user_id = u.id
-                  WHERE u.email = ? AND u.status = 1 AND um.name = 'wildpass'`;
+                  WHERE u.email = ? AND u.status IN (${this.UserStatus.ACTIVE},${this.UserStatus.TEMPORARILY_DISABLED}) AND um.name = 'wildpass'`;
     try {
       const rows = await pool.query(sql, [email]);
 

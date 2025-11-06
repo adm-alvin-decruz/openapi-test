@@ -60,6 +60,7 @@ const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
 const userSignupService = require('./userSignupService');
 const { serializeError } = require('../../utils/errorHandler');
+const { secrets } = require('../../services/secretsService');
 
 /**
  * Function User signup service
@@ -79,13 +80,16 @@ async function userSignup(req, membershipData) {
   }
   // generate Mandai ID
   let idCounter = 0;
-  let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
+  const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+  const userPoolClientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
+
+  let mandaiId = await userSignupService.generateMandaiId(req,userPoolClientSecret, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
 
     let found = false;
     for (let c = 1; c <= 5; c++) {
-      const tryId = await userSignupService.generateMandaiId(req, c);
+      const tryId = await userSignupService.generateMandaiId(req,userPoolClientSecret, c);
       loggerService.log({ mandaiId, tryId, counter: c }, '[CIAM] New MandaiId generated');
 
       if (!(await userModel.existsByMandaiId(tryId))) {
