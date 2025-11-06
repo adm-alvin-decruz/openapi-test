@@ -60,6 +60,7 @@ const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
 const userSignupService = require('./userSignupService');
 const { serializeError } = require('../../utils/errorHandler');
+const { secrets } = require('../../services/secretsService');
 
 /**
  * Function User signup service
@@ -79,13 +80,15 @@ async function userSignup(req, membershipData) {
   }
   // generate Mandai ID
   let idCounter = 0;
-  let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
+  const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+  const userPoolClientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
+  let mandaiId = await userSignupService.generateMandaiId(req, userPoolClientSecret, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
 
     let found = false;
     for (let c = 1; c <= 5; c++) {
-      const tryId = await userSignupService.generateMandaiId(req, c);
+      const tryId = await userSignupService.generateMandaiId(req, userPoolClientSecret, c);
       loggerService.log({ mandaiId, tryId, counter: c }, '[CIAM] New MandaiId generated');
 
       if (!(await userModel.existsByMandaiId(tryId))) {
@@ -106,7 +109,7 @@ async function userSignup(req, membershipData) {
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // call cognitoCreateUser function
-  return await cognitoCreateUser(req);
+  return await cognitoCreateUser(req, null, userPoolClientSecret);
 }
 
 async function handleMPAccountSignupWP(req, membershipData) {
@@ -198,9 +201,10 @@ async function handleMPAccountSignupWP(req, membershipData) {
  *
  * @param {json} req
  * @param membershipData
+ * @param userPoolClientSecret
  * @returns
  */
-async function cognitoCreateUser(req, membershipData) {
+async function cognitoCreateUser(req, membershipData, userPoolClientSecret = null) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices.cognitoCreateUser start'); // log process time
   // prepare array  to create user
@@ -310,7 +314,7 @@ async function cognitoCreateUser(req, membershipData) {
 
         req.body.mandaiIdCounter = (req.body.mandaiIdCounter ?? 0) + 1;
         const salt = crypto.randomUUID();
-        const newId = usersSignupHelper.generateMandaiId(req.body, req.body.mandaiIdCounter, salt);
+        const newId = await userSignupService.generateMandaiId(req.body, userPoolClientSecret, req.body.mandaiIdCounter, salt);
 
         if (await userModel.existsByMandaiId(newId)) {
           continue;
