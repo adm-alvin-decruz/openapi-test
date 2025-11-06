@@ -697,7 +697,7 @@ class User {
                  FROM users u
                           LEFT JOIN user_memberships um ON u.id = um.user_id
                           LEFT JOIN user_membership_details umd ON um.id = umd.user_membership_id
-                 WHERE u.email = ? AND u.status = 1
+                 WHERE u.email = ? AND u.status IN (${this.UserStatus.ACTIVE},${this.UserStatus.TEMPORARILY_DISABLED})
                  GROUP BY u.id;`;
     const params = [email];
     try {
