@@ -124,11 +124,13 @@ const existsCapitalizePattern = (keyword) => {
 const generateRandomString = (length = 5) => {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const bytes = crypto.randomBytes(length);
-  let result = "";
+  let prefix = "";
   for (let i = 0; i < length; i++) {
-    result += chars[bytes[i] % chars.length];
+    prefix += chars[bytes[i] % chars.length];
   }
-  return result;
+  // Append a UUID (remove dashes for compactness)
+  const uuid = crypto.randomUUID().replace(/-/g, "");
+  return `${prefix}_${uuid}`;
 }
 
 const randomizeDeletedEmail = (email) => {
