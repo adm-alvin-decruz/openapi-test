@@ -125,8 +125,8 @@ const existsCapitalizePattern = (keyword) => {
 
 // Generate random 5-character string (letters + numbers)
 const generateRandomString = () => {
-  return crypto.randomUUID().replace(/-/g, "");
-}
+  return crypto.randomUUID().replace(/-/g, '');
+};
 
 const randomizeDeletedEmail = (email) => {
   if (!email || !email.includes('@')) {
@@ -136,32 +136,21 @@ const randomizeDeletedEmail = (email) => {
   const [localPart, domain] = email.split('@');
 
   // Generate UUID without hyphens (32 hex chars)
-  let uuid = generateRandomString();
+  const uuid = generateRandomString();
 
   // Format: delete-<localPart>~<uuid>
   // Need: localPart + uuid + overhead ≤ 64
   // Overhead: "delete-" (7) + "~" (1) = 8 chars
   const overhead = 8;
-  const availableSpace = 64 - overhead; // 56 chars available
-
-  let finalLocalPart = localPart;
-  let finalUuid = uuid;
-
-  if (localPart.length <= 32) {
-    // Local part is acceptable, adjust UUID if needed
-    const remainingSpace = availableSpace - localPart.length;
-    if (remainingSpace < 32) {
-      // Truncate UUID to fit (minimum 8 chars for uniqueness)
-      finalUuid = uuid.substring(0, Math.max(8, remainingSpace));
-    }
-  } else {
-    // Local part >32 chars, truncate it to 32 and use remaining space for UUID
-    finalLocalPart = localPart.substring(0, 32);
-    const remainingSpace = availableSpace - 32; // 24 chars for UUID
-    finalUuid = uuid.substring(0, Math.max(8, remainingSpace));
+  const availableForUuid = 64 - overhead - localPart.length;
+  // Minimum 8 chars for uuid for safety to avoid duplicate 1 out of 2^32
+  if (availableForUuid <= 8) {
+    throw new Error('Unable to construct valid deleted email local part');
   }
 
-  return `delete-${finalLocalPart}~${finalUuid}@${domain}`;
+  const finalUuid = uuid.substring(0, Math.min(uuid.length, availableForUuid));
+
+  return `delete-${localPart}~${finalUuid}@${domain}`;
 };
 
 module.exports = {
@@ -178,5 +167,5 @@ module.exports = {
   emailPattern,
   existsCapitalizePattern,
   passwordPatternComplexity,
-  randomizeDeletedEmail
+  randomizeDeletedEmail,
 };
