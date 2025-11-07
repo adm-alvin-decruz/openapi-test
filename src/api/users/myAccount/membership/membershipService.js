@@ -169,9 +169,8 @@ async function deleteUserMembership(req, user_perform_action) {
     await cognitoService.cognitoDisabledUser(deletedEmail);
 
     //proceed update deletedEmail in userCredentialModel
-    const { id : userId } = await userModel.findByEmailOrMandaiId(email);
-    await userCredentialModel.updateByUserId(
-      userId,
+    await userCredentialModel.updateByUserEmail(
+      rs.email,
       {
         username: deletedEmail
       }
