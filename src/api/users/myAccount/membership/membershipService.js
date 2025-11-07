@@ -1,4 +1,5 @@
 const userModel = require('../../../../db/models/userModel');
+const userCredentialModel = require('../../../../db/models/userCredentialModel');
 const { messageLang, randomizeDeletedEmail } = require('../../../../utils/common');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
@@ -166,6 +167,14 @@ async function deleteUserMembership(req, user_perform_action) {
     );
     // disable user in cognito
     await cognitoService.cognitoDisabledUser(deletedEmail);
+
+    //proceed update deletedEmail in userCredentialModel
+    await userCredentialModel.updateByUserEmail(
+      rs.email,
+      {
+        username: deletedEmail
+      }
+    )
 
     //proceed soft-delete in CIAM DB
     await userModel.softDeleteUserByEmail(email, {
