@@ -35,9 +35,11 @@ class UserSignupService {
     }
   }
 
-  async generateMandaiId(req, secret, counter = 0, salt = '') {
+  async generateMandaiId(req, counter = 0, salt = '') {
     const source = getSource(req.headers['mwg-app-id']);
     const groupKey = getGroup(req.body.group);
+    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+    const secret = ciamSecrets.USER_POOL_CLIENT_SECRET;
 
     const payload = [
       groupKey,
@@ -451,15 +453,13 @@ class UserSignupService {
 
     // generate Mandai ID
     let idCounter = 0;
-    const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
-    const userPoolClientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
-    let mandaiId = await this.generateMandaiId(req, userPoolClientSecret, idCounter);
+    let mandaiId = await this.generateMandaiId(req, idCounter);
     if (await userModel.existsByMandaiId(mandaiId)) {
       loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
       for (let c = 1; c <= 5; c++) {
-        const tryId = await this.generateMandaiId(req, userPoolClientSecret, c);
+        const tryId = await this.generateMandaiId(req, c);
         loggerService.log({ mandaiId, tryId, counter: c }, '[CIAM] New MandaiId generated');
 
         if (!(await userModel.existsByMandaiId(tryId))) {
@@ -598,7 +598,7 @@ class UserSignupService {
           // Compute a new ID and keep Cognito in sync
           idCounter += 1;
           const salt = crypto.randomUUID();
-          const newId = await this.generateMandaiId(req, userPoolClientSecret, idCounter, salt);
+          const newId = await this.generateMandaiId(req, idCounter, salt);
 
           const updateParams = [
             {
