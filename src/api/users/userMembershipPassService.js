@@ -325,7 +325,7 @@ class UserMembershipPassService {
         'End createUserMembership - Success',
       );
       return createMembershipRs;
-    } catch (error) {
+    } catch (_error) {
       loggerService.error(
         {
           user: {
@@ -436,7 +436,7 @@ class UserMembershipPassService {
         },
         'End insertMembershipDetails - Success',
       );
-    } catch (error) {
+    } catch (_error) {
       loggerService.error(
         {
           user: {
@@ -524,7 +524,7 @@ class UserMembershipPassService {
       return {
         membershipId: userMembership.membership_id,
       };
-    } catch (error) {
+    } catch (_error) {
       throw new Error(JSON.stringify(MembershipPassErrors.createMembershipPassError()));
     }
   }

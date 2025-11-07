@@ -12,6 +12,7 @@ const commonService = require('../../services/commonService');
 const loggerService = require('../../logs/logger');
 const cognitoService = require('../../services/cognitoService');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
+const errorHandler = require('../../utils/errorHandler');
 
 /**
  * Generate mandaiID
@@ -75,23 +76,6 @@ function generateMandaiID(reqBody) {
 }
 
 /**
- * Generate random chars
- *
- * @param {string} str
- * @param {int} count
- * @returns
- */
-function getRandomChars(str, count) {
-  const chars = str.split('');
-  const result = [];
-  for (let i = 0; i < count; i++) {
-    const index = Math.floor(Math.random() * chars.length);
-    result.push(chars.splice(index, 1)[0]);
-  }
-  return result.join('');
-}
-
-/**
  * (Not IN USE FOR NOW) Generate visualID
  * @param {json} reqBody
  * @returns
@@ -128,7 +112,7 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersSignupHelper.createUserSignupDB starts'); // log process time
   // insert to user table
-  // if singup wildpass but account already have membership passes - reuse this for upsert
+  // if signup wildpass but account already have membership passes - reuse this for upsert
   const userExisted = !!membershipData && !!membershipData.userId;
 
   try {
@@ -136,9 +120,9 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
       ? await updateUser(membershipData.userId, req)
       : await insertUser(req);
 
+    let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
+
     if (!userExisted) {
-      // insert to membership table - membership-passes have empty so keep insert
-      let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
       // upsert to newsletter table
       let newUserNewsLetterResult = await insertUserNewletter(
         req,
@@ -146,15 +130,17 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
         userExisted,
       );
       // insert to credential table - if membership-passes ignore update user credential
-      let newUserCredentialResult = !userExisted
-        ? await insertUserCredential(req, newUserResult.user_id, userSubIdFromCognito)
-        : {};
+      let newUserCredentialResult = await insertUserCredential(
+        req,
+        newUserResult.user_id,
+        userSubIdFromCognito,
+      );
       // upsert to detail table
       let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
 
       // user migrations - update user_migrations user ID
       if (req.body.migrations) {
-        let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
+        await updateUserMigration(req, newUserResult.user_id);
       }
       // if group non wildpass, insert user credential
       let response = {
@@ -473,6 +459,56 @@ async function updatePasswordCredential(email, passwordCredential) {
   await userCredentialModel.updateByUserEmail(email, dataUpdated);
 }
 
+const handleSignupError = (error, action, res, statusCode = 400) => {
+  loggerService.error(
+    {
+      user: {
+        action,
+        error: errorHandler.serializeError(error),
+      },
+    },
+    '[CIAM] Signup User Failed',
+  );
+
+  let errorMessage;
+  if (typeof error === 'string') {
+    // Check if the error string contains 'stack'
+    errorMessage = error.toLowerCase().includes('stack') ? 'Signup failed' : error;
+  } else {
+    errorMessage = error?.message || 'Signup failed';
+  }
+
+  // Use status code from error if available, otherwise fallback
+  const upstreamStatusCode =
+    (typeof error === 'object' && (error.statusCode || error.code)) || statusCode;
+
+  return res.status(statusCode).json({
+    status: 'failed',
+    statusCode,
+    error: {
+      code: upstreamStatusCode,
+      message: errorMessage,
+    },
+  });
+};
+
+// Helper functions for error handling
+const isErrorResponse = (newUser) => {
+  // Add truthiness and type checks to prevent crashes
+  if (!newUser || typeof newUser !== 'object') {
+    // Handle null, undefined, or primitive values
+    return newUser instanceof Error || !!newUser === false;
+  }
+
+  return (
+    newUser instanceof Error ||
+    (newUser.code !== undefined && newUser.code >= 400) ||
+    (newUser.error &&
+      (typeof newUser.error === 'object' ||
+        (typeof newUser.error === 'string' && newUser.error.toLowerCase().includes('stack'))))
+  );
+};
+
 module.exports = {
   generateMandaiID,
   generateVisualID,
@@ -481,4 +517,6 @@ module.exports = {
   insertUserNewletter,
   signupMPWithUpdateIfExist,
   updatePasswordCredential,
+  handleSignupError,
+  isErrorResponse,
 };
