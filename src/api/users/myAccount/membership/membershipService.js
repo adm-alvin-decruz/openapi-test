@@ -1,6 +1,6 @@
 const userModel = require('../../../../db/models/userModel');
+const { messageLang, randomizeDeletedEmail, maskKeyRandomly } = require('../../../../utils/common');
 const userCredentialModel = require('../../../../db/models/userCredentialModel');
-const { messageLang, randomizeDeletedEmail } = require('../../../../utils/common');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
 const { preSignedURLS3 } = require('../../../../services/s3Service');
@@ -86,7 +86,7 @@ async function deleteUserMembership(req, user_perform_action) {
   const STATUS_WILD_PASS = {
     VOID: '1',
     VALID: '0',
-    EXPIRED: '5'
+    EXPIRED: '5',
   };
 
   const language = req.body.language;
@@ -135,8 +135,16 @@ async function deleteUserMembership(req, user_perform_action) {
           dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
         };
 
+        // Create masked version for logging
+        const maskedRequiredFields = {
+          ...requiredFields,
+          firstName: maskKeyRandomly(requiredFields.firstName),
+          lastName: maskKeyRandomly(requiredFields.lastName),
+          dob: maskKeyRandomly(requiredFields.dob),
+        };
+
         loggerWrapper('[CIAM-MYACCOUNT] Sending request to Update in Galaxy', {
-          body: JSON.stringify(requiredFields),
+          body: JSON.stringify(maskedRequiredFields),
           layer: 'service.deleteUserMembership.galaxyUpdate',
         });
         //temporary set status to EXPIRED due to galaxy WP API not support VOIDED status update
@@ -169,12 +177,9 @@ async function deleteUserMembership(req, user_perform_action) {
     await cognitoService.cognitoDisabledUser(deletedEmail);
 
     //proceed update deletedEmail in userCredentialModel
-    await userCredentialModel.updateByUserEmail(
-      rs.email,
-      {
-        username: deletedEmail
-      }
-    )
+    await userCredentialModel.updateByUserEmail(rs.email, {
+      username: deletedEmail,
+    });
 
     //proceed soft-delete in CIAM DB
     await userModel.softDeleteUserByEmail(email, {

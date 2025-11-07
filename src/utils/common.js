@@ -98,8 +98,11 @@ const maskKeyRandomly = (str) => {
   // If string is too short (less than 11 characters), we can't show 3+5+3 pattern properly
   if (str.length <= 10) {
     // For very short strings, show at least first and last character if possible
-    if (str.length <= 2) {
+    if (str.length === 1) {
       return str;
+    } else if (str.length === 2) {
+      // For 2-character strings, show first character and mask the second , example "AB" -> "A*"
+      return str[0] + '*';
     } else if (str.length <= 6) {
       return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
     } else {
@@ -126,11 +129,40 @@ const generateRandomString = () => {
 }
 
 const randomizeDeletedEmail = (email) => {
-  const [localPart, domain] = email.split("@");
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email format');
+  }
 
-  // Insert prefix "delete-" and random string before '@'
-  return `delete-${localPart}~${generateRandomString()}@${domain}`;
-}
+  const [localPart, domain] = email.split('@');
+
+  // Generate UUID without hyphens (32 hex chars)
+  let uuid = generateRandomString();
+
+  // Format: delete-<localPart>~<uuid>
+  // Need: localPart + uuid + overhead ≤ 64
+  // Overhead: "delete-" (7) + "~" (1) = 8 chars
+  const overhead = 8;
+  const availableSpace = 64 - overhead; // 56 chars available
+
+  let finalLocalPart = localPart;
+  let finalUuid = uuid;
+
+  if (localPart.length <= 32) {
+    // Local part is acceptable, adjust UUID if needed
+    const remainingSpace = availableSpace - localPart.length;
+    if (remainingSpace < 32) {
+      // Truncate UUID to fit (minimum 8 chars for uniqueness)
+      finalUuid = uuid.substring(0, Math.max(8, remainingSpace));
+    }
+  } else {
+    // Local part >32 chars, truncate it to 32 and use remaining space for UUID
+    finalLocalPart = localPart.substring(0, 32);
+    const remainingSpace = availableSpace - 32; // 24 chars for UUID
+    finalUuid = uuid.substring(0, Math.max(8, remainingSpace));
+  }
+
+  return `delete-${finalLocalPart}~${finalUuid}@${domain}`;
+};
 
 module.exports = {
   messageLang,
