@@ -150,7 +150,7 @@ const randomizeDeletedEmail = (email) => {
 
   const finalUuid = uuid.substring(0, Math.min(uuid.length, availableForUuid));
 
-  return `delete-${localPart}~${finalUuid}@${domain}`;
+  return `deleted-${localPart}~${finalUuid}@${domain}`;
 };
 
 module.exports = {
