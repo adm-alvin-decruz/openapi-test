@@ -140,7 +140,7 @@ const randomizeDeletedEmail = (email) => {
 
   // Format: delete-<localPart>~<uuid>
   // Need: localPart + uuid + overhead ≤ 64
-  // Overhead: "delete-" (7) + "~" (1) = 8 chars
+  // Overhead: "deleted-" (7) + "~" (1) = 8 chars
   const overhead = 8;
   const availableSpace = 64 - overhead; // 56 chars available
 
@@ -161,7 +161,7 @@ const randomizeDeletedEmail = (email) => {
     finalUuid = uuid.substring(0, Math.max(8, remainingSpace));
   }
 
-  return `delete-${finalLocalPart}~${finalUuid}@${domain}`;
+  return `deleted-${finalLocalPart}~${finalUuid}@${domain}`;
 };
 
 module.exports = {
