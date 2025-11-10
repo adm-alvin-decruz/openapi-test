@@ -140,8 +140,8 @@ const randomizeDeletedEmail = (email) => {
 
   // Format: delete-<localPart>~<uuid>
   // Need: localPart + uuid + overhead ≤ 64
-  // Overhead: "deleted-" (7) + "~" (1) = 8 chars
-  const overhead = 8;
+  // Overhead: "deleted-" (8) + "~" (1) = 9 chars
+  const overhead = 9;
   const availableForUuid = 64 - overhead - localPart.length;
   // Minimum 8 chars for uuid for safety to avoid duplicate 1 out of 2^32
   if (availableForUuid <= 8) {
