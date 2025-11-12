@@ -98,8 +98,11 @@ const maskKeyRandomly = (str) => {
   // If string is too short (less than 11 characters), we can't show 3+5+3 pattern properly
   if (str.length <= 10) {
     // For very short strings, show at least first and last character if possible
-    if (str.length <= 2) {
+    if (str.length === 1) {
       return str;
+    } else if (str.length === 2) {
+      // For 2-character strings, show first character and mask the second , example "AB" -> "A*"
+      return str[0] + '*';
     } else if (str.length <= 6) {
       return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
     } else {
@@ -120,6 +123,36 @@ const existsCapitalizePattern = (keyword) => {
   return regexEmailValid.test(keyword.toString());
 };
 
+// Generate random 5-character string (letters + numbers)
+const generateRandomString = () => {
+  return crypto.randomUUID().replace(/-/g, '');
+};
+
+const randomizeDeletedEmail = (email) => {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email format');
+  }
+
+  const [localPart, domain] = email.split('@');
+
+  // Generate UUID without hyphens (32 hex chars)
+  const uuid = generateRandomString();
+
+  // Format: delete-<localPart>~<uuid>
+  // Need: localPart + uuid + overhead ≤ 64
+  // Overhead: "deleted-" (8) + "~" (1) = 9 chars
+  const overhead = 9;
+  const availableForUuid = 64 - overhead - localPart.length;
+  // Minimum 8 chars for uuid for safety to avoid duplicate 1 out of 2^32
+  if (availableForUuid <= 8) {
+    throw new Error('Unable to construct valid deleted email local part');
+  }
+
+  const finalUuid = uuid.substring(0, Math.min(uuid.length, availableForUuid));
+
+  return `deleted-${localPart}~${finalUuid}@${domain}`;
+};
+
 module.exports = {
   messageLang,
   getSource,
@@ -134,4 +167,5 @@ module.exports = {
   emailPattern,
   existsCapitalizePattern,
   passwordPatternComplexity,
+  randomizeDeletedEmail,
 };
