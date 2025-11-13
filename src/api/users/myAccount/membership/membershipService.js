@@ -1,5 +1,6 @@
 const userModel = require('../../../../db/models/userModel');
-const { messageLang } = require('../../../../utils/common');
+const { messageLang, randomizeDeletedEmail, maskKeyRandomly } = require('../../../../utils/common');
+const userCredentialModel = require('../../../../db/models/userCredentialModel');
 const loggerService = require('../../../../logs/logger');
 const GetMembershipError = require('../../../../config/https/errors/membershipErrors');
 const { preSignedURLS3 } = require('../../../../services/s3Service');
@@ -85,7 +86,7 @@ async function deleteUserMembership(req, user_perform_action) {
   const STATUS_WILD_PASS = {
     VOID: '1',
     VALID: '0',
-    EXPIRED: '5'
+    EXPIRED: '5',
   };
 
   const language = req.body.language;
@@ -127,14 +128,25 @@ async function deleteUserMembership(req, user_perform_action) {
       } else {
         const requiredFields = {
           visualId: visualIdWpToUpdate,
-          firstName: rs.familyName,
-          middleName: rs.givenName,
+          firstName: rs.givenName,
           lastName: rs.familyName,
           email: rs.email,
           // Format DOB to 'DD/MM/YYYY' for fit with galaxy input requirement
           dob: rs.birthdate ? new Date(rs.birthdate).toLocaleDateString('en-GB') : '',
         };
 
+        // Create masked version for logging
+        const maskedRequiredFields = {
+          ...requiredFields,
+          firstName: maskKeyRandomly(requiredFields.firstName),
+          lastName: maskKeyRandomly(requiredFields.lastName),
+          dob: maskKeyRandomly(requiredFields.dob),
+        };
+
+        loggerWrapper('[CIAM-MYACCOUNT] Sending request to Update in Galaxy', {
+          body: JSON.stringify(maskedRequiredFields),
+          layer: 'service.deleteUserMembership.galaxyUpdate',
+        });
         //temporary set status to EXPIRED due to galaxy WP API not support VOIDED status update
         await galaxyWPService.callMembershipUpdateStatus(requiredFields, STATUS_WILD_PASS.EXPIRED);
 
@@ -152,7 +164,7 @@ async function deleteUserMembership(req, user_perform_action) {
       throw new Error(JSON.stringify(DeleteUserErrors.ciamDeleteUserUnable(language)));
     }
 
-    const deletedEmail = `deleted-${email}`;
+    const deletedEmail = randomizeDeletedEmail(email);
     // update email user in cognito
     await cognitoService.cognitoAdminUpdateNewUser(
       [
@@ -163,6 +175,11 @@ async function deleteUserMembership(req, user_perform_action) {
     );
     // disable user in cognito
     await cognitoService.cognitoDisabledUser(deletedEmail);
+
+    //proceed update deletedEmail in userCredentialModel
+    await userCredentialModel.updateByUserEmail(rs.email, {
+      username: deletedEmail,
+    });
 
     //proceed soft-delete in CIAM DB
     await userModel.softDeleteUserByEmail(email, {

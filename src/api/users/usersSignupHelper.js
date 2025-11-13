@@ -76,23 +76,6 @@ function generateMandaiID(reqBody) {
 }
 
 /**
- * Generate random chars
- *
- * @param {string} str
- * @param {int} count
- * @returns
- */
-function getRandomChars(str, count) {
-  const chars = str.split('');
-  const result = [];
-  for (let i = 0; i < count; i++) {
-    const index = Math.floor(Math.random() * chars.length);
-    result.push(chars.splice(index, 1)[0]);
-  }
-  return result.join('');
-}
-
-/**
  * (Not IN USE FOR NOW) Generate visualID
  * @param {json} reqBody
  * @returns
@@ -129,7 +112,7 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersSignupHelper.createUserSignupDB starts'); // log process time
   // insert to user table
-  // if singup wildpass but account already have membership passes - reuse this for upsert
+  // if signup wildpass but account already have membership passes - reuse this for upsert
   const userExisted = !!membershipData && !!membershipData.userId;
 
   try {
@@ -137,9 +120,9 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
       ? await updateUser(membershipData.userId, req)
       : await insertUser(req);
 
+    let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
+
     if (!userExisted) {
-      // insert to membership table - membership-passes have empty so keep insert
-      let newMembershipResult = await insertUserMembership(req, newUserResult.user_id);
       // upsert to newsletter table
       let newUserNewsLetterResult = await insertUserNewletter(
         req,
@@ -147,15 +130,17 @@ async function createUserSignupDB(req, membershipData, userSubIdFromCognito) {
         userExisted,
       );
       // insert to credential table - if membership-passes ignore update user credential
-      let newUserCredentialResult = !userExisted
-        ? await insertUserCredential(req, newUserResult.user_id, userSubIdFromCognito)
-        : {};
+      let newUserCredentialResult = await insertUserCredential(
+        req,
+        newUserResult.user_id,
+        userSubIdFromCognito,
+      );
       // upsert to detail table
       let newUserDetailResult = await insertUserDetail(req, newUserResult.user_id, userExisted);
 
       // user migrations - update user_migrations user ID
       if (req.body.migrations) {
-        let userMigrationsResult = await updateUserMigration(req, newUserResult.user_id);
+        await updateUserMigration(req, newUserResult.user_id);
       }
       // if group non wildpass, insert user credential
       let response = {
