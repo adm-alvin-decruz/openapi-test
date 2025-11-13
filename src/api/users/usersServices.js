@@ -310,7 +310,7 @@ async function cognitoCreateUser(req, membershipData) {
 
         req.body.mandaiIdCounter = (req.body.mandaiIdCounter ?? 0) + 1;
         const salt = crypto.randomUUID();
-        const newId = usersSignupHelper.generateMandaiId(req.body, req.body.mandaiIdCounter, salt);
+        const newId = await userSignupService.generateMandaiId(req, req.body.mandaiIdCounter, salt);
 
         if (await userModel.existsByMandaiId(newId)) {
           continue;
