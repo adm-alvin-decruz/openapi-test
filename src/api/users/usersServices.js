@@ -60,6 +60,7 @@ const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
 const userSignupService = require('./userSignupService');
 const { serializeError } = require('../../utils/errorHandler');
+const { secrets } = require('../../services/secretsService');
 
 /**
  * Function User signup service
@@ -79,6 +80,8 @@ async function userSignup(req, membershipData) {
   }
   // generate Mandai ID
   let idCounter = 0;
+  const ciamSecrets = await secrets.getSecrets('ciam-microservice-lambda-config');
+  const userPoolClientSecret = ciamSecrets.USER_POOL_CLIENT_SECRET;
   let mandaiId = await userSignupService.generateMandaiId(req, idCounter);
   if (await userModel.existsByMandaiId?.(mandaiId)) {
     loggerService.log({ mandaiId }, '[CIAM] MandaiId Duplicated');
@@ -106,7 +109,7 @@ async function userSignup(req, membershipData) {
   req['body']['membershipGroup'] = commonService.prepareMembershipGroup(req.body);
 
   // call cognitoCreateUser function
-  return await cognitoCreateUser(req);
+  return await cognitoCreateUser(req, null, userPoolClientSecret);
 }
 
 async function handleMPAccountSignupWP(req, membershipData) {

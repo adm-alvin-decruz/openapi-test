@@ -459,7 +459,7 @@ class UserSignupService {
       // try a few counters to find a free one before hitting Cognito/DB
       let found = false;
       for (let c = 1; c <= 5; c++) {
-        const tryId = this.generateMandaiId(req, c);
+        const tryId = await this.generateMandaiId(req, c);
         loggerService.log({ mandaiId, tryId, counter: c }, '[CIAM] New MandaiId generated');
 
         if (!(await userModel.existsByMandaiId(tryId))) {
@@ -598,7 +598,7 @@ class UserSignupService {
           // Compute a new ID and keep Cognito in sync
           idCounter += 1;
           const salt = crypto.randomUUID();
-          const newId = this.generateMandaiId(req, idCounter, salt);
+          const newId = await this.generateMandaiId(req, idCounter, salt);
 
           const updateParams = [
             {
@@ -622,8 +622,7 @@ class UserSignupService {
         'success',
         'signup',
         req.body,
-        1,
-        mandaiId,
+        1
       );
       return {
         mandaiId,
