@@ -55,7 +55,6 @@ class PasswordlessSendCodeService {
       userCognitoGroups && userCognitoGroups.Groups && userCognitoGroups.Groups.length
         ? userCognitoGroups.Groups.map((g) => g.GroupName)
         : [];
-    console.log('groups:', groups);
     if (type === 'membership-passes') {
       if (!groups.includes(GROUP.MEMBERSHIP_PASSES)) {
         console.log('Failed membership pass check');
