@@ -9,19 +9,19 @@ async function getUserFullInfoByEmail(req) {
       u.mandai_id, u.source, u.status, u.created_at AS user_created_at,
       u.updated_at AS user_updated_at,
 
-      um.id AS membership_id, ud.user_id, um.name AS membership_name, um.visual_id AS membership_visual_id,
+      um.id AS membership_id, um.name AS membership_name, um.visual_id AS membership_visual_id,
       um.expires_at AS membership_expires_at, um.created_at AS membership_created_at,
       um.updated_at AS membership_updated_at,
 
-      un.id AS newsletter_id, ud.user_id, un.name AS newsletter_name, un.type AS newsletter_type,
+      un.id AS newsletter_id, un.name AS newsletter_name, un.type AS newsletter_type,
       un.subscribe AS newsletter_subscribed, un.created_at AS newsletter_created_at,
       un.updated_at AS newsletter_updated_at,
 
-      ud.id AS details_id, ud.user_id, ud.phone_number, ud.zoneinfo, ud.address, ud.picture,
+      ud.id AS details_id, ud.phone_number, ud.zoneinfo, ud.address, ud.picture,
       ud.vehicle_iu, ud.vehicle_plate, ud.extra AS user_extra,
       ud.created_at AS details_created_at, ud.updated_at AS details_updated_at,
 
-      uc.id AS credentials_id, ud.user_id, uc.username, uc.tokens, uc.last_login,
+      uc.id AS credentials_id, uc.username, uc.tokens, uc.last_login,
       uc.created_at AS credentials_created_at, uc.updated_at AS credentials_updated_at
     FROM
       users u
