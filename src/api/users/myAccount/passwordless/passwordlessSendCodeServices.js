@@ -11,7 +11,8 @@ const PasswordlessErrors = require('../../../../config/https/errors/passwordless
 const UserCredentialEventsModel = require('../../../../db/models/userCredentialEventsModel');
 const { getResetTimeRemaining } = require('./passwordlessSendCodeHelpers');
 const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
-const { findByUserId } = require('../../../../db/models/userMembershipModel');
+const { cognitoAdminListGroupsForUser } = require('../../../../services/cognitoService');
+const { GROUP } = require('../../../../utils/constants');
 
 class PasswordlessSendCodeService {
   /**
@@ -48,14 +49,20 @@ class PasswordlessSendCodeService {
     );
 
     // Check for request type (e.g., WildPass login or membership login)
-    const userMemberships = await findByUserId(userInfo.db.id);
-    console.log('user memberships:', userMemberships);
+    const userCognitoGroups = await cognitoAdminListGroupsForUser(email);
+    console.log('userCognitoGroups:', userCognitoGroups);
+    const groups =
+      userCognitoGroups && userCognitoGroups.Groups && userCognitoGroups.Groups.length
+        ? userCognitoGroups.Groups.map((g) => g.GroupName)
+        : [];
     if (type === 'membership-passes') {
-      if (userMemberships.length === 1 && userMemberships[0].name === 'wildpass') {
+      if (!groups.includes(GROUP.MEMBERSHIP_PASSES)) {
+        console.log('Failed membership pass check');
         return { proceed: false, error: { reason: 'membership_login_disallowed' } };
       }
     } else if (type === 'wildpass') {
-      if (!userMemberships.some((membership) => membership.name === 'wildpass')) {
+      if (!groups.includes(GROUP.WILD_PASS)) {
+        console.log('Failed wildpass check');
         return { proceed: false, error: { reason: 'wildpass_login_disallowed' } };
       }
     }
