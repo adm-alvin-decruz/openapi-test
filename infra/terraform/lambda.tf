@@ -59,7 +59,8 @@ resource "aws_s3_object" "ciam" {
 }
 
 module "lambda_function_ciam_membership" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "8.1.2"
 
   function_name                     = "${var.project}-${var.env}-lambda"
   description                       = "${var.project} ${var.env} lambda"
