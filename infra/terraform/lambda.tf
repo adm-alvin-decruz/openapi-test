@@ -13,11 +13,13 @@ data "aws_kms_alias" "s3" {
 
 resource "aws_s3_bucket" "ciam" {
   bucket = "${var.project}-${var.env}"
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "aws:kms"
-      }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "ciam" {
+  bucket = aws_s3_bucket.ciam.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
     }
   }
 }
@@ -62,7 +64,7 @@ module "lambda_function_ciam_membership" {
   function_name                     = "${var.project}-${var.env}-lambda"
   description                       = "${var.project} ${var.env} lambda"
   handler                           = var.newrelic_handler
-  runtime                           = "nodejs20.x"
+  runtime                           = "nodejs24.x"
   timeout                           = 50
   memory_size                       = var.memory_size
   create_package                    = false
