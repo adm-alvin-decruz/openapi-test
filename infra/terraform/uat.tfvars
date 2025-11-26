@@ -1,7 +1,7 @@
 project              = "ciam-membership"
 env                  = "uat"
 memory_size          = 1024
-layers               = ["arn:aws:lambda:ap-southeast-1:451483290750:layer:NewRelicNodeJS20X:96"]
+layers               = ["arn:aws:lambda:ap-southeast-1:451483290750:layer:NewRelicNodeJS20X-slim:16"]
 NEW_RELIC_ACCOUNT_ID = "4510480"
 NEW_RELIC_USE_ESM    = "true"
 newrelic_handler     = "newrelic-lambda-wrapper.handler"
