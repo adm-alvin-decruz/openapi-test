@@ -51,10 +51,10 @@ class User {
   }
 
   static async findById(id) {
-    const sql = 'SELECT * FROM users WHERE id = ?';
     try {
-      const [rows] = await pool.query(sql, [id]);
-      return rows[0];
+      const sql = 'SELECT * FROM users WHERE id = ?';
+      const [row] = await pool.query(sql, [id]);
+      return row;
     } catch (error) {
       loggerService.error(
         {
@@ -66,6 +66,7 @@ class User {
         {},
         '[CIAM] userModel.findById - Failed',
       );
+      throw error;
     }
   }
 
