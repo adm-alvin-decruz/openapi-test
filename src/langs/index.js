@@ -87,7 +87,6 @@ module.exports = {
     sendCode_newUser: 'The email address you have entered is invalid. Please try again.',
     sendCode_success: 'Verification code sent successfully.',
     sendCode_tooSoon: 'Please wait before requesting another code.',
-    sendCode_suppressed: 'Verification code via email is suppressed.',
     verifyML_invalid: 'Link is invalid or expired. Please request a new one.',
     verifyML_missingToken: 'The token is missing or empty.',
     verifyOTP_invalid: 'The code you entered is incorrect. Please try again.',

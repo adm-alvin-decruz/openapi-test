@@ -481,15 +481,6 @@ async function CookiesAuthGuard(req, res, next) {
   next();
 }
 
-function validateId(req, res, next) {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id) || id <= 0) {
-    return res.status(400).json({ msg: 'Invalid ID' });
-  }
-
-  next();
-}
-
 module.exports = {
   isEmptyRequest,
   validateEmail,
@@ -501,5 +492,4 @@ module.exports = {
   validateAPIKey,
   validateQueryParameters,
   CookiesAuthGuard,
-  validateId,
 };

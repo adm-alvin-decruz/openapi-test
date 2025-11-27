@@ -889,6 +889,10 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
+async function userDisableOTPEmail(req) {
+  return await dbService.userDisableOTPEmail(req.body.email);
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -907,4 +911,5 @@ module.exports = {
   userCreateMembershipPass,
   userUpdateMembershipPass,
   userRefreshAccessToken,
+  userDisableOTPEmail
 };

@@ -4,7 +4,7 @@ const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
-const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const { convertDateToMySQLFormat, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 
 /**
  * Get User By Email
@@ -34,7 +34,7 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    if (USER_CFG_MAP.hasOwnProperty(item.Name)) {
+    if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
     }
     if (item.Name === 'birthdate') {
@@ -46,7 +46,7 @@ function prepareDBUpdateData(ciamAttrInput) {
       try {
         let newsletterData = JSON.parse(item.Value);
         Object.keys(USER_NEWS_CFG_MAP).forEach(function (key) {
-          if (newsletterData.hasOwnProperty(key)) {
+          if (newsletterData[key] !== undefined) {
             result.updateUserNewsletterModel[key] = newsletterData[key];
           }
         });
@@ -113,6 +113,19 @@ async function userDetailsModelExecuteUpdate(userId, phoneNumber, address, count
   return await userDetailModel.updateByUserId(userId, updateFields);
 }
 
+async function userDisableOTPEmail(email) {
+  const disabledUntilDate = new Date();
+  disabledUntilDate.setMinutes(disabledUntilDate.getMinutes() + 5);
+  const otpEmailDisabledUntil = formatDateToMySQLDateTime(disabledUntilDate);
+
+  const user = await userModel.findByEmail(email);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return await userModel.update(user.id, { otp_email_disabled_until: otpEmailDisabledUntil });
+}
+
 module.exports = {
   getDBUserByEmail,
   queryWPUserByEmail,
@@ -121,4 +134,5 @@ module.exports = {
   userModelExecuteUpdate,
   userNewsletterModelExecuteUpdate,
   userDetailsModelExecuteUpdate,
+  userDisableOTPEmail,
 };
