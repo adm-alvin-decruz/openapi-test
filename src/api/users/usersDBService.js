@@ -5,6 +5,7 @@ const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
 const { convertDateToMySQLFormat, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const loggerService = require('../../logs/logger');
 
 /**
  * Get User By Email
@@ -53,6 +54,18 @@ function prepareDBUpdateData(ciamAttrInput) {
       } catch (e) {
         console.error('Error parsing custom:newsletter:', e);
       }
+    }
+
+    if (item.Name === 'otp_email_disabled_until') {
+      let disabledUntilDate = null;
+      try {
+        disabledUntilDate = new Date(item.Value);
+        disabledUntilDate = formatDateToMySQLDateTime(disabledUntilDate);
+      } catch (e) {
+        loggerService.error(e, {}, '[CIAM-MAIN] Prepare DB Update Data - Failed to parse custom:otp_email_disabled_until');
+      }
+
+      result.updateUsersModel['otp_email_disabled_until'] = disabledUntilDate;
     }
   });
 
@@ -113,19 +126,6 @@ async function userDetailsModelExecuteUpdate(userId, phoneNumber, address, count
   return await userDetailModel.updateByUserId(userId, updateFields);
 }
 
-async function userDisableOTPEmail(email) {
-  const disabledUntilDate = new Date();
-  disabledUntilDate.setMinutes(disabledUntilDate.getMinutes() + 5);
-  const otpEmailDisabledUntil = formatDateToMySQLDateTime(disabledUntilDate);
-
-  const user = await userModel.findByEmail(email);
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  return await userModel.update(user.id, { otp_email_disabled_until: otpEmailDisabledUntil });
-}
-
 module.exports = {
   getDBUserByEmail,
   queryWPUserByEmail,
@@ -134,5 +134,4 @@ module.exports = {
   userModelExecuteUpdate,
   userNewsletterModelExecuteUpdate,
   userDetailsModelExecuteUpdate,
-  userDisableOTPEmail,
 };

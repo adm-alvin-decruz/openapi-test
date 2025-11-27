@@ -5,7 +5,7 @@ const resConfig = {
 
   // users wildpass source - cognito mapping
   WILDPASS_SOURCE_COGNITO_MAPPING:
-    '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter"}',
+    '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter", "otp_email_disabled_until":"otp_email_disabled_until"}',
 
   // validation
   SIGNUP_VALIDATE_PARAMS:
@@ -34,7 +34,7 @@ const resConfig = {
     '{"email":"email","firstName":"given_name","lastName":"family_name","mandaiId":"mandai_id","visualId":"visual_id","dateOfBirth":"birthdate","postalCode":""}',
 
   // user model fields for prepare DB update data
-  DB_USERS_MODEL_MAPPING: '{"given_name":"","family_name":"","birthdate":""}',
+  DB_USERS_MODEL_MAPPING: '{"given_name":"","family_name":"","birthdate":"", "otp_email_disabled_until":""}',
   DB_USER_NEWSLETTER_MAPPING: '{"name":"","type":"","subscribe":""}',
 
   // update parameters that can trigger Galaxy update:

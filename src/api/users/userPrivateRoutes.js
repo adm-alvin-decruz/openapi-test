@@ -87,34 +87,4 @@ router.put(
   },
 );
 
-/**
- * CIAM Update user - Private endpoint
- * PATCH /private/v1/users/:id/otp-email/disable  
- */
-router.post(
-  '/v1/users/disable-otp-email',
-  validateEmail,
-  validateAPIKey,
-  lowercaseTrimKeyValueString,
-  async (req, res) => {
-    req['processTimer'] = processTimer;
-    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
-    const startTimer = process.hrtime();
-    req.apiTimer.start('Route CIAM Disable OTP email', startTimer);
-
-    try {
-      const disableOTPEmailResult = await userController.userDisableOTPEmail(req);
-      if (!disableOTPEmailResult.success) {
-        req.apiTimer.end('Route CIAM Update User Error - Failed to disable OTP email', startTimer);
-        return res.status(500).json(CommonErrors.InternalServerError());
-      }
-    } catch (error) {
-      req.apiTimer.end('Route CIAM Disable OTP email Error: ' + error.message, startTimer);
-      return res.status(500).json(CommonErrors.InternalServerError());
-    }
-    req.apiTimer.end('Route CIAM Disable OTP email Success', startTimer);
-    return res.status(200).json(CommonErrors.Success());
-  },
-);
-
 module.exports = router;

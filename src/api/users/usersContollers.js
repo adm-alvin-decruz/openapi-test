@@ -214,6 +214,9 @@ async function adminUpdateUser(req, listedParams) {
         if (commonService.isJsonNotEmpty(ciamComparedParams) === true) {
           let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
+          // ignore otp_email_disabled_until from ciamComparedParams to prevent update to Cognito. It will be handled by DB service.
+          ciamComparedParams = ciamComparedParams.filter(param => param.Name !== 'otp_email_disabled_until');
+          
           response = await usersService.adminUpdateUser(
             req,
             ciamComparedParams,
@@ -889,10 +892,6 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
-async function userDisableOTPEmail(req) {
-  return await dbService.userDisableOTPEmail(req.body.email);
-}
-
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -911,5 +910,4 @@ module.exports = {
   userCreateMembershipPass,
   userUpdateMembershipPass,
   userRefreshAccessToken,
-  userDisableOTPEmail
 };
