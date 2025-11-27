@@ -17,7 +17,7 @@ const {
 } = require('../../../../db/models/passwordlessTokenModel');
 const { updateTokenSession } = require('./passwordlessSendCodeServices');
 const configsModel = require('../../../../db/models/configsModel');
-const { update } = require('../../../../db/models/userModel');
+const { update, findByEmail } = require('../../../../db/models/userModel');
 const appConfig = require('../../../../config/appConfig');
 const cryptoEnvelope = require('../../../../utils/cryptoEnvelope');
 const { getLastLoginEvent } = require('../../../../db/models/userCredentialEventsModel');
@@ -36,6 +36,39 @@ async function sendCode(req) {
       },
       '[CIAM] Start Send OTP Request',
     );
+
+    // Check if OTP email sending is suppressed for troubleshooting
+    const { id, otp_email_disabled_until: disabledUntil } = await findByEmail(email);
+    if (id && disabledUntil) {
+      const disabledUntilDate = new Date(disabledUntil);
+      const now = new Date();
+
+      if (disabledUntilDate > now) {
+        loggerService.log(
+          {
+            user: {
+              email: req.body.email,
+              layer: 'controller.sendCode',
+              suppressed: true,
+              disabledUntil: disabledUntilDate.toISOString(),
+              remainingSeconds: Math.ceil((disabledUntilDate - now) / 1000),
+            },
+          },
+          '[CIAM] OTP Email Suppressed - Email sending disabled',
+        );
+      }
+
+      return {
+        auth: {
+          method: 'passwordless',
+          code: 200,
+          mwgCode: 'MWG_CIAM_USERS_OTP_SUPPRESSED',
+          message: messageLang('sendCode_suppressed', req.body.language),
+        },
+        status: 'success',
+        statusCode: 200,
+      };
+    }
 
     const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
     console.log(
