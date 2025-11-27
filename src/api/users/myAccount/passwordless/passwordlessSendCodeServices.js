@@ -65,7 +65,7 @@ class PasswordlessSendCodeService {
       // Disallow login if user not in membership-passes Cognito group AND no record of any membership passes in DB
       if (
         !groups.includes(GROUP.MEMBERSHIP_PASSES) &&
-        !userMemberships.some((membership) => validPassTypes.includes(membership.name))
+        !userMemberships.some((membership) => validPassTypes.value.includes(membership.name))
       ) {
         console.log('Failed membership pass check');
         return { proceed: false, error: { reason: 'membership_login_disallowed' } };
