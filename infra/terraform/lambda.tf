@@ -59,13 +59,12 @@ resource "aws_s3_object" "ciam" {
 }
 
 module "lambda_function_ciam_membership" {
-  source  = "terraform-aws-modules/lambda/aws"
-  version = "8.1.2"
+  source = "terraform-aws-modules/lambda/aws"
 
   function_name                     = "${var.project}-${var.env}-lambda"
   description                       = "${var.project} ${var.env} lambda"
   handler                           = var.newrelic_handler
-  runtime                           = "nodejs24.x"
+  runtime                           = "nodejs20.x"
   timeout                           = 50
   memory_size                       = var.memory_size
   create_package                    = false
