@@ -30,6 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
+const userConfig = require('../../config/usersConfig');
 
 /**
  * Create user using admin function
@@ -214,8 +215,11 @@ async function adminUpdateUser(req, listedParams) {
         if (commonService.isJsonNotEmpty(ciamComparedParams) === true) {
           let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-          // ignore otp_email_disabled_until from ciamComparedParams to prevent update to Cognito. It will be handled by DB service.
-          ciamComparedParams = ciamComparedParams.filter(param => param.Name !== 'otp_email_disabled_until');
+          // ignore DB-only parameters from ciamComparedParams to prevent update to Cognito. DB-only parameters will be handled by DB service.
+          const dbOnlyParameters = JSON.parse(userConfig.DATABASE_ONLY_PARAMS_MAPPING);
+          for (const param of dbOnlyParameters) {
+            ciamComparedParams = ciamComparedParams.filter(p => p.Name !== param);
+          }
           
           response = await usersService.adminUpdateUser(
             req,
