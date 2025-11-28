@@ -5,7 +5,7 @@ const resConfig = {
 
   // users wildpass source - cognito mapping
   WILDPASS_SOURCE_COGNITO_MAPPING:
-    '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter", "otp_email_disabled_until":"otp_email_disabled_until"}',
+    '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter"}',
   // parameters that are only stored in the database
   DATABASE_ONLY_PARAMS_MAPPING: '{"otp_email_disabled_until":"otp_email_disabled_until"}',
   // validation
