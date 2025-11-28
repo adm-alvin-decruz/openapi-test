@@ -63,10 +63,14 @@ router.put(
     //keep logic update for wildpass user account
     req['body'] = commonService.cleanData(req.body);
     // validate request params is listed, NOTE: listedParams doesn't have email
+    const cognitoAndDatabaseMapping = {
+      ...userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
+      ...userConfig.DATABASE_ONLY_PARAMS_MAPPING,
+    };
+    
     const listedParams = commonService.mapCognitoJsonObj(
-      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-      req.body,
-    );
+      cognitoAndDatabaseMapping, 
+      req.body);
 
     if (commonService.isJsonNotEmpty(listedParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });

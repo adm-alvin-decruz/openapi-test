@@ -5,7 +5,6 @@ const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
 const { convertDateToMySQLFormat, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
-const loggerService = require('../../logs/logger');
 
 /**
  * Get User By Email
@@ -58,11 +57,10 @@ function prepareDBUpdateData(ciamAttrInput) {
 
     if (item.Name === 'otp_email_disabled_until') {
       let disabledUntilDate = null;
-      try {
-        disabledUntilDate = new Date(item.Value);
-        disabledUntilDate = formatDateToMySQLDateTime(disabledUntilDate);
-      } catch (e) {
-        loggerService.error(e, {}, '[CIAM-MAIN] Prepare DB Update Data - Failed to parse custom:otp_email_disabled_until');
+      if (item.Value === 'true') {
+        // current time + 5 minutes
+        const date = new Date(Date.now() + 5 * 60000);
+        disabledUntilDate = formatDateToMySQLDateTime(date);
       }
 
       result.updateUsersModel['otp_email_disabled_until'] = disabledUntilDate;
