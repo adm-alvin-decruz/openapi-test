@@ -57,7 +57,7 @@ function prepareDBUpdateData(ciamAttrInput) {
 
     if (item.Name === 'otp_email_disabled_until') {
       let disabledUntilDate = null;
-      if (item.Value === 'true') {
+      if (item.Value === 'true' || item.Value === true) {
         // current time + 5 minutes
         const date = new Date(Date.now() + 5 * 60000);
         disabledUntilDate = formatDateToMySQLDateTime(date);

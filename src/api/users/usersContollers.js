@@ -217,8 +217,8 @@ async function adminUpdateUser(req, listedParams) {
 
           // ignore DB-only parameters from ciamComparedParams to prevent update to Cognito. DB-only parameters will be handled by DB service.
           const dbOnlyParameters = JSON.parse(userConfig.DATABASE_ONLY_PARAMS_MAPPING);
-          for (const param of dbOnlyParameters) {
-            ciamComparedParams = ciamComparedParams.filter(p => p.Name !== param);
+          for (const key in dbOnlyParameters) {
+            ciamComparedParams = ciamComparedParams.filter(p => p.Name !== key);
           }
           
           response = await usersService.adminUpdateUser(
