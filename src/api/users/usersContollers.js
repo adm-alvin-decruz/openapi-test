@@ -30,7 +30,6 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
-const userConfig = require('../../config/usersConfig');
 
 /**
  * Create user using admin function
@@ -188,7 +187,7 @@ async function adminCreateMPUser(req) {
  *
  * @returns
  */
-async function adminUpdateUser(req, listedParams) {
+async function adminUpdateUser(req, cognitoParams, databaseParams) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersController.adminUpdateUser start'); // log process time
 
@@ -208,29 +207,26 @@ async function adminUpdateUser(req, listedParams) {
       if (validatedParams.status === 'success') {
         let response;
         // compare input data vs membership info
-        let ciamComparedParams = commonService.compareAndFilterJSON(
-          listedParams,
+        let cognitoComparedParams = commonService.compareAndFilterJSON(
+          cognitoParams,
           memberInfo.data.cognitoUser.UserAttributes,
         );
-        if (commonService.isJsonNotEmpty(ciamComparedParams) === true) {
-          let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-          // ignore DB-only parameters from ciamComparedParams to prevent update to Cognito. DB-only parameters will be handled by DB service.
-          const dbOnlyParameters = JSON.parse(userConfig.DATABASE_ONLY_PARAMS_MAPPING);
-          for (const key in dbOnlyParameters) {
-            ciamComparedParams = ciamComparedParams.filter(p => p.Name !== key);
-          }
-          
-          response = await usersService.adminUpdateUser(
-            req,
-            ciamComparedParams,
-            memberInfo.data,
-            prepareDBUpdateData,
-          );
+        let databaseComparedParams = commonService.compareAndFilterJSON(
+          databaseParams,
+          memberInfo.data.cognitoUser.UserAttributes,
+        );
+        let prepareDBUpdateData = dbService.prepareDBUpdateData(databaseComparedParams);
 
-          req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-          return response;
-        }
+        response = await usersService.adminUpdateUser(
+          req,
+          cognitoComparedParams,
+          memberInfo.data,
+          prepareDBUpdateData,
+        );
+
+        req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+        return response;
       } else {
         // prepare error params response
         const errorConfig = commonService.processUserUpdateErrors(
@@ -282,25 +278,26 @@ async function adminUpdateUser(req, listedParams) {
       );
     }
 
+    // un reachable code
     // prepare logs
-    let logObj = loggerService.build(
-      'user',
-      'usersControllers.adminUpdateUser',
-      req,
-      'MWG_CIAM_USER_UPDATE_SUCCESS',
-      { success: 'no data to update' },
-      memberInfo,
-    );
+    // let logObj = loggerService.build(
+    //   'user',
+    //   'usersControllers.adminUpdateUser',
+    //   req,
+    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
+    //   { success: 'no data to update' },
+    //   memberInfo,
+    // );
 
     // prepare error params response
-    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-    return responseHelper.craftUsersApiResponse(
-      'usersControllers.adminUpdateUser',
-      req.body,
-      'MWG_CIAM_USER_UPDATE_SUCCESS',
-      'USERS_UPDATE',
-      logObj,
-    );
+    // req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+    // return responseHelper.craftUsersApiResponse(
+    //   'usersControllers.adminUpdateUser',
+    //   req.body,
+    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
+    //   'USERS_UPDATE',
+    //   logObj,
+    // );
   } catch (error) {
     req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     throw error;

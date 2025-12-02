@@ -63,22 +63,22 @@ router.put(
     //keep logic update for wildpass user account
     req['body'] = commonService.cleanData(req.body);
     // validate request params is listed, NOTE: listedParams doesn't have email
-    const cognitoAndDatabaseMapping = commonService.mergeJsonObjects(
-      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-      userConfig.DATABASE_ONLY_PARAMS_MAPPING
-    );
-
-    const listedParams = commonService.mapCognitoJsonObj(
-      cognitoAndDatabaseMapping, 
+    const cognitoParams = commonService.mapCognitoJsonObj(
+      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, 
       req.body
     );
 
-    if (commonService.isJsonNotEmpty(listedParams) === false) {
+    const databaseParams = commonService.mapCognitoJsonObj(
+      userConfig.DATABASE_PARAMS_MAPPING, 
+      req.body
+    );
+
+    if (commonService.isJsonNotEmpty(cognitoParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
 
     try {
-      const updateUser = await userController.adminUpdateUser(req, listedParams);
+      const updateUser = await userController.adminUpdateUser(req, cognitoParams, databaseParams);
 
       req.apiTimer.end('Route CIAM Update User ', startTimer);
       if ('membership' in updateUser && 'code' in updateUser.membership) {

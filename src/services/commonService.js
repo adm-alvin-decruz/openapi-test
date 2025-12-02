@@ -164,11 +164,8 @@ function mapJsonObjects(mappingJSON, inputJson) {
  */
 function mapCognitoJsonObj(mappingJSON, inputJSON) {
   const jsonC = [];
-  if(typeof mappingJSON === 'string') {
-    mappingJSON = JSON.parse(mappingJSON);
-  }
 
-  for (const [keyA, valueA] of Object.entries(mappingJSON)) {
+  for (const [keyA, valueA] of Object.entries(JSON.parse(mappingJSON))) {
     if (valueA in inputJSON) {
       let value = inputJSON[valueA];
       if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
