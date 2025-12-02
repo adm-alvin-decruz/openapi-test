@@ -500,7 +500,7 @@ async function getUserMembership(req) {
 }
 
 //#region Update user CIAM info - Phase2 FO series
-async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareDBUpdateData) {
+async function adminUpdateUser(req, cognitoComparedParams, membershipData, prepareDBUpdateData) {
   // get switches from DB
   req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
@@ -511,7 +511,7 @@ async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareD
     req.body,
     membershipData.cognitoUser.UserAttributes,
   );
-  ciamComparedParams.push(name);
+  cognitoComparedParams.push(name);
 
   let response = {};
 
@@ -521,24 +521,25 @@ async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareD
 
   try {
     // save to cognito
-    let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams);
+    if (commonService.isJsonNotEmpty(cognitoComparedParams) === true) {
+      let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, cognitoComparedParams);
+      response['cognito'] = cognitoRes;
+    }
 
     // save to DB
-    let updateDBRes = await userUpdateHelper.updateDBUserInfo(
-      req,
-      prepareDBUpdateData,
-      membershipData.db_user,
-    );
+    if (commonService.isJsonNotEmpty(prepareDBUpdateData) === true) {
+      let updateDBRes = await userUpdateHelper.updateDBUserInfo(
+        req,
+        prepareDBUpdateData,
+        membershipData.db_user,
+      );
+      response['updateDB'] = updateDBRes;
+    }
 
     // galaxy update move to sqs. Push to SQS queue for Galaxy Import Pass
-    req.body['ciamComparedParams'] = ciamComparedParams;
+    req.body['ciamComparedParams'] = cognitoComparedParams;
     req.body['membershipData'] = membershipData;
     response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
-
-    response = {
-      cognito: cognitoRes,
-      updateDB: updateDBRes,
-    };
 
     // prepare logs
     let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData];

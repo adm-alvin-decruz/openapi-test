@@ -4,7 +4,7 @@ const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
-const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const { convertDateToMySQLFormat, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 
 /**
  * Get User By Email
@@ -34,7 +34,7 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    if (USER_CFG_MAP.hasOwnProperty(item.Name)) {
+    if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
     }
     if (item.Name === 'birthdate') {
@@ -46,13 +46,23 @@ function prepareDBUpdateData(ciamAttrInput) {
       try {
         let newsletterData = JSON.parse(item.Value);
         Object.keys(USER_NEWS_CFG_MAP).forEach(function (key) {
-          if (newsletterData.hasOwnProperty(key)) {
+          if (newsletterData[key] !== undefined) {
             result.updateUserNewsletterModel[key] = newsletterData[key];
           }
         });
       } catch (e) {
         console.error('Error parsing custom:newsletter:', e);
       }
+    }
+
+    if (item.Name === 'otp_email_disabled_until') {
+      let disabledUntilDate = null;
+      if (item.Value === 'true' || item.Value === true) {
+        const date = new Date(Date.now() + userConfig.OTP_EMAIL_DISABLED_UNTIL_DURATION);
+        disabledUntilDate = formatDateToMySQLDateTime(date);
+      }
+
+      result.updateUsersModel['otp_email_disabled_until'] = disabledUntilDate;
     }
   });
 

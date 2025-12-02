@@ -6,7 +6,8 @@ const resConfig = {
   // users wildpass source - cognito mapping
   WILDPASS_SOURCE_COGNITO_MAPPING:
     '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter"}',
-
+  // parameters that are only stored in the database
+  DATABASE_PARAMS_MAPPING: '{"given_name":"firstName","family_name":"lastName","birthdate":"dob","custom:newsletter":"newsletter", "otp_email_disabled_until":"otp_email_disabled_until"}',
   // validation
   SIGNUP_VALIDATE_PARAMS:
     '{"email":{"invalid":"The %s is invalid.","exist":"This address is already being used for a Mandai %s Account."},"firstName":{"invalid":"The %s is invalid."},"lastName":{"invalid":"The %s is invalid."},"dob":{"invalid":"The %s is invalid.","range_error":"The dob must between 13 and 99 years old."},"group":{"invalid":"The %s is invalid."},"newsletter":{"invalid":"The %s is invalid.","subscribe_error":"Must agree and subscribe to the newsletter."}}',
@@ -34,7 +35,7 @@ const resConfig = {
     '{"email":"email","firstName":"given_name","lastName":"family_name","mandaiId":"mandai_id","visualId":"visual_id","dateOfBirth":"birthdate","postalCode":""}',
 
   // user model fields for prepare DB update data
-  DB_USERS_MODEL_MAPPING: '{"given_name":"","family_name":"","birthdate":""}',
+  DB_USERS_MODEL_MAPPING: '{"given_name":"","family_name":"","birthdate":"", "otp_email_disabled_until":""}',
   DB_USER_NEWSLETTER_MAPPING: '{"name":"","type":"","subscribe":""}',
 
   // update parameters that can trigger Galaxy update:
@@ -43,6 +44,8 @@ const resConfig = {
 
   // db page size limit
   DEFAULT_PAGE_SIZE: 250,
+
+  OTP_EMAIL_DISABLED_UNTIL_DURATION: 5 * 60000,
 };
 
 module.exports = resConfig;

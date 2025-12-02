@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require('../../utils/constants');
 const CommonErrors = require('../../config/https/errors/commonErrors');
-
+const loggerService = require('../../logs/logger');
 const pong = { pong: 'pang' };
 
 router.use(express.json());
@@ -63,17 +63,22 @@ router.put(
     //keep logic update for wildpass user account
     req['body'] = commonService.cleanData(req.body);
     // validate request params is listed, NOTE: listedParams doesn't have email
-    const listedParams = commonService.mapCognitoJsonObj(
-      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-      req.body,
+    const cognitoParams = commonService.mapCognitoJsonObj(
+      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, 
+      req.body
     );
 
-    if (commonService.isJsonNotEmpty(listedParams) === false) {
+    const databaseParams = commonService.mapCognitoJsonObj(
+      userConfig.DATABASE_PARAMS_MAPPING, 
+      req.body
+    );
+
+    if (commonService.isJsonNotEmpty(cognitoParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
 
     try {
-      const updateUser = await userController.adminUpdateUser(req, listedParams);
+      const updateUser = await userController.adminUpdateUser(req, cognitoParams, databaseParams);
 
       req.apiTimer.end('Route CIAM Update User ', startTimer);
       if ('membership' in updateUser && 'code' in updateUser.membership) {
@@ -81,6 +86,7 @@ router.put(
       }
       return res.status(200).json(updateUser);
     } catch (error) {
+      loggerService.error(error);
       res.status(501).send(CommonErrors.NotImplemented());
     }
   },
