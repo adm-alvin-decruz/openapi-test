@@ -30,6 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
+const UsersV2Service = require('./usersV2Services');
 
 /**
  * Create user using admin function
@@ -893,6 +894,32 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
+/**
+ * Get users với filters, pagination, sorting
+ * 
+ * @param {Object} req - Express request object
+ * @returns {Promise<Object>} Response object
+ */
+async function getUsers(req) {
+  try {
+    const result = await UsersV2Service.getUsers(req);
+    return result;
+  } catch (error) {
+    loggerService.error('usersContollers.getUsers', error);
+    
+    // Format error response theo pattern hiện tại
+    return {
+      status: 'failed',
+      statusCode: 500,
+      membership: {
+        code: 500,
+        mwgCode: 'MWG_CIAM_USERS_GET_ERROR',
+        message: 'Get users error.',
+      },
+    };
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -911,4 +938,5 @@ module.exports = {
   userCreateMembershipPass,
   userUpdateMembershipPass,
   userRefreshAccessToken,
+  getUsers,
 };

@@ -92,4 +92,37 @@ router.put(
   },
 );
 
+/**
+ * CIAM Get users private endpoint
+ * GET /private/v1/users?email=xxx&mandai_id=xxx&page=1&limit=50&sort_by=created_at&sort_order=DESC
+ */
+router.get(
+  '/v1/users',
+  validateAPIKey, // Middleware: Validate API key
+  async (req, res) => {
+    req['processTimer'] = processTimer;
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
+    const startTimer = process.hrtime();
+
+    try {
+      const result = await userController.getUsers(req);
+      req.apiTimer.end('Route CIAM Get Users Success', startTimer);
+      return res.status(result.statusCode).json(result);
+    } catch (error) {
+      req.apiTimer.end('Route CIAM Get Users Error', startTimer);
+      loggerService.error('userPrivateRoutes.GET /v1/users', error);
+      
+      return res.status(500).json({
+        status: 'failed',
+        statusCode: 500,
+        membership: {
+          code: 500,
+          mwgCode: 'MWG_CIAM_USERS_GET_ERROR',
+          message: 'Get users error.',
+        },
+      });
+    }
+  }
+);
+
 module.exports = router;
