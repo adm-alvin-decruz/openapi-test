@@ -2,35 +2,21 @@ const { getDataSource } = require('../../db/typeorm/data-source');
 const loggerService = require('../../logs/logger');
 const userConfig = require('../../config/usersConfig');
 
-/**
- * Service layer cho GET /private/v1/users
- * Xử lý business logic, validation, format response
- * Dùng TypeORM repository trực tiếp (không cần custom repository class)
- */
-class UsersV2Service {
-  /**
-   * Get users với filters, pagination, sorting
-   * 
-   * @param {Object} req - Express request object
-   * @returns {Promise<Object>} Response object
-   */
+class UsersServicesV2 {
+  constructor() {
+    this.dataSource = getDataSource();
+    this.userRepository = this.dataSource.getRepository('User');
+  }
+
   static async getUsers(req) {
     try {
-      // Parse và validate query parameters
       const filters = this._parseFilters(req.query);
       const pagination = this._parsePagination(req.query);
       const sorting = this._parseSorting(req.query);
 
-      // Get TypeORM repository trực tiếp
-      const dataSource = await getDataSource();
-      const userRepository = dataSource.getRepository('User');
+      const queryBuilder = this.userRepository.createQueryBuilder('user');
 
-      // Build query builder
-      const queryBuilder = userRepository.createQueryBuilder('user');
-
-      // Apply filters
       if (filters.email) {
-        // Support both exact match và LIKE search
         if (filters.email.includes('%') || filters.email.includes('_')) {
           queryBuilder.andWhere('user.email LIKE :email', { email: filters.email });
         } else {
@@ -58,10 +44,8 @@ class UsersV2Service {
         queryBuilder.andWhere('user.created_at <= :created_to', { created_to: filters.created_to });
       }
 
-      // Exclude soft-deleted records
       queryBuilder.andWhere('user.delete_at IS NULL');
 
-      // Apply sorting
       const sortBy = sorting.sort_by || 'created_at';
       const sortOrder = (sorting.sort_order || 'DESC').toUpperCase();
       const allowedSortFields = ['id', 'email', 'mandai_id', 'singpass_uuid', 'status', 'created_at', 'updated_at'];
@@ -69,24 +53,19 @@ class UsersV2Service {
       if (allowedSortFields.includes(sortBy)) {
         queryBuilder.orderBy(`user.${sortBy}`, sortOrder);
       } else {
-        // Default fallback
         queryBuilder.orderBy('user.created_at', 'DESC');
       }
 
-      // Get total count (before pagination)
       const total = await queryBuilder.getCount();
 
-      // Apply pagination
       const page = Math.max(1, parseInt(pagination.page) || 1);
       const limit = Math.min(250, Math.max(1, parseInt(pagination.limit) || 50)); // Max 250, default 50
       const skip = (page - 1) * limit;
 
       queryBuilder.skip(skip).take(limit);
 
-      // Execute query
       const users = await queryBuilder.getMany();
 
-      // Format result
       const result = {
         users,
         total,
@@ -95,7 +74,6 @@ class UsersV2Service {
         totalPages: Math.ceil(total / limit),
       };
 
-      // Format response
       return {
         status: 'success',
         statusCode: 200,
@@ -105,7 +83,7 @@ class UsersV2Service {
           message: 'Get users successfully.',
         },
         data: {
-          users: result.users.map(user => this._formatUserResponse(user)),
+          users: result.users.map(user => this.formatUserResponse(user)),
           pagination: {
             page: result.page,
             limit: result.limit,
@@ -120,13 +98,7 @@ class UsersV2Service {
     }
   }
 
-  /**
-   * Parse filters từ query string
-   * 
-   * @param {Object} query - req.query
-   * @returns {Object} Filters object
-   */
-  static _parseFilters(query) {
+  _parseFilters(query) {
     const filters = {};
 
     if (query.email) {
@@ -149,7 +121,6 @@ class UsersV2Service {
     }
 
     if (query.created_from) {
-      // Validate ISO date format
       const date = new Date(query.created_from);
       if (!isNaN(date.getTime())) {
         filters.created_from = date.toISOString();
@@ -166,13 +137,7 @@ class UsersV2Service {
     return filters;
   }
 
-  /**
-   * Parse pagination từ query string
-   * 
-   * @param {Object} query - req.query
-   * @returns {Object} Pagination object
-   */
-  static _parsePagination(query) {
+  _parsePagination(query) {
     return {
       page: parseInt(query.page) || 1,
       limit: Math.min(
@@ -182,27 +147,14 @@ class UsersV2Service {
     };
   }
 
-  /**
-   * Parse sorting từ query string
-   * 
-   * @param {Object} query - req.query
-   * @returns {Object} Sorting object
-   */
-  static _parseSorting(query) {
+  _parseSorting(query) {
     return {
       sort_by: query.sort_by || 'created_at',
       sort_order: (query.sort_order || 'DESC').toUpperCase(),
     };
   }
 
-  /**
-   * Format user object cho response
-   * Chỉ trả về các field cần thiết, không expose sensitive data
-   * 
-   * @param {Object} user - User entity từ database
-   * @returns {Object} Formatted user object
-   */
-  static _formatUserResponse(user) {
+  _formatUserResponse(user) {
     return {
       id: user.id,
       email: user.email,
@@ -222,5 +174,7 @@ class UsersV2Service {
   }
 }
 
-module.exports = UsersV2Service;
+module.exports = { 
+  UsersServices: new UsersServicesV2() 
+};
 

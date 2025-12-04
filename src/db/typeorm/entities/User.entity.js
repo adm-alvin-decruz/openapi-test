@@ -1,9 +1,5 @@
 const { EntitySchema } = require('typeorm');
 
-/**
- * User Entity - Map với table `users`
- * Dùng EntitySchema vì project đang là JavaScript (không phải TypeScript)
- */
 const User = new EntitySchema({
   name: 'User',
   tableName: 'users',
@@ -91,5 +87,7 @@ const User = new EntitySchema({
   ],
 });
 
-module.exports = User;
+module.exports = {
+  User
+};
 

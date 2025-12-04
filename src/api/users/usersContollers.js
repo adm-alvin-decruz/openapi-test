@@ -30,7 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
-const UsersV2Service = require('./usersV2Services');
+const { UsersServices } = require('./usersServicesV2');
 
 /**
  * Create user using admin function
@@ -894,20 +894,13 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
-/**
- * Get users với filters, pagination, sorting
- * 
- * @param {Object} req - Express request object
- * @returns {Promise<Object>} Response object
- */
 async function getUsers(req) {
   try {
-    const result = await UsersV2Service.getUsers(req);
+    const result = await UsersServices.getUsers(req);
     return result;
   } catch (error) {
     loggerService.error('usersContollers.getUsers', error);
     
-    // Format error response theo pattern hiện tại
     return {
       status: 'failed',
       statusCode: 500,

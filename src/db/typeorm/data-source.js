@@ -1,14 +1,10 @@
 require('dotenv').config();
 const { DataSource } = require('typeorm');
 const { getDbConfig } = require('../config/mysqlConfig');
-const User = require('./entities/User.entity');
+const { User } = require('./entities/User.entity');
 
 let dataSource = null;
 
-/**
- * Initialize TypeORM DataSource
- * Sử dụng cùng config với mysqlConn.js để đảm bảo consistency
- */
 async function getDataSource() {
   if (dataSource && dataSource.isInitialized) {
     return dataSource;
@@ -16,7 +12,6 @@ async function getDataSource() {
 
   const dbConfig = await getDbConfig();
   
-  // TypeORM sẽ dùng slave pool cho read operations
   dataSource = new DataSource({
     type: 'mysql',
     host: dbConfig.slave.host,
@@ -25,8 +20,8 @@ async function getDataSource() {
     password: dbConfig.slave.password,
     database: dbConfig.slave.database,
     entities: [User],
-    synchronize: false, // QUAN TRỌNG: Không auto-sync, dùng migration riêng
-    logging: process.env.NODE_ENV === 'development', // Log queries trong dev
+    synchronize: false, 
+    logging: process.env.NODE_ENV === 'development',
     extra: {
       ssl: dbConfig.slave.ssl,
       connectionLimit: dbConfig.slave.connectionLimit || 10,
@@ -41,9 +36,6 @@ async function getDataSource() {
   return dataSource;
 }
 
-/**
- * Close DataSource connection (dùng khi shutdown Lambda)
- */
 async function closeDataSource() {
   if (dataSource && dataSource.isInitialized) {
     await dataSource.destroy();
