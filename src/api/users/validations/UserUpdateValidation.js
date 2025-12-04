@@ -66,9 +66,15 @@ class UserUpdateValidation {
   static async validateRequestParams(req) {
     const privateMode = !!req.privateMode;
 
-    if ((req.data && Object.keys(req.data).length === 0) || !req.data) {
+    if (req.otpEmailDisabledUntil === undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
+
+    if (req.otpEmailDisabledUntil !== undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
+      // return null to skip validation
+      return (this.error = null);
+    }
+
     const bodyData = req.data;
 
     //validate missing required params

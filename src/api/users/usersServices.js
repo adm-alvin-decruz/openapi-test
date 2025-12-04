@@ -593,6 +593,7 @@ async function adminUpdateMPUser(body) {
   const email = body.email;
   const newEmail = body.data.newEmail || '';
   const language = body.language || 'en';
+  const otpEmailDisabledUntil = body.otpEmailDisabledUntil;
 
   //clean and format phoneNumber
   dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
@@ -652,6 +653,7 @@ async function adminUpdateMPUser(body) {
       ncRequest: ncRequest,
       password,
       language: language,
+      otpEmailDisabledUntil: otpEmailDisabledUntil,
     });
     await userEventAuditTrailService.createEvent(
       email,

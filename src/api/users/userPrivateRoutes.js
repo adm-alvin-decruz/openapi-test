@@ -18,6 +18,7 @@ const { GROUP, GROUPS_SUPPORTS } = require('../../utils/constants');
 const CommonErrors = require('../../config/https/errors/commonErrors');
 const loggerService = require('../../logs/logger');
 const pong = { pong: 'pang' };
+const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
 
 router.use(express.json());
 
@@ -45,6 +46,17 @@ router.put(
         .status(400)
         .json(CommonErrors.BadRequest('group', 'group_invalid', req.body.language));
     }
+
+    // transform otp_email_disabled_until to mysql format if exists
+    if (req.body.otpEmailDisabledUntil !== undefined) {
+      if (req.body.otpEmailDisabledUntil === 'true' || req.body.otpEmailDisabledUntil === true) {
+        const date = new Date(Date.now() + userConfig.OTP_EMAIL_DISABLED_UNTIL_DURATION);
+        req.body.otpEmailDisabledUntil = formatDateToMySQLDateTime(date);
+      } else {
+        req.body.otpEmailDisabledUntil = null;
+      }
+    }
+
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {

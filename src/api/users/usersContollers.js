@@ -337,6 +337,13 @@ async function adminUpdateMPUser(req) {
     );
     throw new Error(JSON.stringify(message));
   }
+
+  // create req.body.data if not exists to avoid error
+  // TODO: Remove this once the validation is updated to handle this case
+  if (req.body.otpEmailDisabledUntil !== undefined && (!req.body.data || Object.keys(req.body.data).length === 0)) {
+    req.body.data = {};
+  }
+
   try {
     // check if it is AEM call
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
