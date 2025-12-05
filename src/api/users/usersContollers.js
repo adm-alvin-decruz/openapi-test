@@ -28,7 +28,6 @@ const UserGetMembershipPassesValidation = require('./validations/UserGetMembersh
 const UserVerifyTokenValidation = require('./validations/UserVerifyTokenValidation');
 const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
-const { transformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
 
@@ -359,11 +358,6 @@ async function adminUpdateMPUser(req) {
   }
 
   try {
-    // transform otpEmailDisabledUntil for membership-passes flow (if present)
-    if (req.body.otpEmailDisabledUntil !== undefined) {
-      req.body.otpEmailDisabledUntil = transformOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil);
-    }
-    
     // check if it is AEM call
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
     if (!requestFromAEM) {

@@ -86,16 +86,16 @@ async function updateUserMigration(req, param1, param2) {
 }
 
 async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, otpEmailDisabledUntil) {
+  // transform otpEmailDisabledUntil to mysql format if exists
+  const transformedOtpEmailDisabledUntil = transformOtpEmailDisabledUntil(otpEmailDisabledUntil);
+
   const updateFields = {
     given_name: firstName,
     family_name: lastName,
     birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
     email: email,
+    otp_email_disabled_until: transformedOtpEmailDisabledUntil,
   };
-
-  if (otpEmailDisabledUntil !== undefined) {
-    updateFields.otp_email_disabled_until = otpEmailDisabledUntil;
-  }
 
   return await userModel.update(userId, updateFields);
 }
