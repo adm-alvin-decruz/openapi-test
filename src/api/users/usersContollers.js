@@ -231,16 +231,6 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
           memberInfo.data.cognitoUser.UserAttributes,
         );
         
-        // Transform otpEmailDisabledUntil for wildpass flow (if present)
-        if (req.body.otpEmailDisabledUntil !== undefined) {
-          const transformedValue = transformOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil);
-          // Update the value in databaseComparedParams if it exists
-          const otpParamIndex = databaseComparedParams.findIndex(param => param.Name === 'otp_email_disabled_until');
-          if (otpParamIndex !== -1) {
-            databaseComparedParams[otpParamIndex].Value = transformedValue;
-          }
-        }
-        
         let prepareDBUpdateData = dbService.prepareDBUpdateData(databaseComparedParams);
 
         response = await usersService.adminUpdateUser(

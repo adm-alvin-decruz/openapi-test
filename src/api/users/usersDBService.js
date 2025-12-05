@@ -35,11 +35,7 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    // Transform otp_email_disabled_until if present
-    // This is defensive - should already be transformed in route, but ensures consistency
     if (item.Name === 'otp_email_disabled_until') {
-      // Transform value (handles true/'true' → datetime, false/'false' → null)
-      // If already transformed (datetime string), transformOtpEmailDisabledUntil will return it as-is
       result.updateUsersModel[item.Name] = transformOtpEmailDisabledUntil(item.Value);
     } else if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
