@@ -5,6 +5,7 @@ const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
 const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const { transformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 
 /**
  * Get User By Email
@@ -34,9 +35,16 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    if (USER_CFG_MAP[item.Name] !== undefined) {
+    // Transform otp_email_disabled_until if present
+    // This is defensive - should already be transformed in route, but ensures consistency
+    if (item.Name === 'otp_email_disabled_until') {
+      // Transform value (handles true/'true' → datetime, false/'false' → null)
+      // If already transformed (datetime string), transformOtpEmailDisabledUntil will return it as-is
+      result.updateUsersModel[item.Name] = transformOtpEmailDisabledUntil(item.Value);
+    } else if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
     }
+    
     if (item.Name === 'birthdate') {
       result.updateUsersModel[item.Name] = convertDateToMySQLFormat(item.Value);
     }

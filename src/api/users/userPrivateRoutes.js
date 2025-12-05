@@ -18,7 +18,7 @@ const { GROUP, GROUPS_SUPPORTS } = require('../../utils/constants');
 const CommonErrors = require('../../config/https/errors/commonErrors');
 const loggerService = require('../../logs/logger');
 const pong = { pong: 'pang' };
-const { formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const { validateAndTransformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 
 router.use(express.json());
 
@@ -47,14 +47,19 @@ router.put(
         .json(CommonErrors.BadRequest('group', 'group_invalid', req.body.language));
     }
 
-    // transform otp_email_disabled_until to mysql format if exists
+    // Validate and transform otp_email_disabled_until to mysql format if exists
+    // Works for both wildpass and membership-passes flows
     if (req.body.otpEmailDisabledUntil !== undefined) {
-      if (req.body.otpEmailDisabledUntil === 'true' || req.body.otpEmailDisabledUntil === true) {
-        const date = new Date(Date.now() + userConfig.OTP_EMAIL_DISABLED_UNTIL_DURATION);
-        req.body.otpEmailDisabledUntil = formatDateToMySQLDateTime(date);
-      } else {
-        req.body.otpEmailDisabledUntil = null;
+      const { error, value } = validateAndTransformOtpEmailDisabledUntil(
+        req.body.otpEmailDisabledUntil,
+        req.body.language,
+      );
+      
+      if (error) {
+        return res.status(400).json(error);
       }
+      
+      req.body.otpEmailDisabledUntil = value;
     }
 
     //#region Update Account New logic (FO series)

@@ -10,6 +10,7 @@ const { checkPasswordHasValidPattern } = require('../helpers/checkPasswordComple
 const cognitoService = require('../../../services/cognitoService');
 const crypto = require('crypto');
 const { secrets } = require('../../../services/secretsService');
+const { validateOtpEmailDisabledUntil } = require('../helpers/otpEmailHelper');
 
 class UserUpdateValidation {
   constructor() {
@@ -66,12 +67,20 @@ class UserUpdateValidation {
   static async validateRequestParams(req) {
     const privateMode = !!req.privateMode;
 
+    // Validate otpEmailDisabledUntil if present - use helper function for consistency
+    if (req.otpEmailDisabledUntil !== undefined) {
+      const validationError = validateOtpEmailDisabledUntil(req.otpEmailDisabledUntil, req.language);
+      if (validationError) {
+        return (this.error = validationError);
+      }
+    }
+
     if (req.otpEmailDisabledUntil === undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
 
     if (req.otpEmailDisabledUntil !== undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
-      // return null to skip validation
+      // return null to skip validation for other fields when only otpEmailDisabledUntil is present
       return (this.error = null);
     }
 
