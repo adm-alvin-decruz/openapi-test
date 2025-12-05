@@ -514,11 +514,11 @@ async function adminUpdateUser(req, cognitoComparedParams, membershipData, prepa
   // add name params to cognito request only if there are other changes
   // This prevents triggering Cognito update (and potential email triggers) when only otpEmailDisabledUntil is toggled
   if (hasCognitoChanges) {
-    let name = usersUpdateHelpers.createNameParameter(
-      req.body,
-      membershipData.cognitoUser.UserAttributes,
-    );
-    cognitoComparedParams.push(name);
+  let name = usersUpdateHelpers.createNameParameter(
+    req.body,
+    membershipData.cognitoUser.UserAttributes,
+  );
+  cognitoComparedParams.push(name);
   }
 
   let response = {};
@@ -640,15 +640,15 @@ async function adminUpdateMPUser(body) {
     let userNewEmailInfo = null;
     if (newEmail && newEmail !== email) {
       userNewEmailInfo = await getUserFromDBCognito(newEmail);
-      
-      //check email and new email is existed -> throw error if possible to stop update process
-      await verifyCurrentAndNewEmail({
-        originalEmail: email,
-        userInfoOriginal: userOriginalInfo,
-        newEmail: newEmail,
-        userInfoNewEmail: userNewEmailInfo,
-        language: language,
-      });
+
+    //check email and new email is existed -> throw error if possible to stop update process
+    await verifyCurrentAndNewEmail({
+      originalEmail: email,
+      userInfoOriginal: userOriginalInfo,
+      newEmail: newEmail,
+      userInfoNewEmail: userNewEmailInfo,
+      language: language,
+    });
     }
 
     const password = await manipulatePassword(ncRequest, body.data.password, body.data.newPassword);
@@ -677,13 +677,13 @@ async function adminUpdateMPUser(body) {
     //2nd proceed update user information in Cognito only if there are updatable fields
     // Skip Cognito update if only otpEmailDisabledUntil is being toggled (it's DB-only)
     if (hasUpdatableData || newEmail) {
-      await updateCognitoUserInfo({
-        data: dataRequestUpdate,
-        userInfo: userOriginalInfo.cognito,
-        email: email,
-        newEmail: newEmail,
-        language: language,
-      });
+    await updateCognitoUserInfo({
+      data: dataRequestUpdate,
+      userInfo: userOriginalInfo.cognito,
+      email: email,
+      newEmail: newEmail,
+      language: language,
+    });
     }
 
     //3rd proceed update user in DB (always proceed, even if only otpEmailDisabledUntil)

@@ -28,6 +28,7 @@ const UserGetMembershipPassesValidation = require('./validations/UserGetMembersh
 const UserVerifyTokenValidation = require('./validations/UserVerifyTokenValidation');
 const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
+const { transformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
 
@@ -229,6 +230,17 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
           databaseParams,
           memberInfo.data.cognitoUser.UserAttributes,
         );
+        
+        // Transform otpEmailDisabledUntil for wildpass flow (if present)
+        if (req.body.otpEmailDisabledUntil !== undefined) {
+          const transformedValue = transformOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil);
+          // Update the value in databaseComparedParams if it exists
+          const otpParamIndex = databaseComparedParams.findIndex(param => param.Name === 'otp_email_disabled_until');
+          if (otpParamIndex !== -1) {
+            databaseComparedParams[otpParamIndex].Value = transformedValue;
+          }
+        }
+        
         let prepareDBUpdateData = dbService.prepareDBUpdateData(databaseComparedParams);
 
         response = await usersService.adminUpdateUser(
@@ -331,6 +343,11 @@ async function adminUpdateMPUser(req) {
     },
     '[CIAM] Start Update User with FOs Request',
   );
+  // Ensure req.body.data exists before validation (needed for OTP-only updates)
+  if (!req.body.data) {
+    req.body.data = {};
+  }
+
   const message = await UserUpdateValidation.execute(req.body);
   if (message) {
     loggerService.error(
@@ -351,13 +368,12 @@ async function adminUpdateMPUser(req) {
     throw new Error(JSON.stringify(message));
   }
 
-  // create req.body.data if not exists to avoid error
-  // TODO: Remove this once the validation is updated to handle this case
-  if (req.body.otpEmailDisabledUntil !== undefined && (!req.body.data || Object.keys(req.body.data).length === 0)) {
-    req.body.data = {};
-  }
-
   try {
+    // transform otpEmailDisabledUntil for membership-passes flow (if present)
+    if (req.body.otpEmailDisabledUntil !== undefined) {
+      req.body.otpEmailDisabledUntil = transformOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil);
+    }
+    
     // check if it is AEM call
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
     if (!requestFromAEM) {

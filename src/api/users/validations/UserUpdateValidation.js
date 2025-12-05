@@ -66,7 +66,6 @@ class UserUpdateValidation {
   //enhance get list error
   static async validateRequestParams(req) {
     const privateMode = !!req.privateMode;
-
     // CRITICAL: Validate otpEmailDisabledUntil FIRST before any short-circuiting
     // This ensures invalid values (e.g., 'foo', 123, null) are rejected before they reach DB update path
     if (req.otpEmailDisabledUntil !== undefined) {
