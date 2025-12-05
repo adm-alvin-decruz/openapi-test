@@ -90,7 +90,9 @@ router.put(
       req.body
     );
 
-    if (commonService.isJsonNotEmpty(cognitoParams) === false) {
+    // Allow request if there are Cognito params OR database params (e.g., otpEmailDisabledUntil)
+    // This supports OTP-only updates without requiring other fields
+    if (commonService.isJsonNotEmpty(cognitoParams) === false && commonService.isJsonNotEmpty(databaseParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
 
