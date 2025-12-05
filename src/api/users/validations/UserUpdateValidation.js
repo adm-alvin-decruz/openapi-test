@@ -67,18 +67,23 @@ class UserUpdateValidation {
   static async validateRequestParams(req) {
     const privateMode = !!req.privateMode;
 
-    // Validate otpEmailDisabledUntil if present - use helper function for consistency
+    // CRITICAL: Validate otpEmailDisabledUntil FIRST before any short-circuiting
+    // This ensures invalid values (e.g., 'foo', 123, null) are rejected before they reach DB update path
     if (req.otpEmailDisabledUntil !== undefined) {
       const validationError = validateOtpEmailDisabledUntil(req.otpEmailDisabledUntil, req.language);
       if (validationError) {
         return (this.error = validationError);
       }
+      // Validation passed - value is one of: true, false, 'true', 'false'
     }
 
+    // Check if request is empty (no otpEmailDisabledUntil and no data)
     if (req.otpEmailDisabledUntil === undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
       return (this.error = CommonErrors.RequestIsEmptyErr(req.language));
     }
 
+    // Short-circuit: If only otpEmailDisabledUntil is present (and already validated above), skip other validations
+    // This is safe because we've already validated otpEmailDisabledUntil is a valid boolean/string value
     if (req.otpEmailDisabledUntil !== undefined && ((req.data && Object.keys(req.data).length === 0) || !req.data)) {
       // return null to skip validation for other fields when only otpEmailDisabledUntil is present
       return (this.error = null);

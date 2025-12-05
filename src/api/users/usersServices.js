@@ -588,6 +588,10 @@ async function adminUpdateUser(req, cognitoComparedParams, membershipData, prepa
 }
 
 async function adminUpdateMPUser(body) {
+  if (!body.data) {
+    body.data = {};
+  }
+  
   const ncRequest = !!body.ncRequest;
   const dataRequestUpdate = body.data;
   const email = body.email;
@@ -598,19 +602,43 @@ async function adminUpdateMPUser(body) {
   //clean and format phoneNumber
   dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
 
+  // Check if there are any updatable fields in dataRequestUpdate that would trigger Cognito update
+  // Fields that can trigger Cognito update: firstName, lastName, dob, phoneNumber (if not empty), newsletter
+  // Exclude: uuid, newPassword, confirmPassword, oldPassword, group, phoneNumber (if empty)
+  const hasUpdatableData = Object.keys(dataRequestUpdate).some(
+    (key) => {
+      // Skip ignored keys
+      if (['uuid', 'newPassword', 'confirmPassword', 'oldPassword', 'group'].includes(key)) {
+        return false;
+      }
+      // Skip phoneNumber if empty
+      if (key === 'phoneNumber' && (!dataRequestUpdate.phoneNumber || dataRequestUpdate.phoneNumber.trim() === '')) {
+        return false;
+      }
+      // Check if value exists and is not empty
+      const value = dataRequestUpdate[key];
+      return value !== undefined && value !== null && value !== '';
+    },
+  );
+
   // start update process
   try {
     const userOriginalInfo = await getUserFromDBCognito(email);
-    const userNewEmailInfo = await getUserFromDBCognito(newEmail);
-
-    //check email and new email is existed -> throw error if possible to stop update process
-    await verifyCurrentAndNewEmail({
-      originalEmail: email,
-      userInfoOriginal: userOriginalInfo,
-      newEmail: newEmail,
-      userInfoNewEmail: userNewEmailInfo,
-      language: language,
-    });
+    
+    // Only fetch new email info if newEmail is provided and different from current email
+    let userNewEmailInfo = null;
+    if (newEmail && newEmail !== email) {
+      userNewEmailInfo = await getUserFromDBCognito(newEmail);
+      
+      //check email and new email is existed -> throw error if possible to stop update process
+      await verifyCurrentAndNewEmail({
+        originalEmail: email,
+        userInfoOriginal: userOriginalInfo,
+        newEmail: newEmail,
+        userInfoNewEmail: userNewEmailInfo,
+        language: language,
+      });
+    }
 
     const password = await manipulatePassword(ncRequest, body.data.password, body.data.newPassword);
 
@@ -635,16 +663,19 @@ async function adminUpdateMPUser(body) {
       );
     }
 
-    //2nd proceed update user information
-    await updateCognitoUserInfo({
-      data: dataRequestUpdate,
-      userInfo: userOriginalInfo.cognito,
-      email: email,
-      newEmail: newEmail,
-      language: language,
-    });
+    //2nd proceed update user information in Cognito only if there are updatable fields
+    // Skip Cognito update if only otpEmailDisabledUntil is being toggled (it's DB-only)
+    if (hasUpdatableData || newEmail) {
+      await updateCognitoUserInfo({
+        data: dataRequestUpdate,
+        userInfo: userOriginalInfo.cognito,
+        email: email,
+        newEmail: newEmail,
+        language: language,
+      });
+    }
 
-    //3rd proceed update user in DB
+    //3rd proceed update user in DB (always proceed, even if only otpEmailDisabledUntil)
     await updateDBUserInfo({
       email: email,
       newEmail: newEmail,
