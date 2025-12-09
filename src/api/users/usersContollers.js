@@ -200,8 +200,21 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
 
     // user exist, can update info
     if (memberInfo.status === 'success') {
-      // API validation
-      let validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
+      // Skip validation if only otpEmailDisabledUntil is present (DB-only field, no need for other validations)
+      // This allows OTP-only updates without requiring other fields like dob, email, etc.
+      // Check databaseParams and cognitoParams instead of req.body since they're already mapped and cleaned
+      const hasOtpEmailDisabledUntil = databaseParams.some(param => param.Name === 'otp_email_disabled_until');
+      const hasCognitoParams = commonService.isJsonNotEmpty(cognitoParams);
+      const isOtpOnlyUpdate = hasOtpEmailDisabledUntil && !hasCognitoParams;
+      
+      let validatedParams;
+      if (isOtpOnlyUpdate) {
+        // Skip validation for OTP-only updates
+        validatedParams = { status: 'success' };
+      } else {
+        // API validation for normal updates
+        validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
+      }
 
       // return errorParams;
       if (validatedParams.status === 'success') {
@@ -216,6 +229,7 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
           databaseParams,
           memberInfo.data.cognitoUser.UserAttributes,
         );
+        
         let prepareDBUpdateData = dbService.prepareDBUpdateData(databaseComparedParams);
 
         response = await usersService.adminUpdateUser(
@@ -318,6 +332,11 @@ async function adminUpdateMPUser(req) {
     },
     '[CIAM] Start Update User with FOs Request',
   );
+  // Ensure req.body.data exists before validation (needed for OTP-only updates)
+  if (!req.body.data) {
+    req.body.data = {};
+  }
+
   const message = await UserUpdateValidation.execute(req.body);
   if (message) {
     loggerService.error(
@@ -337,6 +356,7 @@ async function adminUpdateMPUser(req) {
     );
     throw new Error(JSON.stringify(message));
   }
+
   try {
     // check if it is AEM call
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);

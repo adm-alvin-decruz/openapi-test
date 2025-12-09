@@ -45,6 +45,16 @@ router.put(
         .status(400)
         .json(CommonErrors.BadRequest('group', 'group_invalid', req.body.language));
     }
+
+    // Validate otpEmailDisabledUntil if exists (validation only)
+    if (req.body.otpEmailDisabledUntil !== undefined) {
+      const { validateOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
+      const validationError = validateOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil, req.body.language);
+      if (validationError) {
+        return res.status(400).json(validationError);
+      }
+    }
+
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
@@ -73,7 +83,9 @@ router.put(
       req.body
     );
 
-    if (commonService.isJsonNotEmpty(cognitoParams) === false) {
+    // Allow request if there are Cognito params OR database params (e.g., otpEmailDisabledUntil)
+    // This supports OTP-only updates without requiring other fields
+    if (commonService.isJsonNotEmpty(cognitoParams) === false && commonService.isJsonNotEmpty(databaseParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
 

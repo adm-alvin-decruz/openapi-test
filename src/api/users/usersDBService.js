@@ -4,7 +4,8 @@ const userNewsletterModel = require('../../db/models/userNewletterModel');
 const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
-const { convertDateToMySQLFormat, formatDateToMySQLDateTime } = require('../../utils/dateUtils');
+const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const { transformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 
 /**
  * Get User By Email
@@ -34,9 +35,12 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    if (USER_CFG_MAP[item.Name] !== undefined) {
+    if (item.Name === 'otp_email_disabled_until') {
+      result.updateUsersModel[item.Name] = transformOtpEmailDisabledUntil(item.Value);
+    } else if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
     }
+    
     if (item.Name === 'birthdate') {
       result.updateUsersModel[item.Name] = convertDateToMySQLFormat(item.Value);
     }
@@ -53,16 +57,6 @@ function prepareDBUpdateData(ciamAttrInput) {
       } catch (e) {
         console.error('Error parsing custom:newsletter:', e);
       }
-    }
-
-    if (item.Name === 'otp_email_disabled_until') {
-      let disabledUntilDate = null;
-      if (item.Value === 'true' || item.Value === true) {
-        const date = new Date(Date.now() + userConfig.OTP_EMAIL_DISABLED_UNTIL_DURATION);
-        disabledUntilDate = formatDateToMySQLDateTime(date);
-      }
-
-      result.updateUsersModel['otp_email_disabled_until'] = disabledUntilDate;
     }
   });
 
@@ -91,12 +85,16 @@ async function updateUserMigration(req, param1, param2) {
   return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
 }
 
-async function userModelExecuteUpdate(userId, firstName, lastName, dob, email) {
+async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, otpEmailDisabledUntil) {
+  // transform otpEmailDisabledUntil to mysql format if exists
+  const transformedOtpEmailDisabledUntil = transformOtpEmailDisabledUntil(otpEmailDisabledUntil);
+
   const updateFields = {
     given_name: firstName,
     family_name: lastName,
     birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
     email: email,
+    otp_email_disabled_until: transformedOtpEmailDisabledUntil,
   };
 
   return await userModel.update(userId, updateFields);
