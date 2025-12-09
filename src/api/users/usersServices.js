@@ -677,13 +677,13 @@ async function adminUpdateMPUser(body) {
     //2nd proceed update user information in Cognito only if there are updatable fields
     // Skip Cognito update if only otpEmailDisabledUntil is being toggled (it's DB-only)
     if (hasUpdatableData || newEmail) {
-    await updateCognitoUserInfo({
-      data: dataRequestUpdate,
-      userInfo: userOriginalInfo.cognito,
-      email: email,
-      newEmail: newEmail,
-      language: language,
-    });
+      await updateCognitoUserInfo({
+        data: dataRequestUpdate,
+        userInfo: userOriginalInfo.cognito,
+        email: email,
+        newEmail: newEmail,
+        language: language,
+      });
     }
 
     //3rd proceed update user in DB (always proceed, even if only otpEmailDisabledUntil)
