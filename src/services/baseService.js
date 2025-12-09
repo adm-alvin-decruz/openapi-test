@@ -26,13 +26,33 @@ class BaseService {
   }
 
   /**
-   * Get repository for the entity
+   * Get repository for the entity (Lazy Initialization)
+   * 
+   * This method implements lazy initialization pattern:
+   * - dataSource and repository are only initialized when first needed
+   * - Subsequent calls reuse the cached repository
+   * - Prevents async operations in constructor
+   * 
+   * @returns {Promise<Object>} TypeORM repository for the entity
+   * @throws {Error} If dataSource initialization fails
    */
   async getRepository() {
+    // Lazy initialization: only create repository when needed
     if (!this.repository) {
+      // Lazy initialization: only create dataSource when needed
       if (!this.dataSource) {
-        this.dataSource = await getDataSource();
+        try {
+          this.dataSource = await getDataSource();
+        } catch (error) {
+          throw new Error(`Failed to initialize dataSource for ${this.entityName}: ${error.message}`);
+        }
       }
+      
+      // Ensure dataSource is initialized before getting repository
+      if (!this.dataSource.isInitialized) {
+        await this.dataSource.initialize();
+      }
+      
       this.repository = this.dataSource.getRepository(this.entityName);
     }
     return this.repository;

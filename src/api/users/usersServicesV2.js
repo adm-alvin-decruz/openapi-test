@@ -1,79 +1,92 @@
-const { getDataSource } = require('../../db/typeorm/data-source');
+const BaseService = require('../../services/baseService');
 const loggerService = require('../../logs/logger');
 const userConfig = require('../../config/usersConfig');
 
-class UsersServicesV2 {
+/**
+ * UsersServicesV2 - Service for User entity operations
+ * Extends BaseService to leverage dynamic filters, pagination, and sorting
+ */
+class UsersServicesV2 extends BaseService {
   constructor() {
-    this.dataSource = getDataSource();
-    this.userRepository = this.dataSource.getRepository('User');
+    super('User'); // Initialize BaseService with 'User' entity
   }
 
-  static async getUsers(req) {
-    try {
-      const filters = this._parseFilters(req.query);
-      const pagination = this._parsePagination(req.query);
-      const sorting = this._parseSorting(req.query);
+  /**
+   * Override parseFilters to add custom validation for status field
+   * 
+   * @param {Object} query - Query parameters from request
+   * @param {Object} options - Configuration options
+   * @returns {Object} Parsed filters object
+   */
+  parseFilters(query, options = {}) {
+    // Call parent parseFilters first
+    const filters = super.parseFilters(query, options);
 
-      const queryBuilder = this.userRepository.createQueryBuilder('user');
-
-      if (filters.email) {
-        if (filters.email.includes('%') || filters.email.includes('_')) {
-          queryBuilder.andWhere('user.email LIKE :email', { email: filters.email });
-        } else {
-          queryBuilder.andWhere('user.email = :email', { email: filters.email });
-        }
-      }
-
-      if (filters.mandai_id) {
-        queryBuilder.andWhere('user.mandai_id = :mandai_id', { mandai_id: filters.mandai_id });
-      }
-
-      if (filters.singpass_uuid) {
-        queryBuilder.andWhere('user.singpass_uuid = :singpass_uuid', { singpass_uuid: filters.singpass_uuid });
-      }
-
-      if (filters.status !== undefined && filters.status !== null) {
-        queryBuilder.andWhere('user.status = :status', { status: filters.status });
-      }
-
-      if (filters.created_from) {
-        queryBuilder.andWhere('user.created_at >= :created_from', { created_from: filters.created_from });
-      }
-
-      if (filters.created_to) {
-        queryBuilder.andWhere('user.created_at <= :created_to', { created_to: filters.created_to });
-      }
-
-      queryBuilder.andWhere('user.delete_at IS NULL');
-
-      const sortBy = sorting.sort_by || 'created_at';
-      const sortOrder = (sorting.sort_order || 'DESC').toUpperCase();
-      const allowedSortFields = ['id', 'email', 'mandai_id', 'singpass_uuid', 'status', 'created_at', 'updated_at'];
-      
-      if (allowedSortFields.includes(sortBy)) {
-        queryBuilder.orderBy(`user.${sortBy}`, sortOrder);
+    // Custom validation for status field (must be 0 or 1)
+    if (filters.status !== undefined && filters.status !== null) {
+      const status = parseInt(filters.status);
+      if (![0, 1].includes(status)) {
+        // Remove invalid status from filters
+        delete filters.status;
       } else {
-        queryBuilder.orderBy('user.created_at', 'DESC');
+        // Ensure status is a number
+        filters.status = status;
       }
+    }
 
-      const total = await queryBuilder.getCount();
+    return filters;
+  }
 
-      const page = Math.max(1, parseInt(pagination.page) || 1);
-      const limit = Math.min(250, Math.max(1, parseInt(pagination.limit) || 50)); // Max 250, default 50
-      const skip = (page - 1) * limit;
+  /**
+   * Get users with filters, pagination, and sorting
+   * 
+   * @param {Object} req - Request object with query parameters
+   * @returns {Promise<Object>} Formatted response with users and pagination
+   */
+  async getUsers(req) {
+    try {
+      const options = {
+        // Allowed fields for filtering (security whitelist)
+        allowedFields: [
+          'email',
+          'mandai_id',
+          'singpass_uuid',
+          'status',
+          'created_at',
+          'updated_at',
+        ],
 
-      queryBuilder.skip(skip).take(limit);
+        // Default filters (always applied)
+        defaultFilters: {
+          delete_at_is_null: true, // Always filter out soft-deleted records
+        },
 
-      const users = await queryBuilder.getMany();
+        // Pagination options
+        defaultPage: 1,
+        defaultLimit: 50,
+        maxLimit: userConfig.DEFAULT_PAGE_SIZE || 250,
 
-      const result = {
-        users,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        // Sorting options
+        defaultSortBy: 'created_at',
+        defaultSortOrder: 'DESC',
+        allowedSortFields: [
+          'id',
+          'email',
+          'mandai_id',
+          'singpass_uuid',
+          'status',
+          'created_at',
+          'updated_at',
+        ],
       };
 
+      // Build query with filters, pagination, and sorting
+      const { queryBuilder, pagination } = await this.buildQuery(req, options);
+
+      // Execute query
+      const result = await this.executeQuery(queryBuilder, pagination);
+
+      // Format response with custom structure
       return {
         status: 'success',
         statusCode: 200,
@@ -83,7 +96,7 @@ class UsersServicesV2 {
           message: 'Get users successfully.',
         },
         data: {
-          users: result.users.map(user => this.formatUserResponse(user)),
+          users: result.data.map(user => this._formatUserResponse(user)),
           pagination: {
             page: result.page,
             limit: result.limit,
@@ -98,62 +111,12 @@ class UsersServicesV2 {
     }
   }
 
-  _parseFilters(query) {
-    const filters = {};
-
-    if (query.email) {
-      filters.email = query.email.trim();
-    }
-
-    if (query.mandai_id) {
-      filters.mandai_id = query.mandai_id.trim();
-    }
-
-    if (query.singpass_uuid) {
-      filters.singpass_uuid = query.singpass_uuid.trim();
-    }
-
-    if (query.status !== undefined && query.status !== null) {
-      const status = parseInt(query.status);
-      if ([0, 1].includes(status)) {
-        filters.status = status;
-      }
-    }
-
-    if (query.created_from) {
-      const date = new Date(query.created_from);
-      if (!isNaN(date.getTime())) {
-        filters.created_from = date.toISOString();
-      }
-    }
-
-    if (query.created_to) {
-      const date = new Date(query.created_to);
-      if (!isNaN(date.getTime())) {
-        filters.created_to = date.toISOString();
-      }
-    }
-
-    return filters;
-  }
-
-  _parsePagination(query) {
-    return {
-      page: parseInt(query.page) || 1,
-      limit: Math.min(
-        parseInt(query.limit) || 50,
-        userConfig.DEFAULT_PAGE_SIZE || 250
-      ),
-    };
-  }
-
-  _parseSorting(query) {
-    return {
-      sort_by: query.sort_by || 'created_at',
-      sort_order: (query.sort_order || 'DESC').toUpperCase(),
-    };
-  }
-
+  /**
+   * Format user response object
+   * 
+   * @param {Object} user - User entity from database
+   * @returns {Object} Formatted user object
+   */
   _formatUserResponse(user) {
     return {
       id: user.id,
@@ -175,6 +138,6 @@ class UsersServicesV2 {
 }
 
 module.exports = { 
-  UsersServices: new UsersServicesV2() 
+  UsersServicesV2: new UsersServicesV2(),
 };
 
