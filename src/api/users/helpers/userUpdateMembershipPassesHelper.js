@@ -278,6 +278,7 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
         birthdate: data.dob ? convertDateToMySQLFormat(data.dob) : undefined,
         email: latestEmail,
         otp_email_disabled_until: otpEmailDisabledUntil,
+        singpass_uuid: data.singpassUuid,
       }),
     });
     //1st - Update user table - step is always proceed
@@ -288,6 +289,7 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
       data.dob,
       latestEmail,
       otpEmailDisabledUntil,
+      data.singpassUuid,
     );
 
     loggerWrapper('[CIAM-MAIN] Update User Credentials table', {
