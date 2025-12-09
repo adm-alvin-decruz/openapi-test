@@ -120,7 +120,7 @@ class UsersServicesV2 extends BaseService {
         // Field mappings: map camelCase query params to snake_case database fields
         fieldMappings: {
           'mandaiId': 'mandai_id',
-          'singpassUuid': 'singpass_uuid',
+          'singpassId': 'singpass_id',
           'createdAt': 'created_at',
           'updatedAt': 'updated_at',
           'createdFrom': 'created_from',
@@ -136,7 +136,7 @@ class UsersServicesV2 extends BaseService {
           'status',
           'mandaiId',
           'mandaiIdIsNull',
-          'singpassUuid',
+          'singpassId',
           'createdAt',
           'updatedAt',
           'createdAtFrom',
@@ -171,7 +171,7 @@ class UsersServicesV2 extends BaseService {
           'id',
           'email',
           'mandaiId',
-          'singpassUuid',
+          'singpassId',
           'status',
           'createdAt',
           'updatedAt',
@@ -222,7 +222,7 @@ class UsersServicesV2 extends BaseService {
       mandai_id: user.mandai_id,
       source: user.source,
       status: user.status,
-      singpass_uuid: user.singpass_uuid,
+      singpass_id: user.singpass_id,
       otp_email_disabled_until: user.otp_email_disabled_until 
         ? new Date(user.otp_email_disabled_until).toISOString() 
         : null,

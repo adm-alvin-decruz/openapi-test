@@ -53,7 +53,7 @@ const User = new EntitySchema({
       nullable: true,
       default: null,
     },
-    singpass_uuid: {
+    singpass_id: {
       type: 'varchar',
       length: 36,
       nullable: true,
@@ -80,8 +80,8 @@ const User = new EntitySchema({
       columns: ['mandai_id'],
     },
     {
-      name: 'uniq_singpass_uuid',
-      columns: ['singpass_uuid'],
+      name: 'uniq_singpass_id',
+      columns: ['singpass_id'],
       unique: true,
     },
   ],
