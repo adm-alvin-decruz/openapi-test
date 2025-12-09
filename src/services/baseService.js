@@ -58,21 +58,51 @@ class BaseService {
     return this.repository;
   }
 
+
+  /**
+   * Convert camelCase string to snake_case
+   * 
+   * @param {String} str - camelCase string
+   * @returns {String} snake_case string
+   */
+  camelToSnakeCase(str) {
+    return str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  }
+
+  /**
+   * Normalize defaultFilters keys from camelCase to snake_case
+   * 
+   * @param {Object} defaultFilters - Default filters object
+   * @returns {Object} Normalized default filters
+   */
+  normalizeDefaultFilters(defaultFilters) {
+    const normalizedDefaultFilters = {};
+    for (const [key, value] of Object.entries(defaultFilters)) {
+      // Convert to snake_case first
+      // If already snake_case (contains '_'), keep as is; otherwise convert camelCase
+      const normalizedKey = key.includes('_') ? key : this.camelToSnakeCase(key);
+      
+      normalizedDefaultFilters[normalizedKey] = value;
+    }
+    return normalizedDefaultFilters;
+  }
+
   /**
    * Parse filters from query parameters
    * Supports:
    * - Exact match: ?field=value
    * - Like match: ?field=value% or ?field=%value%
-   * - Range: ?field_from=value&field_to=value
+   * - Range: ?field_from=value&field_to=value (or ?fieldFrom=value&fieldTo=value with normalizeCamelCase)
    * - In: ?field=value1,value2,value3
-   * - Not null: ?field_not_null=true
-   * - Is null: ?field_is_null=true
+   * - Not null: ?field_not_null=true (or ?fieldNotNull=true with normalizeCamelCase)
+   * - Is null: ?field_is_null=true (or ?fieldIsNull=true with normalizeCamelCase)
    * 
    * @param {Object} query - Query parameters from request
    * @param {Object} options - Configuration options
    * @param {Array} options.allowedFields - Fields allowed for filtering
    * @param {Object} options.fieldMappings - Map query field names to entity field names
    * @param {Object} options.defaultFilters - Default filters to always apply
+   * @param {Boolean} options.normalizeCamelCase - Whether to normalize camelCase operators (default: false)
    * @returns {Object} Parsed filters object
    */
   parseFilters(query, options = {}) {
@@ -80,61 +110,123 @@ class BaseService {
       allowedFields = [],
       fieldMappings = {},
       defaultFilters = {},
+      normalizeCamelCase = false,
     } = options;
 
-    const filters = { ...defaultFilters };
+    // Keep query as-is (camelCase), no normalization needed
+    // fieldMappings will handle camelCase -> snake_case conversion
+    const normalizedQuery = query;
+    
+    // Normalize defaultFilters if requested
+    const normalizedDefaultFilters = normalizeCamelCase 
+      ? this.normalizeDefaultFilters(defaultFilters)
+      : defaultFilters;
+
+    // Update allowedFields to include mapped fields for validation
+    // baseService validates entityField (after mapping), so we need mapped fields in allowedFields
+    let finalAllowedFields = allowedFields;
+    if (normalizeCamelCase && allowedFields.length && Object.keys(fieldMappings).length) {
+      const mappedFields = Object.values(fieldMappings);
+      // Also add base field names without operators for operators like _from, _to
+      const baseMappedFields = mappedFields.map(field => {
+        if (field.endsWith('_from')) return field.replace('_from', '');
+        if (field.endsWith('_to')) return field.replace('_to', '');
+        return field;
+      });
+      finalAllowedFields = [
+        ...new Set([...allowedFields, ...mappedFields, ...baseMappedFields]),
+      ];
+    }
+
+    const filters = { ...normalizedDefaultFilters };
 
     // Process each query parameter
-    for (const [key, value] of Object.entries(query)) {
+    for (const [key, value] of Object.entries(normalizedQuery)) {
       if (!value || value === '') continue;
 
-      // Handle special operators
-      if (key.endsWith('_not_null') && value === 'true') {
-        const fieldName = key.replace('_not_null', '');
-        const entityField = fieldMappings[fieldName] || fieldName;
-        if (!allowedFields.length || allowedFields.includes(entityField)) {
-          filters[`${entityField}_not_null`] = true;
+      // Helper function to find entityField from fieldMappings
+      // fieldMappings maps camelCase -> snake_case (e.g., 'mandaiId' -> 'mandai_id')
+      // fieldKey is camelCase (may include operators like 'createdAtFrom', 'deleteAtIsNull')
+      const findEntityField = (fieldKey) => {
+        // Try direct mapping first
+        if (fieldMappings[fieldKey]) {
+          return fieldMappings[fieldKey];
+        }
+        
+        // Extract base field name from camelCase operators
+        let baseField = fieldKey;
+        let operatorSuffix = '';
+        
+        if (fieldKey.match(/NotNull$/i)) {
+          baseField = fieldKey.replace(/NotNull$/i, '');
+          operatorSuffix = '_not_null';
+        } else if (fieldKey.match(/IsNull$/i)) {
+          baseField = fieldKey.replace(/IsNull$/i, '');
+          operatorSuffix = '_is_null';
+        } else if (fieldKey.endsWith('From')) {
+          baseField = fieldKey.replace(/From$/i, '');
+          operatorSuffix = '_from';
+        } else if (fieldKey.endsWith('To') && fieldKey !== 'to') {
+          baseField = fieldKey.replace(/To$/i, '');
+          operatorSuffix = '_to';
+        }
+        
+        // Look up base field in fieldMappings
+        if (fieldMappings[baseField]) {
+          return fieldMappings[baseField] + operatorSuffix;
+        }
+        
+        // Return as-is if no mapping found
+        return fieldKey;
+      };
+
+      // Handle camelCase operators
+      if (key.match(/NotNull$/i) && value === 'true') {
+        const entityField = findEntityField(key);
+        // Check if base field (without operator) is in allowedFields
+        const baseField = key.replace(/NotNull$/i, '');
+        if (!finalAllowedFields.length || finalAllowedFields.includes(baseField) || finalAllowedFields.includes(key)) {
+          filters[entityField] = true; // entityField already includes _not_null suffix
         }
         continue;
       }
 
-      if (key.endsWith('_is_null') && value === 'true') {
-        const fieldName = key.replace('_is_null', '');
-        const entityField = fieldMappings[fieldName] || fieldName;
-        if (!allowedFields.length || allowedFields.includes(entityField)) {
-          filters[`${entityField}_is_null`] = true;
+      if (key.match(/IsNull$/i) && value === 'true') {
+        const entityField = findEntityField(key);
+        // Check if base field (without operator) is in allowedFields
+        const baseField = key.replace(/IsNull$/i, '');
+        if (!finalAllowedFields.length || finalAllowedFields.includes(baseField) || finalAllowedFields.includes(key)) {
+          filters[entityField] = true; // entityField already includes _is_null suffix
         }
         continue;
       }
 
-      // Handle range filters (field_from, field_to)
-      if (key.endsWith('_from')) {
-        const fieldName = key.replace('_from', '');
-        const entityField = fieldMappings[fieldName] || fieldName;
-        if (!allowedFields.length || allowedFields.includes(entityField)) {
+      // Handle range filters (camelCase: createdAtFrom, createdAtTo)
+      if (key.endsWith('From')) {
+        const entityField = findEntityField(key);
+        if (!finalAllowedFields.length || finalAllowedFields.includes(entityField)) {
           const date = new Date(value);
           if (!isNaN(date.getTime())) {
-            filters[`${entityField}_from`] = date.toISOString();
+            filters[entityField] = date.toISOString();
           }
         }
         continue;
       }
 
-      if (key.endsWith('_to')) {
-        const fieldName = key.replace('_to', '');
-        const entityField = fieldMappings[fieldName] || fieldName;
-        if (!allowedFields.length || allowedFields.includes(entityField)) {
+      if (key.endsWith('To') && key !== 'to') {
+        const entityField = findEntityField(key);
+        if (!finalAllowedFields.length || finalAllowedFields.includes(entityField)) {
           const date = new Date(value);
           if (!isNaN(date.getTime())) {
-            filters[`${entityField}_to`] = date.toISOString();
+            filters[entityField] = date.toISOString();
           }
         }
         continue;
       }
 
       // Handle regular filters
-      const entityField = fieldMappings[key] || key;
-      if (!allowedFields.length || allowedFields.includes(entityField)) {
+      const entityField = findEntityField(key);
+      if (!finalAllowedFields.length || finalAllowedFields.includes(entityField)) {
         const trimmedValue = typeof value === 'string' ? value.trim() : value;
         
         // Check if it's a comma-separated list (IN operator)

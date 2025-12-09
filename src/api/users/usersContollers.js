@@ -30,7 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
-const { UsersServices } = require('./usersServicesV2');
+const { UsersServicesV2 } = require('./usersServicesV2');
 
 /**
  * Create user using admin function
@@ -896,7 +896,7 @@ async function userRefreshAccessToken(accessToken, req) {
 
 async function getUsers(req) {
   try {
-    const result = await UsersServices.getUsers(req);
+    const result = await UsersServicesV2.getUsers(req);
     return result;
   } catch (error) {
     loggerService.error('usersContollers.getUsers', error);
