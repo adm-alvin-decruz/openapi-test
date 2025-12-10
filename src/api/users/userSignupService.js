@@ -358,7 +358,7 @@ class UserSignupService {
           given_name: req.body.firstName || undefined,
           family_name: req.body.lastName || undefined,
           birthdate: req.body.dob ? convertDateToMySQLFormat(req.body.dob) : undefined,
-          singpass_id: req.body.singpassId || undefined,
+          singpass_id: !singpassIdDB && req.body.singpassId ? req.body.singpassId : undefined,
         });
         let userName = getOrCheck(userCognito, 'name');
         const userFirstName = getOrCheck(userCognito, 'given_name');
