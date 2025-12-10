@@ -8,14 +8,14 @@ class User {
     INACTIVE: 0,
     ACTIVE: 1,
     TEMPORARILY_DISABLED: 2,
-  }
+  };
 
   static async create(userData) {
     const now = getCurrentUTCTimestamp();
     const sql = `
       INSERT INTO users
-      (email, given_name, family_name, birthdate, mandai_id, source, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (email, given_name, family_name, birthdate, mandai_id, singpass_id, source, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       userData.email,
@@ -23,6 +23,7 @@ class User {
       userData.family_name,
       convertDateToMySQLFormat(userData.birthdate),
       userData.mandai_id,
+      userData.singpass_id,
       userData.source,
       userData.status,
       userData.created_at,
