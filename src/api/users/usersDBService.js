@@ -85,7 +85,7 @@ async function updateUserMigration(req, param1, param2) {
   return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
 }
 
-async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, otpEmailDisabledUntil, singpassUuid) {
+async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, otpEmailDisabledUntil, singpassId) {
   // transform otpEmailDisabledUntil to mysql format if exists
   const transformedOtpEmailDisabledUntil = transformOtpEmailDisabledUntil(otpEmailDisabledUntil);
 
@@ -95,7 +95,7 @@ async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, o
     birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
     email: email,
     otp_email_disabled_until: transformedOtpEmailDisabledUntil,
-    singpass_uuid: singpassUuid,
+    singpass_id: singpassId,
   };
 
   return await userModel.update(userId, updateFields);

@@ -178,8 +178,9 @@ class BaseService {
   /**
    * Parse filters from query parameters
    * Supports:
-   * - Exact match: ?field=value
-   * - Like match: ?field=value% or ?field=%value%
+   * - Exact match: ?field=value (default, uses index efficiently)
+   * - Like match: ?field=value% or ?field=%value% (only when % wildcard is explicitly provided)
+   *   Note: Underscore (_) in values does NOT trigger LIKE to avoid unintended wildcard matching
    * - Range: ?fieldFrom=value&fieldTo=value
    * - In: ?field=value1,value2,value3
    * - Not null: ?fieldNotNull=true
@@ -301,7 +302,8 @@ class BaseService {
 
   /**
    * Parse sorting parameters
-   * Query sort_by is in camelCase and will be automatically converted to snake_case
+   * Supports both camelCase (sortBy/sortOrder) and snake_case (sort_by/sort_order)
+   * camelCase is preferred to match API documentation
    * 
    * @param {Object} query - Query parameters
    * @param {Object} options - Configuration options
@@ -317,8 +319,10 @@ class BaseService {
       allowedSortFields = [],
     } = options;
 
-    let sortBy = query.sort_by || defaultSortBy;
-    const sortOrder = (query.sort_order || defaultSortOrder).toUpperCase();
+    // Support both camelCase (sortBy/sortOrder) and snake_case (sort_by/sort_order)
+    // camelCase is preferred to match API documentation
+    let sortBy = query.sortBy || query.sort_by || defaultSortBy;
+    const sortOrder = (query.sortOrder || query.sort_order || defaultSortOrder).toUpperCase();
 
     // Normalize defaultSortBy to snake_case
     const normalizedDefaultSortBy = defaultSortBy.includes('_') 
@@ -619,13 +623,15 @@ class BaseService {
         continue;
       }
 
-      // Handle LIKE (if value contains % or _)
-      if (typeof value === 'string' && (value.includes('%') || value.includes('_'))) {
+      // Handle LIKE only when wildcard % is explicitly provided
+      // Do NOT use LIKE for underscore (_) as it's a valid character in emails/IDs
+      // and would cause unintended wildcard matching (e.g., john_doe@example.com would match john@doe@example.com)
+      if (typeof value === 'string' && value.includes('%')) {
         queryBuilder.andWhere(`${tableAlias}.${fieldName} LIKE :${key}`, { [key]: value });
         continue;
       }
 
-      // Handle exact match
+      // Handle exact match (default - uses index efficiently)
       queryBuilder.andWhere(`${tableAlias}.${fieldName} = :${key}`, { [key]: value });
     }
   }
@@ -725,14 +731,33 @@ class BaseService {
    * @returns {Promise<Object>} Query result with data, total, and pagination info
    * 
    * Note: This method uses getRawMany() to get raw data, then formats it with grouped related fields
+   * When joins are present, uses DISTINCT to avoid duplicate rows from one-to-many relationships
    */
   async executeQuery(queryBuilder, pagination, options = {}) {
+    const hasJoins = options.joins && options.joins.length > 0;
+    
     // Clone query builder for count (to avoid modifying the original)
     const countQueryBuilder = queryBuilder.clone();
     
     // Get total count before pagination
-    // Remove orderBy, skip, take for accurate count
-    const total = await countQueryBuilder.getCount();
+    // When joins are present, use GROUP BY and count groups to avoid inflated counts
+    let total;
+    if (hasJoins) {
+      // Apply GROUP BY to count distinct users (not rows)
+      // This ensures accurate count when users have multiple related records
+      countQueryBuilder.groupBy(`${this.alias}.id`);
+      const groupedRows = await countQueryBuilder.getRawMany();
+      total = groupedRows.length;
+    } else {
+      // No joins, use standard count
+      total = await countQueryBuilder.getCount();
+    }
+
+    // Apply GROUP BY on main entity ID when joins are present to avoid duplicate users
+    // This ensures one row per user even when user has multiple related records
+    if (hasJoins) {
+      queryBuilder.groupBy(`${this.alias}.id`);
+    }
 
     // Apply pagination
     const skip = (pagination.page - 1) * pagination.limit;
