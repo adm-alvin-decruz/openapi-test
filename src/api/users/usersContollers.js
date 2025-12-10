@@ -123,7 +123,7 @@ async function adminCreateUser(req) {
 }
 
 /**
- * User created and with password FOW/FOW+
+ * Create membership-passes user
  */
 async function adminCreateMPUser(req) {
   loggerService.log(
@@ -136,7 +136,7 @@ async function adminCreateMPUser(req) {
         layer: 'controller.adminCreateMPUser',
       },
     },
-    '[CIAM] Start Signup with FOs Request',
+    '[CIAM] Start signup for membership pass request',
   );
   if (!req.body.password && !req.body.confirmPassword) {
     req.body.is_passwordless = true;
@@ -155,7 +155,7 @@ async function adminCreateMPUser(req) {
         },
       },
       {},
-      '[CIAM] End Signup with FOs Request - Failed',
+      '[CIAM] End signup for membership pass request - Failed',
     );
     throw new Error(JSON.stringify(message));
   }
