@@ -13,7 +13,8 @@ class BaseDTO {
     const hiddenFields = this.HIDDEN_FIELDS || [];
     
     for (const field in this.entity) {
-      if (!this.entity[field]) {
+      // Only skip null and undefined, not 0, false, or empty string
+      if (this.entity[field] === null || this.entity[field] === undefined) {
         continue;
       }
       
@@ -38,7 +39,9 @@ class BaseDTO {
     const internalFields = ['DATE_FIELDS', 'HIDDEN_FIELDS', 'entity'];
     
     for (const key in this) {
-      if (this[key] && !internalFields.includes(key)) {
+      // Only skip null, undefined, and internal fields
+      // Include 0, false, and empty string as valid values
+      if (this[key] !== null && this[key] !== undefined && !internalFields.includes(key)) {
         json[key] = this[key];
       }
     }

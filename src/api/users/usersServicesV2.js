@@ -73,6 +73,10 @@ class UsersServicesV2 extends BaseService {
           'status',
           'createdAt',
           'updatedAt',
+          'createdAtTo',
+          'createdAtFrom',
+          'updatedAtFrom',
+          'updatedAtTo',
         ],
       };
 
