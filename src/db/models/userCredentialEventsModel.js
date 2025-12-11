@@ -118,11 +118,11 @@ class UserCredentialEventsModel {
           SELECT COUNT(*) as count
           FROM user_credential_events
           WHERE user_id = ?
-            AND event_type = ?
+            AND event_type IN (?, ?)
             AND created_at > ?
             AND status = ?
         `;
-        params = [userId, EVENTS.SEND_OTP, lastSuccess, STATUS.SUCCESS];
+        params = [userId, EVENTS.SEND_OTP, EVENTS.OTP_MAIL_DISABLED, lastSuccess, STATUS.SUCCESS];
       } else {
         // If no successful login yet - count all OTP generations
         // But only within last 24 hours to prevent indefinite blocking
@@ -130,11 +130,11 @@ class UserCredentialEventsModel {
           SELECT COUNT(*) as count
           FROM user_credential_events
           WHERE user_id = ?
-            AND event_type = ?
+            AND event_type IN (?, ?)
             AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             AND status = ?
         `;
-        params = [userId, EVENTS.SEND_OTP, STATUS.SUCCESS];
+        params = [userId, EVENTS.SEND_OTP, EVENTS.OTP_MAIL_DISABLED, STATUS.SUCCESS];
       }
 
       const rows = await query(sql, params);
