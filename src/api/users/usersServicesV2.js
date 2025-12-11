@@ -23,31 +23,100 @@ class UsersServicesV2 extends BaseService {
     let joins = [];
     let relatedFieldMappings = {};
 
-    let allowedFields = [
-          'email',
-          'status',
-          'mandaiId',
-          'mandaiIdIsNull',
-          'singpassId',
-          'createdAt',
-          'createdAtFrom',
-    ];
+    // Check if any membership-related fields are in query
+    const hasCategoryType = req.query.categoryType && req.query.categoryType.trim() !== '';
+    const hasValidFrom = req.query.validFrom && req.query.validFrom.trim() !== '';
+    const hasValidUntil = req.query.validUntil && req.query.validUntil.trim() !== '';
+    const hasMembershipDetailsFilter = 
+      req.query['membershipDetails.categoryType'] ||
+      req.query['membershipDetails.validFrom[gte]'] ||
+      req.query['membershipDetails.validUntil[lte]'] ||
+      req.query['membershipDetails.validUntil[gt]'] ||
+      req.query['membershipDetails.validUntil[lt]'] ||
+      req.query['membershipDetails.validFromIsNull'] ||
+      req.query['membershipDetails.validUntilIsNull'] ||
+      req.query['membershipDetails.validFromNotNull'] ||
+      req.query['membershipDetails.validUntilNotNull'] ||
+      req.query['membershipDetails.validFromFrom'] ||
+      req.query['membershipDetails.validFromTo'] ||
+      req.query['membershipDetails.validUntilFrom'] ||
+      req.query['membershipDetails.validUntilTo'] ||
+      req.query.validFromIsNull ||
+      req.query.validUntilIsNull ||
+      req.query.validFromNotNull ||
+      req.query.validUntilNotNull ||
+      req.query.validFromFrom ||
+      req.query.validFromTo ||
+      req.query.validUntilFrom ||
+      req.query.validUntilTo;
 
-    if (req.query.categoryType) {
+    // Only add join if membership-related fields are requested
+    if (hasCategoryType || hasValidFrom || hasValidUntil || hasMembershipDetailsFilter) {
       joins.push({
         type: 'leftJoin',
         entity: 'user_membership_details',
         alias: 'membershipDetails',
         condition: 'user.id = membershipDetails.user_id',
-        selectFields: ['id', 'user_id', 'category_type'],
+        selectFields: ['id', 'user_id', 'category_type', 'valid_from', 'valid_until'],
       });
 
-      relatedFieldMappings['categoryType'] = {
-        alias: 'membershipDetails',
-        field: 'category_type',
+      relatedFieldMappings = {
+        'validFrom': {
+          alias: 'membershipDetails',
+          field: 'valid_from',
+        },
+        'validUntil': {
+          alias: 'membershipDetails',
+          field: 'valid_until',
+        },
+        'categoryType': {
+          alias: 'membershipDetails',
+          field: 'category_type',
+        },
       };
+    }
 
-      allowedFields.push('categoryType');
+    let allowedFields = [
+          'email',
+          'status',
+          'mandaiId',
+          'mandaiIdIsNull',
+          'mandaiIdNotNull',
+          'singpassId',
+          'singpassIdIsNull',
+          'singpassIdNotNull',
+          'createdAt',
+          'createdAtFrom',
+    ];
+
+    // Only add membership-related fields to allowedFields if join is added
+    if (joins.length > 0) {
+      allowedFields.push(
+        'validFrom',
+        'validUntil',
+        'categoryType',
+        'validFromIsNull',
+        'validUntilIsNull',
+        'validFromNotNull',
+        'validUntilNotNull',
+        'validFromFrom',
+        'validFromTo',
+        'validUntilFrom',
+        'validUntilTo',
+        'membershipDetails.validUntil[lte]',
+        'membershipDetails.validFrom[gte]',
+        'membershipDetails.categoryType',
+        'membershipDetails.validUntil[gt]',
+        'membershipDetails.validUntil[lt]',
+        'membershipDetails.validFromIsNull',
+        'membershipDetails.validUntilIsNull',
+        'membershipDetails.validFromNotNull',
+        'membershipDetails.validUntilNotNull',
+        'membershipDetails.validFromFrom',
+        'membershipDetails.validFromTo',
+        'membershipDetails.validUntilFrom',
+        'membershipDetails.validUntilTo',
+      );
     }
 
     try {
