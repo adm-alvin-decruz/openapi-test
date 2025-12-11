@@ -181,6 +181,7 @@ async function insertUser(req) {
       family_name: req.body.lastName,
       birthdate: req.body.dob,
       mandai_id: req.body.mandaiID,
+      singpass_id: req.body.singpassId || null,
       source: envSource[req.body.source],
       status: 1,
       created_at: req.body.registerTime ? req.body.registerTime : getCurrentUTCTimestamp(),
