@@ -37,6 +37,7 @@ const EVENTS = {
   REFRESH_TOKEN: 'refresh_token',
   SEND_OTP: 'send_otp',
   VERIFY_OTP: 'verify_otp',
+  OTP_MAIL_DISABLED: 'otp_mail_disabled',
 };
 
 const STATUS = {
