@@ -163,10 +163,10 @@ class UserCredentialEventsModel {
     const sql = `SELECT data, created_at
       FROM user_credential_events
       WHERE user_id = ?
-        AND event_type IN (?, ?)
+        AND event_type IN (?, ?, ?)
       ORDER BY created_at DESC
       LIMIT 1`;
-    const params = [userId, EVENTS.SEND_OTP, EVENTS.VERIFY_OTP];
+    const params = [userId, EVENTS.SEND_OTP, EVENTS.OTP_MAIL_DISABLED, EVENTS.VERIFY_OTP];
 
     try {
       const rows = await query(sql, params);
@@ -196,11 +196,11 @@ class UserCredentialEventsModel {
     const sql = `SELECT id, data, created_at
       FROM user_credential_events
       WHERE user_id = ?
-        AND event_type = ?
+        AND event_type IN (?, ?)
         AND status = ?
       ORDER BY created_at DESC
       LIMIT 1`;
-    const params = [userId, EVENTS.SEND_OTP, STATUS.SUCCESS];
+    const params = [userId, EVENTS.SEND_OTP, EVENTS.OTP_MAIL_DISABLED, STATUS.SUCCESS];
 
     try {
       const rows = await query(sql, params);
