@@ -698,9 +698,15 @@ class BaseService {
             queryBuilder.leftJoin(entity, alias);
           }
           // Select specific fields if provided (to avoid N+1 when only filtering)
+          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              queryBuilder.addSelect(`${alias}.${field}`, `${alias}_${field}`);
+              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
+              // This prevents data loss when GROUP BY user.id with multiple membership details
+              queryBuilder.addSelect(
+                `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
+                `${alias}_${field}`
+              );
             });
           }
           break;
@@ -712,9 +718,15 @@ class BaseService {
             queryBuilder.innerJoin(entity, alias);
           }
           // Select specific fields if provided (to avoid N+1 when only filtering)
+          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              queryBuilder.addSelect(`${alias}.${field}`, `${alias}_${field}`);
+              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
+              // This prevents data loss when GROUP BY user.id with multiple membership details
+              queryBuilder.addSelect(
+                `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
+                `${alias}_${field}`
+              );
             });
           }
           break;
@@ -726,9 +738,15 @@ class BaseService {
             queryBuilder.rightJoin(entity, alias);
           }
           // Select specific fields if provided (to avoid N+1 when only filtering)
+          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              queryBuilder.addSelect(`${alias}.${field}`, `${alias}_${field}`);
+              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
+              // This prevents data loss when GROUP BY user.id with multiple membership details
+              queryBuilder.addSelect(
+                `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
+                `${alias}_${field}`
+              );
             });
           }
           break;
@@ -868,7 +886,7 @@ class BaseService {
       // Handle comparison operators: gt, lt, gte, lte, eq, ne
       // Support both main fields and related fields (e.g., orders.total_amount_gt)
       if (key.endsWith('_gt')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         const numValue = this.parseNumericValue(value);
         if (numValue !== null) {
           queryBuilder.andWhere(`${finalAlias}.${finalFieldName} > :${key}`, { [key]: numValue });
@@ -877,7 +895,7 @@ class BaseService {
       }
 
       if (key.endsWith('_lt')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         const numValue = this.parseNumericValue(value);
         if (numValue !== null) {
           queryBuilder.andWhere(`${finalAlias}.${finalFieldName} < :${key}`, { [key]: numValue });
@@ -886,7 +904,7 @@ class BaseService {
       }
 
       if (key.endsWith('_gte')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         const numValue = this.parseNumericValue(value);
         if (numValue !== null) {
           queryBuilder.andWhere(`${finalAlias}.${finalFieldName} >= :${key}`, { [key]: numValue });
@@ -895,7 +913,7 @@ class BaseService {
       }
 
       if (key.endsWith('_lte')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         const numValue = this.parseNumericValue(value);
         if (numValue !== null) {
           queryBuilder.andWhere(`${finalAlias}.${finalFieldName} <= :${key}`, { [key]: numValue });
@@ -904,13 +922,13 @@ class BaseService {
       }
 
       if (key.endsWith('_eq')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         queryBuilder.andWhere(`${finalAlias}.${finalFieldName} = :${key}`, { [key]: value });
         continue;
       }
 
       if (key.endsWith('_ne')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias, fieldName);
+        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
         queryBuilder.andWhere(`${finalAlias}.${finalFieldName} != :${key}`, { [key]: value });
         continue;
       }
@@ -1053,7 +1071,13 @@ class BaseService {
               if (!relatedFieldsMap[alias]) {
                 relatedFieldsMap[alias] = {};
               }
-              relatedFieldsMap[alias][fieldName] = value;
+              // Parse GROUP_CONCAT values (separated by '|||')
+              // If value contains '|||', it means multiple records were aggregated
+              if (value && typeof value === 'string' && value.includes('|||')) {
+                relatedFieldsMap[alias][fieldName] = value.split('|||').filter(v => v !== null && v !== '');
+              } else {
+                relatedFieldsMap[alias][fieldName] = value;
+              }
               fieldAssigned = true;
               break;
             }
@@ -1076,9 +1100,43 @@ class BaseService {
       // Add grouped related fields
       for (const [alias, relatedFields] of Object.entries(relatedFieldsMap)) {
         // Only add if there's at least one non-null field
-        const hasData = Object.values(relatedFields).some(v => v !== null && v !== undefined);
+        const hasData = Object.values(relatedFields).some(v => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true));
         if (hasData) {
-          formattedItem[alias] = relatedFields;
+          // Check if any field is an array (from GROUP_CONCAT with multiple values)
+          const hasArrayFields = Object.values(relatedFields).some(v => Array.isArray(v) && v.length > 1);
+          
+          if (hasArrayFields) {
+            // Multiple related records: create array of objects
+            // Get the maximum length of arrays
+            const maxLength = Math.max(...Object.values(relatedFields)
+              .filter(v => Array.isArray(v))
+              .map(v => v.length));
+            
+            // Create array of objects from parallel arrays
+            const relatedArray = [];
+            for (let i = 0; i < maxLength; i++) {
+              const relatedObj = {};
+              for (const [fieldName, fieldValue] of Object.entries(relatedFields)) {
+                if (Array.isArray(fieldValue)) {
+                  relatedObj[fieldName] = fieldValue[i] || null;
+                } else {
+                  // Single value: use for all items
+                  relatedObj[fieldName] = fieldValue;
+                }
+              }
+              // Only add if object has at least one non-null value
+              if (Object.values(relatedObj).some(v => v !== null && v !== undefined)) {
+                relatedArray.push(relatedObj);
+              }
+            }
+            
+            // If array has only one item, return as object for backward compatibility
+            // If array has multiple items, return as array
+            formattedItem[alias] = relatedArray.length === 1 ? relatedArray[0] : relatedArray;
+          } else {
+            // Single related record: return as object (backward compatible)
+            formattedItem[alias] = relatedFields;
+          }
         }
       }
       
@@ -1105,14 +1163,16 @@ class BaseService {
     const countQueryBuilder = queryBuilder.clone();
     
     // Get total count before pagination
-    // When joins are present, use GROUP BY and count groups to avoid inflated counts
+    // When joins are present, use COUNT(DISTINCT) to avoid inflated counts and O(n) memory usage
     let total;
     if (hasJoins) {
-      // Apply GROUP BY to count distinct users (not rows)
-      // This ensures accurate count when users have multiple related records
-      countQueryBuilder.groupBy(`${this.alias}.id`);
-      const groupedRows = await countQueryBuilder.getRawMany();
-      total = groupedRows.length;
+      // Use COUNT(DISTINCT user.id) to count distinct users efficiently at the database level
+      // This avoids fetching all rows into memory (O(n) performance regression)
+      // Remove all existing selects and add only the count
+      countQueryBuilder.select([]);
+      countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
+      const countResult = await countQueryBuilder.getRawOne();
+      total = parseInt(countResult?.total || 0, 10);
     } else {
       // No joins, use standard count
       total = await countQueryBuilder.getCount();
@@ -1120,6 +1180,15 @@ class BaseService {
 
     // Apply GROUP BY on main entity ID when joins are present to avoid duplicate users
     // This ensures one row per user even when user has multiple related records
+    // 
+    // NOTE: MySQL ONLY_FULL_GROUP_BY mode requires all non-grouped columns to be aggregated.
+    // TypeORM's createQueryBuilder automatically selects all entity columns, which may cause
+    // ONLY_FULL_GROUP_BY errors. However, since user.id is unique (primary key), all other
+    // user columns are identical per user.id, so MySQL will accept them even with ONLY_FULL_GROUP_BY
+    // in most cases. If you encounter ONLY_FULL_GROUP_BY errors, consider:
+    // 1. Disabling ONLY_FULL_GROUP_BY mode (not recommended for production)
+    // 2. Using a subquery approach
+    // 3. Explicitly aggregating all non-grouped columns with MIN()/MAX()/ANY_VALUE()
     if (hasJoins) {
       queryBuilder.groupBy(`${this.alias}.id`);
     }

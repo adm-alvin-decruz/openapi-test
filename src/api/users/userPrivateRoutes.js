@@ -9,6 +9,7 @@ const {
   validateEmail,
   validateAPIKey,
   lowercaseTrimKeyValueString,
+  normalizeQueryParams,
 } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
@@ -124,6 +125,7 @@ router.put(
 router.get(
   '/v1/users',
   validateAPIKey, // Middleware: Validate API key
+  normalizeQueryParams, // Middleware: Normalize query parameters (trim, lowercase email)
   async (req, res) => {
     req['processTimer'] = processTimer;
     req['apiTimer'] = req.processTimer.apiRequestTimer(true);

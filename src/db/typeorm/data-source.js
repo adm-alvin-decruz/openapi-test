@@ -1,3 +1,6 @@
+// Import reflect-metadata shim BEFORE TypeORM DataSource
+// TypeORM 0.3.x requires reflect-metadata to be loaded before creating DataSource
+require('reflect-metadata');
 require('dotenv').config();
 const { DataSource } = require('typeorm');
 const { getDbConfig } = require('../config/mysqlConfig');

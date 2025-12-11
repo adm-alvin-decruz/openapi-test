@@ -80,7 +80,9 @@ const appConfig = {
   PRIVATE_APP_ID_PROD: '["nopComm.Prod.servicehub.mandaipvtapi.ciam"]',
 
   // db page size limit
-  DEFAULT_PAGE_SIZE: 250,
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 50,
+  MAX_LIMIT: 250,
 };
 
 module.exports = appConfig;

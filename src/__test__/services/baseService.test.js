@@ -39,6 +39,7 @@ describe('BaseService', () => {
       take: jest.fn().mockReturnThis(),
       clone: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue([]),
+      getRawOne: jest.fn().mockResolvedValue({ total: '0' }),
       getCount: jest.fn().mockResolvedValue(0),
       select: jest.fn().mockReturnThis(),
       distinct: jest.fn().mockReturnThis(),
@@ -675,7 +676,7 @@ describe('BaseService', () => {
       );
     });
 
-    it('should add selectFields for leftJoin', () => {
+    it('should add selectFields for leftJoin with GROUP_CONCAT', () => {
       const joins = [
         {
           type: 'leftJoin',
@@ -689,12 +690,13 @@ describe('BaseService', () => {
       baseService.applyJoins(mockQueryBuilder, joins);
 
       expect(mockQueryBuilder.leftJoin).toHaveBeenCalled();
+      // GROUP_CONCAT is used to aggregate multiple related records when GROUP BY is applied
       expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        'membershipDetails.id',
+        "GROUP_CONCAT(DISTINCT membershipDetails.id ORDER BY membershipDetails.id SEPARATOR '|||')",
         'membershipDetails_id',
       );
       expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        'membershipDetails.category_type',
+        "GROUP_CONCAT(DISTINCT membershipDetails.category_type ORDER BY membershipDetails.category_type SEPARATOR '|||')",
         'membershipDetails_category_type',
       );
     });
@@ -1374,7 +1376,7 @@ describe('BaseService', () => {
       expect(result.totalPages).toBe(10); // Math.ceil(100 / 10)
     });
 
-    it('should use GROUP BY to count distinct users when joins exist', async () => {
+    it('should use COUNT(DISTINCT) to count distinct users when joins exist', async () => {
       const mockRawData = [
         {
           user_id: 1,
@@ -1384,13 +1386,14 @@ describe('BaseService', () => {
         },
       ];
 
-      // Mock grouped rows for count (GROUP BY returns one row per user)
-      const mockGroupedRows = [{ user_id: 1 }];
-      mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce(mockGroupedRows) // For count (after GROUP BY)
-        .mockResolvedValueOnce(mockRawData); // For data
+      // Mock count result from COUNT(DISTINCT user.id)
+      const mockCountResult = { total: '1' };
+      mockQueryBuilder.getRawOne.mockResolvedValueOnce(mockCountResult); // For count
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockRawData); // For data
 
       mockQueryBuilder.clone.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
 
       const pagination = { page: 1, limit: 50 };
       const options = {
@@ -1404,10 +1407,16 @@ describe('BaseService', () => {
 
       const result = await baseService.executeQuery(mockQueryBuilder, pagination, options);
 
-      // Should use groupBy for count when joins exist (to count distinct users)
-      // groupBy is called twice: once for count query, once for main query
+      // Should use COUNT(DISTINCT) for efficient counting at database level
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith([]);
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
+        `COUNT(DISTINCT ${baseService.alias}.id)`,
+        'total'
+      );
+      expect(mockQueryBuilder.getRawOne).toHaveBeenCalled(); // For count
+      // Main query still uses GROUP BY to avoid duplicate users
       expect(mockQueryBuilder.groupBy).toHaveBeenCalledWith(`${baseService.alias}.id`);
-      expect(result).toHaveProperty('total', 1); // Count from grouped rows (one per user)
+      expect(result).toHaveProperty('total', 1); // Count from COUNT(DISTINCT)
       expect(result.data).toEqual([
         {
           id: 1,
@@ -1425,19 +1434,20 @@ describe('BaseService', () => {
         {
           user_id: 1,
           user_email: 'test@example.com',
-          membershipDetails_id: 10,
+          // GROUP_CONCAT returns single value (no separator) when only one record
+          membershipDetails_id: '10',
           membershipDetails_category_type: 'FOM',
         },
       ];
 
-      // Mock distinct IDs for count
-      const mockDistinctIds = [{ user_id: 1 }];
-      mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce(mockDistinctIds) // For count
-        .mockResolvedValueOnce(mockRawData); // For data
+      // Mock count result from COUNT(DISTINCT user.id)
+      const mockCountResult = { total: '1' };
+      mockQueryBuilder.getRawOne.mockResolvedValueOnce(mockCountResult); // For count
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockRawData); // For data
 
       mockQueryBuilder.clone.mockReturnValue(mockQueryBuilder);
       mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
 
       const pagination = { page: 1, limit: 50 };
       const options = {
@@ -1456,7 +1466,7 @@ describe('BaseService', () => {
           id: 1,
           email: 'test@example.com',
           membershipDetails: {
-            id: 10,
+            id: '10',
             category_type: 'FOM',
           },
         },
@@ -1465,27 +1475,30 @@ describe('BaseService', () => {
 
     it('should handle multiple users with joins correctly', async () => {
       // Simulate 2 users, but one has 2 membership details (would return 3 rows without GROUP BY)
-      const mockGroupedRows = [{ user_id: 1 }, { user_id: 2 }]; // GROUP BY returns one row per user
       const mockRawData = [
         {
           user_id: 1,
           user_email: 'user1@example.com',
-          membershipDetails_id: 10,
+          // GROUP_CONCAT returns single value when only one record
+          membershipDetails_id: '10',
           membershipDetails_category_type: 'FOM',
         },
         {
           user_id: 2,
           user_email: 'user2@example.com',
-          membershipDetails_id: 20,
+          membershipDetails_id: '20',
           membershipDetails_category_type: 'WILDPASS',
         },
       ];
 
-      mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce(mockGroupedRows) // For count (after GROUP BY - 2 users)
-        .mockResolvedValueOnce(mockRawData); // For data
+      // Mock count result from COUNT(DISTINCT user.id) - 2 distinct users
+      const mockCountResult = { total: '2' };
+      mockQueryBuilder.getRawOne.mockResolvedValueOnce(mockCountResult); // For count
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockRawData); // For data
 
       mockQueryBuilder.clone.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
 
       const pagination = { page: 1, limit: 50 };
       const options = {
@@ -1499,11 +1512,65 @@ describe('BaseService', () => {
 
       const result = await baseService.executeQuery(mockQueryBuilder, pagination, options);
 
-      // Should count 2 distinct users (from GROUP BY), not 3 rows
+      // Should count 2 distinct users (from COUNT(DISTINCT)), not 3 rows
       expect(result.total).toBe(2);
       expect(result.data).toHaveLength(2);
-      // GROUP BY is called twice: once for count, once for main query
+      // Main query still uses GROUP BY to avoid duplicate users
       expect(mockQueryBuilder.groupBy).toHaveBeenCalledWith(`${baseService.alias}.id`);
+    });
+
+    it('should handle user with multiple membership details using GROUP_CONCAT', async () => {
+      // Simulate user with 2 membership details - GROUP_CONCAT will aggregate them
+      const mockRawData = [
+        {
+          user_id: 1,
+          user_email: 'user1@example.com',
+          // GROUP_CONCAT returns multiple values separated by '|||'
+          membershipDetails_id: '10|||11',
+          membershipDetails_category_type: 'FOM|||JUNIOR',
+        },
+      ];
+
+      // Mock count result from COUNT(DISTINCT user.id) - 1 distinct user
+      const mockCountResult = { total: '1' };
+      mockQueryBuilder.getRawOne.mockResolvedValueOnce(mockCountResult); // For count
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockRawData); // For data
+
+      mockQueryBuilder.clone.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+
+      const pagination = { page: 1, limit: 50 };
+      const options = {
+        joins: [
+          {
+            alias: 'membershipDetails',
+            selectFields: ['id', 'category_type'],
+          },
+        ],
+      };
+
+      const result = await baseService.executeQuery(mockQueryBuilder, pagination, options);
+
+      expect(result.total).toBe(1);
+      expect(result.data).toHaveLength(1);
+      
+      // Should parse GROUP_CONCAT into array and create array of objects
+      expect(result.data[0]).toHaveProperty('id', 1);
+      expect(result.data[0]).toHaveProperty('email', 'user1@example.com');
+      expect(result.data[0]).toHaveProperty('membershipDetails');
+      
+      // When multiple values, should return as array
+      expect(Array.isArray(result.data[0].membershipDetails)).toBe(true);
+      expect(result.data[0].membershipDetails).toHaveLength(2);
+      expect(result.data[0].membershipDetails[0]).toEqual({
+        id: '10',
+        category_type: 'FOM',
+      });
+      expect(result.data[0].membershipDetails[1]).toEqual({
+        id: '11',
+        category_type: 'JUNIOR',
+      });
     });
   });
 

@@ -127,9 +127,9 @@ class UsersServicesV2 extends BaseService {
 
         relatedFieldMappings: relatedFieldMappings,
 
-        defaultPage: 1,
-        defaultLimit: 50,
-        maxLimit: appConfig.DEFAULT_PAGE_SIZE || 250,
+        defaultPage: appConfig.DEFAULT_PAGE || 1,
+        defaultLimit: appConfig.DEFAULT_LIMIT || 50,
+        maxLimit: appConfig.MAX_LIMIT || 250,
 
         // 6. Sorting
         defaultSortBy: 'createdAt', // camelCase, tự động convert
@@ -142,10 +142,6 @@ class UsersServicesV2 extends BaseService {
           'status',
           'createdAt',
           'updatedAt',
-          'createdAtTo',
-          'createdAtFrom',
-          'updatedAtFrom',
-          'updatedAtTo',
         ],
       };
 
