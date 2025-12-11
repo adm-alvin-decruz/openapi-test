@@ -108,6 +108,7 @@ class UsersServicesV2 extends BaseService {
           'singpassIdNotNull',
           'createdAt',
           'createdAtFrom',
+          'createdAtTo',
     ];
 
     // Only add membership-related fields to allowedFields if join is added
