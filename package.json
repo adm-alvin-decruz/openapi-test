@@ -6,7 +6,7 @@
     "test": "{src,test}/*.js"
   },
   "scripts": {
-    "test": "jest --detectOpenHandles --forceExit",
+    "test": "jest --forceExit",
     "dev": "nodemon --env-file=.env app.js",
     "prepare": "node .husky/install.mjs",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",

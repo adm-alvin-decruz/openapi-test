@@ -25,7 +25,7 @@
  */
 
 const { UsersServicesV2 } = require('../../../api/users/usersServicesV2');
-const { getDataSource } = require('../../../db/typeorm/data-source');
+const { getDataSource, closeDataSource } = require('../../../db/typeorm/data-source');
 
 // Skip integration tests if flag is set or if database is not available
 const SKIP_INTEGRATION_TESTS = process.env.SKIP_INTEGRATION_TESTS === 'true';
@@ -39,7 +39,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
       return;
     }
 
-    // Try to connect to database
+      // Try to connect to database
     try {
       const dataSource = await getDataSource();
       if (dataSource && dataSource.isInitialized) {
@@ -57,12 +57,9 @@ describe('UsersServicesV2 - Integration Tests', () => {
   afterAll(async () => {
     if (dataSourceAvailable) {
       try {
-        const dataSource = await getDataSource();
-        if (dataSource && dataSource.isInitialized) {
-          await dataSource.destroy();
-        }
+        await closeDataSource();
       } catch (error) {
-        console.error('Error in afterAll:', error);
+        console.error('Error closing dataSource in afterAll:', error);
         // Ignore cleanup errors
       }
     }
@@ -75,6 +72,10 @@ describe('UsersServicesV2 - Integration Tests', () => {
 
     // Clear any timers or async operations
     jest.clearAllTimers();
+    
+    // Force Jest to exit - give a small delay for cleanup to complete
+    // But don't wait too long as forceExit should handle it
+    await new Promise((resolve) => setTimeout(resolve, 50));
   });
 
   /**
@@ -127,8 +128,8 @@ describe('UsersServicesV2 - Integration Tests', () => {
       
       // Verify all returned users have status = 1
       result.data.users.forEach((user) => {
-        expect(user.status).toBe(1);
-      });
+          expect(user.status).toBe(1);
+        });
     });
 
     // NOTE: mandaiIdIsNull filter test is skipped because mandai_id column is NOT NULL in database schema
@@ -183,6 +184,80 @@ describe('UsersServicesV2 - Integration Tests', () => {
       result.data.users.forEach((user) => {
         expect(user.singpassId).not.toBeNull();
       });
+    });
+
+    it('should filter by mandaiId with real database', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      // Use a mandaiId that exists in seed data
+      const req = createMockRequest({ mandaiId: 'INTEG001' });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have matching mandaiId
+      result.data.users.forEach((user) => {
+        expect(user.mandaiId).toBe('INTEG001');
+        });
+    });
+
+    it('should filter by mandaiIdNotNull with real database', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      const req = createMockRequest({ mandaiIdNotNull: 'true' });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have non-null mandaiId
+      result.data.users.forEach((user) => {
+        expect(user.mandaiId).not.toBeNull();
+      });
+    });
+
+    it('should filter by singpassId with real database', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      // Use a singpassId that might exist in database
+      const req = createMockRequest({ singpassId: 'test-singpass-id' });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have matching singpassId (if any)
+      result.data.users.forEach((user) => {
+        expect(user.singpassId).toBe('test-singpass-id');
+      });
+    });
+
+    it('should filter by createdAt with real database', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      const req = createMockRequest({ createdAt: '2024-01-01' });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have matching createdAt date
+      result.data.users.forEach((user) => {
+          if (user.createdAt) {
+            const userDate = new Date(user.createdAt);
+          const filterDate = new Date('2024-01-01');
+          expect(userDate.toDateString()).toBe(filterDate.toDateString());
+          }
+        });
     });
   });
 
@@ -337,6 +412,77 @@ describe('UsersServicesV2 - Integration Tests', () => {
         const currEmail = result.data.users[i].email?.toLowerCase() || '';
         expect(currEmail >= prevEmail).toBe(true);
       }
+    });
+  });
+
+  describe('getUsers - Comparison Operators with Date/String (Integration)', () => {
+    it('should filter by createdAt[gt] with date string', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      const pastDate = new Date();
+      pastDate.setFullYear(pastDate.getFullYear() - 1);
+      const pastDateStr = pastDate.toISOString().split('T')[0];
+
+      const req = createMockRequest({ 'createdAt[gt]': pastDateStr });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have createdAt > pastDate
+      result.data.users.forEach((user) => {
+        if (user.createdAt) {
+          const userDate = new Date(user.createdAt);
+          const filterDate = new Date(pastDateStr);
+          expect(userDate.getTime()).toBeGreaterThan(filterDate.getTime());
+        }
+      });
+    });
+
+    it('should filter by createdAt[lt] with date string', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
+
+      const req = createMockRequest({ 'createdAt[lt]': futureDateStr });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have createdAt < futureDate
+      result.data.users.forEach((user) => {
+        if (user.createdAt) {
+          const userDate = new Date(user.createdAt);
+          const filterDate = new Date(futureDateStr);
+          expect(userDate.getTime()).toBeLessThan(filterDate.getTime());
+        }
+      });
+    });
+
+    it('should filter by email[gt] with string (lexicographic comparison)', async () => {
+      if (skipIfNoDB()) {
+        return;
+      }
+
+      const req = createMockRequest({ 'email[gt]': 'a@example.com' });
+      const result = await UsersServicesV2.getUsers(req);
+
+      expect(result.status).toBe('success');
+      expect(result.data.users).toBeInstanceOf(Array);
+      
+      // Verify all returned users have email > 'a@example.com' (lexicographic)
+      result.data.users.forEach((user) => {
+        if (user.email) {
+          expect(user.email.localeCompare('a@example.com')).toBeGreaterThan(0);
+        }
+      });
     });
   });
 
@@ -546,13 +692,13 @@ describe('UsersServicesV2 - Integration Tests', () => {
       
       // Verify all filters are applied
       result.data.users.forEach((user) => {
-        expect(user.status).toBe(1);
+          expect(user.status).toBe(1);
         expect(user.email).toContain('@');
         if (user.createdAt) {
           const userDate = new Date(user.createdAt);
           const filterDate = new Date('2020-01-01');
           expect(userDate.getTime()).toBeGreaterThanOrEqual(filterDate.getTime());
-        }
+      }
       });
     });
 
@@ -1115,7 +1261,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
         
         // Verify hidden fields are not exposed
         expect(user).not.toHaveProperty('password_hash');
-      }
+        }
     });
   });
 });

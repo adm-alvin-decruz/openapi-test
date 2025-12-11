@@ -109,6 +109,9 @@ describe('UsersServicesV2 - Filter Tests', () => {
     }
     // Clear all mocks
     jest.clearAllMocks();
+    // Clear timers
+    jest.clearAllTimers();
+    // Force exit - no need to wait
   });
 
   describe('getUsers - Basic Filters', () => {

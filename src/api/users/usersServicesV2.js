@@ -24,23 +24,44 @@ class UsersServicesV2 extends BaseService {
     let relatedFieldMappings = {};
 
     // Check if any membership-related fields are in query
-    const hasCategoryType = req.query.categoryType && req.query.categoryType.trim() !== '';
-    const hasValidFrom = req.query.validFrom && req.query.validFrom.trim() !== '';
-    const hasValidUntil = req.query.validUntil && req.query.validUntil.trim() !== '';
+    // Note: Express qs parser converts field[operator]=value into nested objects
+    // e.g., membershipDetails.validUntil[gt]=value becomes { "membershipDetails.validUntil": { gt: 'value' } }
+    // The dot is kept in the key name, not as nested object structure
+    
+    // Helper function to check if a query key matches membership pattern
+    const hasMembershipKey = (key) => {
+      return key && (
+        key.startsWith('membershipDetails.') ||
+        key === 'categoryType' ||
+        key === 'validFrom' ||
+        key === 'validUntil' ||
+        key.includes('validFrom') ||
+        key.includes('validUntil')
+      );
+    };
+    
+    // Check all query keys for membership-related fields
     const hasMembershipDetailsFilter = 
-      req.query['membershipDetails.categoryType'] ||
-      req.query['membershipDetails.validFrom[gte]'] ||
-      req.query['membershipDetails.validUntil[lte]'] ||
-      req.query['membershipDetails.validUntil[gt]'] ||
-      req.query['membershipDetails.validUntil[lt]'] ||
-      req.query['membershipDetails.validFromIsNull'] ||
-      req.query['membershipDetails.validUntilIsNull'] ||
-      req.query['membershipDetails.validFromNotNull'] ||
-      req.query['membershipDetails.validUntilNotNull'] ||
-      req.query['membershipDetails.validFromFrom'] ||
-      req.query['membershipDetails.validFromTo'] ||
-      req.query['membershipDetails.validUntilFrom'] ||
-      req.query['membershipDetails.validUntilTo'] ||
+      // Simple fields (without membershipDetails prefix)
+      (req.query.categoryType && req.query.categoryType.trim() !== '') ||
+      (req.query.validFrom && req.query.validFrom.trim() !== '') ||
+      (req.query.validUntil && req.query.validUntil.trim() !== '') ||
+      // Check all query keys for membership-related patterns
+      Object.keys(req.query || {}).some(key => {
+        if (!hasMembershipKey(key)) return false;
+        
+        const value = req.query[key];
+        // Check if it's a nested object (from qs parser with operators)
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          return Object.keys(value).length > 0;
+        }
+        // Check if it's a string value
+        if (typeof value === 'string' && value.trim() !== '') {
+          return true;
+        }
+        return false;
+      }) ||
+      // Fields without prefix but related to membership
       req.query.validFromIsNull ||
       req.query.validUntilIsNull ||
       req.query.validFromNotNull ||
@@ -51,7 +72,7 @@ class UsersServicesV2 extends BaseService {
       req.query.validUntilTo;
 
     // Only add join if membership-related fields are requested
-    if (hasCategoryType || hasValidFrom || hasValidUntil || hasMembershipDetailsFilter) {
+    if (hasMembershipDetailsFilter) {
       joins.push({
         type: 'leftJoin',
         entity: 'user_membership_details',
@@ -168,7 +189,8 @@ class UsersServicesV2 extends BaseService {
         },
       };
     } catch (error) {
-      loggerService.error('UsersV2Service.getUsers', error);
+      console.error('Error in UsersV2Service.getUsers:', error);
+      loggerService.error('UsersV2Service.getUsers', { error: error.message });
       throw error;
     }
   }

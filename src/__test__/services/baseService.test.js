@@ -303,6 +303,64 @@ describe('BaseService', () => {
         expect(filters['orders.total_amount_gt']).toBe('100');
       });
 
+      it('should parse related field with operator when full format is in allowedFields (membershipDetails.validUntil[gt])', () => {
+        const query = { 'membershipDetails.validUntil[gt]': '2025-12-09 10:50:30' };
+        const options = {
+          allowedFields: ['membershipDetails.validUntil[gt]'],
+        };
+
+        const filters = baseService.parseFilters(query, options);
+
+        // Should parse correctly when full format with operator is in allowedFields
+        expect(filters['membershipDetails.valid_until_gt']).toBe('2025-12-09 10:50:30');
+      });
+
+      it('should parse related field with operator when base field is in allowedFields (membershipDetails.validUntil[gt])', () => {
+        const query = { 'membershipDetails.validUntil[gt]': '2025-12-09 10:50:30' };
+        const options = {
+          allowedFields: ['validUntil'],
+        };
+
+        const filters = baseService.parseFilters(query, options);
+
+        // Should also work when only base field name is in allowedFields
+        expect(filters['membershipDetails.valid_until_gt']).toBe('2025-12-09 10:50:30');
+      });
+
+      it('should parse nested object from Express qs parser (membershipDetails.validUntil[gt])', () => {
+        // Express qs parser converts membershipDetails.validUntil[gt]=value into nested object
+        const query = { 
+          'membershipDetails.validUntil': { 
+            'gt': '2025-12-09 10:50:30' 
+          } 
+        };
+        const options = {
+          allowedFields: ['membershipDetails.validUntil[gt]'],
+        };
+
+        const filters = baseService.parseFilters(query, options);
+
+        // Should parse nested object correctly
+        expect(filters['membershipDetails.valid_until_gt']).toBe('2025-12-09 10:50:30');
+      });
+
+      it('should parse nested object from Express qs parser with base field in allowedFields', () => {
+        // Express qs parser converts membershipDetails.validUntil[gt]=value into nested object
+        const query = { 
+          'membershipDetails.validUntil': { 
+            'gt': '2025-12-09 10:50:30' 
+          } 
+        };
+        const options = {
+          allowedFields: ['validUntil'],
+        };
+
+        const filters = baseService.parseFilters(query, options);
+
+        // Should parse nested object correctly even with base field name
+        expect(filters['membershipDetails.valid_until_gt']).toBe('2025-12-09 10:50:30');
+      });
+
       it('should parse related field with camelCase field name', () => {
         const query = { 'orders.totalAmount[gte]': '50' };
         const options = {
@@ -831,6 +889,84 @@ describe('BaseService', () => {
         );
       });
 
+      it('should apply gt operator with date string', () => {
+        const filters = {
+          created_at_gt: '2025-12-09 10:50:30',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.created_at > :created_at_gt',
+          { created_at_gt: '2025-12-09 10:50:30' },
+        );
+      });
+
+      it('should apply lt operator with date string', () => {
+        const filters = {
+          valid_until_lt: '2025-12-31',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.valid_until < :valid_until_lt',
+          { valid_until_lt: '2025-12-31' },
+        );
+      });
+
+      it('should apply gte operator with date string', () => {
+        const filters = {
+          created_at_gte: '2025-01-01',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.created_at >= :created_at_gte',
+          { created_at_gte: '2025-01-01' },
+        );
+      });
+
+      it('should apply lte operator with date string', () => {
+        const filters = {
+          valid_until_lte: '2025-12-31 23:59:59',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.valid_until <= :valid_until_lte',
+          { valid_until_lte: '2025-12-31 23:59:59' },
+        );
+      });
+
+      it('should apply gt operator with string value (lexicographic comparison)', () => {
+        const filters = {
+          email_gt: 'a@example.com',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.email > :email_gt',
+          { email_gt: 'a@example.com' },
+        );
+      });
+
+      it('should apply lt operator with string value', () => {
+        const filters = {
+          name_lt: 'Z',
+        };
+
+        baseService.applyFilters(mockQueryBuilder, filters, {});
+
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.name < :name_lt',
+          { name_lt: 'Z' },
+        );
+      });
+
       it('should apply eq operator', () => {
         const filters = {
           status_eq: '1',
@@ -857,17 +993,18 @@ describe('BaseService', () => {
         );
       });
 
-      it('should ignore invalid numeric values for gt operator', () => {
+      it('should apply gt operator with string value (even if not numeric)', () => {
         const filters = {
           status_gt: 'invalid',
         };
 
         baseService.applyFilters(mockQueryBuilder, filters, {});
 
-        // Should not call andWhere for invalid numeric value
-        expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-          expect.stringContaining('status_gt'),
-          expect.anything(),
+        // Now supports string comparison, so should call andWhere
+        // MySQL will handle the comparison (may result in 0 for non-numeric strings)
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+          'user.status > :status_gt',
+          { status_gt: 'invalid' },
         );
       });
 
@@ -1623,7 +1760,7 @@ describe('BaseService', () => {
     // Reset mock implementations
     getDataSource.mockReset();
     
-    // Give a small delay to allow any pending async operations to complete
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Force Jest to exit - no need to wait for async operations since we're using mocks
+    // The setTimeout was causing Jest to hang
   });
 });

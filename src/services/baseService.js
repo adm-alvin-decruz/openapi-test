@@ -260,6 +260,72 @@ class BaseService {
     for (const [key, value] of Object.entries(query)) {
       if (!value || value === '') continue;
 
+      // Handle nested objects from Express qs parser (e.g., { "membershipDetails.validUntil": { "gt": "value" } })
+      // Express parses field[operator]=value into nested objects
+      if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
+        // This is a nested object from Express qs parser
+        // Iterate through nested operators
+        for (const [operator, operatorValue] of Object.entries(value)) {
+          if (!operatorValue || operatorValue === '') continue;
+          
+          // Reconstruct the full key with operator: membershipDetails.validUntil[gt]
+          const fullKey = `${key}[${operator}]`;
+          
+          // Process as comparison operator
+          const fieldWithOperator = this.parseFieldWithOperator(fullKey);
+          if (fieldWithOperator) {
+            const { fieldName, operator: op, isRelated } = fieldWithOperator;
+            
+            // For related fields (e.g., orders.total_amount), keep the dot notation
+            // For main fields, convert camelCase to snake_case
+            let normalizedFieldName;
+            let baseFieldNameForCheck;
+            
+            if (isRelated) {
+              // Related field: keep as-is but convert field name part to snake_case
+              const parts = fieldName.split('.');
+              if (parts.length === 2) {
+                const [relatedTable, field] = parts;
+                normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(field)}`;
+                const camelCaseField = field.includes('_') ? this.snakeToCamelCase(field) : field;
+                baseFieldNameForCheck = camelCaseField;
+              } else {
+                normalizedFieldName = fieldName;
+                baseFieldNameForCheck = fieldName;
+              }
+            } else {
+              // Main field: convert camelCase to snake_case
+              normalizedFieldName = this.camelToSnakeCase(fieldName);
+              baseFieldNameForCheck = fieldName;
+            }
+            
+            // Check if field is allowed
+            const snakeCaseBaseField = this.camelToSnakeCase(baseFieldNameForCheck);
+            const isAllowed = 
+              this.isFieldAllowed(baseFieldNameForCheck, snakeCaseBaseField, allowedFields) || 
+              this.isFieldAllowed(fieldName, normalizedFieldName, allowedFields) ||
+              allowedFields.includes(fullKey) ||
+              (isRelated && allowedFields.some(field => {
+                const fieldCamelCase = field.includes('_') ? this.snakeToCamelCase(field) : field;
+                const fieldSnakeCase = this.camelToSnakeCase(field);
+                return field === fieldName || 
+                  field === normalizedFieldName ||
+                  field === baseFieldNameForCheck ||
+                  field === snakeCaseBaseField ||
+                  field === fieldCamelCase ||
+                  field === fieldSnakeCase ||
+                  (field === baseFieldNameForCheck || field === snakeCaseBaseField) ||
+                  (field.includes('[') && field.includes(']') && field === fullKey);
+              }));
+            
+            if (isAllowed) {
+              filters[`${normalizedFieldName}_${op}`] = operatorValue;
+            }
+          }
+        }
+        continue;
+      }
+
       // Handle comparison operators: field[operator]=value or related.field[operator]=value
       const fieldWithOperator = this.parseFieldWithOperator(key);
       if (fieldWithOperator) {
@@ -298,9 +364,12 @@ class BaseService {
         
         // Check if field is allowed (try multiple variations)
         // For related fields, check both camelCase and snake_case versions of the field name
+        // Also check if the field is in allowedFields with operator format (e.g., 'membershipDetails.validUntil[gt]')
         const isAllowed = 
           this.isFieldAllowed(baseFieldNameForCheck, snakeCaseBaseField, allowedFields) || 
           this.isFieldAllowed(fieldName, normalizedFieldName, allowedFields) ||
+          // Check if the full field with operator is in allowedFields (e.g., 'membershipDetails.validUntil[gt]')
+          allowedFields.includes(key) ||
           // Also check if the full related field path is allowed (e.g., 'orders.totalAmount')
           (isRelated && allowedFields.some(field => {
             // Check various formats
@@ -313,7 +382,9 @@ class BaseService {
               field === fieldCamelCase ||
               field === fieldSnakeCase ||
               // Check if field matches the base field name (camelCase or snake_case)
-              (field === baseFieldNameForCheck || field === snakeCaseBaseField);
+              (field === baseFieldNameForCheck || field === snakeCaseBaseField) ||
+              // Check if field in allowedFields has operator format matching the current key
+              (field.includes('[') && field.includes(']') && field === key);
           }));
         
         if (isAllowed) {
@@ -887,36 +958,41 @@ class BaseService {
       // Support both main fields and related fields (e.g., orders.total_amount_gt)
       if (key.endsWith('_gt')) {
         const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        const numValue = this.parseNumericValue(value);
-        if (numValue !== null) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} > :${key}`, { [key]: numValue });
+        // Support numeric, date, and string comparisons
+        // MySQL can compare dates and strings directly, so we don't need to parse
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} > :${key}`, { [key]: parsedValue });
         }
         continue;
       }
 
       if (key.endsWith('_lt')) {
         const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        const numValue = this.parseNumericValue(value);
-        if (numValue !== null) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} < :${key}`, { [key]: numValue });
+        // Support numeric, date, and string comparisons
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} < :${key}`, { [key]: parsedValue });
         }
         continue;
       }
 
       if (key.endsWith('_gte')) {
         const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        const numValue = this.parseNumericValue(value);
-        if (numValue !== null) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} >= :${key}`, { [key]: numValue });
+        // Support numeric, date, and string comparisons
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} >= :${key}`, { [key]: parsedValue });
         }
         continue;
       }
 
       if (key.endsWith('_lte')) {
         const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        const numValue = this.parseNumericValue(value);
-        if (numValue !== null) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} <= :${key}`, { [key]: numValue });
+        // Support numeric, date, and string comparisons
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} <= :${key}`, { [key]: parsedValue });
         }
         continue;
       }
@@ -1017,6 +1093,56 @@ class BaseService {
       }
     }
     return null;
+  }
+
+  /**
+   * Parse comparison value - supports numeric, date, and string
+   * For comparison operators (gt, lt, gte, lte), MySQL can compare:
+   * - Numbers: direct comparison
+   * - Dates: direct comparison (ISO format or MySQL date format)
+   * - Strings: lexicographic comparison
+   * 
+   * @param {String|Number|Date} value - Value to parse
+   * @returns {String|Number|Date|null} Parsed value or null if invalid
+   */
+  parseComparisonValue(value) {
+    // Return null/undefined as-is (will be skipped)
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    
+    // Return number as-is
+    if (typeof value === 'number') {
+      return value;
+    }
+    
+    // Return Date object as-is
+    if (value instanceof Date) {
+      return value;
+    }
+    
+    // For strings, try to parse as number first (for backward compatibility)
+    // If not a valid number, return as string (for date/string comparison)
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return null;
+      }
+      
+      // Try to parse as number
+      const num = parseFloat(trimmed);
+      if (!isNaN(num) && isFinite(num) && trimmed === String(num)) {
+        // Valid number (exact match to avoid parsing "2025-12-09" as 2025)
+        return num;
+      }
+      
+      // Return as string (for date/string comparison)
+      // MySQL will handle date comparison if the string is a valid date format
+      return trimmed;
+    }
+    
+    // Return other types as-is
+    return value;
   }
 
   /**
@@ -1169,6 +1295,7 @@ class BaseService {
       // Use COUNT(DISTINCT user.id) to count distinct users efficiently at the database level
       // This avoids fetching all rows into memory (O(n) performance regression)
       // Remove all existing selects and add only the count
+      // Note: clone() preserves JOINs and WHERE clauses, so the count query will have all filters
       countQueryBuilder.select([]);
       countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
       const countResult = await countQueryBuilder.getRawOne();
