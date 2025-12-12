@@ -294,7 +294,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       }));
     });
 
-    it('should filter by mandaiIdIsNull', async () => {
+    it('should filter by mandaiId is null', async () => {
       const mockQueryBuilder = {};
       const mockPagination = { page: 1, limit: 50 };
       const mockOptions = {};
@@ -322,7 +322,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       });
 
       const req = {
-        query: { mandaiIdIsNull: 'true' },
+        query: { mandaiId: { is_null: true } },
       };
 
       const result = await usersService.getUsers(req);
@@ -330,7 +330,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
-        allowedFields: expect.arrayContaining(['mandaiIdIsNull']),
+        allowedFields: expect.arrayContaining(['mandaiId']),
       }));
     });
 
@@ -377,7 +377,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
   });
 
   describe('getUsers - Date Range Filters', () => {
-    it('should filter by createdAtFrom', async () => {
+    it('should filter by createdAt gte', async () => {
       const mockQueryBuilder = {};
       const mockPagination = { page: 1, limit: 50 };
       const mockOptions = {};
@@ -405,7 +405,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       });
 
       const req = {
-        query: { createdAtFrom: '2024-01-01' },
+        query: { createdAt: { gte: '2024-01-01' } },
       };
 
       const result = await usersService.getUsers(req);
@@ -413,11 +413,11 @@ describe('UsersServicesV2 - Filter Tests', () => {
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
-        allowedFields: expect.arrayContaining(['createdAtFrom']),
+        allowedFields: expect.arrayContaining(['createdAt']),
       }));
     });
 
-    it('should filter by createdAtFrom and createdAtTo', async () => {
+    it('should filter by createdAt range gte and lte', async () => {
       const mockQueryBuilder = {};
       const mockPagination = { page: 1, limit: 50 };
       const mockOptions = {};
@@ -446,8 +446,10 @@ describe('UsersServicesV2 - Filter Tests', () => {
 
       const req = {
         query: {
-          createdAtFrom: '2024-01-01',
-          createdAtTo: '2024-12-31',
+          createdAt: {
+            gte: '2024-01-01',
+            lte: '2024-12-31',
+          },
         },
       };
 
@@ -456,7 +458,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
-        allowedFields: expect.arrayContaining(['createdAtFrom']),
+        allowedFields: expect.arrayContaining(['createdAt']),
       }));
     });
   });
@@ -887,8 +889,8 @@ describe('UsersServicesV2 - Filter Tests', () => {
       const req = {
         query: {
           status: '1',
-          email: '%example%',
-          createdAtFrom: '2024-01-01',
+          email: { like: '%example%' },
+          createdAt: { gte: '2024-01-01' },
         },
       };
 
@@ -897,7 +899,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
-        allowedFields: expect.arrayContaining(['status', 'email', 'createdAtFrom']),
+        allowedFields: expect.arrayContaining(['status', 'email', 'createdAt']),
       }));
     });
   });

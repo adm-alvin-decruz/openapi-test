@@ -23,6 +23,7 @@ class BaseService {
     this.dataSource = null;
     this.repository = null;
     this.alias = entityName.toLowerCase();
+    this.validOperators = ['lt', 'gt', 'lte', 'gte', 'eq', 'ne', 'in', 'is_null', 'not_null', 'like'];
   }
 
   /**
@@ -37,9 +38,7 @@ class BaseService {
    * @throws {Error} If dataSource initialization fails
    */
   async getRepository() {
-    // Lazy initialization: only create repository when needed
     if (!this.repository) {
-      // Lazy initialization: only create dataSource when needed
       if (!this.dataSource) {
         try {
           this.dataSource = await getDataSource();
@@ -48,7 +47,6 @@ class BaseService {
         }
       }
       
-      // Ensure dataSource is initialized before getting repository
       if (!this.dataSource.isInitialized) {
         await this.dataSource.initialize();
       }
@@ -79,131 +77,7 @@ class BaseService {
     return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
-  /**
-   * Extract operator from field name (e.g., 'createdAtFrom' -> {baseField: 'createdAt', operatorSuffix: '_from'})
-   * 
-   * @param {String} fieldKey - Field key that may contain operator (camelCase)
-   * @returns {Object} Object with baseField and operatorSuffix
-   */
-  extractOperator(fieldKey) {
-        let baseField = fieldKey;
-        let operatorSuffix = '';
-        
-        if (fieldKey.match(/NotNull$/i)) {
-          baseField = fieldKey.replace(/NotNull$/i, '');
-          operatorSuffix = '_not_null';
-        } else if (fieldKey.match(/IsNull$/i)) {
-          baseField = fieldKey.replace(/IsNull$/i, '');
-          operatorSuffix = '_is_null';
-        } else if (fieldKey.endsWith('From')) {
-          baseField = fieldKey.replace(/From$/i, '');
-          operatorSuffix = '_from';
-        } else if (fieldKey.endsWith('To') && fieldKey !== 'to') {
-          baseField = fieldKey.replace(/To$/i, '');
-          operatorSuffix = '_to';
-        }
-        
-    return { baseField, operatorSuffix };
-  }
 
-  /**
-   * Find entity field name from query field key
-   * Converts camelCase query field to snake_case database field
-   * 
-   * @param {String} fieldKey - Query field key (camelCase, may include operators like 'createdAtFrom')
-   * @param {Object} fieldMappings - Optional field mappings for edge cases
-   * @returns {String} Entity field name in snake_case
-   */
-  findEntityField(fieldKey, fieldMappings = {}) {
-    // If fieldMappings provided (edge cases), use it first
-    if (fieldMappings[fieldKey]) {
-      return fieldMappings[fieldKey];
-    }
-    
-    // Extract operator (From, To, IsNull, NotNull)
-    const { baseField, operatorSuffix } = this.extractOperator(fieldKey);
-    
-    // If base field has mapping, use it
-        if (fieldMappings[baseField]) {
-          return fieldMappings[baseField] + operatorSuffix;
-        }
-        
-    // Default: convert camelCase base field to snake_case
-    const snakeCaseField = this.camelToSnakeCase(baseField);
-    return snakeCaseField + operatorSuffix;
-  }
-
-  /**
-   * Parse field name with operator from query parameter
-   * Supports format: field[operator]=value or related.field[operator]=value
-   * 
-   * @param {String} key - Query parameter key (e.g., 'orders.total_amount[gt]')
-   * @returns {Object} Object with fieldName, operator, and isRelated
-   *   Example: { fieldName: 'orders.total_amount', operator: 'gt', isRelated: true }
-   */
-  parseFieldWithOperator(key) {
-    // Match pattern: field[operator] or related.field[operator]
-    const match = key.match(/^(.+?)\[([a-z]+)\]$/i);
-    if (match) {
-      const fieldName = match[1];
-      const operator = match[2].toLowerCase();
-      const isRelated = fieldName.includes('.');
-      
-      // Validate operator
-      const validOperators = ['gt', 'lt', 'gte', 'lte', 'eq', 'ne'];
-      if (validOperators.includes(operator)) {
-        return { fieldName, operator, isRelated };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Get base field name by removing operator suffix
-   * Removes operators like _not_null, _is_null, _from, _to, _in, _gt, _lt, etc. from field name
-   * Only removes suffix at the end of the field name (safer than replace)
-   * 
-   * @param {String} fieldKey - Field key that may contain operator suffix (snake_case)
-   * @returns {String} Base field name without operator suffix
-   */
-  getBaseFieldName(fieldKey) {
-    // Remove operator suffix only if it's at the end (safer)
-    if (fieldKey.endsWith('_not_null')) {
-      return fieldKey.replace(/_not_null$/, '');
-    }
-    if (fieldKey.endsWith('_is_null')) {
-      return fieldKey.replace(/_is_null$/, '');
-    }
-    if (fieldKey.endsWith('_from')) {
-      return fieldKey.replace(/_from$/, '');
-    }
-    if (fieldKey.endsWith('_to')) {
-      return fieldKey.replace(/_to$/, '');
-    }
-    if (fieldKey.endsWith('_in')) {
-      return fieldKey.replace(/_in$/, '');
-    }
-    // Comparison operators
-    if (fieldKey.endsWith('_gt')) {
-      return fieldKey.replace(/_gt$/, '');
-    }
-    if (fieldKey.endsWith('_lt')) {
-      return fieldKey.replace(/_lt$/, '');
-    }
-    if (fieldKey.endsWith('_gte')) {
-      return fieldKey.replace(/_gte$/, '');
-    }
-    if (fieldKey.endsWith('_lte')) {
-      return fieldKey.replace(/_lte$/, '');
-    }
-    if (fieldKey.endsWith('_eq')) {
-      return fieldKey.replace(/_eq$/, '');
-    }
-    if (fieldKey.endsWith('_ne')) {
-      return fieldKey.replace(/_ne$/, '');
-    }
-        return fieldKey;
-  }
 
   /**
    * Check if field is allowed for filtering
@@ -220,328 +94,115 @@ class BaseService {
   }
 
   /**
-   * Parse filters from query parameters
-   * Supports:
-   * - Exact match: ?field=value (default, uses index efficiently)
-   * - Like match: ?field=value% or ?field=%value% (only when % wildcard is explicitly provided)
-   *   Note: Underscore (_) in values does NOT trigger LIKE to avoid unintended wildcard matching
-   * - Range: ?fieldFrom=value&fieldTo=value
-   * - In: ?field=value1,value2,value3
-   * - Not null: ?fieldNotNull=true
-   * - Is null: ?fieldIsNull=true
-   * - Comparison operators: ?field[gt]=100, ?field[lt]=100, ?field[gte]=100, ?field[lte]=100, ?field[eq]=100, ?field[ne]=100
-   * - Related fields with operators: ?orders.total_amount[gt]=100
+   * Parse filters from query parameters (already parsed by Express qs parser)
    * 
-   * Query parameters are in camelCase and will be automatically converted to snake_case
+   * Query format after parsing:
+   * - field[operator]=value → { field: { operator: value } }
+   * - memberShipDetails.category_type[eq]=FOW → { memberShipDetails: { category_type: { eq: "FOW" } } }
    * 
-   * @param {Object} query - Query parameters from request (camelCase)
+   * Supported operators:
+   * - lt, gt, lte, gte: Comparison operators
+   * - eq, ne: Equality operators
+   * - in: Array/list matching
+   * - like: Pattern matching (with % wildcard)
+   * - is_null: Null check (field[is_null]=true)
+   * - not_null: Not null check (field[not_null]=true)
+   * 
+   * Related fields:
+   * - Format: tableName.fieldName[operator]=value
+   * - Example: memberShipDetails.category_type[eq]=FOW
+   * 
+   * @param {Object} query - Query parameters from request (already parsed by Express qs parser)
    * @param {Object} options - Configuration options
    * @param {Array} options.allowedFields - Fields allowed for filtering (camelCase or snake_case)
-   * @param {Object} options.fieldMappings - Map query field names to entity field names (for edge cases)
-   * @param {Object} options.defaultFilters - Default filters to always apply (camelCase, will be converted)
-   * @returns {Object} Parsed filters object (snake_case)
+   * @param {Object} options.defaultFilters - Default filters to always apply
+   * @returns {Object} Parsed filters in nested format: 
+   *   { field: [{ operator, value }], table: { field: [{ operator, value }] } }
    */
   parseFilters(query, options = {}) {
     const {
       allowedFields = [],
-      fieldMappings = {},
       defaultFilters = {},
     } = options;
 
-    // Normalize defaultFilters: convert camelCase keys to snake_case
-    const normalizedDefaultFilters = {};
-    for (const [key, value] of Object.entries(defaultFilters)) {
-      const snakeCaseKey = this.camelToSnakeCase(key);
-      normalizedDefaultFilters[snakeCaseKey] = value;
-    }
-    const filters = { ...normalizedDefaultFilters };
+    const filters = { ...defaultFilters };
 
-    // Process each query parameter
     for (const [key, value] of Object.entries(query)) {
-      if (!value || value === '') continue;
+      if (value === null || value === undefined || value === '') continue;
 
-      // Handle nested objects from Express qs parser (e.g., { "membershipDetails.validUntil": { "gt": "value" } })
-      // Express parses field[operator]=value into nested objects
-      if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
-        // This is a nested object from Express qs parser
-        // Iterate through nested operators
-        for (const [operator, operatorValue] of Object.entries(value)) {
-          if (!operatorValue || operatorValue === '') continue;
-          
-          // Reconstruct the full key with operator: membershipDetails.validUntil[gt]
-          const fullKey = `${key}[${operator}]`;
-          
-          // Process as comparison operator
-          const fieldWithOperator = this.parseFieldWithOperator(fullKey);
-          if (fieldWithOperator) {
-            const { fieldName, operator: op, isRelated } = fieldWithOperator;
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        const allKeysAreOperators = Object.keys(value).every(k => this.validOperators.includes(k));
+        
+        if (allKeysAreOperators) {
+          // Direct field with operators: { field: { eq: value } }
+          this.addFieldFilters(filters, key, value, allowedFields);
+        } else {
+          // Related fields (nested structure): { membershipDetails: { categoryType: ... } }
+          const relatedFilters = {};
+          for (const [fieldName, fieldValue] of Object.entries(value)) {
+            if (fieldValue === null || fieldValue === undefined || fieldValue === '') continue;
             
-            // For related fields (e.g., orders.total_amount), keep the dot notation
-            // For main fields, convert camelCase to snake_case
-            let normalizedFieldName;
-            let baseFieldNameForCheck;
-            
-            if (isRelated) {
-              // Related field: keep as-is but convert field name part to snake_case
-              const parts = fieldName.split('.');
-              if (parts.length === 2) {
-                const [relatedTable, field] = parts;
-                normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(field)}`;
-                const camelCaseField = field.includes('_') ? this.snakeToCamelCase(field) : field;
-                baseFieldNameForCheck = camelCaseField;
-              } else {
-                normalizedFieldName = fieldName;
-                baseFieldNameForCheck = fieldName;
-              }
+            if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+              // Field has operators: { categoryType: { eq: 'FOM' } }
+              this.addFieldFilters(relatedFilters, fieldName, fieldValue, allowedFields);
             } else {
-              // Main field: convert camelCase to snake_case
-              normalizedFieldName = this.camelToSnakeCase(fieldName);
-              baseFieldNameForCheck = fieldName;
-            }
-            
-            // Check if field is allowed
-            const snakeCaseBaseField = this.camelToSnakeCase(baseFieldNameForCheck);
-            const isAllowed = 
-              this.isFieldAllowed(baseFieldNameForCheck, snakeCaseBaseField, allowedFields) || 
-              this.isFieldAllowed(fieldName, normalizedFieldName, allowedFields) ||
-              allowedFields.includes(fullKey) ||
-              (isRelated && allowedFields.some(field => {
-                const fieldCamelCase = field.includes('_') ? this.snakeToCamelCase(field) : field;
-                const fieldSnakeCase = this.camelToSnakeCase(field);
-                return field === fieldName || 
-                  field === normalizedFieldName ||
-                  field === baseFieldNameForCheck ||
-                  field === snakeCaseBaseField ||
-                  field === fieldCamelCase ||
-                  field === fieldSnakeCase ||
-                  (field === baseFieldNameForCheck || field === snakeCaseBaseField) ||
-                  (field.includes('[') && field.includes(']') && field === fullKey);
-              }));
-            
-            if (isAllowed) {
-              filters[`${normalizedFieldName}_${op}`] = operatorValue;
+              // Field without operator (default to eq): { categoryType: 'FOM' }
+              this.addFieldFilters(relatedFilters, fieldName, { eq: fieldValue }, allowedFields);
             }
           }
-        }
-        continue;
-      }
-
-      // Handle comparison operators: field[operator]=value or related.field[operator]=value
-      const fieldWithOperator = this.parseFieldWithOperator(key);
-      if (fieldWithOperator) {
-        const { fieldName, operator, isRelated } = fieldWithOperator;
-        
-        // For related fields (e.g., orders.total_amount), keep the dot notation
-        // For main fields, convert camelCase to snake_case
-        let normalizedFieldName;
-        let baseFieldNameForCheck;
-        
-        if (isRelated) {
-          // Related field: keep as-is but convert field name part to snake_case
-          const parts = fieldName.split('.');
-          if (parts.length === 2) {
-            const [relatedTable, field] = parts;
-            normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(field)}`;
-            // For checking allowedFields, use just the field name (without table prefix)
-            // Try both camelCase and snake_case versions
-            // If field is already snake_case (total_amount), convert to camelCase for checking
-            // If field is camelCase (totalAmount), keep as-is
-            const camelCaseField = field.includes('_') ? this.snakeToCamelCase(field) : field;
-            baseFieldNameForCheck = camelCaseField; // Use camelCase for checking (matches allowedFields format)
-          } else {
-            normalizedFieldName = fieldName; // Keep as-is if format is unexpected
-            baseFieldNameForCheck = fieldName;
-          }
-        } else {
-          // Main field: convert camelCase to snake_case
-          normalizedFieldName = this.camelToSnakeCase(fieldName);
-          baseFieldNameForCheck = fieldName;
-        }
-        
-        // Check if field is allowed
-        // For related fields, check the base field name (without table prefix)
-        const snakeCaseBaseField = this.camelToSnakeCase(baseFieldNameForCheck);
-        
-        // Check if field is allowed (try multiple variations)
-        // For related fields, check both camelCase and snake_case versions of the field name
-        // Also check if the field is in allowedFields with operator format (e.g., 'membershipDetails.validUntil[gt]')
-        const isAllowed = 
-          this.isFieldAllowed(baseFieldNameForCheck, snakeCaseBaseField, allowedFields) || 
-          this.isFieldAllowed(fieldName, normalizedFieldName, allowedFields) ||
-          // Check if the full field with operator is in allowedFields (e.g., 'membershipDetails.validUntil[gt]')
-          allowedFields.includes(key) ||
-          // Also check if the full related field path is allowed (e.g., 'orders.totalAmount')
-          (isRelated && allowedFields.some(field => {
-            // Check various formats
-            const fieldCamelCase = field.includes('_') ? this.snakeToCamelCase(field) : field;
-            const fieldSnakeCase = this.camelToSnakeCase(field);
-            return field === fieldName || 
-              field === normalizedFieldName ||
-              field === baseFieldNameForCheck ||
-              field === snakeCaseBaseField ||
-              field === fieldCamelCase ||
-              field === fieldSnakeCase ||
-              // Check if field matches the base field name (camelCase or snake_case)
-              (field === baseFieldNameForCheck || field === snakeCaseBaseField) ||
-              // Check if field in allowedFields has operator format matching the current key
-              (field.includes('[') && field.includes(']') && field === key);
-          }));
-        
-        if (isAllowed) {
-          // Store with operator suffix: field_gt, field_lt, etc.
-          // Keep dot notation for related fields to identify them later
-          filters[`${normalizedFieldName}_${operator}`] = value;
-        }
-        continue;
-      }
-
-      // Handle camelCase operators: NotNull
-      // Support both main fields (singpassIdNotNull) and related fields (membershipDetails.validFromNotNull)
-      if (key.match(/NotNull$/i) && value === 'true') {
-        // Check if this is a related field (dot notation)
-        if (key.includes('.')) {
-          const parts = key.split('.');
-          if (parts.length === 2) {
-            const [relatedTable, fieldWithNotNull] = parts;
-            const baseField = fieldWithNotNull.replace(/NotNull$/i, '');
-            const normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(baseField)}_not_null`;
-            const camelCaseField = baseField.includes('_') ? this.snakeToCamelCase(baseField) : baseField;
-            const snakeCaseField = this.camelToSnakeCase(baseField);
-            
-            // Check if field is allowed (check base field name without table prefix)
-            if (this.isFieldAllowed(camelCaseField, snakeCaseField, allowedFields) || 
-                this.isFieldAllowed(key, normalizedFieldName, allowedFields)) {
-              filters[normalizedFieldName] = true;
-            }
-          }
-        } else {
-          // Main field
-          const entityField = this.findEntityField(key, fieldMappings);
-          const { baseField } = this.extractOperator(key);
-          const snakeCaseBaseField = this.camelToSnakeCase(baseField);
-          if (this.isFieldAllowed(baseField, snakeCaseBaseField, allowedFields) || this.isFieldAllowed(key, entityField, allowedFields)) {
-            filters[entityField] = true;
+          if (Object.keys(relatedFilters).length > 0) {
+            filters[key] = relatedFilters;
           }
         }
-        continue;
-      }
-
-      // Handle camelCase operators: IsNull
-      // Support both main fields (validFromIsNull) and related fields (membershipDetails.validFromIsNull)
-      if (key.match(/IsNull$/i) && value === 'true') {
-        // Check if this is a related field (dot notation)
-        if (key.includes('.')) {
-          const parts = key.split('.');
-          if (parts.length === 2) {
-            const [relatedTable, fieldWithIsNull] = parts;
-            const baseField = fieldWithIsNull.replace(/IsNull$/i, '');
-            const normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(baseField)}_is_null`;
-            const camelCaseField = baseField.includes('_') ? this.snakeToCamelCase(baseField) : baseField;
-            const snakeCaseField = this.camelToSnakeCase(baseField);
-            
-            // Check if field is allowed (check base field name without table prefix)
-            if (this.isFieldAllowed(camelCaseField, snakeCaseField, allowedFields) || 
-                this.isFieldAllowed(key, normalizedFieldName, allowedFields)) {
-              filters[normalizedFieldName] = true;
-            }
-          }
-        } else {
-          // Main field
-          const entityField = this.findEntityField(key, fieldMappings);
-          const { baseField } = this.extractOperator(key);
-          const snakeCaseBaseField = this.camelToSnakeCase(baseField);
-          if (this.isFieldAllowed(baseField, snakeCaseBaseField, allowedFields) || this.isFieldAllowed(key, entityField, allowedFields)) {
-            filters[entityField] = true;
-          }
-        }
-        continue;
-      }
-
-      // Handle range filters: From (camelCase: createdAtFrom)
-      // Support both main fields (validFromFrom) and related fields (membershipDetails.validFromFrom)
-      if (key.endsWith('From')) {
-        // Check if this is a related field (dot notation)
-        if (key.includes('.')) {
-          const parts = key.split('.');
-          if (parts.length === 2) {
-            const [relatedTable, fieldWithFrom] = parts;
-            const baseField = fieldWithFrom.replace(/From$/i, '');
-            const normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(baseField)}_from`;
-            const camelCaseField = baseField.includes('_') ? this.snakeToCamelCase(baseField) : baseField;
-            const snakeCaseField = this.camelToSnakeCase(baseField);
-            
-            // Check if field is allowed (check base field name without table prefix)
-            if (this.isFieldAllowed(camelCaseField, snakeCaseField, allowedFields) || 
-                this.isFieldAllowed(key, normalizedFieldName, allowedFields)) {
-              const date = new Date(value);
-              if (!isNaN(date.getTime())) {
-                filters[normalizedFieldName] = date.toISOString();
-              }
-            }
-          }
-        } else {
-          // Main field
-          const entityField = this.findEntityField(key, fieldMappings);
-          if (this.isFieldAllowed(key, entityField, allowedFields)) {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              filters[entityField] = date.toISOString();
-            }
-          }
-        }
-        continue;
-      }
-
-      // Handle range filters: To (camelCase: createdAtTo)
-      // Support both main fields (validFromTo) and related fields (membershipDetails.validFromTo)
-      if (key.endsWith('To') && key !== 'to') {
-        // Check if this is a related field (dot notation)
-        if (key.includes('.')) {
-          const parts = key.split('.');
-          if (parts.length === 2) {
-            const [relatedTable, fieldWithTo] = parts;
-            const baseField = fieldWithTo.replace(/To$/i, '');
-            const normalizedFieldName = `${relatedTable}.${this.camelToSnakeCase(baseField)}_to`;
-            const camelCaseField = baseField.includes('_') ? this.snakeToCamelCase(baseField) : baseField;
-            const snakeCaseField = this.camelToSnakeCase(baseField);
-            
-            // Check if field is allowed (check base field name without table prefix)
-            if (this.isFieldAllowed(camelCaseField, snakeCaseField, allowedFields) || 
-                this.isFieldAllowed(key, normalizedFieldName, allowedFields)) {
-              const date = new Date(value);
-              if (!isNaN(date.getTime())) {
-                filters[normalizedFieldName] = date.toISOString();
-              }
-            }
-          }
-        } else {
-          // Main field
-          const entityField = this.findEntityField(key, fieldMappings);
-          if (this.isFieldAllowed(key, entityField, allowedFields)) {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              filters[entityField] = date.toISOString();
-            }
-          }
-        }
-        continue;
-      }
-
-      // Handle regular filters
-      const entityField = this.findEntityField(key, fieldMappings);
-      if (this.isFieldAllowed(key, entityField, allowedFields)) {
-        const trimmedValue = typeof value === 'string' ? value.trim() : value;
-        
-        // Check if it's a comma-separated list (IN operator)
-        if (typeof trimmedValue === 'string' && trimmedValue.includes(',')) {
-          filters[`${entityField}_in`] = trimmedValue.split(',').map(v => v.trim()).filter(v => v);
-        } else {
-          filters[entityField] = trimmedValue;
-        }
+      } else {
+        // Direct field without operator (default to eq): { field: 'value' }
+        this.addFieldFilters(filters, key, { eq: value }, allowedFields);
       }
     }
 
     return filters;
+  }
+
+  /**
+   * Add field filters to filters object
+   * 
+   * @param {Object} filters - Filters object to add to
+   * @param {String} fieldName - Field name
+   * @param {Object} operators - Operators object { operator: value }
+   * @param {Array} allowedFields - Allowed fields list
+   */
+  addFieldFilters(filters, fieldName, operators, allowedFields) {
+    const camelCaseField = fieldName.includes('_') ? this.snakeToCamelCase(fieldName) : fieldName;
+    const normalizedFieldName = this.camelToSnakeCase(fieldName);
+    
+        const isAllowed = 
+      !allowedFields.length ||
+      this.isFieldAllowed(camelCaseField, normalizedFieldName, allowedFields);
+    
+    if (!isAllowed) return;
+
+    for (const [operator, operatorValue] of Object.entries(operators)) {
+      if (operatorValue === null || operatorValue === undefined || operatorValue === '') continue;
+      
+      let normalizedValue = operatorValue;
+      
+      if (operator === 'is_null' || operator === 'not_null') {
+        normalizedValue = null;
+      } else if (operator === 'in') {
+        normalizedValue = Array.isArray(operatorValue) 
+          ? operatorValue 
+          : (typeof operatorValue === 'string' ? operatorValue.split(',').map(v => v.trim()).filter(v => v) : [operatorValue]);
+      }
+      
+      if (!filters[normalizedFieldName]) {
+        filters[normalizedFieldName] = [];
+              }
+      
+      filters[normalizedFieldName].push({
+        operator: operator,
+        value: normalizedValue
+      });
+        }
   }
 
   /**
@@ -586,21 +247,15 @@ class BaseService {
       allowedSortFields = [],
     } = options;
 
-    // Support both camelCase (sortBy/sortOrder) and snake_case (sort_by/sort_order)
-    // camelCase is preferred to match API documentation
     let sortBy = query.sortBy || query.sort_by || defaultSortBy;
     const sortOrder = (query.sortOrder || query.sort_order || defaultSortOrder).toUpperCase();
 
-    // Normalize defaultSortBy to snake_case
     const normalizedDefaultSortBy = defaultSortBy.includes('_') 
       ? defaultSortBy 
       : this.camelToSnakeCase(defaultSortBy);
 
-    // Validate sort field if allowed fields are specified (before conversion)
-    // This allows allowedSortFields to contain camelCase fields
     if (allowedSortFields.length) {
       const snakeCaseSortBy = sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
-      // Check both camelCase and snake_case versions
       if (!allowedSortFields.includes(sortBy) && !allowedSortFields.includes(snakeCaseSortBy)) {
       return {
           sort_by: normalizedDefaultSortBy,
@@ -609,13 +264,26 @@ class BaseService {
     }
     }
 
-    // Convert to snake_case after validation
     const normalizedSortBy = sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
 
     return {
       sort_by: normalizedSortBy,
       sort_order: sortOrder === 'ASC' ? 'ASC' : 'DESC',
     };
+  }
+
+  /**
+   * Normalize object keys from camelCase to snake_case
+   * 
+   * @param {Object} obj - Object with camelCase keys
+   * @returns {Object} Object with snake_case keys
+   */
+  normalizeKeys(obj) {
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[this.camelToSnakeCase(key)] = value;
+    }
+    return result;
   }
 
   /**
@@ -629,25 +297,12 @@ class BaseService {
   normalizeOptions(options = {}) {
     const normalizedOptions = { ...options };
 
-    // Normalize relatedFieldMappings keys to snake_case
-    // relatedFieldMappings might be defined with camelCase keys (e.g., 'categoryType')
-    // but filters are already in snake_case (e.g., 'category_type')
     if (options.relatedFieldMappings) {
-      const normalizedRelatedFieldMappings = {};
-      for (const [key, value] of Object.entries(options.relatedFieldMappings)) {
-        const normalizedKey = this.camelToSnakeCase(key);
-        normalizedRelatedFieldMappings[normalizedKey] = value;
-      }
-      normalizedOptions.relatedFieldMappings = normalizedRelatedFieldMappings;
+      normalizedOptions.relatedFieldMappings = this.normalizeKeys(options.relatedFieldMappings);
     }
 
     if (options.defaultFilters) {
-      const normalizedDefaultFilters = {};
-      for (const [key, value] of Object.entries(options.defaultFilters)) {
-        const normalizedKey = this.camelToSnakeCase(key);
-        normalizedDefaultFilters[normalizedKey] = value;
-      }
-      normalizedOptions.defaultFilters = normalizedDefaultFilters;
+      normalizedOptions.defaultFilters = this.normalizeKeys(options.defaultFilters);
     }
 
     return normalizedOptions;
@@ -669,26 +324,18 @@ class BaseService {
     const repository = await this.getRepository();
     const queryBuilder = repository.createQueryBuilder(this.alias);
 
-    // Normalize options FIRST - convert camelCase to snake_case where needed
-    // This ensures all subsequent logic works with normalized options
     const normalizedOptions = this.normalizeOptions(options);
 
-    // Apply joins if configured
     if (normalizedOptions.joins && Array.isArray(normalizedOptions.joins)) {
       this.applyJoins(queryBuilder, normalizedOptions.joins);
     }
 
-    // Parse filters (uses normalizedOptions)
     const filters = this.parseFilters(req.query || {}, normalizedOptions);
-
-    // Apply filters to query builder (uses normalizedOptions)
     this.applyFilters(queryBuilder, filters, normalizedOptions);
 
-    // Parse and apply sorting (uses normalizedOptions)
     const sorting = this.parseSorting(req.query || {}, normalizedOptions);
     this.applySorting(queryBuilder, sorting, normalizedOptions);
 
-    // Parse pagination (uses normalizedOptions)
     const pagination = this.parsePagination(req.query || {}, normalizedOptions);
 
     return {
@@ -696,7 +343,7 @@ class BaseService {
       filters,
       sorting,
       pagination,
-      options: normalizedOptions, // Include normalized options for executeQuery
+      options: normalizedOptions,
     };
   }
 
@@ -735,17 +382,14 @@ class BaseService {
         throw new Error('Join configuration must have entity and alias');
       }
 
-      // Auto-generate condition if not provided
       let joinCondition = condition;
       if (!joinCondition && foreignKey) {
         joinCondition = `${this.alias}.id = ${alias}.${foreignKey}`;
       }
 
-      // Apply join based on type
       switch (type.toLowerCase()) {
         case 'leftjoinandselect':
         case 'left_join_and_select':
-          // Use leftJoinAndSelect to avoid N+1 - automatically selects all fields
           if (joinCondition) {
             queryBuilder.leftJoinAndSelect(entity, alias, joinCondition);
           } else {
@@ -754,7 +398,6 @@ class BaseService {
           break;
         case 'innerjoinandselect':
         case 'inner_join_and_select':
-          // Use innerJoinAndSelect to avoid N+1 - automatically selects all fields
           if (joinCondition) {
             queryBuilder.innerJoinAndSelect(entity, alias, joinCondition);
           } else {
@@ -768,12 +411,9 @@ class BaseService {
           } else {
             queryBuilder.leftJoin(entity, alias);
           }
-          // Select specific fields if provided (to avoid N+1 when only filtering)
-          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
-              // This prevents data loss when GROUP BY user.id with multiple membership details
+              // GROUP_CONCAT aggregates multiple values to prevent data loss with GROUP BY
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
                 `${alias}_${field}`
@@ -788,12 +428,8 @@ class BaseService {
           } else {
             queryBuilder.innerJoin(entity, alias);
           }
-          // Select specific fields if provided (to avoid N+1 when only filtering)
-          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
-              // This prevents data loss when GROUP BY user.id with multiple membership details
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
                 `${alias}_${field}`
@@ -808,12 +444,8 @@ class BaseService {
           } else {
             queryBuilder.rightJoin(entity, alias);
           }
-          // Select specific fields if provided (to avoid N+1 when only filtering)
-          // Use GROUP_CONCAT to aggregate multiple related records when GROUP BY is used
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
             selectFields.forEach(field => {
-              // Use GROUP_CONCAT to aggregate multiple values (separated by '|||')
-              // This prevents data loss when GROUP BY user.id with multiple membership details
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
                 `${alias}_${field}`
@@ -829,252 +461,144 @@ class BaseService {
 
   /**
    * Apply filters to query builder
-   * Filters are already in snake_case (from parseFilters)
+   * Filters are in nested format: { field: [{ operator, value }], table: { field: [{ operator, value }] } }
    * 
    * @param {Object} queryBuilder - TypeORM query builder
-   * @param {Object} filters - Parsed filters (already in snake_case)
+   * @param {Object} filters - Parsed filters in nested format
    * @param {Object} options - Configuration options
    * @param {Object} options.fieldMappings - Optional field mappings for edge cases
    * @param {Object} options.relatedFieldMappings - Map query field names to related table fields
-   *   Example: { 'category_type': { alias: 'userDetails', field: 'category_type' } }
    */
   applyFilters(queryBuilder, filters, options = {}) {
     const { fieldMappings = {}, relatedFieldMappings = {} } = options;
 
     for (const [key, value] of Object.entries(filters)) {
-      if (value === undefined || value === null || value === '') continue;
-
-      // Check if this is a related field (format: orders.total_amount_gt or orders.total_amount)
-      // key may contain dot notation for related fields
-      let baseFieldName = this.getBaseFieldName(key);
-      let relatedMapping = null;
-      
-      // Check if key contains dot notation (related field format)
-      if (key.includes('.')) {
-        const parts = key.split('.');
-        if (parts.length === 2) {
-          const [relatedTable, fieldWithOperator] = parts;
-          // Remove operator suffix to get base field
-          const baseField = fieldWithOperator.replace(/_(gt|lt|gte|lte|eq|ne|in|from|to|not_null|is_null)$/, '');
-          // Try to find related mapping by checking camelCase field name
-          const camelCaseField = this.snakeToCamelCase(baseField);
-          // Check both camelCase and snake_case versions
-          relatedMapping = relatedFieldMappings[camelCaseField] || relatedFieldMappings[baseField] || relatedFieldMappings[`${relatedTable}.${camelCaseField}`] || relatedFieldMappings[`${relatedTable}.${baseField}`];
+      if (Array.isArray(value)) {
+        this.applyFieldConditions(queryBuilder, key, value, this.alias, fieldMappings, relatedFieldMappings);
+      } else if (typeof value === 'object' && value !== null) {
+        const tableAlias = key;
+        for (const [fieldName, conditions] of Object.entries(value)) {
+          if (Array.isArray(conditions)) {
+            this.applyFieldConditions(queryBuilder, fieldName, conditions, tableAlias, fieldMappings, relatedFieldMappings);
+          }
         }
-      } else {
-        // Regular field: check relatedFieldMappings
-        relatedMapping = relatedFieldMappings[key] || relatedFieldMappings[baseFieldName];
       }
-
-      // Determine table alias and field name
-      let tableAlias = this.alias;
-      let fieldName = key;
-
-      if (relatedMapping) {
-        // This is a related field
-        tableAlias = relatedMapping.alias;
-        fieldName = relatedMapping.field || baseFieldName;
-      } else if (key.includes('.')) {
-        // Related field without mapping: extract field name from dot notation
-        const parts = key.split('.');
-        if (parts.length === 2) {
-          const [relatedTable, fieldWithOperator] = parts;
-          // Remove operator suffix to get base field
-          const baseField = fieldWithOperator.replace(/_(gt|lt|gte|lte|eq|ne|in|from|to|not_null|is_null)$/, '');
-          fieldName = this.camelToSnakeCase(baseField);
-          tableAlias = relatedTable;
-        } else {
-          // This is a main entity field (already snake_case, use fieldMappings only for edge cases)
-          fieldName = fieldMappings[key] || key;
-        }
-      } else {
-        // This is a main entity field (already snake_case, use fieldMappings only for edge cases)
-        fieldName = fieldMappings[key] || key;
-      }
-
-      // Handle NOT NULL
-      if (key.endsWith('_not_null')) {
-        // For main fields, use baseFieldName (without operator suffix)
-        // For related fields, use fieldName (already processed from dot notation)
-        const finalFieldName = relatedMapping 
-          ? (relatedMapping.field || baseFieldName) 
-          : (key.includes('.') ? fieldName : baseFieldName);
-        const finalAlias = relatedMapping ? relatedMapping.alias : tableAlias;
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} IS NOT NULL`);
-        continue;
-      }
-
-      // Handle IS NULL
-      if (key.endsWith('_is_null')) {
-        // For main fields, use baseFieldName (without operator suffix)
-        // For related fields, use fieldName (already processed from dot notation)
-        const finalFieldName = relatedMapping 
-          ? (relatedMapping.field || baseFieldName) 
-          : (key.includes('.') ? fieldName : baseFieldName);
-        const finalAlias = relatedMapping ? relatedMapping.alias : tableAlias;
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} IS NULL`);
-        continue;
-      }
-
-      // Handle range filters (FROM)
-      if (key.endsWith('_from')) {
-        // For main fields, use baseFieldName (without operator suffix)
-        // For related fields, use fieldName (already processed from dot notation)
-        const finalFieldName = relatedMapping 
-          ? (relatedMapping.field || baseFieldName) 
-          : (key.includes('.') ? fieldName : baseFieldName);
-        const finalAlias = relatedMapping ? relatedMapping.alias : tableAlias;
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} >= :${key}`, {
-          [key]: value,
-        });
-        continue;
-      }
-
-      // Handle range filters (TO)
-      if (key.endsWith('_to')) {
-        // For main fields, use baseFieldName (without operator suffix)
-        // For related fields, use fieldName (already processed from dot notation)
-        const finalFieldName = relatedMapping 
-          ? (relatedMapping.field || baseFieldName) 
-          : (key.includes('.') ? fieldName : baseFieldName);
-        const finalAlias = relatedMapping ? relatedMapping.alias : tableAlias;
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} <= :${key}`, {
-          [key]: value,
-        });
-        continue;
-      }
-
-      // Handle IN operator
-      if (key.endsWith('_in') && Array.isArray(value)) {
-        const finalFieldName = relatedMapping ? (relatedMapping.field || baseFieldName) : baseFieldName;
-        const finalAlias = relatedMapping ? relatedMapping.alias : this.alias;
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} IN (:...${key})`, {
-          [key]: value,
-        });
-        continue;
-      }
-
-      // Handle comparison operators: gt, lt, gte, lte, eq, ne
-      // Support both main fields and related fields (e.g., orders.total_amount_gt)
-      if (key.endsWith('_gt')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        // Support numeric, date, and string comparisons
-        // MySQL can compare dates and strings directly, so we don't need to parse
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} > :${key}`, { [key]: parsedValue });
-        }
-        continue;
-      }
-
-      if (key.endsWith('_lt')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        // Support numeric, date, and string comparisons
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} < :${key}`, { [key]: parsedValue });
-        }
-        continue;
-      }
-
-      if (key.endsWith('_gte')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        // Support numeric, date, and string comparisons
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} >= :${key}`, { [key]: parsedValue });
-        }
-        continue;
-      }
-
-      if (key.endsWith('_lte')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        // Support numeric, date, and string comparisons
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
-          queryBuilder.andWhere(`${finalAlias}.${finalFieldName} <= :${key}`, { [key]: parsedValue });
-        }
-        continue;
-      }
-
-      if (key.endsWith('_eq')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} = :${key}`, { [key]: value });
-        continue;
-      }
-
-      if (key.endsWith('_ne')) {
-        const { finalFieldName, finalAlias } = this.getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias);
-        queryBuilder.andWhere(`${finalAlias}.${finalFieldName} != :${key}`, { [key]: value });
-        continue;
-      }
-
-      // Handle LIKE only when wildcard % is explicitly provided
-      // Do NOT use LIKE for underscore (_) as it's a valid character in emails/IDs
-      // and would cause unintended wildcard matching (e.g., john_doe@example.com would match john@doe@example.com)
-      if (typeof value === 'string' && value.includes('%')) {
-        queryBuilder.andWhere(`${tableAlias}.${fieldName} LIKE :${key}`, { [key]: value });
-        continue;
-      }
-
-      // Handle exact match (default - uses index efficiently)
-      queryBuilder.andWhere(`${tableAlias}.${fieldName} = :${key}`, { [key]: value });
     }
   }
 
   /**
-   * Get field name and alias for comparison operators
-   * Handles both main fields and related fields (e.g., orders.total_amount_gt)
+   * Apply conditions for a single field
    * 
-   * @param {String} key - Filter key (e.g., 'orders.total_amount_gt' or 'total_amount_gt')
-   * @param {Object} relatedMapping - Related field mapping (if exists, from relatedFieldMappings)
-   * @param {String} baseFieldName - Base field name without operator (already processed)
-   * @param {String} tableAlias - Current table alias (already determined)
-   * @returns {Object} Object with finalFieldName and finalAlias
+   * @param {Object} queryBuilder - TypeORM query builder
+   * @param {String} fieldName - Field name
+   * @param {Array} conditions - Array of { operator, value }
+   * @param {String} tableAlias - Table alias
+   * @param {Object} fieldMappings - Field mappings
+   * @param {Object} relatedFieldMappings - Related field mappings
    */
-  getFieldAndAliasForComparison(key, relatedMapping, baseFieldName, tableAlias) {
-    // If key contains dot notation (related field format: orders.total_amount_gt)
-    if (key.includes('.')) {
-      const parts = key.split('.');
-      if (parts.length === 2) {
-        const [relatedTable, fieldWithOperator] = parts;
-        // Remove operator suffix to get base field
-        const baseField = fieldWithOperator.replace(/_(gt|lt|gte|lte|eq|ne)$/, '');
-        // Convert to snake_case for SQL
-        const snakeCaseField = this.camelToSnakeCase(baseField);
-        
-        // If we have a related mapping (found in applyFilters), use it
-        if (relatedMapping) {
-          return {
-            finalFieldName: relatedMapping.field || snakeCaseField,
-            finalAlias: relatedMapping.alias,
-          };
+  applyFieldConditions(queryBuilder, fieldName, conditions, tableAlias, fieldMappings, relatedFieldMappings) {
+    const camelCaseField = fieldName.includes('_') ? this.snakeToCamelCase(fieldName) : fieldName;
+    const relatedMapping = relatedFieldMappings[camelCaseField] || relatedFieldMappings[fieldName];
+    
+    let finalTableAlias = tableAlias;
+    let finalFieldName = fieldName;
+
+      if (relatedMapping) {
+      finalTableAlias = relatedMapping.alias;
+      finalFieldName = relatedMapping.field || fieldName;
+    } else if (tableAlias === this.alias) {
+      finalFieldName = fieldMappings[fieldName] || fieldName;
         }
-        
-        // If no mapping found, assume the relatedTable is the alias
-        // This works if the join alias matches the table name (e.g., 'orders' table with 'orders' alias)
-        return {
-          finalFieldName: snakeCaseField,
-          finalAlias: relatedTable,
-        };
+
+    for (let i = 0; i < conditions.length; i++) {
+      const { operator, value } = conditions[i];
+      const paramKey = `${finalTableAlias}_${finalFieldName}_${operator}_${i}`.replace(/\./g, '_');
+
+      switch (operator) {
+        case 'is_null':
+          queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} IS NULL`);
+          break;
+
+        case 'not_null':
+          queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} IS NOT NULL`);
+          break;
+
+        case 'in':
+          if (Array.isArray(value) && value.length > 0) {
+            queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} IN (:...${paramKey})`, {
+              [paramKey]: value
+            });
+          }
+          break;
+
+        case 'like':
+          queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} LIKE :${paramKey}`, {
+            [paramKey]: value
+          });
+          break;
+
+        case 'gt':
+          {
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+              queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} > :${paramKey}`, {
+                [paramKey]: parsedValue
+              });
+        }
+      }
+          break;
+
+        case 'lt':
+          {
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+              queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} < :${paramKey}`, {
+                [paramKey]: parsedValue
+              });
+        }
+      }
+          break;
+
+        case 'gte':
+          {
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+              queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} >= :${paramKey}`, {
+                [paramKey]: parsedValue
+              });
+        }
+      }
+          break;
+
+        case 'lte':
+          {
+        const parsedValue = this.parseComparisonValue(value);
+        if (parsedValue !== null && parsedValue !== undefined) {
+              queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} <= :${paramKey}`, {
+                [paramKey]: parsedValue
+              });
+        }
+          }
+          break;
+
+        case 'eq':
+          queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} = :${paramKey}`, {
+            [paramKey]: value
+          });
+          break;
+
+        case 'ne':
+          queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} != :${paramKey}`, {
+            [paramKey]: value
+          });
+          break;
+
+        default:
+          break;
       }
     }
-    
-    // For main fields or fields with relatedMapping already found
-    if (relatedMapping) {
-      return {
-        finalFieldName: relatedMapping.field || baseFieldName,
-        finalAlias: relatedMapping.alias,
-      };
-    }
-    
-    // Default: use baseFieldName (without operator suffix) and tableAlias
-    // baseFieldName is already processed and doesn't contain operator suffix
-    return {
-      finalFieldName: baseFieldName,
-      finalAlias: tableAlias,
-    };
   }
+
 
   /**
    * Parse numeric value from string
@@ -1106,42 +630,32 @@ class BaseService {
    * @returns {String|Number|Date|null} Parsed value or null if invalid
    */
   parseComparisonValue(value) {
-    // Return null/undefined as-is (will be skipped)
     if (value === null || value === undefined || value === '') {
       return null;
     }
     
-    // Return number as-is
     if (typeof value === 'number') {
       return value;
     }
     
-    // Return Date object as-is
     if (value instanceof Date) {
       return value;
     }
     
-    // For strings, try to parse as number first (for backward compatibility)
-    // If not a valid number, return as string (for date/string comparison)
     if (typeof value === 'string') {
       const trimmed = value.trim();
       if (trimmed === '') {
         return null;
       }
       
-      // Try to parse as number
       const num = parseFloat(trimmed);
       if (!isNaN(num) && isFinite(num) && trimmed === String(num)) {
-        // Valid number (exact match to avoid parsing "2025-12-09" as 2025)
         return num;
       }
       
-      // Return as string (for date/string comparison)
-      // MySQL will handle date comparison if the string is a valid date format
       return trimmed;
     }
     
-    // Return other types as-is
     return value;
   }
 
@@ -1156,7 +670,6 @@ class BaseService {
    */
   applySorting(queryBuilder, sorting, options = {}) {
     const { fieldMappings = {} } = options;
-    // Use fieldMappings if provided (edge cases), otherwise use sort_by as-is (already snake_case)
     const sortBy = fieldMappings[sorting.sort_by] || sorting.sort_by;
     queryBuilder.orderBy(`${this.alias}.${sortBy}`, sorting.sort_order);
   }
@@ -1176,29 +689,24 @@ class BaseService {
   formatDataWithRelatedFields(rawData, joins = []) {
     return rawData.map(item => {
       const formattedItem = {};
-      const relatedFieldsMap = {}; // Map to store related fields by alias
+      const relatedFieldsMap = {};
       
-      // Process each field in the raw item
       for (const [key, value] of Object.entries(item)) {
         let fieldAssigned = false;
         
-        // Check if this field belongs to a joined table
         for (const join of joins) {
           const { alias, selectFields = [] } = join;
           if (!alias) continue;
           
-          // Check if field matches this alias prefix
           const prefix = `${alias}_`;
           if (key.startsWith(prefix)) {
             const fieldName = key.replace(prefix, '');
             
-            // Only process if field is in selectFields
             if (selectFields.includes(fieldName)) {
               if (!relatedFieldsMap[alias]) {
                 relatedFieldsMap[alias] = {};
               }
               // Parse GROUP_CONCAT values (separated by '|||')
-              // If value contains '|||', it means multiple records were aggregated
               if (value && typeof value === 'string' && value.includes('|||')) {
                 relatedFieldsMap[alias][fieldName] = value.split('|||').filter(v => v !== null && v !== '');
               } else {
@@ -1210,8 +718,6 @@ class BaseService {
           }
         }
         
-        // If not assigned to any join, it's a main entity field
-        // Remove alias prefix if exists (e.g., 'user_id' -> 'id')
         if (!fieldAssigned) {
           const mainPrefix = `${this.alias}_`;
           if (key.startsWith(mainPrefix)) {
@@ -1223,22 +729,16 @@ class BaseService {
         }
       }
       
-      // Add grouped related fields
       for (const [alias, relatedFields] of Object.entries(relatedFieldsMap)) {
-        // Only add if there's at least one non-null field
         const hasData = Object.values(relatedFields).some(v => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true));
         if (hasData) {
-          // Check if any field is an array (from GROUP_CONCAT with multiple values)
           const hasArrayFields = Object.values(relatedFields).some(v => Array.isArray(v) && v.length > 1);
           
           if (hasArrayFields) {
-            // Multiple related records: create array of objects
-            // Get the maximum length of arrays
             const maxLength = Math.max(...Object.values(relatedFields)
               .filter(v => Array.isArray(v))
               .map(v => v.length));
             
-            // Create array of objects from parallel arrays
             const relatedArray = [];
             for (let i = 0; i < maxLength; i++) {
               const relatedObj = {};
@@ -1246,21 +746,16 @@ class BaseService {
                 if (Array.isArray(fieldValue)) {
                   relatedObj[fieldName] = fieldValue[i] || null;
                 } else {
-                  // Single value: use for all items
                   relatedObj[fieldName] = fieldValue;
                 }
               }
-              // Only add if object has at least one non-null value
               if (Object.values(relatedObj).some(v => v !== null && v !== undefined)) {
                 relatedArray.push(relatedObj);
               }
             }
             
-            // If array has only one item, return as object for backward compatibility
-            // If array has multiple items, return as array
             formattedItem[alias] = relatedArray.length === 1 ? relatedArray[0] : relatedArray;
           } else {
-            // Single related record: return as object (backward compatible)
             formattedItem[alias] = relatedFields;
           }
         }
@@ -1285,29 +780,18 @@ class BaseService {
   async executeQuery(queryBuilder, pagination, options = {}) {
     const hasJoins = options.joins && options.joins.length > 0;
     
-    // Clone query builder for count (to avoid modifying the original)
     const countQueryBuilder = queryBuilder.clone();
     
-    // Get total count before pagination
-    // When joins are present, use COUNT(DISTINCT) to avoid inflated counts and O(n) memory usage
     let total;
     if (hasJoins) {
-      // Use COUNT(DISTINCT user.id) to count distinct users efficiently at the database level
-      // This avoids fetching all rows into memory (O(n) performance regression)
-      // Remove all existing selects and add only the count
-      // Note: clone() preserves JOINs and WHERE clauses, so the count query will have all filters
       countQueryBuilder.select([]);
       countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
       const countResult = await countQueryBuilder.getRawOne();
       total = parseInt(countResult?.total || 0, 10);
     } else {
-      // No joins, use standard count
       total = await countQueryBuilder.getCount();
     }
 
-    // Apply GROUP BY on main entity ID when joins are present to avoid duplicate users
-    // This ensures one row per user even when user has multiple related records
-    // 
     // NOTE: MySQL ONLY_FULL_GROUP_BY mode requires all non-grouped columns to be aggregated.
     // TypeORM's createQueryBuilder automatically selects all entity columns, which may cause
     // ONLY_FULL_GROUP_BY errors. However, since user.id is unique (primary key), all other
@@ -1320,15 +804,10 @@ class BaseService {
       queryBuilder.groupBy(`${this.alias}.id`);
     }
 
-    // Apply pagination
     const skip = (pagination.page - 1) * pagination.limit;
     queryBuilder.skip(skip).take(pagination.limit);
 
-    // Execute query - get raw data
-    // getRawMany() returns flat objects with alias-prefixed fields (e.g., 'user_id', 'membershipDetails_id')
     const rawData = await queryBuilder.getRawMany();
-
-    // Format data with grouped related fields
     const formattedData = this.formatDataWithRelatedFields(rawData, options.joins || []);
 
     return {
