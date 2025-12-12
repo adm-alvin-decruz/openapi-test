@@ -126,9 +126,10 @@ async function normalizeQueryParams(req, res, next) {
 }
 
 /**
- * Transform query object - normalize string values
+ * Transform query object - normalize string values recursively
  * - Email fields: lowercase + trim
  * - All other string values: trim (safe for IDs, numbers, dates, etc.)
+ * - Recursively handles nested objects (e.g., createdAt[gt], membershipDetails.categoryType)
  * 
  * @param {Object} queryObj - Query parameters object
  * @returns {Object} Normalized query object
@@ -140,7 +141,21 @@ function transformQueryObject(queryObj) {
   const keysAcceptedTrimAndLower = ['email'];
 
   return Object.entries(queryObj).reduce((rs, [key, value]) => {
-    // Skip non-string values (numbers, booleans, arrays, objects)
+    // Handle nested objects recursively (e.g., createdAt: { gt: 'value' }, membershipDetails: { categoryType: 'value' })
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      rs[key] = transformQueryObject(value);
+      return rs;
+    }
+
+    // Handle arrays (recursively process each element if it's an object)
+    if (Array.isArray(value)) {
+      rs[key] = value.map(item => 
+        typeof item === 'object' && item !== null ? transformQueryObject(item) : item
+      );
+      return rs;
+    }
+
+    // Skip non-string values (numbers, booleans, null)
     if (typeof value !== 'string' || value === '') {
       rs[key] = value;
       return rs;
