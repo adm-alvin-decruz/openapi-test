@@ -29,6 +29,7 @@ class User {
       userData.created_at,
       now,
     ];
+    console.log('userData.singpass_id:', userData.singpass_id);
     try {
       const result = await pool.execute(sql, params);
 
