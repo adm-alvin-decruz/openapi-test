@@ -292,27 +292,6 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
         logObj,
       );
     }
-
-    // un reachable code
-    // prepare logs
-    // let logObj = loggerService.build(
-    //   'user',
-    //   'usersControllers.adminUpdateUser',
-    //   req,
-    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
-    //   { success: 'no data to update' },
-    //   memberInfo,
-    // );
-
-    // prepare error params response
-    // req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-    // return responseHelper.craftUsersApiResponse(
-    //   'usersControllers.adminUpdateUser',
-    //   req.body,
-    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
-    //   'USERS_UPDATE',
-    //   logObj,
-    // );
   } catch (error) {
     req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     throw error;

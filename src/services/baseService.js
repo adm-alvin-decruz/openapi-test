@@ -88,9 +88,40 @@ class BaseService {
    * @param {Array} allowedFields - Array of allowed field names (can be camelCase or snake_case)
    * @returns {Boolean} True if field is allowed or if allowedFields is empty
    */
+  /**
+   * Check if a field is allowed, supporting both camelCase and snake_case formats
+   * This method automatically handles conversion between camelCase and snake_case
+   * to provide flexibility in field naming while maintaining security through allowlist
+   * 
+   * @param {String} camelCaseField - Field name in camelCase format
+   * @param {String} snakeCaseField - Field name in snake_case format
+   * @param {Array<String>} allowedFields - Array of allowed field names (can be camelCase or snake_case)
+   * @returns {Boolean} True if field is allowed, false otherwise
+   */
   isFieldAllowed(camelCaseField, snakeCaseField, allowedFields = []) {
     if (!allowedFields.length) return true;
-    return allowedFields.includes(camelCaseField) || allowedFields.includes(snakeCaseField);
+    
+    // Check both formats directly
+    if (allowedFields.includes(camelCaseField) || allowedFields.includes(snakeCaseField)) {
+      return true;
+    }
+    
+    // Fallback: Try converting each allowed field to match the input format
+    // This handles cases where allowedFields might be in different format than input
+    for (const allowedField of allowedFields) {
+      const allowedCamelCase = allowedField.includes('_') 
+        ? this.snakeToCamelCase(allowedField) 
+        : allowedField;
+      const allowedSnakeCase = allowedField.includes('_') 
+        ? allowedField 
+        : this.camelToSnakeCase(allowedField);
+      
+      if (allowedCamelCase === camelCaseField || allowedSnakeCase === snakeCaseField) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -782,24 +813,36 @@ class BaseService {
     
     const countQueryBuilder = queryBuilder.clone();
     
+    // Count total records efficiently
+    // For joins: Use COUNT(DISTINCT user.id) to avoid counting duplicate rows from one-to-many relationships
+    // This is more efficient than fetching all rows and counting in memory
     let total;
     if (hasJoins) {
+      // Clear any existing selects and use COUNT(DISTINCT) for accurate counting with joins
       countQueryBuilder.select([]);
       countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
+      // Remove pagination from count query (not needed for counting)
+      countQueryBuilder.skip(undefined).take(undefined);
       const countResult = await countQueryBuilder.getRawOne();
       total = parseInt(countResult?.total || 0, 10);
     } else {
+      // For queries without joins, use TypeORM's built-in getCount() which is optimized
       total = await countQueryBuilder.getCount();
     }
 
+    // When joins are present, use GROUP BY to ensure one row per user
+    // This prevents duplicate rows from one-to-many relationships (e.g., multiple membership records per user)
+    // 
     // NOTE: MySQL ONLY_FULL_GROUP_BY mode requires all non-grouped columns to be aggregated.
-    // TypeORM's createQueryBuilder automatically selects all entity columns, which may cause
-    // ONLY_FULL_GROUP_BY errors. However, since user.id is unique (primary key), all other
-    // user columns are identical per user.id, so MySQL will accept them even with ONLY_FULL_GROUP_BY
-    // in most cases. If you encounter ONLY_FULL_GROUP_BY errors, consider:
-    // 1. Disabling ONLY_FULL_GROUP_BY mode (not recommended for production)
-    // 2. Using a subquery approach
-    // 3. Explicitly aggregating all non-grouped columns with MIN()/MAX()/ANY_VALUE()
+    // - Main table columns (user.*): Since user.id is unique (primary key), all other user columns
+    //   are identical per user.id, so MySQL accepts them even with ONLY_FULL_GROUP_BY
+    // - Joined table columns: Already aggregated using GROUP_CONCAT(DISTINCT ...) in applyJoins()
+    //   when using leftJoin/innerJoin with selectFields
+    // 
+    // If you encounter ONLY_FULL_GROUP_BY errors, consider:
+    // 1. Ensure joined fields use GROUP_CONCAT aggregation (already handled in applyJoins)
+    // 2. Using a subquery approach for complex cases
+    // 3. Explicitly aggregating non-grouped columns with MIN()/MAX()/ANY_VALUE()
     if (hasJoins) {
       queryBuilder.groupBy(`${this.alias}.id`);
     }

@@ -114,12 +114,14 @@ router.put(
  * - mandaiId: Filter by mandai ID
  * - singpassId: Filter by Singpass ID (UUID)
  * - status: Filter by status (0 or 1)
- * - createdAtFrom: Filter by created date from (ISO format)
- * - createdAtTo: Filter by created date to (ISO format)
+ * - createdAt[gt]: Filter by created date greater than (ISO format)
+ * - createdAt[gte]: Filter by created date greater than or equal (ISO format)
+ * - createdAt[lt]: Filter by created date less than (ISO format)
+ * - createdAt[lte]: Filter by created date less than or equal (ISO format)
  * - categoryType: Filter by membership category type (requires join)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 50, max: 250)
- * - sortBy: Sort field (id, email, mandaiId, singpassId, status, createdAt, updatedAt)
+ * - sortBy: Sort field (id, email, mandaiId, singpassId, status, createdAt, updatedAt) - must be camelCase
  * - sortOrder: Sort order (ASC or DESC, default: DESC)
  */
 router.get(

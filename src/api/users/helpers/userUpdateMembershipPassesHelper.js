@@ -289,7 +289,7 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
       data.dob,
       latestEmail,
       otpEmailDisabledUntil,
-      data.singpassUuid,
+      data.singpassId,
     );
 
     loggerWrapper('[CIAM-MAIN] Update User Credentials table', {

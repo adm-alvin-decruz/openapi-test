@@ -42,10 +42,15 @@ function transformOtpEmailDisabledUntil(value) {
     return undefined; // No change
   }
 
-  // If already a datetime string (YYYY-MM-DD HH:mm:ss format), return as-is
+  // If already a datetime string, validate it's a valid date and return as-is
   // This handles cases where value was already transformed in route
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
-    return value;
+  // Use Date parsing instead of brittle regex to be more robust
+  if (typeof value === 'string') {
+    const parsedDate = new Date(value);
+    // Check if it's a valid date and matches MySQL datetime format (YYYY-MM-DD HH:mm:ss)
+    if (!isNaN(parsedDate.getTime()) && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+      return value;
+    }
   }
 
   if (value === 'true' || value === true) {

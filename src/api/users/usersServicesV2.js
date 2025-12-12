@@ -13,13 +13,62 @@ class UsersServicesV2 extends BaseService {
   }
 
   /**
+   * Override parseSorting to correctly handle camelCase sortBy parameter
+   * Convention: Query parameters must always be camelCase. If user sends snake_case, it's invalid.
+   * 
+   * 1. Support both sortBy (camelCase) and sort_by (snake_case) parameter names for backward compatibility
+   * 2. Validate that sortBy value is camelCase (reject snake_case values)
+   * 3. Validate against allowedSortFields (which are camelCase)
+   * 4. Convert to snake_case for database query
+   * 
+   * @param {Object} query - Query object with sortBy/sort_by and sortOrder/sort_order
+   * @param {Object} options - Options with defaultSortBy, defaultSortOrder, allowedSortFields
+   * @returns {Object} Sorting object with sort_by (snake_case) and sort_order
+   */
+  parseSorting(query, options = {}) {
+    const {
+      defaultSortBy = 'createdAt',
+      defaultSortOrder = 'DESC',
+      allowedSortFields = [],
+      fieldMappings = {},
+    } = options;
+
+    // Support both sortBy (camelCase) and sort_by (snake_case) parameter names for backward compatibility
+    const sortByQuery = query.sortBy || query.sort_by || defaultSortBy;
+    const sortOrderQuery = (query.sortOrder || query.sort_order || defaultSortOrder).toUpperCase();
+
+    // Convention: Query parameter values must be camelCase
+    // If user sends snake_case value (contains underscore), reject it and use default
+    if (sortByQuery.includes('_')) {
+      // Invalid: snake_case value provided, fallback to default
+      const dbSortBy = fieldMappings[defaultSortBy] || this.camelToSnakeCase(defaultSortBy);
+      return {
+        sort_by: dbSortBy,
+        sort_order: sortOrderQuery === 'ASC' ? 'ASC' : 'DESC',
+      };
+    }
+
+    // Validate against allowed fields (which are camelCase)
+    const validatedSortBy = allowedSortFields.includes(sortByQuery) 
+      ? sortByQuery 
+      : defaultSortBy;
+
+    // Map to snake_case for the database query. Use fieldMappings if available, otherwise convert.
+    const dbSortBy = fieldMappings[validatedSortBy] || this.camelToSnakeCase(validatedSortBy);
+
+    return {
+      sort_by: dbSortBy,
+      sort_order: sortOrderQuery === 'ASC' ? 'ASC' : 'DESC',
+    };
+  }
+
+  /**
    * Get users with filters, pagination, and sorting
    * 
    * @param {Object} req - Request object with query parameters
    * @returns {Promise<Object>} Formatted response with users and pagination
    */
   async getUsers(req) {
-    console.log('🔍 Debug - Query:', JSON.stringify(req.query, null, 2));
     let joins = [];
     let relatedFieldMappings = {};
 
@@ -57,13 +106,6 @@ class UsersServicesV2 extends BaseService {
     
     // Check if membership-related fields are present in query
     const hasMembershipDetailsFilter = hasMembershipKey(req.query || {});
-    
-    // Debug: Log query structure for troubleshooting
-    if (req.query && (req.query.membershipDetails || req.query.categoryType || req.query.validFrom || req.query.validUntil)) {
-      console.log('🔍 Debug - Query structure:', JSON.stringify(req.query, null, 2));
-      console.log('🔍 Debug - hasMembershipDetailsFilter:', hasMembershipDetailsFilter);
-      console.log('🔍 Debug - Joins will be added:', hasMembershipDetailsFilter);
-    }
 
     // Only add join if membership-related fields are requested
     if (hasMembershipDetailsFilter) {
@@ -91,24 +133,12 @@ class UsersServicesV2 extends BaseService {
       };
     }
 
-    let allowedFields = [
-          'email',
-          'status',
-          'mandaiId',
-          'singpassId',
-          'createdAt',
-    ];
+    // Get base allowed fields from DTO
+    let allowedFields = UserDTO.getAllowedFields();
 
     // Only add membership-related fields to allowedFields if join is added
     if (joins.length > 0) {
-      allowedFields.push(
-        'validFrom',
-        'validUntil',
-        'categoryType',
-        'category_type',
-        'valid_from',
-        'valid_until'
-      );
+      allowedFields.push(...UserDTO.getMembershipFields());
     }
 
     try {
@@ -123,18 +153,9 @@ class UsersServicesV2 extends BaseService {
         defaultLimit: appConfig.DEFAULT_LIMIT || 50,
         maxLimit: appConfig.MAX_LIMIT || 250,
 
-        // 6. Sorting
-        defaultSortBy: 'createdAt', // camelCase, tự động convert
-        defaultSortOrder: 'DESC',
-        allowedSortFields: [
-          'id',
-          'email',
-          'mandaiId',
-          'singpassId',
-          'status',
-          'createdAt',
-          'updatedAt',
-        ],
+        // Sorting configuration from DTO
+        ...UserDTO.getDefaultSortConfig(),
+        allowedSortFields: UserDTO.getAllowedSortFields(),
       };
 
       const { queryBuilder, pagination, options: buildOptions } = await this.buildQuery(req, options);
