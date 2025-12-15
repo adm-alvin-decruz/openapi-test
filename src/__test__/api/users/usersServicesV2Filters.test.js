@@ -94,32 +94,21 @@ describe('UsersServicesV2 - Filter Tests', () => {
       })),
     }));
     
-    // Mock UserDTO static methods
+    // Mock UserDTO static methods (must match actual UserDTO implementation)
     UserDTO.getAllowedFields = jest.fn(() => [
       'email',
       'status',
       'mandaiId',
-      'mandaiIdIsNull',
-      'mandaiIdNotNull',
       'singpassId',
-      'singpassIdIsNull',
-      'singpassIdNotNull',
       'createdAt',
-      'createdAtFrom',
-      'createdAtTo',
     ]);
     UserDTO.getMembershipFields = jest.fn(() => [
       'validFrom',
       'validUntil',
       'categoryType',
-      'validFromIsNull',
-      'validUntilIsNull',
-      'validFromNotNull',
-      'validUntilNotNull',
-      'validFromFrom',
-      'validFromTo',
-      'validUntilFrom',
-      'validUntilTo',
+      'category_type',
+      'valid_from',
+      'valid_until',
     ]);
     UserDTO.getDefaultSortConfig = jest.fn(() => ({
       defaultSortBy: 'createdAt',

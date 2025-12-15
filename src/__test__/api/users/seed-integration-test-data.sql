@@ -69,7 +69,7 @@ ON DUPLICATE KEY UPDATE
 -- ============================================
 -- 3. Test user with empty mandaiId (for testing)
 -- NOTE: mandai_id is NOT NULL in schema, so we use empty string or special value
--- For mandaiIdIsNull filter test, we'll use a user that doesn't exist or skip that test
+-- For mandaiId is null filter test, we'll use a user that doesn't exist or skip that test
 -- ============================================
 INSERT INTO users (
   email,
@@ -580,7 +580,7 @@ ON DUPLICATE KEY UPDATE
   updated_at = NOW();
 
 -- ============================================
--- 10. Test user with membership details - valid_from = NULL (for testing validFromIsNull)
+-- 10. Test user with membership details - valid_from = NULL (for testing validFrom is null)
 -- ============================================
 INSERT INTO users (
   email,
@@ -684,7 +684,7 @@ ON DUPLICATE KEY UPDATE
   updated_at = NOW();
 
 -- ============================================
--- 11. Test user with membership details - valid_until = NULL (for testing validUntilIsNull)
+-- 11. Test user with membership details - valid_until = NULL (for testing validUntil is null)
 -- ============================================
 INSERT INTO users (
   email,

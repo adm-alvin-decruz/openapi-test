@@ -135,9 +135,9 @@ describe('UsersServicesV2 - Integration Tests', () => {
         });
     });
 
-    // NOTE: mandaiIdIsNull filter test is skipped because mandai_id column is NOT NULL in database schema
+    // NOTE: mandaiId is null filter test is skipped because mandai_id column is NOT NULL in database schema
     // This filter may work in theory but cannot be tested with real data since all users must have mandai_id
-    it.skip('should filter by mandaiIdIsNull with real database', async () => {
+    it.skip('should filter by mandaiId is null with real database', async () => {
       requireDB();
 
       const req = createMockRequest({ mandaiId: { is_null: true } });
@@ -153,7 +153,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
       });
     });
 
-    it('should filter by singpassIdIsNull with real database', async () => {
+    it('should filter by singpassId is null with real database', async () => {
       requireDB();
 
       const req = createMockRequest({ singpassId: { is_null: true } });
@@ -168,7 +168,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
       });
     });
 
-    it('should filter by singpassIdNotNull with real database', async () => {
+    it('should filter by singpassId not null with real database', async () => {
       requireDB();
 
       const req = createMockRequest({ singpassId: { not_null: true } });
@@ -209,7 +209,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
       });
     });
 
-    it('should filter by mandaiIdNotNull with real database', async () => {
+    it('should filter by mandaiId not null with real database', async () => {
       requireDB();
 
       const req = createMockRequest({ mandaiId: { not_null: true } });
@@ -898,7 +898,7 @@ describe('UsersServicesV2 - Integration Tests', () => {
     });
   });
 
-  describe('getUsers - IsNull, NotNull and Date Range Filters for Related Fields (Integration)', () => {
+  describe('getUsers - is null, not null and date range filters for related fields (Integration)', () => {
     it('should filter by membershipDetails.validFrom[is_null] with real database', async () => {
       requireDB();
 
