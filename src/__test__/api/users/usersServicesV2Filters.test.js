@@ -93,6 +93,47 @@ describe('UsersServicesV2 - Filter Tests', () => {
         membershipDetails: user.membershipDetails,
       })),
     }));
+    
+    // Mock UserDTO static methods
+    UserDTO.getAllowedFields = jest.fn(() => [
+      'email',
+      'status',
+      'mandaiId',
+      'mandaiIdIsNull',
+      'mandaiIdNotNull',
+      'singpassId',
+      'singpassIdIsNull',
+      'singpassIdNotNull',
+      'createdAt',
+      'createdAtFrom',
+      'createdAtTo',
+    ]);
+    UserDTO.getMembershipFields = jest.fn(() => [
+      'validFrom',
+      'validUntil',
+      'categoryType',
+      'validFromIsNull',
+      'validUntilIsNull',
+      'validFromNotNull',
+      'validUntilNotNull',
+      'validFromFrom',
+      'validFromTo',
+      'validUntilFrom',
+      'validUntilTo',
+    ]);
+    UserDTO.getDefaultSortConfig = jest.fn(() => ({
+      defaultSortBy: 'createdAt',
+      defaultSortOrder: 'DESC',
+    }));
+    UserDTO.getAllowedSortFields = jest.fn(() => [
+      'id',
+      'email',
+      'mandaiId',
+      'singpassId',
+      'status',
+      'createdAt',
+      'updatedAt',
+    ]);
   });
 
   afterEach(() => {
@@ -404,6 +445,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
         totalPages: 1,
       });
 
+      // Express qs parser converts createdAt[gte]=value to { createdAt: { gte: 'value' } }
       const req = {
         query: { createdAt: { gte: '2024-01-01' } },
       };
@@ -412,6 +454,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
 
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
+      // Verify buildQuery was called with correct options including allowedFields
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
         allowedFields: expect.arrayContaining(['createdAt']),
       }));
@@ -444,6 +487,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
         totalPages: 1,
       });
 
+      // Express qs parser converts createdAt[gte]=value to { createdAt: { gte: 'value' } }
       const req = {
         query: {
           createdAt: {
@@ -457,6 +501,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
 
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
+      // Verify buildQuery was called with correct options including allowedFields
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
         allowedFields: expect.arrayContaining(['createdAt']),
       }));
@@ -790,8 +835,8 @@ describe('UsersServicesV2 - Filter Tests', () => {
           categoryType: 'FOM',
           page: '1',
           limit: '20',
-          sort_by: 'createdAt',
-          sort_order: 'DESC',
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
         },
       };
 
@@ -886,6 +931,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
         totalPages: 1,
       });
 
+      // Express qs parser converts field[operator]=value to { field: { operator: 'value' } }
       const req = {
         query: {
           status: '1',
@@ -898,6 +944,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
 
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(1);
+      // Verify buildQuery was called with correct options including allowedFields
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
         allowedFields: expect.arrayContaining(['status', 'email', 'createdAt']),
       }));
@@ -1007,17 +1054,18 @@ describe('UsersServicesV2 - Filter Tests', () => {
       });
 
       const req = {
-        query: { sort_by: 'createdAt', sort_order: 'ASC' },
+        query: { sortBy: 'createdAt', sortOrder: 'ASC' },
       };
 
       const result = await usersService.getUsers(req);
 
       expect(result.status).toBe('success');
       expect(result.data.users).toHaveLength(2);
+      // Verify buildQuery was called with correct options including sorting config
       expect(mockBuildQuery).toHaveBeenCalledWith(req, expect.objectContaining({
+        allowedSortFields: expect.arrayContaining(['createdAt', 'email', 'id']),
         defaultSortBy: 'createdAt',
         defaultSortOrder: 'DESC',
-        allowedSortFields: expect.arrayContaining(['createdAt', 'email', 'id']),
       }));
     });
 
@@ -1046,7 +1094,7 @@ describe('UsersServicesV2 - Filter Tests', () => {
       });
 
       const req = {
-        query: { sort_by: 'email', sort_order: 'DESC' },
+        query: { sortBy: 'email', sortOrder: 'DESC' },
       };
 
       const result = await usersService.getUsers(req);
@@ -1107,15 +1155,16 @@ describe('UsersServicesV2 - Filter Tests', () => {
         totalPages: 1,
       });
 
+      // Express qs parser converts createdAt[gte]=value to { createdAt: { gte: 'value' } }
       const req = {
         query: {
           status: '1',
-          createdAtFrom: '2024-01-01',
+          createdAt: { gte: '2024-01-01' },
           categoryType: 'FOM',
           page: '1',
           limit: '20',
-          sort_by: 'createdAt',
-          sort_order: 'DESC',
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
         },
       };
 
