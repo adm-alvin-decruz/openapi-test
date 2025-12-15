@@ -30,6 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
+const { UsersServicesV2 } = require('./usersServicesV2');
 
 /**
  * Create user using admin function
@@ -291,27 +292,6 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
         logObj,
       );
     }
-
-    // un reachable code
-    // prepare logs
-    // let logObj = loggerService.build(
-    //   'user',
-    //   'usersControllers.adminUpdateUser',
-    //   req,
-    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
-    //   { success: 'no data to update' },
-    //   memberInfo,
-    // );
-
-    // prepare error params response
-    // req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-    // return responseHelper.craftUsersApiResponse(
-    //   'usersControllers.adminUpdateUser',
-    //   req.body,
-    //   'MWG_CIAM_USER_UPDATE_SUCCESS',
-    //   'USERS_UPDATE',
-    //   logObj,
-    // );
   } catch (error) {
     req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     throw error;
@@ -913,6 +893,25 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
+async function getUsers(req) {
+  try {
+    const result = await UsersServicesV2.getUsers(req);
+    return result;
+  } catch (error) {
+    loggerService.error('usersContollers.getUsers', error);
+    
+    return {
+      status: 'failed',
+      statusCode: 500,
+      membership: {
+        code: 500,
+        mwgCode: 'MWG_CIAM_USERS_GET_ERROR',
+        message: 'Get users error.',
+      },
+    };
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -931,4 +930,5 @@ module.exports = {
   userCreateMembershipPass,
   userUpdateMembershipPass,
   userRefreshAccessToken,
+  getUsers,
 };

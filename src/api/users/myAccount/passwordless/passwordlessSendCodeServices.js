@@ -58,16 +58,13 @@ class PasswordlessSendCodeService {
         : [];
 
     const userMemberships = await findByUserId(userInfo.db.id);
-    console.log('userMemberships:', userMemberships);
     const validPassTypes = await configsModel.findByConfigKey('membership-passes', 'pass-type');
-    console.log('validPassTypes:', validPassTypes);
     if (type === 'membership-passes') {
       // Disallow login if user not in membership-passes Cognito group AND no record of any membership passes in DB
       if (
         !groups.includes(GROUP.MEMBERSHIP_PASSES) &&
         !userMemberships.some((membership) => validPassTypes.value.includes(membership.name))
       ) {
-        console.log('Failed membership pass check');
         return { proceed: false, error: { reason: 'membership_login_disallowed' } };
       }
     } else if (type === 'wildpass') {
@@ -76,7 +73,6 @@ class PasswordlessSendCodeService {
         !groups.includes(GROUP.WILD_PASS) &&
         !userMemberships.some((membership) => membership.name === 'wildpass')
       ) {
-        console.log('Failed wildpass check');
         return { proceed: false, error: { reason: 'wildpass_login_disallowed' } };
       }
     }
