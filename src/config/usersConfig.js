@@ -15,7 +15,7 @@ const resConfig = {
     '{"email":{"invalid":"The %s is invalid.","exist":"This address is already being used for a Mandai %s Account."},"group":{"invalid":"The %s is invalid."}}',
   UPDATE_WP_VALIDATE_PARAMS:
     '{"email":{"invalid":"The %s is invalid.","not_exist":"This email address does not have a Mandai Account."},"dob":{"range_error":"The dob must between 13 and 99 years old."},"group":{"invalid":"The %s is invalid or empty."}}',
-
+  UPDATE_WP_REQUIRED_PARAMS: ['email', 'group'],
   GET_USER_VALIDATE_PARAMS:
     '{"email":{"invalid":"The %s is invalid."},"group":{"invalid":"The %s is invalid."}}',
 
