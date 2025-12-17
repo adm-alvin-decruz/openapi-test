@@ -100,9 +100,9 @@ module "lambda_function_ciam_membership" {
     SOURCE_DB_MAPPING                                = jsonencode(var.SOURCE_DB_MAPPING)
     NEW_RELIC_ACCOUNT_ID                             = var.NEW_RELIC_ACCOUNT_ID
     NEW_RELIC_LAMBDA_HANDLER                         = var.handler
-    NEW_RELIC_USE_ESM                                = var.NEW_RELIC_USE_ESM
-    NEW_RELIC_APM_LAMBDA_MODE                        = var.NEW_RELIC_APM_LAMBDA_MODE
-    NEW_RELIC_DISTRIBUTED_TRACING_ENABLED            = var.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED
+    NEW_RELIC_USE_ESM                                = tostring(var.NEW_RELIC_USE_ESM)
+    NEW_RELIC_APM_LAMBDA_MODE                        = tostring(var.NEW_RELIC_APM_LAMBDA_MODE)
+    NEW_RELIC_DISTRIBUTED_TRACING_ENABLED            = tostring(var.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED)
     NEW_RELIC_LICENSE_KEY_SECRET                     = var.NEW_RELIC_LICENSE_KEY_SECRET
     AWS_REGION_NAME                                  = var.region
     SQS_QUEUE_URL                                    = data.terraform_remote_state.sqs.outputs.sqs_queue_url
