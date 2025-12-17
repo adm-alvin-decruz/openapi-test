@@ -265,7 +265,7 @@ async function updateCognitoUserInfo({ data, userInfo, email, newEmail, language
  * @param {Object} password - password information after manipulated
  * @param {string} language - The language preference for verification messages.
  */
-async function updateDBUserInfo({ email, newEmail, data, userId, password, language }) {
+async function updateDBUserInfo({ email, newEmail, data, userId, password, language, otpEmailDisabledUntil }) {
   const latestEmail = newEmail || email;
 
   try {
@@ -277,6 +277,8 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
         family_name: data.lastName,
         birthdate: data.dob ? convertDateToMySQLFormat(data.dob) : undefined,
         email: latestEmail,
+        otp_email_disabled_until: otpEmailDisabledUntil,
+        singpass_id: data.singpassId,
       }),
     });
     //1st - Update user table - step is always proceed
@@ -286,6 +288,8 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
       data.lastName,
       data.dob,
       latestEmail,
+      otpEmailDisabledUntil,
+      data.singpassId,
     );
 
     loggerWrapper('[CIAM-MAIN] Update User Credentials table', {

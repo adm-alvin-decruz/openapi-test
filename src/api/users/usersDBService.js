@@ -5,6 +5,7 @@ const userDetailModel = require('../../db/models/userDetailsModel');
 const userMigrationsModel = require('../../db/models/userMigrationsModel');
 const userConfig = require('../../config/usersConfig');
 const { convertDateToMySQLFormat } = require('../../utils/dateUtils');
+const { transformOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
 
 /**
  * Get User By Email
@@ -34,9 +35,12 @@ function prepareDBUpdateData(ciamAttrInput) {
 
   // process updateAttrInput and USER_CFG_MAP
   ciamAttrInput.forEach(function (item) {
-    if (USER_CFG_MAP.hasOwnProperty(item.Name)) {
+    if (item.Name === 'otp_email_disabled_until') {
+      result.updateUsersModel[item.Name] = transformOtpEmailDisabledUntil(item.Value);
+    } else if (USER_CFG_MAP[item.Name] !== undefined) {
       result.updateUsersModel[item.Name] = item.Value;
     }
+    
     if (item.Name === 'birthdate') {
       result.updateUsersModel[item.Name] = convertDateToMySQLFormat(item.Value);
     }
@@ -46,7 +50,7 @@ function prepareDBUpdateData(ciamAttrInput) {
       try {
         let newsletterData = JSON.parse(item.Value);
         Object.keys(USER_NEWS_CFG_MAP).forEach(function (key) {
-          if (newsletterData.hasOwnProperty(key)) {
+          if (newsletterData[key] !== undefined) {
             result.updateUserNewsletterModel[key] = newsletterData[key];
           }
         });
@@ -81,12 +85,17 @@ async function updateUserMigration(req, param1, param2) {
   return userMigrationsModel.update(reqBody.email, reqBody.batchNo, reqBody);
 }
 
-async function userModelExecuteUpdate(userId, firstName, lastName, dob, email) {
+async function userModelExecuteUpdate(userId, firstName, lastName, dob, email, otpEmailDisabledUntil, singpassId) {
+  // transform otpEmailDisabledUntil to mysql format if exists
+  const transformedOtpEmailDisabledUntil = transformOtpEmailDisabledUntil(otpEmailDisabledUntil);
+
   const updateFields = {
     given_name: firstName,
     family_name: lastName,
     birthdate: dob ? convertDateToMySQLFormat(dob) : undefined,
     email: email,
+    otp_email_disabled_until: transformedOtpEmailDisabledUntil,
+    singpass_id: singpassId,
   };
 
   return await userModel.update(userId, updateFields);

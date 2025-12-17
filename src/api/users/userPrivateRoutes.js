@@ -9,6 +9,7 @@ const {
   validateEmail,
   validateAPIKey,
   lowercaseTrimKeyValueString,
+  normalizeQueryParams,
 } = require('../../middleware/validationMiddleware');
 const userConfig = require('../../config/usersConfig');
 const processTimer = require('../../utils/processTimer');
@@ -16,7 +17,7 @@ const crypto = require('crypto');
 const uuid = crypto.randomUUID();
 const { GROUP, GROUPS_SUPPORTS } = require('../../utils/constants');
 const CommonErrors = require('../../config/https/errors/commonErrors');
-
+const loggerService = require('../../logs/logger');
 const pong = { pong: 'pang' };
 
 router.use(express.json());
@@ -45,6 +46,16 @@ router.put(
         .status(400)
         .json(CommonErrors.BadRequest('group', 'group_invalid', req.body.language));
     }
+
+    // Validate otpEmailDisabledUntil if exists (validation only)
+    if (req.body.otpEmailDisabledUntil !== undefined) {
+      const { validateOtpEmailDisabledUntil } = require('./helpers/otpEmailHelper');
+      const validationError = validateOtpEmailDisabledUntil(req.body.otpEmailDisabledUntil, req.body.language);
+      if (validationError) {
+        return res.status(400).json(validationError);
+      }
+    }
+
     //#region Update Account New logic (FO series)
     if ([GROUP.MEMBERSHIP_PASSES].includes(req.body.group)) {
       try {
@@ -63,17 +74,24 @@ router.put(
     //keep logic update for wildpass user account
     req['body'] = commonService.cleanData(req.body);
     // validate request params is listed, NOTE: listedParams doesn't have email
-    const listedParams = commonService.mapCognitoJsonObj(
-      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING,
-      req.body,
+    const cognitoParams = commonService.mapCognitoJsonObj(
+      userConfig.WILDPASS_SOURCE_COGNITO_MAPPING, 
+      req.body
     );
 
-    if (commonService.isJsonNotEmpty(listedParams) === false) {
+    const databaseParams = commonService.mapCognitoJsonObj(
+      userConfig.DATABASE_PARAMS_MAPPING, 
+      req.body
+    );
+
+    // Allow request if there are Cognito params OR database params (e.g., otpEmailDisabledUntil)
+    // This supports OTP-only updates without requiring other fields
+    if (commonService.isJsonNotEmpty(cognitoParams) === false && commonService.isJsonNotEmpty(databaseParams) === false) {
       return res.status(400).json({ error: 'Bad Requests' });
     }
 
     try {
-      const updateUser = await userController.adminUpdateUser(req, listedParams);
+      const updateUser = await userController.adminUpdateUser(req, cognitoParams, databaseParams);
 
       req.apiTimer.end('Route CIAM Update User ', startTimer);
       if ('membership' in updateUser && 'code' in updateUser.membership) {
@@ -81,9 +99,59 @@ router.put(
       }
       return res.status(200).json(updateUser);
     } catch (error) {
+      loggerService.error(error);
       res.status(501).send(CommonErrors.NotImplemented());
     }
   },
+);
+
+/**
+ * CIAM Get users private endpoint
+ * GET /private/v1/users?email=xxx&mandaiId=xxx&page=1&limit=50&sortBy=createdAt&sortOrder=DESC
+ * 
+ * Supported query parameters (camelCase):
+ * - email: Filter by email
+ * - mandaiId: Filter by mandai ID
+ * - singpassId: Filter by Singpass ID (UUID)
+ * - status: Filter by status (0 or 1)
+ * - createdAt[gt]: Filter by created date greater than (ISO format)
+ * - createdAt[gte]: Filter by created date greater than or equal (ISO format)
+ * - createdAt[lt]: Filter by created date less than (ISO format)
+ * - createdAt[lte]: Filter by created date less than or equal (ISO format)
+ * - categoryType: Filter by membership category type (requires join)
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 50, max: 250)
+ * - sortBy: Sort field (id, email, mandaiId, singpassId, status, createdAt, updatedAt) - must be camelCase
+ * - sortOrder: Sort order (ASC or DESC, default: DESC)
+ */
+router.get(
+  '/v1/users',
+  validateAPIKey, // Middleware: Validate API key
+  normalizeQueryParams, // Middleware: Normalize query parameters (trim, lowercase email)
+  async (req, res) => {
+    req['processTimer'] = processTimer;
+    req['apiTimer'] = req.processTimer.apiRequestTimer(true);
+    const startTimer = process.hrtime();
+
+    try {
+      const result = await userController.getUsers(req);
+      req.apiTimer.end('Route CIAM Get Users Success', startTimer);
+      return res.status(result.statusCode).json(result);
+    } catch (error) {
+      req.apiTimer.end('Route CIAM Get Users Error', startTimer);
+      loggerService.error('userPrivateRoutes.GET /v1/users', error);
+      
+      return res.status(500).json({
+        status: 'failed',
+        statusCode: 500,
+        membership: {
+          code: 500,
+          mwgCode: 'MWG_CIAM_USERS_GET_ERROR',
+          message: 'Get users error.',
+        },
+      });
+    }
+  }
 );
 
 module.exports = router;

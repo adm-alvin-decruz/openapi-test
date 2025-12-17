@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const qs = require('qs');
 const membershipRoutes = require('./src/api/memberships/membershipRoutes');
 const userRoutes = require('./src/api/users/userRoutes');
 const galaxyRoutes = require('./src/api/components/galaxy/galaxyRoutes');
@@ -13,6 +14,9 @@ const helmetMiddleware = require('./src/config/helmetConfig');
 const permissionsPolicyMiddleware = require('./src/config/permission-policy');
 const membershipMyAccountRoutes = require('./src/api/users/myAccount/membership/membershipRoutes');
 
+app.set('query parser', (str) => {
+  return qs.parse(str, { allowDots: true, depth: 10 });
+});
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(helmetMiddleware);

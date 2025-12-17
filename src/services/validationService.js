@@ -36,7 +36,7 @@ function validateParams(reqBody, configName) {
   let errorObj = { status: 'success' };
   // check for invalid and dob
   Object.keys(validationVar).forEach(function (key) {
-    if (reqBody[key] === undefined) {
+    if (reqBody[key] === undefined && userConfig['UPDATE_WP_REQUIRED_PARAMS'].includes(key)) {
       (errorObj['invalid'] ??= []).push(key);
     }
     if (key === 'dob' && reqBody[key] != undefined) {

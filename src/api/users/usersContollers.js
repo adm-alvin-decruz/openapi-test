@@ -30,6 +30,7 @@ const UserResetAccessTokenJob = require('./userRefreshAccessTokenJob');
 const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
+const { UsersServicesV2 } = require('./usersServicesV2');
 
 /**
  * Create user using admin function
@@ -123,7 +124,7 @@ async function adminCreateUser(req) {
 }
 
 /**
- * User created and with password FOW/FOW+
+ * Create membership-passes user
  */
 async function adminCreateMPUser(req) {
   loggerService.log(
@@ -136,7 +137,7 @@ async function adminCreateMPUser(req) {
         layer: 'controller.adminCreateMPUser',
       },
     },
-    '[CIAM] Start Signup with FOs Request',
+    '[CIAM] Start signup for membership pass request',
   );
   if (!req.body.password && !req.body.confirmPassword) {
     req.body.is_passwordless = true;
@@ -155,7 +156,7 @@ async function adminCreateMPUser(req) {
         },
       },
       {},
-      '[CIAM] End Signup with FOs Request - Failed',
+      '[CIAM] End signup for membership pass request - Failed',
     );
     throw new Error(JSON.stringify(message));
   }
@@ -187,7 +188,7 @@ async function adminCreateMPUser(req) {
  *
  * @returns
  */
-async function adminUpdateUser(req, listedParams) {
+async function adminUpdateUser(req, cognitoParams, databaseParams) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersController.adminUpdateUser start'); // log process time
 
@@ -200,30 +201,47 @@ async function adminUpdateUser(req, listedParams) {
 
     // user exist, can update info
     if (memberInfo.status === 'success') {
-      // API validation
-      let validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
+      // Skip validation if only otpEmailDisabledUntil is present (DB-only field, no need for other validations)
+      // This allows OTP-only updates without requiring other fields like dob, email, etc.
+      // Check databaseParams and cognitoParams instead of req.body since they're already mapped and cleaned
+      const hasOtpEmailDisabledUntil = databaseParams.some(param => param.Name === 'otp_email_disabled_until');
+      const hasCognitoParams = commonService.isJsonNotEmpty(cognitoParams);
+      const isOtpOnlyUpdate = hasOtpEmailDisabledUntil && !hasCognitoParams;
+      
+      let validatedParams;
+      if (isOtpOnlyUpdate) {
+        // Skip validation for OTP-only updates
+        validatedParams = { status: 'success' };
+      } else {
+        // API validation for normal updates
+        validatedParams = validationService.validateParams(req.body, 'UPDATE_WP_VALIDATE_PARAMS');
+      }
 
       // return errorParams;
       if (validatedParams.status === 'success') {
         let response;
         // compare input data vs membership info
-        let ciamComparedParams = commonService.compareAndFilterJSON(
-          listedParams,
+        let cognitoComparedParams = commonService.compareAndFilterJSON(
+          cognitoParams,
           memberInfo.data.cognitoUser.UserAttributes,
         );
-        if (commonService.isJsonNotEmpty(ciamComparedParams) === true) {
-          let prepareDBUpdateData = dbService.prepareDBUpdateData(ciamComparedParams);
 
-          response = await usersService.adminUpdateUser(
-            req,
-            ciamComparedParams,
-            memberInfo.data,
-            prepareDBUpdateData,
-          );
+        let databaseComparedParams = commonService.compareAndFilterJSON(
+          databaseParams,
+          memberInfo.data.cognitoUser.UserAttributes,
+        );
+        
+        let prepareDBUpdateData = dbService.prepareDBUpdateData(databaseComparedParams);
 
-          req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-          return response;
-        }
+        response = await usersService.adminUpdateUser(
+          req,
+          cognitoComparedParams,
+          memberInfo.data,
+          prepareDBUpdateData,
+        );
+
+        req.apiTimer.end('usersController.adminUpdateUser'); // log end time
+        return response;
       } else {
         // prepare error params response
         const errorConfig = commonService.processUserUpdateErrors(
@@ -274,26 +292,6 @@ async function adminUpdateUser(req, listedParams) {
         logObj,
       );
     }
-
-    // prepare logs
-    let logObj = loggerService.build(
-      'user',
-      'usersControllers.adminUpdateUser',
-      req,
-      'MWG_CIAM_USER_UPDATE_SUCCESS',
-      { success: 'no data to update' },
-      memberInfo,
-    );
-
-    // prepare error params response
-    req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-    return responseHelper.craftUsersApiResponse(
-      'usersControllers.adminUpdateUser',
-      req.body,
-      'MWG_CIAM_USER_UPDATE_SUCCESS',
-      'USERS_UPDATE',
-      logObj,
-    );
   } catch (error) {
     req.apiTimer.end('usersController.adminUpdateUser'); // log end time
     throw error;
@@ -314,6 +312,11 @@ async function adminUpdateMPUser(req) {
     },
     '[CIAM] Start Update User with FOs Request',
   );
+  // Ensure req.body.data exists before validation (needed for OTP-only updates)
+  if (!req.body.data) {
+    req.body.data = {};
+  }
+
   const message = await UserUpdateValidation.execute(req.body);
   if (message) {
     loggerService.error(
@@ -333,6 +336,7 @@ async function adminUpdateMPUser(req) {
     );
     throw new Error(JSON.stringify(message));
   }
+
   try {
     // check if it is AEM call
     const requestFromAEM = commonService.isRequestFromAEM(req.headers);
@@ -889,6 +893,25 @@ async function userRefreshAccessToken(accessToken, req) {
   }
 }
 
+async function getUsers(req) {
+  try {
+    const result = await UsersServicesV2.getUsers(req);
+    return result;
+  } catch (error) {
+    loggerService.error('usersContollers.getUsers', error);
+    
+    return {
+      status: 'failed',
+      statusCode: 500,
+      membership: {
+        code: 500,
+        mwgCode: 'MWG_CIAM_USERS_GET_ERROR',
+        message: 'Get users error.',
+      },
+    };
+  }
+}
+
 module.exports = {
   adminCreateUser,
   adminUpdateUser,
@@ -907,4 +930,5 @@ module.exports = {
   userCreateMembershipPass,
   userUpdateMembershipPass,
   userRefreshAccessToken,
+  getUsers,
 };

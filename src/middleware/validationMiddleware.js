@@ -109,6 +109,71 @@ async function lowercaseTrimKeyValueString(req, res, next) {
   next();
 }
 
+/**
+ * Normalize query parameters for GET requests
+ * - Email: lowercase + trim
+ * - All other string values: trim (for IDs, page, limit, dates, etc.)
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+async function normalizeQueryParams(req, res, next) {
+  if (req.query && typeof req.query === 'object') {
+    req.query = transformQueryObject(req.query);
+  }
+  next();
+}
+
+/**
+ * Transform query object - normalize string values recursively
+ * - Email fields: lowercase + trim
+ * - All other string values: trim (safe for IDs, numbers, dates, etc.)
+ * - Recursively handles nested objects (e.g., createdAt[gt], membershipDetails.categoryType)
+ * 
+ * @param {Object} queryObj - Query parameters object
+ * @returns {Object} Normalized query object
+ */
+function transformQueryObject(queryObj) {
+  if (typeof queryObj !== 'object' || queryObj === null) return queryObj;
+
+  // Fields that should be lowercase + trim
+  const keysAcceptedTrimAndLower = ['email'];
+
+  return Object.entries(queryObj).reduce((rs, [key, value]) => {
+    // Handle nested objects recursively (e.g., createdAt: { gt: 'value' }, membershipDetails: { categoryType: 'value' })
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      rs[key] = transformQueryObject(value);
+      return rs;
+    }
+
+    // Handle arrays (recursively process each element if it's an object)
+    if (Array.isArray(value)) {
+      rs[key] = value.map(item => 
+        typeof item === 'object' && item !== null ? transformQueryObject(item) : item
+      );
+      return rs;
+    }
+
+    // Skip non-string values (numbers, booleans, null)
+    if (typeof value !== 'string' || value === '') {
+      rs[key] = value;
+      return rs;
+    }
+
+    // Handle email: lowercase + trim
+    if (keysAcceptedTrimAndLower.includes(key)) {
+      rs[key] = value.toLowerCase().trim();
+      return rs;
+    }
+
+    // For all other string values, trim (safe for IDs, page, limit, dates, sortBy, sortOrder, etc.)
+    // This helps with parsing numbers, dates, and matching allowed fields
+    rs[key] = value.trim();
+    return rs;
+  }, {});
+}
+
 function resStatusFormatter(res, status, msg) {
   return res.status(status).json(resHelper.formatMiddlewareRes(status, msg));
 }
@@ -489,6 +554,7 @@ module.exports = {
   AccessTokenAuthGuard,
   validateEmailDisposable,
   lowercaseTrimKeyValueString,
+  normalizeQueryParams,
   validateAPIKey,
   validateQueryParameters,
   CookiesAuthGuard,

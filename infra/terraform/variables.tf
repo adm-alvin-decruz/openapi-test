@@ -55,7 +55,20 @@ variable "NEW_RELIC_ACCOUNT_ID" {
 
 variable "NEW_RELIC_USE_ESM" {
   description = "Node.js handlers using ES Modules"
-  default     = "false"
+  type        = bool
+  default     = false
+}
+
+variable "NEW_RELIC_APM_LAMBDA_MODE" {
+  description = "Enable NewRelic to collect APM metrics from AWS Lambda"
+  type        = bool
+  default     = true
+}
+
+variable "NEW_RELIC_DISTRIBUTED_TRACING_ENABLED" {
+  description = "Enable NewRelic to collect distributed tracing from AWS Lambda"
+  type        = bool
+  default     = true
 }
 
 variable "NEW_RELIC_LICENSE_KEY_SECRET" {

@@ -6,7 +6,7 @@
     "test": "{src,test}/*.js"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --forceExit",
     "dev": "nodemon --env-file=.env app.js",
     "prepare": "node .husky/install.mjs",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -40,7 +40,9 @@
     "multer": "^2.0.1",
     "mysql2": "^3.11.0",
     "serverless-http": "^3.2.0",
+    "reflect-metadata": "^0.2.2",
     "supertest": "^7.0.0",
+    "typeorm": "^0.3.20",
     "uuid": "^13.0.0",
     "validator": "^13.15.23"
   },

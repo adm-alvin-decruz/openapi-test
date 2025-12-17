@@ -72,8 +72,8 @@ class UserSignupService {
   userModelExecution(userData) {
     const sql = `
       INSERT INTO users
-      (email, given_name, family_name, birthdate, mandai_id, source, active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (email, given_name, family_name, birthdate, mandai_id, singpass_id, source, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       userData.email,
@@ -81,6 +81,7 @@ class UserSignupService {
       userData.family_name,
       convertDateToMySQLFormat(userData.birthdate),
       userData.mandai_id,
+      userData.singpass_id,
       userData.source,
       userData.status,
       userData.created_at,
@@ -186,6 +187,7 @@ class UserSignupService {
         family_name: req.body.lastName ? req.body.lastName.trim() : '',
         birthdate: req.body.dob || null,
         mandai_id: mandaiId,
+        singpass_id: req.body.singpassId || null,
         source: source.sourceDB,
         status: 1,
         created_at: getCurrentUTCTimestamp(),
@@ -202,6 +204,7 @@ class UserSignupService {
           family_name: req.body.lastName ? req.body.lastName.trim() : '',
           birthdate: req.body.dob || null,
           mandai_id: mandaiId,
+          singpass_id: req.body.singpassId || null,
           source: source.sourceDB,
           status: 1,
           created_at: getCurrentUTCTimestamp(),
@@ -342,10 +345,12 @@ class UserSignupService {
 
       const firstNameDB = userDB.given_name || '';
       const lastNameDB = userDB.family_name || '';
+      const singpassIdDB = userDB.singpass_id || '';
       const dobCognito = getOrCheck(userCognito, 'birthdate') || null;
       const isTriggerUpdateInfo =
         firstNameDB !== req.body.firstName ||
         lastNameDB !== req.body.lastName ||
+        (!singpassIdDB && req.body.singpassId) || // Update singpass ID only if it is currently empty in DB
         (req.body.dob && dobCognito !== req.body.dob);
 
       if (isTriggerUpdateInfo) {
@@ -353,6 +358,7 @@ class UserSignupService {
           given_name: req.body.firstName || undefined,
           family_name: req.body.lastName || undefined,
           birthdate: req.body.dob ? convertDateToMySQLFormat(req.body.dob) : undefined,
+          singpass_id: !singpassIdDB && req.body.singpassId ? req.body.singpassId : undefined,
         });
         let userName = getOrCheck(userCognito, 'name');
         const userFirstName = getOrCheck(userCognito, 'given_name');
@@ -434,7 +440,7 @@ class UserSignupService {
           layer: 'userSignupService.signup',
         },
       },
-      '[CIAM] Start Signup with FOs Service',
+      '[CIAM] Start Signup for Membership Pass Service',
     );
 
     // get switches from DB
@@ -515,12 +521,12 @@ class UserSignupService {
         await empMembershipUserAccountsModel.updateByEmail(req.body.email, { picked: 3 });
       }
       this.loggerWrapper(
-        '[CIAM] End Signup with FOs Service - Failed',
+        '[CIAM] End Signup for Membership Pass Service - Failed',
         {
           layer: 'userSignupService.signup',
           action: 'adminCreateMPUser',
           email: userInfo.email,
-          error: 'User is signup failed with email case sensitive existed at Cognito!',
+          error: 'User signup failed with email case sensitive existed at Cognito!',
         },
         'error',
       );
@@ -530,12 +536,12 @@ class UserSignupService {
     //cover for case email sensitive at Cognito have chance that email capitalize
     if (userInfo && userInfo.email) {
       this.loggerWrapper(
-        '[CIAM] End Signup with FOs Service - Failed',
+        '[CIAM] End Signup for Membership Pass Service - Failed',
         {
           layer: 'userSignupService.signup',
           action: 'adminCreateMPUser',
           email: userInfo.email,
-          error: 'User is already exists at DB!',
+          error: 'User already exists in DB!',
         },
         'error',
       );
@@ -611,7 +617,7 @@ class UserSignupService {
           mandaiId = newId; // try DB again with the new ID
         }
       }
-      this.loggerWrapper('[CIAM] End Signup with FOs Service - Success', {
+      this.loggerWrapper('[CIAM] End Signup for Membership Pass Service - Success', {
         layer: 'userSignupService.signup',
         action: 'adminCreateMPUser',
         cognitoCreated: JSON.stringify(cognitoInfo),
@@ -622,14 +628,14 @@ class UserSignupService {
         'success',
         'signup',
         req.body,
-        1
+        1,
       );
       return {
         mandaiId,
       };
     } catch (error) {
       this.loggerWrapper(
-        '[CIAM] End Signup with FOs Service - Failed',
+        '[CIAM] End Signup for Membership Pass Service - Failed',
         {
           layer: 'userSignupService.signup',
           action: 'adminCreateMPUser',

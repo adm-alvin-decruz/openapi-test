@@ -500,18 +500,26 @@ async function getUserMembership(req) {
 }
 
 //#region Update user CIAM info - Phase2 FO series
-async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareDBUpdateData) {
+async function adminUpdateUser(req, cognitoComparedParams, membershipData, prepareDBUpdateData) {
   // get switches from DB
   req['dbSwitch'] = await switchService.getAllSwitches();
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('usersServices:adminUpdateUser start'); // log process time
 
-  // add name params to cognito request, make sure update value if there's changes otherwise no change.
+  // Check if there are actual changes to Cognito attributes (excluding otpEmailDisabledUntil which is DB-only)
+  // Only push name parameter if there are other changes, to avoid unnecessary Cognito updates
+  // when only otpEmailDisabledUntil is being toggled
+  const hasCognitoChanges = commonService.isJsonNotEmpty(cognitoComparedParams);
+  
+  // add name params to cognito request only if there are other changes
+  // This prevents triggering Cognito update (and potential email triggers) when only otpEmailDisabledUntil is toggled
+  if (hasCognitoChanges) {
   let name = usersUpdateHelpers.createNameParameter(
     req.body,
     membershipData.cognitoUser.UserAttributes,
   );
-  ciamComparedParams.push(name);
+  cognitoComparedParams.push(name);
+  }
 
   let response = {};
 
@@ -520,28 +528,32 @@ async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareD
   req.body['visualID'] = membershipData.db_user.visual_id;
 
   try {
-    // save to cognito
-    let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, ciamComparedParams);
+    // save to cognito only if there are actual changes
+    // Skip Cognito update if only otpEmailDisabledUntil is being toggled (it's DB-only)
+    if (hasCognitoChanges) {
+      let cognitoRes = await cognitoService.cognitoAdminUpdateUser(req, cognitoComparedParams);
+      response['cognito'] = cognitoRes;
+    }
 
     // save to DB
-    let updateDBRes = await userUpdateHelper.updateDBUserInfo(
-      req,
-      prepareDBUpdateData,
-      membershipData.db_user,
-    );
+    if (commonService.isJsonNotEmpty(prepareDBUpdateData) === true) {
+      let updateDBRes = await userUpdateHelper.updateDBUserInfo(
+        req,
+        prepareDBUpdateData,
+        membershipData.db_user,
+      );
+      response['updateDB'] = updateDBRes;
+    }
 
     // galaxy update move to sqs. Push to SQS queue for Galaxy Import Pass
-    req.body['ciamComparedParams'] = ciamComparedParams;
+    req.body['ciamComparedParams'] = cognitoComparedParams;
     req.body['membershipData'] = membershipData;
     response['galaxyUpdate'] = await galaxyWPService.galaxyToSQS(req, 'userUpdate');
 
-    response = {
-      cognito: cognitoRes,
-      updateDB: updateDBRes,
-    };
-
     // prepare logs
-    let updateUserArr = [response.cognito.cognitoUpdateArr, prepareDBUpdateData];
+    // Handle case where cognito update was skipped (OTP-only updates)
+    let cognitoUpdateArr = response.cognito?.cognitoUpdateArr || [];
+    let updateUserArr = [cognitoUpdateArr, prepareDBUpdateData];
     let logObj = loggerService.build(
       'user',
       'usersServices.adminUpdateUser',
@@ -587,19 +599,47 @@ async function adminUpdateUser(req, ciamComparedParams, membershipData, prepareD
 }
 
 async function adminUpdateMPUser(body) {
+  if (!body.data) {
+    body.data = {};
+  }
+  
   const ncRequest = !!body.ncRequest;
   const dataRequestUpdate = body.data;
   const email = body.email;
   const newEmail = body.data.newEmail || '';
   const language = body.language || 'en';
+  const otpEmailDisabledUntil = body.otpEmailDisabledUntil;
 
   //clean and format phoneNumber
   dataRequestUpdate.phoneNumber = commonService.cleanPhoneNumber(body.data.phoneNumber);
 
+  // Check if there are any updatable fields in dataRequestUpdate that would trigger Cognito update
+  // Fields that can trigger Cognito update: firstName, lastName, dob, phoneNumber (if not empty), newsletter
+  // Exclude: uuid, newPassword, confirmPassword, oldPassword, group, phoneNumber (if empty)
+  const hasUpdatableData = Object.keys(dataRequestUpdate).some(
+    (key) => {
+      // Skip ignored keys
+      if (['uuid', 'newPassword', 'confirmPassword', 'oldPassword', 'group'].includes(key)) {
+        return false;
+      }
+      // Skip phoneNumber if empty
+      if (key === 'phoneNumber' && (!dataRequestUpdate.phoneNumber || dataRequestUpdate.phoneNumber.trim() === '')) {
+        return false;
+      }
+      // Check if value exists and is not empty
+      const value = dataRequestUpdate[key];
+      return value !== undefined && value !== null && value !== '';
+    },
+  );
+
   // start update process
   try {
     const userOriginalInfo = await getUserFromDBCognito(email);
-    const userNewEmailInfo = await getUserFromDBCognito(newEmail);
+    
+    // Only fetch new email info if newEmail is provided and different from current email
+    let userNewEmailInfo = null;
+    if (newEmail && newEmail !== email) {
+      userNewEmailInfo = await getUserFromDBCognito(newEmail);
 
     //check email and new email is existed -> throw error if possible to stop update process
     await verifyCurrentAndNewEmail({
@@ -609,6 +649,7 @@ async function adminUpdateMPUser(body) {
       userInfoNewEmail: userNewEmailInfo,
       language: language,
     });
+    }
 
     const password = await manipulatePassword(ncRequest, body.data.password, body.data.newPassword);
 
@@ -633,16 +674,19 @@ async function adminUpdateMPUser(body) {
       );
     }
 
-    //2nd proceed update user information
-    await updateCognitoUserInfo({
-      data: dataRequestUpdate,
-      userInfo: userOriginalInfo.cognito,
-      email: email,
-      newEmail: newEmail,
-      language: language,
-    });
+    //2nd proceed update user information in Cognito only if there are updatable fields
+    // Skip Cognito update if only otpEmailDisabledUntil is being toggled (it's DB-only)
+    if (hasUpdatableData || newEmail) {
+      await updateCognitoUserInfo({
+        data: dataRequestUpdate,
+        userInfo: userOriginalInfo.cognito,
+        email: email,
+        newEmail: newEmail,
+        language: language,
+      });
+    }
 
-    //3rd proceed update user in DB
+    //3rd proceed update user in DB (always proceed, even if only otpEmailDisabledUntil)
     await updateDBUserInfo({
       email: email,
       newEmail: newEmail,
@@ -651,6 +695,7 @@ async function adminUpdateMPUser(body) {
       ncRequest: ncRequest,
       password,
       language: language,
+      otpEmailDisabledUntil: otpEmailDisabledUntil,
     });
     await userEventAuditTrailService.createEvent(
       email,
