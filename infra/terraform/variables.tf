@@ -58,6 +58,16 @@ variable "NEW_RELIC_USE_ESM" {
   default     = "false"
 }
 
+variable "NEW_RELIC_APM_LAMBDA_MODE" {
+  description = "Enable NewRelic to collect APM metrics from AWS Lambda"
+  default     = true
+}
+
+variable "NEW_RELIC_DISTRIBUTED_TRACING_ENABLED" {
+  description = "Enable NewRelic to collect distributed tracing from AWS Lambda"
+  default     = true
+}
+
 variable "NEW_RELIC_LICENSE_KEY_SECRET" {
   description = "NEW_RELIC_LICENSE_KEY_SECRET"
   default     = "NEW_RELIC_LICENSE_KEY"
