@@ -3,13 +3,13 @@ const userConfig = require('../config/usersConfig');
 
 /**
  * BaseService - Base class for services with dynamic filters, pagination, and sorting
- * 
+ *
  * Usage:
  * class MyService extends BaseService {
  *   constructor() {
  *     super('MyEntity');
  *   }
- * 
+ *
  *   async getItems(req) {
  *     const queryBuilder = await this.buildQuery(req);
  *     const result = await this.executeQuery(queryBuilder, req);
@@ -23,17 +23,28 @@ class BaseService {
     this.dataSource = null;
     this.repository = null;
     this.alias = entityName.toLowerCase();
-    this.validOperators = ['lt', 'gt', 'lte', 'gte', 'eq', 'ne', 'in', 'is_null', 'not_null', 'like'];
+    this.validOperators = [
+      'lt',
+      'gt',
+      'lte',
+      'gte',
+      'eq',
+      'ne',
+      'in',
+      'is_null',
+      'not_null',
+      'like',
+    ];
   }
 
   /**
    * Get repository for the entity (Lazy Initialization)
-   * 
+   *
    * This method implements lazy initialization pattern:
    * - dataSource and repository are only initialized when first needed
    * - Subsequent calls reuse the cached repository
    * - Prevents async operations in constructor
-   * 
+   *
    * @returns {Promise<Object>} TypeORM repository for the entity
    * @throws {Error} If dataSource initialization fails
    */
@@ -43,23 +54,24 @@ class BaseService {
         try {
           this.dataSource = await getDataSource();
         } catch (error) {
-          throw new Error(`Failed to initialize dataSource for ${this.entityName}: ${error.message}`);
+          throw new Error(
+            `Failed to initialize dataSource for ${this.entityName}: ${error.message}`,
+          );
         }
       }
-      
+
       if (!this.dataSource.isInitialized) {
         await this.dataSource.initialize();
       }
-      
+
       this.repository = this.dataSource.getRepository(this.entityName);
     }
     return this.repository;
   }
 
-
   /**
    * Convert camelCase string to snake_case
-   * 
+   *
    * @param {String} str - camelCase string
    * @returns {String} snake_case string
    */
@@ -69,7 +81,7 @@ class BaseService {
 
   /**
    * Convert snake_case string to camelCase
-   * 
+   *
    * @param {String} str - snake_case string
    * @returns {String} camelCase string
    */
@@ -77,12 +89,10 @@ class BaseService {
     return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
-
-
   /**
    * Check if field is allowed for filtering
    * Supports both camelCase and snake_case field names in allowedFields
-   * 
+   *
    * @param {String} camelCaseField - Field name in camelCase
    * @param {String} snakeCaseField - Field name in snake_case
    * @param {Array} allowedFields - Array of allowed field names (can be camelCase or snake_case)
@@ -92,7 +102,7 @@ class BaseService {
    * Check if a field is allowed, supporting both camelCase and snake_case formats
    * This method automatically handles conversion between camelCase and snake_case
    * to provide flexibility in field naming while maintaining security through allowlist
-   * 
+   *
    * @param {String} camelCaseField - Field name in camelCase format
    * @param {String} snakeCaseField - Field name in snake_case format
    * @param {Array<String>} allowedFields - Array of allowed field names (can be camelCase or snake_case)
@@ -100,37 +110,37 @@ class BaseService {
    */
   isFieldAllowed(camelCaseField, snakeCaseField, allowedFields = []) {
     if (!allowedFields.length) return true;
-    
+
     // Check both formats directly
     if (allowedFields.includes(camelCaseField) || allowedFields.includes(snakeCaseField)) {
       return true;
     }
-    
+
     // Fallback: Try converting each allowed field to match the input format
     // This handles cases where allowedFields might be in different format than input
     for (const allowedField of allowedFields) {
-      const allowedCamelCase = allowedField.includes('_') 
-        ? this.snakeToCamelCase(allowedField) 
+      const allowedCamelCase = allowedField.includes('_')
+        ? this.snakeToCamelCase(allowedField)
         : allowedField;
-      const allowedSnakeCase = allowedField.includes('_') 
-        ? allowedField 
+      const allowedSnakeCase = allowedField.includes('_')
+        ? allowedField
         : this.camelToSnakeCase(allowedField);
-      
+
       if (allowedCamelCase === camelCaseField || allowedSnakeCase === snakeCaseField) {
         return true;
       }
     }
-    
+
     return false;
   }
 
   /**
    * Parse filters from query parameters (already parsed by Express qs parser)
-   * 
+   *
    * Query format after parsing:
    * - field[operator]=value → { field: { operator: value } }
    * - memberShipDetails.category_type[eq]=FOW → { memberShipDetails: { category_type: { eq: "FOW" } } }
-   * 
+   *
    * Supported operators:
    * - lt, gt, lte, gte: Comparison operators
    * - eq, ne: Equality operators
@@ -138,23 +148,20 @@ class BaseService {
    * - like: Pattern matching (with % wildcard)
    * - is_null: Null check (field[is_null]=true)
    * - not_null: Not null check (field[not_null]=true)
-   * 
+   *
    * Related fields:
    * - Format: tableName.fieldName[operator]=value
    * - Example: memberShipDetails.category_type[eq]=FOW
-   * 
+   *
    * @param {Object} query - Query parameters from request (already parsed by Express qs parser)
    * @param {Object} options - Configuration options
    * @param {Array} options.allowedFields - Fields allowed for filtering (camelCase or snake_case)
    * @param {Object} options.defaultFilters - Default filters to always apply
-   * @returns {Object} Parsed filters in nested format: 
+   * @returns {Object} Parsed filters in nested format:
    *   { field: [{ operator, value }], table: { field: [{ operator, value }] } }
    */
   parseFilters(query, options = {}) {
-    const {
-      allowedFields = [],
-      defaultFilters = {},
-    } = options;
+    const { allowedFields = [], defaultFilters = {} } = options;
 
     const filters = { ...defaultFilters };
 
@@ -162,8 +169,10 @@ class BaseService {
       if (value === null || value === undefined || value === '') continue;
 
       if (typeof value === 'object' && !Array.isArray(value)) {
-        const allKeysAreOperators = Object.keys(value).every(k => this.validOperators.includes(k));
-        
+        const allKeysAreOperators = Object.keys(value).every((k) =>
+          this.validOperators.includes(k),
+        );
+
         if (allKeysAreOperators) {
           // Direct field with operators: { field: { eq: value } }
           this.addFieldFilters(filters, key, value, allowedFields);
@@ -172,7 +181,7 @@ class BaseService {
           const relatedFilters = {};
           for (const [fieldName, fieldValue] of Object.entries(value)) {
             if (fieldValue === null || fieldValue === undefined || fieldValue === '') continue;
-            
+
             if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
               // Field has operators: { categoryType: { eq: 'FOM' } }
               this.addFieldFilters(relatedFilters, fieldName, fieldValue, allowedFields);
@@ -196,7 +205,7 @@ class BaseService {
 
   /**
    * Add field filters to filters object
-   * 
+   *
    * @param {Object} filters - Filters object to add to
    * @param {String} fieldName - Field name
    * @param {Object} operators - Operators object { operator: value }
@@ -205,40 +214,45 @@ class BaseService {
   addFieldFilters(filters, fieldName, operators, allowedFields) {
     const camelCaseField = fieldName.includes('_') ? this.snakeToCamelCase(fieldName) : fieldName;
     const normalizedFieldName = this.camelToSnakeCase(fieldName);
-    
-        const isAllowed = 
+
+    const isAllowed =
       !allowedFields.length ||
       this.isFieldAllowed(camelCaseField, normalizedFieldName, allowedFields);
-    
+
     if (!isAllowed) return;
 
     for (const [operator, operatorValue] of Object.entries(operators)) {
       if (operatorValue === null || operatorValue === undefined || operatorValue === '') continue;
-      
+
       let normalizedValue = operatorValue;
-      
+
       if (operator === 'is_null' || operator === 'not_null') {
         normalizedValue = null;
       } else if (operator === 'in') {
-        normalizedValue = Array.isArray(operatorValue) 
-          ? operatorValue 
-          : (typeof operatorValue === 'string' ? operatorValue.split(',').map(v => v.trim()).filter(v => v) : [operatorValue]);
+        normalizedValue = Array.isArray(operatorValue)
+          ? operatorValue
+          : typeof operatorValue === 'string'
+            ? operatorValue
+                .split(',')
+                .map((v) => v.trim())
+                .filter((v) => v)
+            : [operatorValue];
       }
-      
+
       if (!filters[normalizedFieldName]) {
         filters[normalizedFieldName] = [];
-              }
-      
+      }
+
       filters[normalizedFieldName].push({
         operator: operator,
-        value: normalizedValue
+        value: normalizedValue,
       });
-        }
+    }
   }
 
   /**
    * Parse pagination parameters
-   * 
+   *
    * @param {Object} query - Query parameters
    * @param {Object} options - Configuration options
    * @param {Number} options.defaultPage - Default page number (default: 1)
@@ -263,7 +277,7 @@ class BaseService {
    * Parse sorting parameters
    * Supports both camelCase (sortBy/sortOrder) and snake_case (sort_by/sort_order)
    * camelCase is preferred to match API documentation
-   * 
+   *
    * @param {Object} query - Query parameters
    * @param {Object} options - Configuration options
    * @param {String} options.defaultSortBy - Default sort field (camelCase or snake_case)
@@ -278,24 +292,37 @@ class BaseService {
       allowedSortFields = [],
     } = options;
 
-    let sortBy = query.sortBy || query.sort_by || defaultSortBy;
-    const sortOrder = (query.sortOrder || query.sort_order || defaultSortOrder).toUpperCase();
+    let sortBy =
+      typeof query.sortBy === 'string'
+        ? query.sortBy
+        : typeof query.sort_by === 'string'
+          ? query.sort_by
+          : defaultSortBy;
+    const sortOrderRaw =
+      typeof query.sortOrder === 'string'
+        ? query.sortOrder
+        : typeof query.sort_order === 'string'
+          ? query.sort_order
+          : defaultSortOrder;
+    const sortOrder = sortOrderRaw.toUpperCase();
 
-    const normalizedDefaultSortBy = defaultSortBy.includes('_') 
-      ? defaultSortBy 
+    const normalizedDefaultSortBy = defaultSortBy.includes('_')
+      ? defaultSortBy
       : this.camelToSnakeCase(defaultSortBy);
 
     if (allowedSortFields.length) {
-      const snakeCaseSortBy = sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
+      const snakeCaseSortBy =
+        typeof sortBy === 'string' && sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
       if (!allowedSortFields.includes(sortBy) && !allowedSortFields.includes(snakeCaseSortBy)) {
-      return {
+        return {
           sort_by: normalizedDefaultSortBy,
-        sort_order: defaultSortOrder,
-      };
-    }
+          sort_order: defaultSortOrder,
+        };
+      }
     }
 
-    const normalizedSortBy = sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
+    const normalizedSortBy =
+      typeof sortBy === 'string' && sortBy.includes('_') ? sortBy : this.camelToSnakeCase(sortBy);
 
     return {
       sort_by: normalizedSortBy,
@@ -305,7 +332,7 @@ class BaseService {
 
   /**
    * Normalize object keys from camelCase to snake_case
-   * 
+   *
    * @param {Object} obj - Object with camelCase keys
    * @returns {Object} Object with snake_case keys
    */
@@ -321,7 +348,7 @@ class BaseService {
    * Normalize options to ensure consistency
    * Converts camelCase keys to snake_case where needed
    * This should be called at the beginning of buildQuery to normalize all options
-   * 
+   *
    * @param {Object} options - Configuration options
    * @returns {Object} Normalized options
    */
@@ -341,7 +368,7 @@ class BaseService {
 
   /**
    * Build query builder with filters, pagination, and sorting
-   * 
+   *
    * @param {Object} req - Request object
    * @param {Object} options - Configuration options
    * @param {Array} options.joins - Array of join configurations
@@ -380,10 +407,10 @@ class BaseService {
 
   /**
    * Apply joins to query builder
-   * 
+   *
    * @param {Object} queryBuilder - TypeORM query builder
    * @param {Array} joins - Array of join configurations
-   * 
+   *
    * Join configuration format:
    * {
    *   type: 'leftJoin' | 'innerJoin' | 'rightJoin' | 'leftJoinAndSelect' | 'innerJoinAndSelect',
@@ -393,18 +420,18 @@ class BaseService {
    *   foreignKey: 'user_id' (optional, used to auto-generate condition)
    *   selectFields: ['field1', 'field2'] (optional, fields to select from joined table - prevents N+1)
    * }
-   * 
+   *
    * Note: Use 'leftJoinAndSelect' or 'innerJoinAndSelect' to avoid N+1 query problem
    * These will automatically select all fields from the joined table.
    * If you only need specific fields, use 'leftJoin' with 'selectFields' option.
    */
   applyJoins(queryBuilder, joins) {
-    joins.forEach(join => {
-      const { 
-        type = 'leftJoin', 
-        entity, 
-        alias, 
-        condition, 
+    joins.forEach((join) => {
+      const {
+        type = 'leftJoin',
+        entity,
+        alias,
+        condition,
         foreignKey,
         selectFields = null, // Array of fields to select, or null to select all
       } = join;
@@ -443,11 +470,11 @@ class BaseService {
             queryBuilder.leftJoin(entity, alias);
           }
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
-            selectFields.forEach(field => {
+            selectFields.forEach((field) => {
               // GROUP_CONCAT aggregates multiple values to prevent data loss with GROUP BY
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
-                `${alias}_${field}`
+                `${alias}_${field}`,
               );
             });
           }
@@ -460,10 +487,10 @@ class BaseService {
             queryBuilder.innerJoin(entity, alias);
           }
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
-            selectFields.forEach(field => {
+            selectFields.forEach((field) => {
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
-                `${alias}_${field}`
+                `${alias}_${field}`,
               );
             });
           }
@@ -476,10 +503,10 @@ class BaseService {
             queryBuilder.rightJoin(entity, alias);
           }
           if (selectFields && Array.isArray(selectFields) && selectFields.length > 0) {
-            selectFields.forEach(field => {
+            selectFields.forEach((field) => {
               queryBuilder.addSelect(
                 `GROUP_CONCAT(DISTINCT ${alias}.${field} ORDER BY ${alias}.${field} SEPARATOR '|||')`,
-                `${alias}_${field}`
+                `${alias}_${field}`,
               );
             });
           }
@@ -493,7 +520,7 @@ class BaseService {
   /**
    * Apply filters to query builder
    * Filters are in nested format: { field: [{ operator, value }], table: { field: [{ operator, value }] } }
-   * 
+   *
    * @param {Object} queryBuilder - TypeORM query builder
    * @param {Object} filters - Parsed filters in nested format
    * @param {Object} options - Configuration options
@@ -505,12 +532,26 @@ class BaseService {
 
     for (const [key, value] of Object.entries(filters)) {
       if (Array.isArray(value)) {
-        this.applyFieldConditions(queryBuilder, key, value, this.alias, fieldMappings, relatedFieldMappings);
+        this.applyFieldConditions(
+          queryBuilder,
+          key,
+          value,
+          this.alias,
+          fieldMappings,
+          relatedFieldMappings,
+        );
       } else if (typeof value === 'object' && value !== null) {
         const tableAlias = key;
         for (const [fieldName, conditions] of Object.entries(value)) {
           if (Array.isArray(conditions)) {
-            this.applyFieldConditions(queryBuilder, fieldName, conditions, tableAlias, fieldMappings, relatedFieldMappings);
+            this.applyFieldConditions(
+              queryBuilder,
+              fieldName,
+              conditions,
+              tableAlias,
+              fieldMappings,
+              relatedFieldMappings,
+            );
           }
         }
       }
@@ -519,7 +560,7 @@ class BaseService {
 
   /**
    * Apply conditions for a single field
-   * 
+   *
    * @param {Object} queryBuilder - TypeORM query builder
    * @param {String} fieldName - Field name
    * @param {Array} conditions - Array of { operator, value }
@@ -527,19 +568,26 @@ class BaseService {
    * @param {Object} fieldMappings - Field mappings
    * @param {Object} relatedFieldMappings - Related field mappings
    */
-  applyFieldConditions(queryBuilder, fieldName, conditions, tableAlias, fieldMappings, relatedFieldMappings) {
+  applyFieldConditions(
+    queryBuilder,
+    fieldName,
+    conditions,
+    tableAlias,
+    fieldMappings,
+    relatedFieldMappings,
+  ) {
     const camelCaseField = fieldName.includes('_') ? this.snakeToCamelCase(fieldName) : fieldName;
     const relatedMapping = relatedFieldMappings[camelCaseField] || relatedFieldMappings[fieldName];
-    
+
     let finalTableAlias = tableAlias;
     let finalFieldName = fieldName;
 
-      if (relatedMapping) {
+    if (relatedMapping) {
       finalTableAlias = relatedMapping.alias;
       finalFieldName = relatedMapping.field || fieldName;
     } else if (tableAlias === this.alias) {
       finalFieldName = fieldMappings[fieldName] || fieldName;
-        }
+    }
 
     for (let i = 0; i < conditions.length; i++) {
       const { operator, value } = conditions[i];
@@ -557,70 +605,70 @@ class BaseService {
         case 'in':
           if (Array.isArray(value) && value.length > 0) {
             queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} IN (:...${paramKey})`, {
-              [paramKey]: value
+              [paramKey]: value,
             });
           }
           break;
 
         case 'like':
           queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} LIKE :${paramKey}`, {
-            [paramKey]: value
+            [paramKey]: value,
           });
           break;
 
         case 'gt':
           {
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
+            const parsedValue = this.parseComparisonValue(value);
+            if (parsedValue !== null && parsedValue !== undefined) {
               queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} > :${paramKey}`, {
-                [paramKey]: parsedValue
+                [paramKey]: parsedValue,
               });
-        }
-      }
+            }
+          }
           break;
 
         case 'lt':
           {
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
+            const parsedValue = this.parseComparisonValue(value);
+            if (parsedValue !== null && parsedValue !== undefined) {
               queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} < :${paramKey}`, {
-                [paramKey]: parsedValue
+                [paramKey]: parsedValue,
               });
-        }
-      }
+            }
+          }
           break;
 
         case 'gte':
           {
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
+            const parsedValue = this.parseComparisonValue(value);
+            if (parsedValue !== null && parsedValue !== undefined) {
               queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} >= :${paramKey}`, {
-                [paramKey]: parsedValue
+                [paramKey]: parsedValue,
               });
-        }
-      }
+            }
+          }
           break;
 
         case 'lte':
           {
-        const parsedValue = this.parseComparisonValue(value);
-        if (parsedValue !== null && parsedValue !== undefined) {
+            const parsedValue = this.parseComparisonValue(value);
+            if (parsedValue !== null && parsedValue !== undefined) {
               queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} <= :${paramKey}`, {
-                [paramKey]: parsedValue
+                [paramKey]: parsedValue,
               });
-        }
+            }
           }
           break;
 
         case 'eq':
           queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} = :${paramKey}`, {
-            [paramKey]: value
+            [paramKey]: value,
           });
           break;
 
         case 'ne':
           queryBuilder.andWhere(`${finalTableAlias}.${finalFieldName} != :${paramKey}`, {
-            [paramKey]: value
+            [paramKey]: value,
           });
           break;
 
@@ -630,10 +678,9 @@ class BaseService {
     }
   }
 
-
   /**
    * Parse numeric value from string
-   * 
+   *
    * @param {String|Number} value - Value to parse
    * @returns {Number|null} Parsed number or null if invalid
    */
@@ -656,7 +703,7 @@ class BaseService {
    * - Numbers: direct comparison
    * - Dates: direct comparison (ISO format or MySQL date format)
    * - Strings: lexicographic comparison
-   * 
+   *
    * @param {String|Number|Date} value - Value to parse
    * @returns {String|Number|Date|null} Parsed value or null if invalid
    */
@@ -664,36 +711,36 @@ class BaseService {
     if (value === null || value === undefined || value === '') {
       return null;
     }
-    
+
     if (typeof value === 'number') {
       return value;
     }
-    
+
     if (value instanceof Date) {
       return value;
     }
-    
+
     if (typeof value === 'string') {
       const trimmed = value.trim();
       if (trimmed === '') {
         return null;
       }
-      
+
       const num = parseFloat(trimmed);
       if (!isNaN(num) && isFinite(num) && trimmed === String(num)) {
         return num;
       }
-      
+
       return trimmed;
     }
-    
+
     return value;
   }
 
   /**
    * Apply sorting to query builder
    * sorting.sort_by is already in snake_case (from parseSorting)
-   * 
+   *
    * @param {Object} queryBuilder - TypeORM query builder
    * @param {Object} sorting - Sorting object (sort_by is already snake_case)
    * @param {Object} options - Configuration options
@@ -708,38 +755,40 @@ class BaseService {
   /**
    * Format data with grouped related fields
    * Groups fields from joined tables (with alias prefix) into separate objects
-   * 
+   *
    * Example:
    * Input: { user_id: 1, user_email: 'test@example.com', membershipDetails_id: 123, membershipDetails_category_type: 'FOM' }
    * Output: { id: 1, email: 'test@example.com', membershipDetails: { id: 123, category_type: 'FOM' } }
-   * 
+   *
    * @param {Array} rawData - Raw data from getRawMany() (fields have alias prefix like 'user_id', 'membershipDetails_id')
    * @param {Array} joins - Array of join configurations with alias and selectFields
    * @returns {Array} Formatted data with grouped related fields
    */
   formatDataWithRelatedFields(rawData, joins = []) {
-    return rawData.map(item => {
+    return rawData.map((item) => {
       const formattedItem = {};
       const relatedFieldsMap = {};
-      
+
       for (const [key, value] of Object.entries(item)) {
         let fieldAssigned = false;
-        
+
         for (const join of joins) {
           const { alias, selectFields = [] } = join;
           if (!alias) continue;
-          
+
           const prefix = `${alias}_`;
           if (key.startsWith(prefix)) {
             const fieldName = key.replace(prefix, '');
-            
+
             if (selectFields.includes(fieldName)) {
               if (!relatedFieldsMap[alias]) {
                 relatedFieldsMap[alias] = {};
               }
               // Parse GROUP_CONCAT values (separated by '|||')
               if (value && typeof value === 'string' && value.includes('|||')) {
-                relatedFieldsMap[alias][fieldName] = value.split('|||').filter(v => v !== null && v !== '');
+                relatedFieldsMap[alias][fieldName] = value
+                  .split('|||')
+                  .filter((v) => v !== null && v !== '');
               } else {
                 relatedFieldsMap[alias][fieldName] = value;
               }
@@ -748,7 +797,7 @@ class BaseService {
             }
           }
         }
-        
+
         if (!fieldAssigned) {
           const mainPrefix = `${this.alias}_`;
           if (key.startsWith(mainPrefix)) {
@@ -759,17 +808,23 @@ class BaseService {
           }
         }
       }
-      
+
       for (const [alias, relatedFields] of Object.entries(relatedFieldsMap)) {
-        const hasData = Object.values(relatedFields).some(v => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true));
+        const hasData = Object.values(relatedFields).some(
+          (v) => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
+        );
         if (hasData) {
-          const hasArrayFields = Object.values(relatedFields).some(v => Array.isArray(v) && v.length > 1);
-          
+          const hasArrayFields = Object.values(relatedFields).some(
+            (v) => Array.isArray(v) && v.length > 1,
+          );
+
           if (hasArrayFields) {
-            const maxLength = Math.max(...Object.values(relatedFields)
-              .filter(v => Array.isArray(v))
-              .map(v => v.length));
-            
+            const maxLength = Math.max(
+              ...Object.values(relatedFields)
+                .filter((v) => Array.isArray(v))
+                .map((v) => v.length),
+            );
+
             const relatedArray = [];
             for (let i = 0; i < maxLength; i++) {
               const relatedObj = {};
@@ -780,39 +835,39 @@ class BaseService {
                   relatedObj[fieldName] = fieldValue;
                 }
               }
-              if (Object.values(relatedObj).some(v => v !== null && v !== undefined)) {
+              if (Object.values(relatedObj).some((v) => v !== null && v !== undefined)) {
                 relatedArray.push(relatedObj);
               }
             }
-            
+
             formattedItem[alias] = relatedArray.length === 1 ? relatedArray[0] : relatedArray;
           } else {
             formattedItem[alias] = relatedFields;
           }
         }
       }
-      
+
       return formattedItem;
     });
   }
 
   /**
    * Execute query with pagination
-   * 
+   *
    * @param {Object} queryBuilder - TypeORM query builder
    * @param {Object} pagination - Pagination object
    * @param {Object} options - Configuration options
    * @param {Array} options.joins - Array of join configurations (for formatting related fields)
    * @returns {Promise<Object>} Query result with data, total, and pagination info
-   * 
+   *
    * Note: This method uses getRawMany() to get raw data, then formats it with grouped related fields
    * When joins are present, uses DISTINCT to avoid duplicate rows from one-to-many relationships
    */
   async executeQuery(queryBuilder, pagination, options = {}) {
     const hasJoins = options.joins && options.joins.length > 0;
-    
+
     const countQueryBuilder = queryBuilder.clone();
-    
+
     // Count total records efficiently
     // For joins: Use COUNT(DISTINCT user.id) to avoid counting duplicate rows from one-to-many relationships
     // This is more efficient than fetching all rows and counting in memory
@@ -832,13 +887,13 @@ class BaseService {
 
     // When joins are present, use GROUP BY to ensure one row per user
     // This prevents duplicate rows from one-to-many relationships (e.g., multiple membership records per user)
-    // 
+    //
     // NOTE: MySQL ONLY_FULL_GROUP_BY mode requires all non-grouped columns to be aggregated.
     // - Main table columns (user.*): Since user.id is unique (primary key), all other user columns
     //   are identical per user.id, so MySQL accepts them even with ONLY_FULL_GROUP_BY
     // - Joined table columns: Already aggregated using GROUP_CONCAT(DISTINCT ...) in applyJoins()
     //   when using leftJoin/innerJoin with selectFields
-    // 
+    //
     // If you encounter ONLY_FULL_GROUP_BY errors, consider:
     // 1. Ensure joined fields use GROUP_CONCAT aggregation (already handled in applyJoins)
     // 2. Using a subquery approach for complex cases
@@ -864,15 +919,13 @@ class BaseService {
 
   /**
    * Format response with pagination metadata
-   * 
+   *
    * @param {Object} result - Query result from executeQuery
    * @param {Function} formatter - Optional formatter function for each item
    * @returns {Object} Formatted response
    */
   formatResponse(result, formatter = null) {
-    const formattedData = formatter
-      ? result.data.map(item => formatter(item))
-      : result.data;
+    const formattedData = formatter ? result.data.map((item) => formatter(item)) : result.data;
 
     return {
       status: 'success',
@@ -891,7 +944,7 @@ class BaseService {
 
   /**
    * Get single item by ID
-   * 
+   *
    * @param {Number} id - Item ID
    * @returns {Promise<Object|null>} Item or null if not found
    */
@@ -904,7 +957,7 @@ class BaseService {
 
   /**
    * Get single item by field
-   * 
+   *
    * @param {String} field - Field name
    * @param {*} value - Field value
    * @returns {Promise<Object|null>} Item or null if not found
@@ -918,4 +971,3 @@ class BaseService {
 }
 
 module.exports = BaseService;
-

@@ -15,12 +15,12 @@ class UsersServicesV2 extends BaseService {
   /**
    * Override parseSorting to correctly handle camelCase sortBy parameter
    * Convention: Query parameters must always be camelCase. If user sends snake_case, it's invalid.
-   * 
+   *
    * 1. Support both sortBy (camelCase) and sort_by (snake_case) parameter names for backward compatibility
    * 2. Validate that sortBy value is camelCase (reject snake_case values)
    * 3. Validate against allowedSortFields (which are camelCase)
    * 4. Convert to snake_case for database query
-   * 
+   *
    * @param {Object} query - Query object with sortBy/sort_by and sortOrder/sort_order
    * @param {Object} options - Options with defaultSortBy, defaultSortOrder, allowedSortFields
    * @returns {Object} Sorting object with sort_by (snake_case) and sort_order
@@ -34,13 +34,18 @@ class UsersServicesV2 extends BaseService {
     } = options;
 
     // Support both sortBy (camelCase) and sort_by (snake_case) parameter names for backward compatibility
-    const sortByQuery = query.sortBy || query.sort_by || defaultSortBy;
-    const sortOrderQuery = (query.sortOrder || query.sort_order || defaultSortOrder).toUpperCase();
+    const sortByQueryRaw = query.sortBy || query.sort_by;
+    const sortOrderQueryRaw = query.sortOrder || query.sort_order;
+
+    const sortByQuery = typeof sortByQueryRaw === 'string' ? sortByQueryRaw : defaultSortBy;
+    const sortOrderQuery = (
+      typeof sortOrderQueryRaw === 'string' ? sortOrderQueryRaw : defaultSortOrder
+    ).toUpperCase();
 
     // Convention: Query parameter values must be camelCase
     // If user sends snake_case value (contains underscore), reject it and use default
-    if (sortByQuery.includes('_')) {
-      // Invalid: snake_case value provided, fallback to default
+    if (typeof sortByQuery !== 'string' || sortByQuery.includes('_')) {
+      // Invalid: non-string or snake_case value provided, fallback to default
       const dbSortBy = fieldMappings[defaultSortBy] || this.camelToSnakeCase(defaultSortBy);
       return {
         sort_by: dbSortBy,
@@ -49,9 +54,7 @@ class UsersServicesV2 extends BaseService {
     }
 
     // Validate against allowed fields (which are camelCase)
-    const validatedSortBy = allowedSortFields.includes(sortByQuery) 
-      ? sortByQuery 
-      : defaultSortBy;
+    const validatedSortBy = allowedSortFields.includes(sortByQuery) ? sortByQuery : defaultSortBy;
 
     // Map to snake_case for the database query. Use fieldMappings if available, otherwise convert.
     const dbSortBy = fieldMappings[validatedSortBy] || this.camelToSnakeCase(validatedSortBy);
@@ -64,7 +67,7 @@ class UsersServicesV2 extends BaseService {
 
   /**
    * Get users with filters, pagination, and sorting
-   * 
+   *
    * @param {Object} req - Request object with query parameters
    * @returns {Promise<Object>} Formatted response with users and pagination
    */
@@ -75,13 +78,13 @@ class UsersServicesV2 extends BaseService {
     // Check if any membership-related fields are in query
     // Note: Express qs parser converts field[operator]=value into nested objects
     // e.g., membershipDetails.validUntil[gt]=value becomes { membershipDetails: { validUntil: { gt: 'value' } } }
-    
+
     // Helper function to check if query contains membership-related fields
     const hasMembershipKey = (query) => {
       if (!query || typeof query !== 'object') {
         return false;
       }
-      
+
       // Check for nested membershipDetails object (from Express qs parser)
       // Query: membershipDetails.categoryType[eq]=value
       // Parsed: { membershipDetails: { categoryType: { eq: 'value' } } }
@@ -89,21 +92,28 @@ class UsersServicesV2 extends BaseService {
         const keys = Object.keys(query.membershipDetails);
         if (keys.length > 0) {
           // Check if any of the keys are membership-related fields
-          const membershipFields = ['categoryType', 'validFrom', 'validUntil', 'category_type', 'valid_from', 'valid_until'];
+          const membershipFields = [
+            'categoryType',
+            'validFrom',
+            'validUntil',
+            'category_type',
+            'valid_from',
+            'valid_until',
+          ];
           // If any key matches membership fields, or if we have nested objects (which means it's a related field)
-          return keys.some(key => {
+          return keys.some((key) => {
             const fieldValue = query.membershipDetails[key];
             // Check if it's a membership field name OR if it's an object (which means it's a field with operators)
             return membershipFields.includes(key) || (fieldValue && typeof fieldValue === 'object');
           });
         }
       }
-      
+
       // Check for direct membership fields (validFrom, validUntil, categoryType)
       // These might be used without the membershipDetails prefix
       return !!(query.categoryType || query.validFrom || query.validUntil);
     };
-    
+
     // Check if membership-related fields are present in query
     const hasMembershipDetailsFilter = hasMembershipKey(req.query || {});
 
@@ -118,15 +128,15 @@ class UsersServicesV2 extends BaseService {
       });
 
       relatedFieldMappings = {
-        'validFrom': {
+        validFrom: {
           alias: 'membershipDetails',
           field: 'valid_from',
         },
-        'validUntil': {
+        validUntil: {
           alias: 'membershipDetails',
           field: 'valid_until',
         },
-        'categoryType': {
+        categoryType: {
           alias: 'membershipDetails',
           field: 'category_type',
         },
@@ -158,7 +168,11 @@ class UsersServicesV2 extends BaseService {
         allowedSortFields: UserDTO.getAllowedSortFields(),
       };
 
-      const { queryBuilder, pagination, options: buildOptions } = await this.buildQuery(req, options);
+      const {
+        queryBuilder,
+        pagination,
+        options: buildOptions,
+      } = await this.buildQuery(req, options);
 
       const result = await this.executeQuery(queryBuilder, pagination, buildOptions);
 
@@ -171,7 +185,7 @@ class UsersServicesV2 extends BaseService {
           message: 'Get users successfully.',
         },
         data: {
-          users: result.data.map(user => new UserDTO(user).toJSON()),
+          users: result.data.map((user) => new UserDTO(user).toJSON()),
           pagination: {
             page: result.page,
             limit: result.limit,
@@ -188,7 +202,6 @@ class UsersServicesV2 extends BaseService {
   }
 }
 
-module.exports = { 
+module.exports = {
   UsersServicesV2: new UsersServicesV2(),
 };
-
