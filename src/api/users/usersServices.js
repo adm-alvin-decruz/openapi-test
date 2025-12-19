@@ -55,12 +55,15 @@ const {
   updateDBUserInfo,
   manipulatePassword,
   updateCognitoUserInfo,
+  isUserExisted,
 } = require('./helpers/userUpdateMembershipPassesHelper');
 const userEventAuditTrailService = require('./userEventAuditTrailService');
 const userCredentialEventService = require('./userCredentialEventService');
 const userSignupService = require('./userSignupService');
 const { serializeError } = require('../../utils/errorHandler');
 const { secrets } = require('../../services/secretsService');
+const UpdateUserErrors = require('../../config/https/errors/updateUserErrors');
+
 
 /**
  * Function User signup service
@@ -635,6 +638,11 @@ async function adminUpdateMPUser(body) {
   // start update process
   try {
     const userOriginalInfo = await getUserFromDBCognito(email);
+    
+    // Check if user exists - throw error if not found (similar to wildpass flow)
+    if (!isUserExisted(userOriginalInfo)) {
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(email, language)));
+    }
     
     // Only fetch new email info if newEmail is provided and different from current email
     let userNewEmailInfo = null;
