@@ -49,7 +49,6 @@ const {
   convertDateToMySQLFormat,
 } = require('../../utils/dateUtils');
 const {
-  verifyCurrentAndNewEmail,
   getUserFromDBCognito,
   updateCognitoUserPassword,
   updateDBUserInfo,
@@ -639,7 +638,7 @@ async function adminUpdateMPUser(body) {
   try {
     const userOriginalInfo = await getUserFromDBCognito(email);
     
-    // Check if user exists - throw error if not found (similar to wildpass flow)
+    // Check if user exists - throw error if not found (must check regardless of newEmail)
     if (!isUserExisted(userOriginalInfo)) {
       throw new Error(JSON.stringify(UpdateUserErrors.ciamEmailNotExists(email, language)));
     }
@@ -649,14 +648,9 @@ async function adminUpdateMPUser(body) {
     if (newEmail && newEmail !== email) {
       userNewEmailInfo = await getUserFromDBCognito(newEmail);
 
-    //check email and new email is existed -> throw error if possible to stop update process
-    await verifyCurrentAndNewEmail({
-      originalEmail: email,
-      userInfoOriginal: userOriginalInfo,
-      newEmail: newEmail,
-      userInfoNewEmail: userNewEmailInfo,
-      language: language,
-    });
+      if (isUserExisted(userNewEmailInfo)) {
+        throw new Error(JSON.stringify(UpdateUserErrors.ciamNewEmailBeingUsedErr(newEmail, language)));
+      }
     }
 
     const password = await manipulatePassword(ncRequest, body.data.password, body.data.newPassword);
