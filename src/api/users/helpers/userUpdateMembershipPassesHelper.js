@@ -293,6 +293,16 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
     );
 
     if (result.error) {
+      loggerWrapper(
+        '[CIAM-MAIN] Update User table failed',
+        {
+          userEmail: latestEmail,
+          userId: userId,
+          layer: 'userUpdateMembershipPassesHelper.updateDB',
+          error: result.error,
+        },
+        'error',
+      );
       throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
     }
 
