@@ -282,7 +282,7 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
       }),
     });
     //1st - Update user table - step is always proceed
-    await userDBService.userModelExecuteUpdate(
+    const result = await userDBService.userModelExecuteUpdate(
       userId,
       data.firstName,
       data.lastName,
@@ -291,6 +291,10 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
       otpEmailDisabledUntil,
       data.singpassId,
     );
+
+    if (result.error) {
+      throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
+    }
 
     loggerWrapper('[CIAM-MAIN] Update User Credentials table', {
       userEmail: latestEmail,
