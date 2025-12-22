@@ -64,7 +64,7 @@ async function updateDBUserInfo(req, prepareDBUpdateData, userDBData) {
   req.apiTimer.log('userUpdateHelpers.updateDBUserInfo start'); // log process time
   const user_id = userDBData.id;
   const language = req.body.language || 'en';
-  const response = [];
+  const response = {};
   
   try {
     // prepare data for update
@@ -109,8 +109,12 @@ const dbFunctions = {
   updateUserNewsletterModel: async function (user_id, data) {
     if (JSON.stringify(data) != '[]') {
       let found = await userNewsletterModel.findNewsletter(user_id, data);
+      if (!found || !found.id) {
+        throw new Error('Newsletter record not found');
+      }
       return await userNewsletterModel.update(found.id, data);
     }
+    return { success: true };
   },
 };
 
