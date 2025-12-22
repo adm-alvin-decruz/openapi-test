@@ -1,15 +1,13 @@
 // db
 const userModel = require('../../db/models/userModel');
-const userMembershipModel = require('../../db/models/userMembershipModel');
 const userNewsletterModel = require('../../db/models/userNewletterModel');
-const userCredentialModel = require('../../db/models/userCredentialModel');
-const userDetailModel = require('../../db/models/userDetailsModel');
 const userConfig = require('../../config/usersConfig');
-const dbConfig = require('../../config/dbConfig');
 const galaxyQueryService = require('../components/galaxy/services/galaxyQueryService');
 const galaxyHelpers = require('../components/galaxy/galaxyHelpers');
 const commonService = require('../../services/commonService');
 const galaxyWPService = require('../components/galaxy/services/galaxyWPService');
+const UpdateUserErrors = require('../../config/https/errors/updateUserErrors');
+const loggerService = require('../../logs/logger');
 
 require('dotenv').config();
 
@@ -65,36 +63,53 @@ async function updateDBUserInfo(req, prepareDBUpdateData, userDBData) {
   req['apiTimer'] = req.processTimer.apiRequestTimer();
   req.apiTimer.log('userUpdateHelpers.updateDBUserInfo start'); // log process time
   const user_id = userDBData.id;
+  const language = req.body.language || 'en';
   const response = [];
+  
   try {
     // prepare data for update
     const keys = Object.keys(prepareDBUpdateData);
 
-    keys.forEach((key) => {
+    for (const key of keys) {
       if (typeof dbFunctions[key] === 'function') {
-        response[dbFunctions[key]] = dbFunctions[key](user_id, prepareDBUpdateData[key]);
+        const result = await dbFunctions[key](user_id, prepareDBUpdateData[key]);
+        response[key] = result;
+        
+        // Check for errors in update result (same as membership passes)
+        if (result && result.error) {
+          throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
+        }
       } else {
         response[key] = `Warning: Function ${key} not found`;
       }
-    });
+    }
     req.apiTimer.end('userUpdateHelpers.updateDBUserInfo'); // log end time
+    return response;
   } catch (error) {
     req.apiTimer.end('userUpdateHelpers.updateDBUserInfo Error'); // log end time
-    response['error'] = error;
+    loggerService.error({
+      userUpdateHelpers: {
+        error: error,
+      },
+    }, 'userUpdateHelpers.updateDBUserInfo Error');
+    // Throw generic error (same as membership passes)
+    throw new Error(JSON.stringify(UpdateUserErrors.ciamUpdateUserErr(language)));
   }
 }
 
 const dbFunctions = {
   updateUsersModel: async function (user_id, data) {
     if (JSON.stringify(data) != '[]') {
-      await userModel.update(user_id, data);
+      const result = await userModel.update(user_id, data);
+      return result;
     }
+    return { success: true };
   },
 
   updateUserNewsletterModel: async function (user_id, data) {
     if (JSON.stringify(data) != '[]') {
       let found = await userNewsletterModel.findNewsletter(user_id, data);
-      let result = await userNewsletterModel.update(found.id, data);
+      return await userNewsletterModel.update(found.id, data);
     }
   },
 };
