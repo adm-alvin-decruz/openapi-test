@@ -58,8 +58,20 @@ async function getUserFullInfoByEmail(req) {
 
     const row = results[0];
 
-    const parseJsonColumn = (value) =>
-      value ? (typeof value === 'string' ? JSON.parse(value) : value) : [];
+    const parseJsonColumn = (value) => {
+      if (!value) {
+        return [];
+      }
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          console.error(`Failed to parse JSON data from database: ${value}`, e);
+          return [];
+        }
+      }
+      return value;
+    };
 
     const memberships = parseJsonColumn(row.memberships);
     const newsletters = parseJsonColumn(row.newsletters);
