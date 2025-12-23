@@ -52,42 +52,6 @@ function isUserExisted(userInfo) {
 }
 
 /**
- * Verifies the current and new email addresses of a user.
- *
- * @async
- * @function
- * @param {string} originalEmail - The original email address of the user.
- * @param {Object} userInfoOriginal - The user information associated with the original email.
- * @param {string} newEmail - The new email address to be verified.
- * @param {Object} userInfoNewEmail - The user information associated with the new email.
- * @param {string} language - The language preference for verification messages.
- * @returns {Promise<boolean>} - A promise that resolves to `true` if verification is successful, otherwise `false`.
- */
-async function verifyCurrentAndNewEmail({
-  originalEmail,
-  userInfoOriginal,
-  newEmail,
-  userInfoNewEmail,
-  language,
-}) {
-  try {
-    // If original email not existed - throw error record not found
-    if (!isUserExisted(userInfoOriginal)) {
-      await errorWrapper(UpdateUserErrors.ciamEmailNotExists(originalEmail, language));
-    }
-
-    // If new email is existed - throw error account being user by other
-    if (newEmail) {
-      if (isUserExisted(userInfoNewEmail)) {
-        await errorWrapper(UpdateUserErrors.ciamNewEmailBeingUsedErr(newEmail, language));
-      }
-    }
-  } catch (error) {
-    throw new Error(error);
-  }
-}
-
-/**
  * Update user password at Cognito.
  *
  * @async
@@ -370,7 +334,6 @@ async function updateDBUserInfo({ email, newEmail, data, userId, password, langu
 }
 
 module.exports = {
-  verifyCurrentAndNewEmail,
   getUserFromDBCognito,
   updateCognitoUserPassword,
   updateDBUserInfo,
