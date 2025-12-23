@@ -63,7 +63,6 @@ const { serializeError } = require('../../utils/errorHandler');
 const { secrets } = require('../../services/secretsService');
 const UpdateUserErrors = require('../../config/https/errors/updateUserErrors');
 
-
 /**
  * Function User signup service
  * @param {json} req
