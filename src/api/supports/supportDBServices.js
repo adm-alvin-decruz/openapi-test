@@ -9,13 +9,29 @@ async function getUserFullInfoByEmail(req) {
       u.mandai_id, u.source, u.status, u.created_at AS user_created_at,
       u.updated_at AS user_updated_at,
 
-      um.id AS membership_id, um.name AS membership_name, um.visual_id AS membership_visual_id,
-      um.expires_at AS membership_expires_at, um.created_at AS membership_created_at,
-      um.updated_at AS membership_updated_at,
+      (SELECT JSON_ARRAYAGG(
+        JSON_OBJECT(
+          'id', um.id,
+          'user_id', um.user_id,
+          'name', um.name,
+          'visual_id', um.visual_id,
+          'expires_at', um.expires_at,
+          'created_at', um.created_at,
+          'updated_at', um.updated_at
+        )
+      ) FROM user_memberships um WHERE um.user_id = u.id) AS memberships,
 
-      un.id AS newsletter_id, un.name AS newsletter_name, un.type AS newsletter_type,
-      un.subscribe AS newsletter_subscribed, un.created_at AS newsletter_created_at,
-      un.updated_at AS newsletter_updated_at,
+      (SELECT JSON_ARRAYAGG(
+        JSON_OBJECT(
+          'id', un.id,
+          'user_id', un.user_id,
+          'name', un.name,
+          'type', un.type,
+          'subscribed', un.subscribe,
+          'created_at', un.created_at,
+          'updated_at', un.updated_at
+        )
+      ) FROM user_newsletters un WHERE un.user_id = u.id) AS newsletters,
 
       ud.id AS details_id, ud.phone_number, ud.zoneinfo, ud.address, ud.picture,
       ud.vehicle_iu, ud.vehicle_plate, ud.extra AS user_extra,
@@ -25,10 +41,6 @@ async function getUserFullInfoByEmail(req) {
       uc.created_at AS credentials_created_at, uc.updated_at AS credentials_updated_at
     FROM
       users u
-    LEFT JOIN
-      user_memberships um ON u.id = um.user_id
-    LEFT JOIN
-      user_newsletters un ON u.id = un.user_id
     LEFT JOIN
       user_details ud ON u.id = ud.user_id
     LEFT JOIN
@@ -44,89 +56,56 @@ async function getUserFullInfoByEmail(req) {
       return null; // User not found
     }
 
-    // Initialize the response object
+    const row = results[0];
+
+    const parseJsonColumn = (value) =>
+      value ? (typeof value === 'string' ? JSON.parse(value) : value) : [];
+
+    const memberships = parseJsonColumn(row.memberships);
+    const newsletters = parseJsonColumn(row.newsletters);
+
     const response = {
-      user: {},
-      memberships: [],
-      newsletters: [],
-      details: {},
-      credentials: {},
+      user: {
+        id: row.user_id,
+        email: row.email,
+        given_name: row.given_name,
+        family_name: row.family_name,
+        birthdate: row.birthdate,
+        mandai_id: row.mandai_id,
+        source: row.source,
+        status: row.status,
+        created_at: row.user_created_at,
+        updated_at: row.user_updated_at,
+      },
+      memberships,
+      newsletters,
+      details: row.details_id
+        ? {
+            id: row.details_id,
+            user_id: row.user_id,
+            phone_number: row.phone_number,
+            zoneinfo: row.zoneinfo,
+            address: row.address,
+            picture: row.picture,
+            vehicle_iu: row.vehicle_iu,
+            vehicle_plate: row.vehicle_plate,
+            extra: row.user_extra,
+            created_at: row.details_created_at,
+            updated_at: row.details_updated_at,
+          }
+        : {},
+      credentials: row.credentials_id
+        ? {
+            id: row.credentials_id,
+            user_id: row.user_id,
+            username: row.username,
+            tokens: row.tokens,
+            last_login: row.last_login,
+            created_at: row.credentials_created_at,
+            updated_at: row.credentials_updated_at,
+          }
+        : {},
     };
-
-    // Process the results
-    results.forEach((row) => {
-      // User info (only need to do this once)
-      if (Object.keys(response.user).length === 0) {
-        response.user = {
-          id: row.user_id,
-          email: row.email,
-          given_name: row.given_name,
-          family_name: row.family_name,
-          birthdate: row.birthdate,
-          mandai_id: row.mandai_id,
-          source: row.source,
-          status: row.status,
-          created_at: row.user_created_at,
-          updated_at: row.user_updated_at,
-        };
-      }
-
-      // Memberships (can be multiple)
-      if (row.membership_id) {
-        response.memberships.push({
-          id: row.membership_id,
-          user_id: row.user_id,
-          name: row.membership_name,
-          visual_id: row.membership_visual_id,
-          expires_at: row.membership_expires_at,
-          created_at: row.membership_created_at,
-          updated_at: row.membership_updated_at,
-        });
-      }
-
-      // Newsletters (can be multiple)
-      if (row.newsletter_id) {
-        response.newsletters.push({
-          id: row.newsletter_id,
-          user_id: row.user_id,
-          name: row.newsletter_name,
-          type: row.newsletter_type,
-          subscribed: row.newsletter_subscribed,
-          created_at: row.newsletter_created_at,
-          updated_at: row.newsletter_updated_at,
-        });
-      }
-
-      // User details (only need to do this once)
-      if (Object.keys(response.details).length === 0 && row.details_id) {
-        response.details = {
-          id: row.details_id,
-          user_id: row.user_id,
-          phone_number: row.phone_number,
-          zoneinfo: row.zoneinfo,
-          address: row.address,
-          picture: row.picture,
-          vehicle_iu: row.vehicle_iu,
-          vehicle_plate: row.vehicle_plate,
-          extra: row.user_extra,
-          created_at: row.details_created_at,
-          updated_at: row.details_updated_at,
-        };
-      }
-
-      // User credentials (only need to do this once)
-      if (Object.keys(response.credentials).length === 0 && row.credentials_id) {
-        response.credentials = {
-          id: row.credentials_id,
-          user_id: row.user_id,
-          username: row.username,
-          tokens: row.tokens,
-          last_login: row.last_login,
-          created_at: row.credentials_created_at,
-          updated_at: row.credentials_updated_at,
-        };
-      }
-    });
 
     return response;
   } catch (error) {
