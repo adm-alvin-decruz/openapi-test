@@ -1,6 +1,7 @@
 const pool = require('../../db/connections/mysqlConn');
 const userModel = require('../../db/models/userModel');
 const userConfig = require('../../config/usersConfig');
+const { parseJsonColumn } = require('../../helpers/dbHelpers');
 
 async function getUserFullInfoByEmail(req) {
   const email = req.body?.email;
@@ -62,21 +63,6 @@ async function getUserFullInfoByEmail(req) {
     }
 
     const row = results[0];
-
-    const parseJsonColumn = (value) => {
-      if (!value) {
-        return [];
-      }
-      if (typeof value === 'string') {
-        try {
-          return JSON.parse(value);
-        } catch (e) {
-          console.error(`Failed to parse JSON data from database: ${value}`, e);
-          return [];
-        }
-      }
-      return value;
-    };
 
     const memberships = parseJsonColumn(row.memberships);
     const newsletters = parseJsonColumn(row.newsletters);
