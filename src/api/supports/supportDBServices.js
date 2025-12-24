@@ -5,9 +5,6 @@ const { parseJsonColumn } = require('../../helpers/dbHelpers');
 
 async function getUserFullInfoByEmail(req) {
   const email = req.body?.email;
-  if (!email) {
-    return null;
-  }
 
   const query = `
     SELECT
