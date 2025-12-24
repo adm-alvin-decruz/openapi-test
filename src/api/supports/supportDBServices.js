@@ -3,6 +3,11 @@ const userModel = require('../../db/models/userModel');
 const userConfig = require('../../config/usersConfig');
 
 async function getUserFullInfoByEmail(req) {
+  const email = req.body?.email;
+  if (!email) {
+    return null;
+  }
+
   const query = `
     SELECT
       u.id AS user_id, u.email, u.given_name, u.family_name, u.birthdate,
@@ -50,7 +55,7 @@ async function getUserFullInfoByEmail(req) {
   `;
 
   try {
-    const results = await pool.query(query, [req.body.email]);
+    const results = await pool.query(query, [email]);
 
     if (results.length === 0) {
       return null; // User not found
