@@ -1,6 +1,7 @@
 // use dotenv
 require('dotenv').config();
 const appConfig = require('../config/appConfig');
+const appConfigService = require('../services/appConfigService');
 
 /**
  * log function
@@ -13,7 +14,8 @@ const appConfig = require('../config/appConfig');
  */
 function log(logObj, action = null) {
   if (process.env.APP_LOG_SWITCH === 'true') {
-    console.log(`${appConfig.LOG_APP_PREFIX} ` + action, logObj);
+    const prefix = appConfigService.get('LOG_APP_PREFIX') || appConfig.LOG_APP_PREFIX;
+    console.log(`${prefix} ` + action, logObj);
   }
 }
 
@@ -59,7 +61,8 @@ function error(logObj, req = {}, action = null) {
     if (req.apiPath === undefined) {
       apiPath = '';
     }
-    console.error(appConfig.LOG_APP_PREFIX + ' ' + action + ' ' + apiPath + ' ', logObj);
+    const prefix = appConfigService.get('LOG_APP_PREFIX') || appConfig.LOG_APP_PREFIX;
+    console.error(prefix + ' ' + action + ' ' + apiPath + ' ', logObj);
   }
 }
 
