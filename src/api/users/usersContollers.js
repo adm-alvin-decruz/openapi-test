@@ -31,6 +31,7 @@ const userVerifyTokenService = require('./userVerifyTokenService');
 const UserGetMembershipPassesJob = require('./userGetMembershipPassesJob');
 const { maskKeyRandomly } = require('../../utils/common');
 const { UsersServicesV2 } = require('./usersServicesV2');
+const UpdateUserErrors = require('../../config/https/errors/updateUserErrors');
 
 /**
  * Create user using admin function
@@ -269,28 +270,27 @@ async function adminUpdateUser(req, cognitoParams, databaseParams) {
         );
       }
     } else {
-      // prepare response data
-      let errorConfig = {
-        email: 'This email address does not have a Mandai Account.',
-      };
+      // User does not exist - return error with same format as membership-passes flow
+      const language = req.body.language || 'en';
+      const email = req.body.email;
+      
+      // Use UpdateUserErrors to match membership-passes format
+      const errorResponse = UpdateUserErrors.ciamEmailNotExists(email, language);
+      
       // prepare logs
       let logObj = loggerService.build(
         'user',
         'usersControllers.adminUpdateUser',
         req,
-        'MWG_CIAM_PARAMS_ERR',
+        'MWG_CIAM_USER_UPDATE_ERR',
         {},
-        errorConfig,
+        { email: email },
       );
-      // prepare error params response
+      logObj['response_to_client'] = errorResponse;
+      loggerService.log(logObj);
+      
       req.apiTimer.end('usersController.adminUpdateUser'); // log end time
-      return responseHelper.craftUsersApiResponse(
-        'usersControllers.adminUpdateUser',
-        errorConfig,
-        'MWG_CIAM_PARAMS_ERR',
-        'USERS_UPDATE',
-        logObj,
-      );
+      return errorResponse;
     }
   } catch (error) {
     req.apiTimer.end('usersController.adminUpdateUser'); // log end time
