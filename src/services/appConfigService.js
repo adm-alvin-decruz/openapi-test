@@ -68,8 +68,6 @@ class AppConfigService {
       if (!configs || (Array.isArray(configs) && configs.length === 0)) {
         loggerService.warn(
           { appConfigService: { message: 'No app-config found in database, using file config as fallback' } },
-          {},
-          '[CIAM-MAIN] AppConfigService.initialize - No DB configs found'
         );
         // Fallback to file config
         this.loadFromFileConfig();
@@ -139,9 +137,7 @@ class AppConfigService {
           value = JSON.parse(value);
         } catch (e) {
           loggerService.warn(
-            { appConfigService: { key, message: 'Failed to parse JSON, keeping as string', error: e } },
-            {},
-            'AppConfigService.loadFromFileConfig - Failed to parse JSON'
+            { appConfigService: { key, message: 'Failed to parse JSON, keeping as string', error: e } }
           );
         }
       }
@@ -159,9 +155,7 @@ class AppConfigService {
   get(key) {
     if (!this.initialized) {
       loggerService.warn(
-        { appConfigService: { key, message: 'Cache not initialized, returning undefined' } },
-        {},
-        'AppConfigService.get - Cache not initialized'
+        { appConfigService: { key, message: 'Cache not initialized, returning undefined' } }
       );
       // Fallback to file config if cache not initialized
       return appConfig[key];
@@ -171,9 +165,7 @@ class AppConfigService {
     
     if (value === undefined) {
       loggerService.warn(
-        { appConfigService: { key, message: 'Key not found in cache, falling back to file config' } },
-        {},
-        'AppConfigService.get - Key not found'
+        { appConfigService: { key, message: 'Key not found in cache, falling back to file config' } }
       );
       // Fallback to file config
       return appConfig[key];
