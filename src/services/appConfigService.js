@@ -68,8 +68,6 @@ class AppConfigService {
       if (!configs || (Array.isArray(configs) && configs.length === 0)) {
         loggerService.warn(
           { appConfigService: { message: 'No app-config found in database, using file config as fallback' } },
-          {},
-          '[CIAM-MAIN] AppConfigService.initialize - No DB configs found'
         );
         // Fallback to file config
         this.loadFromFileConfig();
@@ -134,14 +132,12 @@ class AppConfigService {
       let value = appConfig[key];
       
       // Parse JSON strings to actual JSON
-      if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
+      if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{')) && key !== 'LOG_APP_PREFIX') {
         try {
           value = JSON.parse(value);
         } catch (e) {
           loggerService.warn(
-            { appConfigService: { key, message: 'Failed to parse JSON, keeping as string', error: e } },
-            {},
-            '[CIAM-MAIN] AppConfigService.loadFromFileConfig - Failed to parse JSON'
+            { appConfigService: { key, message: 'Failed to parse JSON, keeping as string', error: e } }
           );
         }
       }
@@ -159,9 +155,7 @@ class AppConfigService {
   get(key) {
     if (!this.initialized) {
       loggerService.warn(
-        { appConfigService: { key, message: 'Cache not initialized, returning undefined' } },
-        {},
-        '[CIAM-MAIN] AppConfigService.get - Cache not initialized'
+        { appConfigService: { key, message: 'Cache not initialized, returning undefined' } }
       );
       // Fallback to file config if cache not initialized
       return appConfig[key];
@@ -171,9 +165,7 @@ class AppConfigService {
     
     if (value === undefined) {
       loggerService.warn(
-        { appConfigService: { key, message: 'Key not found in cache, falling back to file config' } },
-        {},
-        '[CIAM-MAIN] AppConfigService.get - Key not found'
+        { appConfigService: { key, message: 'Key not found in cache, falling back to file config' } }
       );
       // Fallback to file config
       return appConfig[key];
@@ -209,7 +201,7 @@ class AppConfigService {
     loggerService.info(
       { appConfigService: { message: 'Refreshing cache' } },
       {},
-      '[CIAM-MAIN] AppConfigService.refresh - Starting'
+      'AppConfigService.refresh - Starting'
     );
 
     try {
@@ -223,7 +215,7 @@ class AppConfigService {
       loggerService.info(
         { appConfigService: { message: 'Cache refreshed successfully' } },
         {},
-        '[CIAM-MAIN] AppConfigService.refresh - Completed'
+        'AppConfigService.refresh - Completed'
       );
     } catch (error) {
       loggerService.error(
@@ -234,7 +226,7 @@ class AppConfigService {
           },
         },
         {},
-        '[CIAM-MAIN] AppConfigService.refresh - Failed'
+        'AppConfigService.refresh - Failed'
       );
       throw error;
     }
@@ -272,7 +264,7 @@ class AppConfigService {
     loggerService.info(
       { appConfigService: { message: 'Clearing cache' } },
       {},
-      '[CIAM-MAIN] AppConfigService.clear'
+      'AppConfigService.clear'
     );
     this.cache.clear();
     this.initialized = false;
@@ -298,7 +290,7 @@ class AppConfigService {
           },
         },
         {},
-        '[CIAM-MAIN] AppConfigService.shouldRefreshFromEnvVar'
+        'AppConfigService.shouldRefreshFromEnvVar'
       );
       this.lastEnvVarValue = currentEnvVar;
       return true;
