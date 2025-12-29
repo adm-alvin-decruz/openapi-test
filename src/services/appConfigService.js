@@ -103,7 +103,7 @@ class AppConfigService {
       loggerService.error(
         {
           appConfigService: {
-            error: new Error(error),
+            error: error,
             message: 'Failed to initialize cache, using file config as fallback',
           },
         },
@@ -229,7 +229,7 @@ class AppConfigService {
       loggerService.error(
         {
           appConfigService: {
-            error: new Error(error),
+            error: error,
             message: 'Failed to refresh cache',
           },
         },

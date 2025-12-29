@@ -14,6 +14,7 @@ const helmetMiddleware = require('./src/config/helmetConfig');
 const permissionsPolicyMiddleware = require('./src/config/permission-policy');
 const membershipMyAccountRoutes = require('./src/api/users/myAccount/membership/membershipRoutes');
 const appConfigService = require('./src/services/appConfigService');
+const loggerService = require('./src/logs/logger');
 
 app.set('query parser', (str) => {
   return qs.parse(str, { allowDots: true, depth: 10 });
@@ -34,7 +35,7 @@ app.use(async (req, res, next) => {
       await appConfigService.refresh();
     } catch (error) {
       // Log error but continue - cache will still work with old values
-      console.error('[CIAM-MAIN] Failed to refresh app-config cache from env var trigger:', error);
+      loggerService.error('Failed to refresh app-config cache from env var trigger:', error);
     }
   }
 
@@ -44,7 +45,7 @@ app.use(async (req, res, next) => {
       await appConfigService.initialize();
     } catch (error) {
       // Log error but continue - will fallback to file config
-      console.error('[CIAM-MAIN] Failed to initialize app-config cache:', error);
+      loggerService.error('Failed to initialize app-config cache:', error);
     }
   }
   next();
@@ -80,7 +81,7 @@ module.exports.handler = async (event, context, callback) => {
       await appConfigService.initialize();
     } catch (error) {
       // Log error but continue - will fallback to file config
-      console.error('[CIAM-MAIN] Failed to initialize app-config cache on Lambda start:', error);
+      loggerService.error('Failed to initialize app-config cache on Lambda start:', error);
     }
   }
 
