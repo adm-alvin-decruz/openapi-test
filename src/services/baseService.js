@@ -878,6 +878,8 @@ class BaseService {
       countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
       // Remove pagination from count query (not needed for counting)
       countQueryBuilder.skip(undefined).take(undefined);
+      // Remove GROUP BY from count query - COUNT(DISTINCT) handles duplicates
+      // Note: We don't add GROUP BY to count query because COUNT(DISTINCT) already counts unique users
       const countResult = await countQueryBuilder.getRawOne();
       total = parseInt(countResult?.total || 0, 10);
     } else {
@@ -894,18 +896,57 @@ class BaseService {
     // - Joined table columns: Already aggregated using GROUP_CONCAT(DISTINCT ...) in applyJoins()
     //   when using leftJoin/innerJoin with selectFields
     //
-    // If you encounter ONLY_FULL_GROUP_BY errors, consider:
-    // 1. Ensure joined fields use GROUP_CONCAT aggregation (already handled in applyJoins)
-    // 2. Using a subquery approach for complex cases
-    // 3. Explicitly aggregating non-grouped columns with MIN()/MAX()/ANY_VALUE()
+    // IMPORTANT: TypeORM may not handle LIMIT/OFFSET correctly with GROUP BY.
+    // When GROUP BY is present, TypeORM might apply LIMIT/OFFSET before GROUP BY in the generated SQL.
+    // To fix this, we use a subquery approach with proper parameter binding using queryRunner.
+    let rawData;
     if (hasJoins) {
       queryBuilder.groupBy(`${this.alias}.id`);
+      
+      // Build inner query (with GROUP BY and ORDER BY, but without LIMIT/OFFSET)
+      let innerQuery = queryBuilder.getQuery();
+      const innerParams = queryBuilder.getParameters();
+      
+      // Convert named parameters (:paramName) to positional parameters (?)
+      // Extract parameter names in order they appear in SQL
+      const paramNames = [];
+      const paramPattern = /:(\w+)/g;
+      let match;
+      while ((match = paramPattern.exec(innerQuery)) !== null) {
+        const paramName = match[1];
+        if (!paramNames.includes(paramName)) {
+          paramNames.push(paramName);
+        }
+      }
+      
+      // Replace named parameters with ? and build positional parameter array
+      const positionalParams = [];
+      innerQuery = innerQuery.replace(/:(\w+)/g, () => {
+        const paramName = paramNames[positionalParams.length];
+        positionalParams.push(innerParams[paramName]);
+        return '?';
+      });
+      
+      // Build outer query with LIMIT/OFFSET
+      const skip = (pagination.page - 1) * pagination.limit;
+      const outerQuery = `SELECT * FROM (${innerQuery}) as paginated_query LIMIT ? OFFSET ?`;
+      
+      // Add LIMIT and OFFSET parameters
+      positionalParams.push(pagination.limit, skip);
+      
+      // Use queryRunner to execute raw SQL with positional parameters
+      const repository = await this.getRepository();
+      const queryRunner = repository.manager.connection.createQueryRunner();
+      try {
+        rawData = await queryRunner.query(outerQuery, positionalParams);
+      } finally {
+        await queryRunner.release();
+      }
+    } else {
+      const skip = (pagination.page - 1) * pagination.limit;
+      queryBuilder.skip(skip).take(pagination.limit);
+      rawData = await queryBuilder.getRawMany();
     }
-
-    const skip = (pagination.page - 1) * pagination.limit;
-    queryBuilder.skip(skip).take(pagination.limit);
-
-    const rawData = await queryBuilder.getRawMany();
     const formattedData = this.formatDataWithRelatedFields(rawData, options.joins || []);
 
     return {
