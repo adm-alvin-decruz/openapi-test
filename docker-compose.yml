@@ -23,7 +23,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
 
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3.0.2
     container_name: ciam-microservice-localstack
     env_file:
       - local.env

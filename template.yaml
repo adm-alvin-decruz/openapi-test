@@ -24,7 +24,7 @@ Globals:
         AWS_REGION_NAME: "ap-southeast-1"
         # AWS credentials are NOT set here - they come from AWS profile via --profile flag
         # SAM will automatically pass real AWS credentials to container for Cognito connection
-        USER_POOL_ID: "ap-southeast-1_7KXtK9lOe"
+        # USER_POOL_ID is loaded from sam-env.json (generated from local.env)
         USE_LOCALSTACK: "true"
         LOCALSTACK_ENDPOINT: "http://host.docker.internal:4566"
         NODE_ENV: "dev"

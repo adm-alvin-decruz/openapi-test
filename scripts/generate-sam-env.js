@@ -44,6 +44,14 @@ envContent.split('\n').forEach((line) => {
   }
 });
 
+// Validate required environment variables
+// USER_POOL_ID must be set in local.env - no hardcoded fallback for security
+if (!envVars.USER_POOL_ID) {
+  console.error('❌ Error: USER_POOL_ID is required in local.env');
+  console.error('   Please set USER_POOL_ID in your local.env file');
+  process.exit(1);
+}
+
 // Create SAM env structure
 // Note: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are NOT included here
 // They will be automatically passed from AWS profile via --profile flag
@@ -65,7 +73,7 @@ const samEnv = {
     AWS_REGION_NAME: envVars.AWS_REGION_NAME || 'ap-southeast-1',
     // AWS credentials are NOT set here - they come from AWS profile via --profile flag
     // This allows SAM to use real AWS credentials for Cognito connection
-    USER_POOL_ID: envVars.USER_POOL_ID || 'ap-southeast-1_7KXtK9lOe',
+    USER_POOL_ID: envVars.USER_POOL_ID,
     USE_LOCALSTACK: envVars.USE_LOCALSTACK || 'true',
     LOCALSTACK_ENDPOINT: envVars.LOCALSTACK_ENDPOINT || 'http://host.docker.internal:4566',
     NODE_ENV: envVars.NODE_ENV || 'dev',

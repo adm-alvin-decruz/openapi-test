@@ -54,7 +54,8 @@ CIAM Cognito API Microservice for Mandai Wildlife Group
        --parameters '{"host":["<RDS_ENDPOINT>"],"portNumber":["3306"],"localPortNumber":["3307"]}'
 
    # 2. In another terminal, dump schema from test database
-   mysqldump -h 127.0.0.1 -P 3307 -u <TEST_DB_USER> -p<TEST_DB_PASSWORD> \
+   # Note: Use --password flag to prompt for password securely (or set MYSQL_PWD environment variable)
+   mysqldump -h 127.0.0.1 -P 3307 -u <TEST_DB_USER> --password \
        --ssl-mode=REQUIRED \
        --no-data \
        --routines \
@@ -63,7 +64,8 @@ CIAM Cognito API Microservice for Mandai Wildlife Group
        <TEST_DB_NAME> > schema.sql
 
    # 3. Import schema into local database
-   mysql -h 127.0.0.1 -P 3306 -u <LOCAL_DB_USER> -p<LOCAL_DB_PASSWORD> <LOCAL_DB_NAME> < schema.sql
+   # Note: Use --password flag to prompt for password securely (or set MYSQL_PWD environment variable)
+   mysql -h 127.0.0.1 -P 3306 -u <LOCAL_DB_USER> --password <LOCAL_DB_NAME> < schema.sql
    ```
 
    **Note:** Replace placeholders with actual values:
