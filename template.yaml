@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CIAM Microservice Lambda Function - Local Development Template
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        APP_ENV: dev
+        IS_LOCAL: "true"
+        SAM_LOCAL: "true"
+        APP_LOG_SWITCH: "true"
+        PARAMETERS_SECRETS_EXTENSION_HTTP_PORT: "4566"
+        MYSQL_MASTER_HOST: "host.docker.internal"
+        MYSQL_MASTER_PORT: "3306"
+        MYSQL_MASTER_DATABASE: "ciam_dev"
+        MYSQL_SLAVE_HOST: "host.docker.internal"
+        MYSQL_SLAVE_PORT: "3306"
+        MYSQL_SLAVE_DATABASE: "ciam_dev"
+        AWS_REGION: "ap-southeast-1"
+        AWS_REGION_NAME: "ap-southeast-1"
+        # AWS credentials are NOT set here - they come from AWS profile via --profile flag
+        # SAM will automatically pass real AWS credentials to container for Cognito connection
+        # USER_POOL_ID is loaded from sam-env.json (generated from local.env)
+        USE_LOCALSTACK: "true"
+        LOCALSTACK_ENDPOINT: "http://host.docker.internal:4566"
+        NODE_ENV: "dev"
+Resources:
+  CiamApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.handler
+      # CodeUri trỏ đến thư mục hiện tại (ciam-microservice)
+      CodeUri: .
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            Cors:
+              AllowMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+                - PATCH
+              AllowHeaders:
+                - "*"
+              AllowOrigin: "*"
+        ApiRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            Cors:
+              AllowMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+                - PATCH
+              AllowHeaders:
+                - "*"
+              AllowOrigin: "*"
+
+Outputs:
+  CiamApi:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  CiamApiFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt CiamApiFunction.Arn
+
+

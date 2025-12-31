@@ -1,0 +1,22 @@
+version = 0.1
+
+[default]
+[default.global.parameters]
+# Use AWS profile from environment variable if set
+# If AWS_PROFILE is not set, SAM will use default profile
+# To use a specific profile: export AWS_PROFILE=your-profile-name
+
+[default.local_start_api.parameters]
+# Use profile from environment variable if set
+# SAM will automatically use AWS_PROFILE if available
+# Default port
+port = 3000
+# Warm containers to improve performance
+warm-containers = "EAGER"
+
+[default.build.parameters]
+# Build doesn't require AWS credentials, profile is optional
+
+[default.local_invoke.parameters]
+# Use profile from environment variable if set
+

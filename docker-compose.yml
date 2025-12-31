@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ciam-microservice-mysql
+    env_file:
+      - local.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ciam_dev}
+      MYSQL_USER: ${MYSQL_USER:-ciam_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ciam_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password
+
+  localstack:
+    image: localstack/localstack:3.0.2
+    container_name: ciam-microservice-localstack
+    env_file:
+      - local.env
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=${LOCALSTACK_SERVICES:-sqs,secretsmanager}
+      - DEBUG=${LOCALSTACK_DEBUG:-1}
+      - DATA_DIR=/var/lib/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_DEFAULT_REGION=${AWS_REGION:-ap-southeast-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - DNS_ADDRESS=0            # Disable DNS service to avoid port 53 conflict
+      - SKIP_SSL_CERT_DOWNLOAD=1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
+  localstack_data:
+
