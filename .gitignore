@@ -142,3 +142,6 @@ dist
 
 #IDEs and editors
 .idea/
+.aws-sam/
+local.env
+sam-env.json
