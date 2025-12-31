@@ -1,6 +1,6 @@
 const BaseService = require('../../services/baseService');
 const loggerService = require('../../logs/logger');
-const appConfig = require('../../config/appConfig');
+const appConfigService = require('../../services/appConfigService');
 const UserDTO = require('../dtos/UserDTO');
 
 /**
@@ -159,9 +159,9 @@ class UsersServicesV2 extends BaseService {
 
         relatedFieldMappings: relatedFieldMappings,
 
-        defaultPage: appConfig.DEFAULT_PAGE || 1,
-        defaultLimit: appConfig.DEFAULT_LIMIT || 50,
-        maxLimit: appConfig.MAX_LIMIT || 250,
+        defaultPage: appConfigService.get('DEFAULT_PAGE') || 1,
+        defaultLimit: appConfigService.get('DEFAULT_LIMIT') || 50,
+        maxLimit: appConfigService.get('MAX_LIMIT') || 250,
 
         // Sorting configuration from DTO
         ...UserDTO.getDefaultSortConfig(),

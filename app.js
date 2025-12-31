@@ -17,7 +17,7 @@ const appConfigService = require('./src/services/appConfigService');
 const loggerService = require('./src/logs/logger');
 
 app.set('query parser', (str) => {
-  return qs.parse(str, { allowDots: true, depth: 10 });
+  return qs.parse(str, { allowDots: true, depth: 10, arrayLimit: 100 });
 });
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));

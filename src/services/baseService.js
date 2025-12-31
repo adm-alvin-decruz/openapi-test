@@ -878,6 +878,8 @@ class BaseService {
       countQueryBuilder.addSelect(`COUNT(DISTINCT ${this.alias}.id)`, 'total');
       // Remove pagination from count query (not needed for counting)
       countQueryBuilder.skip(undefined).take(undefined);
+      // Remove GROUP BY from count query - COUNT(DISTINCT) handles duplicates
+      // Note: We don't add GROUP BY to count query because COUNT(DISTINCT) already counts unique users
       const countResult = await countQueryBuilder.getRawOne();
       total = parseInt(countResult?.total || 0, 10);
     } else {
@@ -894,18 +896,40 @@ class BaseService {
     // - Joined table columns: Already aggregated using GROUP_CONCAT(DISTINCT ...) in applyJoins()
     //   when using leftJoin/innerJoin with selectFields
     //
-    // If you encounter ONLY_FULL_GROUP_BY errors, consider:
-    // 1. Ensure joined fields use GROUP_CONCAT aggregation (already handled in applyJoins)
-    // 2. Using a subquery approach for complex cases
-    // 3. Explicitly aggregating non-grouped columns with MIN()/MAX()/ANY_VALUE()
+    // IMPORTANT: TypeORM may not handle LIMIT/OFFSET correctly with GROUP BY.
+    // When GROUP BY is present, TypeORM might apply LIMIT/OFFSET before GROUP BY in the generated SQL.
+    // To fix this, we use a subquery approach with proper parameter binding using queryRunner.
+    let rawData;
     if (hasJoins) {
       queryBuilder.groupBy(`${this.alias}.id`);
+      
+      // Use getQueryAndParameters() to get SQL with ? placeholders and positional parameters
+      // This method safely handles all parameter types including:
+      // - Named parameters used multiple times
+      // - IN clauses with spread syntax (:...paramName)
+      // - All other TypeORM parameter formats
+      const [innerQuery, innerParams] = queryBuilder.getQueryAndParameters();
+      
+      // Build outer query with LIMIT/OFFSET
+      const skip = (pagination.page - 1) * pagination.limit;
+      const outerQuery = `SELECT * FROM (${innerQuery}) as paginated_query LIMIT ? OFFSET ?`;
+      
+      // Add LIMIT and OFFSET parameters to the existing parameter array
+      const allParams = [...innerParams, pagination.limit, skip];
+      
+      // Use queryRunner to execute raw SQL with positional parameters
+      const repository = await this.getRepository();
+      const queryRunner = repository.manager.connection.createQueryRunner();
+      try {
+        rawData = await queryRunner.query(outerQuery, allParams);
+      } finally {
+        await queryRunner.release();
+      }
+    } else {
+      const skip = (pagination.page - 1) * pagination.limit;
+      queryBuilder.skip(skip).take(pagination.limit);
+      rawData = await queryBuilder.getRawMany();
     }
-
-    const skip = (pagination.page - 1) * pagination.limit;
-    queryBuilder.skip(skip).take(pagination.limit);
-
-    const rawData = await queryBuilder.getRawMany();
     const formattedData = this.formatDataWithRelatedFields(rawData, options.joins || []);
 
     return {
