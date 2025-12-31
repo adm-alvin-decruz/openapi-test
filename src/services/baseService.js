@@ -903,42 +903,25 @@ class BaseService {
     if (hasJoins) {
       queryBuilder.groupBy(`${this.alias}.id`);
       
-      // Build inner query (with GROUP BY and ORDER BY, but without LIMIT/OFFSET)
-      let innerQuery = queryBuilder.getQuery();
-      const innerParams = queryBuilder.getParameters();
-      
-      // Convert named parameters (:paramName) to positional parameters (?)
-      // Extract parameter names in order they appear in SQL
-      const paramNames = [];
-      const paramPattern = /:(\w+)/g;
-      let match;
-      while ((match = paramPattern.exec(innerQuery)) !== null) {
-        const paramName = match[1];
-        if (!paramNames.includes(paramName)) {
-          paramNames.push(paramName);
-        }
-      }
-      
-      // Replace named parameters with ? and build positional parameter array
-      const positionalParams = [];
-      innerQuery = innerQuery.replace(/:(\w+)/g, () => {
-        const paramName = paramNames[positionalParams.length];
-        positionalParams.push(innerParams[paramName]);
-        return '?';
-      });
+      // Use getQueryAndParameters() to get SQL with ? placeholders and positional parameters
+      // This method safely handles all parameter types including:
+      // - Named parameters used multiple times
+      // - IN clauses with spread syntax (:...paramName)
+      // - All other TypeORM parameter formats
+      const [innerQuery, innerParams] = queryBuilder.getQueryAndParameters();
       
       // Build outer query with LIMIT/OFFSET
       const skip = (pagination.page - 1) * pagination.limit;
       const outerQuery = `SELECT * FROM (${innerQuery}) as paginated_query LIMIT ? OFFSET ?`;
       
-      // Add LIMIT and OFFSET parameters
-      positionalParams.push(pagination.limit, skip);
+      // Add LIMIT and OFFSET parameters to the existing parameter array
+      const allParams = [...innerParams, pagination.limit, skip];
       
       // Use queryRunner to execute raw SQL with positional parameters
       const repository = await this.getRepository();
       const queryRunner = repository.manager.connection.createQueryRunner();
       try {
-        rawData = await queryRunner.query(outerQuery, positionalParams);
+        rawData = await queryRunner.query(outerQuery, allParams);
       } finally {
         await queryRunner.release();
       }
