@@ -29,18 +29,16 @@ class AppConfigService {
    */
   async initialize() {
     if (this.initialized) {
-      loggerService.info(
+      loggerService.log(
         { appConfigService: { message: 'Cache already initialized' } },
-        {},
         '[CIAM-MAIN] AppConfigService.initialize - Already initialized'
       );
       return;
     }
 
     if (this.initializing) {
-      loggerService.info(
+      loggerService.log(
         { appConfigService: { message: 'Initialization already in progress' } },
-        {},
         '[CIAM-MAIN] AppConfigService.initialize - Waiting for initialization'
       );
       // Wait for initialization to complete
@@ -53,19 +51,15 @@ class AppConfigService {
     this.initializing = true;
 
     try {
-      loggerService.info(
+      loggerService.log(
         { appConfigService: { message: 'Loading app-config from database' } },
-        {},
         '[CIAM-MAIN] AppConfigService.initialize - Starting'
       );
 
       // Load all configs with config='app-config'
-      const result = await configsModel.findByConfig('app-config');
-      
+      const configFromDB = await configsModel.findByConfig('app-config');
       // pool.query returns [rows, fields]
-      const configs = Array.isArray(result) && result.length > 0 ? result[0] : result;
-
-      if (!configs || (Array.isArray(configs) && configs.length === 0)) {
+      if (!configFromDB || (Array.isArray(configFromDB) && configFromDB.length === 0)) {
         loggerService.warn(
           { appConfigService: { message: 'No app-config found in database, using file config as fallback' } },
         );
@@ -78,21 +72,20 @@ class AppConfigService {
 
       // Build cache map: key -> value
       // configs is an array of row objects
-      const configsArray = Array.isArray(configs) ? configs : [configs];
+      const configsArray = Array.isArray(configFromDB) ? configFromDB : [configFromDB];
       for (const config of configsArray) {
         if (config && config.key && config.value !== null) {
           this.cache.set(config.key, config.value);
         }
       }
 
-      loggerService.info(
+      loggerService.log(
         {
           appConfigService: {
             message: 'Cache initialized successfully',
             keysCount: this.cache.size,
           },
         },
-        {},
         '[CIAM-MAIN] AppConfigService.initialize - Completed'
       );
 
@@ -121,9 +114,8 @@ class AppConfigService {
    * @private
    */
   loadFromFileConfig() {
-    loggerService.info(
+    loggerService.log(
       { appConfigService: { message: 'Loading from file config' } },
-      {},
       '[CIAM-MAIN] AppConfigService.loadFromFileConfig'
     );
 
@@ -261,9 +253,8 @@ class AppConfigService {
    * @returns {void}
    */
   clear() {
-    loggerService.info(
+    loggerService.log(
       { appConfigService: { message: 'Clearing cache' } },
-      {},
       'AppConfigService.clear'
     );
     this.cache.clear();
@@ -281,7 +272,7 @@ class AppConfigService {
     const currentEnvVar = process.env.RELOAD_APP_ID_CACHE || null;
     
     if (currentEnvVar !== this.lastEnvVarValue) {
-      loggerService.info(
+      loggerService.log(
         {
           appConfigService: {
             message: 'Environment variable changed, cache refresh needed',
@@ -289,7 +280,6 @@ class AppConfigService {
             newValue: currentEnvVar,
           },
         },
-        {},
         'AppConfigService.shouldRefreshFromEnvVar'
       );
       this.lastEnvVarValue = currentEnvVar;
