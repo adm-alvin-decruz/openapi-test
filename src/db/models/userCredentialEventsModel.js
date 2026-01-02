@@ -25,6 +25,7 @@ class UserCredentialEventsModel {
 
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        id: result.insertId,
         user_id: result.insertId,
       };
     } catch (error) {
@@ -64,6 +65,33 @@ class UserCredentialEventsModel {
         },
         {},
         '[CIAM] UserCredentialEventsModel.updateAwsSession - Failed',
+      );
+      throw error;
+    }
+  }
+
+  static async updateStatus(id, status) {
+    const sql = `UPDATE user_credential_events
+      SET status = ?, updated_at = ?
+      WHERE id = ?`;
+    const params = [status, getCurrentUTCTimestamp(), id];
+    try {
+      await execute(sql, params);
+
+      return {
+        sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+        id,
+      };
+    } catch (error) {
+      loggerService.error(
+        {
+          UserCredentialEventsModel: {
+            error: new Error(error),
+            sql_statement: commonService.replaceSqlPlaceholders(sql, params),
+          },
+        },
+        {},
+        '[CIAM] UserCredentialEventsModel.updateStatus - Failed',
       );
       throw error;
     }

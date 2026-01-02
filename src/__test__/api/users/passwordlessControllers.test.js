@@ -25,6 +25,7 @@ jest.mock('../../../api/users/helpers/userUpdateMembershipPassesHelper', () => (
 
 jest.mock('../../../api/users/userCredentialEventService', () => ({
   createEvent: jest.fn(),
+  updateEventStatus: jest.fn(),
 }));
 
 jest.mock('../../../api/users/myAccount/passwordless/passwordlessSendCodeServices', () => ({
@@ -68,7 +69,7 @@ const { cognitoInitiatePasswordlessLogin } = require('../../../services/cognitoS
 const {
   getUserFromDBCognito,
 } = require('../../../api/users/helpers/userUpdateMembershipPassesHelper');
-const { createEvent } = require('../../../api/users/userCredentialEventService');
+const { createEvent, updateEventStatus } = require('../../../api/users/userCredentialEventService');
 const {
   updateTokenSession,
 } = require('../../../api/users/myAccount/passwordless/passwordlessSendCodeServices');
@@ -193,6 +194,7 @@ describe('passwordlessControllers', () => {
 
       await expect(sendCode(mockReq)).rejects.toThrow('Cognito error');
       expect(createEvent).toHaveBeenCalled();
+      expect(updateEventStatus).toHaveBeenCalledWith(1, STATUS.FAILED);
     });
   });
 });
