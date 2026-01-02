@@ -37,6 +37,20 @@ async function sendCode(req) {
       '[CIAM] Start Send OTP Request',
     );
 
+    // CIAM-595: Get user info and create SEND_OTP event BEFORE calling Cognito
+    // This prevents race condition where concurrent requests both pass cooldown check
+    const { db: userInfo } = await getUserFromDBCognito(email);
+    await createEvent(
+      {
+        eventType: EVENTS.SEND_OTP,
+        data: { email, pending: true },
+        source: 7,
+        status: STATUS.SUCCESS,
+      },
+      userInfo.id,
+    );
+    console.log('[passwordlessControllers.sendCode] Created SEND_OTP event before Cognito call');
+
     const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
     console.log(
       '[passwordlessControllers.sendCode] Run Cognito AdminInitiateAuth:',
