@@ -26,7 +26,6 @@ class UserCredentialEventsModel {
       return {
         sql_statement: commonService.replaceSqlPlaceholders(sql, params),
         id: result.insertId,
-        user_id: result.insertId,
       };
     } catch (error) {
       loggerService.error(

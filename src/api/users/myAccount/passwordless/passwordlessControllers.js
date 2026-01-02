@@ -49,7 +49,7 @@ async function sendCode(req) {
       },
       userInfo.id,
     );
-    const eventId = eventResult?.id || eventResult?.user_id;
+    const eventId = eventResult?.id;
     console.log('[passwordlessControllers.sendCode] Created SEND_OTP event before Cognito call');
 
     let cognitoRes;
