@@ -8,7 +8,7 @@ const { messageLang } = require('../../../../utils/common');
 const PasswordlessErrors = require('../../../../config/https/errors/passwordlessErrors');
 const { getUserFromDBCognito } = require('../../helpers/userUpdateMembershipPassesHelper');
 const { updateUser } = require('../../userLoginServices');
-const { createEvent } = require('../../userCredentialEventService');
+const { createEvent, updateEventStatus } = require('../../userCredentialEventService');
 const { EVENTS, STATUS } = require('../../../../utils/constants');
 const {
   incrementAttemptById,
@@ -37,7 +37,44 @@ async function sendCode(req) {
       '[CIAM] Start Send OTP Request',
     );
 
-    const cognitoRes = await cognitoInitiatePasswordlessLogin(email);
+    // CIAM-595: Get user info and create SEND_OTP event BEFORE calling Cognito
+    // This prevents race condition where concurrent requests both pass cooldown check
+    const { db: userInfo } = await getUserFromDBCognito(email);
+    const eventResult = await createEvent(
+      {
+        eventType: EVENTS.SEND_OTP,
+        data: { email, pending: true },
+        source: 7,
+        status: STATUS.SUCCESS,
+      },
+      userInfo.id,
+    );
+    const eventId = eventResult?.id;
+    console.log('[passwordlessControllers.sendCode] Created SEND_OTP event before Cognito call');
+
+    let cognitoRes;
+    try {
+      cognitoRes = await cognitoInitiatePasswordlessLogin(email);
+    } catch (error) {
+      if (eventId) {
+        try {
+          await updateEventStatus(eventId, STATUS.FAILED);
+        } catch (updateError) {
+          loggerService.error(
+            {
+              user: {
+                email: req.body.email,
+                layer: 'controller.sendCode',
+                error: `${updateError}`,
+              },
+            },
+            {},
+            '[CIAM] Send Code - Failed to update event status',
+          );
+        }
+      }
+      throw error;
+    }
     console.log(
       '[passwordlessControllers.sendCode] Run Cognito AdminInitiateAuth:',
       JSON.stringify(cognitoRes),

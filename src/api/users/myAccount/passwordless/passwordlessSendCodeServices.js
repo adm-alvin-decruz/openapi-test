@@ -229,12 +229,8 @@ class PasswordlessSendCodeService {
 
   async checkWithinCooldownInterval(userId, otpInterval) {
     try {
-      // Check when the last 'send OTP' event was; if no such event, ok to generate OTP
       const lastSendOTPEvent = await UserCredentialEventsModel.getLastSendOTPEvent(userId);
-      if (!lastSendOTPEvent) return { shouldGenerate: true, reason: null };
-
-      const token = await tokenModel.getTokenById(lastSendOTPEvent.data.token_id);
-      if (!token) throw new Error('Token does not exist in DB');
+      if (!lastSendOTPEvent) return { withinCooldown: false, remainingSeconds: 0 };
 
       const now = new Date();
       const tokenRequestedAt = new Date(lastSendOTPEvent.created_at);
@@ -242,7 +238,9 @@ class PasswordlessSendCodeService {
       const intervalMs = Number(otpInterval) * 1000;
 
       if (elapsedMs >= intervalMs) {
-        await tokenModel.markTokenAsInvalid(lastSendOTPEvent.data.token_id); // Mark token as invalid because new token will be generated
+        if (lastSendOTPEvent.data?.token_id) {
+          await tokenModel.markTokenAsInvalid(lastSendOTPEvent.data.token_id);
+        }
         return { withinCooldown: false, remainingSeconds: 0 };
       }
 

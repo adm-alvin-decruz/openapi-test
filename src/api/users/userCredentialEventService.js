@@ -3,6 +3,10 @@ const userCredentialEventsModel = require('../../db/models/userCredentialEventsM
 const userModel = require('../../db/models/userModel');
 
 class UserCredentialEventService {
+  async updateEventStatus(eventId, status) {
+    return await userCredentialEventsModel.updateStatus(eventId, status);
+  }
+
   async createEvent(event, userId = null, email = null, mandaiId = null) {
     const eventData = {
       eventType: event.eventType,
