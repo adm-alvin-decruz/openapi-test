@@ -9,38 +9,25 @@ describe('MembershipCheckValidation', () => {
     jest.restoreAllMocks();
   });
   describe('execute', () => {
-    it('should throw an error when email is required', () => {
+    it('should return error when group is missing', () => {
       const failedMessage = MembershipCheckValidation.execute({});
       expect(failedMessage).toEqual({
         membership: {
-          code: 200,
-          message: 'Requested email is invalid or empty.',
-          email: undefined,
-          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR',
+          code: 400,
+          message: 'Wrong parameters',
+          error: {
+            group: 'The group is invalid.',
+          },
+          mwgCode: 'MWG_CIAM_PARAMS_ERR',
         },
-        status: 'success',
-        statusCode: 200,
+        status: 'failed',
+        statusCode: 400,
       });
     });
-    it('should throw an error when email is empty', () => {
-      const failedMessage = MembershipCheckValidation.execute({
-        email: '',
-      });
-      expect(failedMessage).toEqual({
-        membership: {
-          code: 200,
-          message: 'Requested email is invalid or empty.',
-          email: '',
-          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_EMAIL_ERR',
-        },
-        status: 'success',
-        statusCode: 200,
-      });
-    });
-    it('should throw an error when group is not support', () => {
+    it('should return error when group is not supported', () => {
       const failedMessage = MembershipCheckValidation.execute({
         email: 'test@gmail.com',
-        group: '',
+        group: 'invalid-group',
       });
       expect(failedMessage).toEqual({
         membership: {
@@ -54,6 +41,35 @@ describe('MembershipCheckValidation', () => {
         status: 'failed',
         statusCode: 400,
       });
+    });
+    it('should return error when neither email nor mandaiId is provided', () => {
+      const failedMessage = MembershipCheckValidation.execute({
+        group: 'wildpass',
+      });
+      expect(failedMessage).toEqual({
+        membership: {
+          code: 400,
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
+          message: 'Email or Mandai ID is required.',
+          email: '',
+        },
+        status: 'failed',
+        statusCode: 400,
+      });
+    });
+    it('should return null when email is provided with valid group', () => {
+      const result = MembershipCheckValidation.execute({
+        email: 'test@gmail.com',
+        group: 'wildpass',
+      });
+      expect(result).toBeNull();
+    });
+    it('should return null when mandaiId is provided with valid group', () => {
+      const result = MembershipCheckValidation.execute({
+        mandaiId: '123',
+        group: 'wildpass',
+      });
+      expect(result).toBeNull();
     });
   });
 });
