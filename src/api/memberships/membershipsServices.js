@@ -79,16 +79,7 @@ async function checkUserMembership(reqBody) {
   try {
     // Validate that at least email or mandaiId is provided
     if (!reqBody.email && !reqBody.mandaiId) {
-      return {
-        membership: {
-          code: 400,
-          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
-          message: messageLang('email_no_record', reqBody.language),
-          email: '',
-        },
-        status: 'failed',
-        statusCode: 400,
-      };
+      return MembershipErrors.ciamMembershipInvalidInput(reqBody.language);
     }
 
     //1st priority check membership group: DB

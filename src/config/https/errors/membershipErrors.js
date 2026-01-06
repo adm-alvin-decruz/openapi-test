@@ -68,6 +68,18 @@ class MembershipErrors {
       statusCode: 404,
     };
   }
+  static ciamMembershipInvalidInput(lang) {
+    return {
+      membership: {
+        code: 400,
+        mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
+        message: messageLang('email_no_record', lang),
+        email: '',
+      },
+      status: 'failed',
+      statusCode: 400,
+    };
+  }
 }
 
 module.exports = MembershipErrors;
