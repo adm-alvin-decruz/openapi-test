@@ -51,7 +51,7 @@ describe('MembershipService', () => {
         membership: {
           code: 400,
           mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
-          message: 'No record found.',
+          message: 'Email or Mandai ID is required.',
           email: '',
         },
         status: 'failed',

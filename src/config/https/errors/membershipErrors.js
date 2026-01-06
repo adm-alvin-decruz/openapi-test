@@ -73,7 +73,7 @@ class MembershipErrors {
       membership: {
         code: 400,
         mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
-        message: messageLang('email_no_record', lang),
+        message: messageLang('email_or_mandai_id_required', lang),
         email: '',
       },
       status: 'failed',
