@@ -12,6 +12,10 @@ class MembershipCheck {
       return (this.error = CommonErrors.BadRequest('group', 'group_invalid', data.language));
     }
 
+    if (!data.email && !data.mandaiId) {
+      return (this.error = MembershipErrors.ciamMembershipInvalidInput(data.language));
+    }
+
     return (this.error = null);
   }
 }

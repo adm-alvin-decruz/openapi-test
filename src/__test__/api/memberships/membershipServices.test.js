@@ -8,54 +8,39 @@ jest.mock('../../../services/cognitoService', () => ({
 }));
 jest.mock('../../../db/models/userModel', () => ({
   findPassesByUserEmailOrMandaiId: jest.fn(),
+  findByEmailOrMandaiId: jest.fn(),
 }));
 
 describe('MembershipService', () => {
   describe('checkUserMembership', () => {
-    it('should throw error MWG_CIAM_USERS_MEMBERSHIP_NULL and when Cognito and DB not found user', async () => {
-      jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockRejectedValue(
-        new Error(
-          JSON.stringify({
-            status: 'failed',
-            data: {
-              name: 'UserNotFoundException',
-            },
-          }),
-        ),
-      );
+    it('should return MWG_CIAM_USERS_MEMBERSHIPS_NULL when user not found in DB', async () => {
       jest.spyOn(userModel, 'findPassesByUserEmailOrMandaiId').mockResolvedValue([]);
-      await expect(
-        membershipService.checkUserMembership({
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue(null);
+      const result = await membershipService.checkUserMembership({
+        email: 'test-email@gmail.com',
+        group: 'wildpass',
+      });
+      expect(result).toEqual({
+        membership: {
+          code: 200,
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL',
+          message: 'No record found.',
           email: 'test-email@gmail.com',
-          group: 'wildpass',
-        }),
-      ).rejects.toThrow(
-        JSON.stringify({
-          membership: {
-            code: 200,
-            mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL',
-            message: 'No record found.',
-            email: 'test-email@gmail.com',
-          },
-          status: 'success',
-          statusCode: 200,
-        }),
-      );
+        },
+        status: 'failed',
+        statusCode: 200,
+      });
     });
     it('should return group based on user without mid when cognito can found user', async () => {
       jest.spyOn(userModel, 'findPassesByUserEmailOrMandaiId').mockResolvedValue([]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
       jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockResolvedValue({
         Groups: [
           {
             GroupName: 'wildpass',
-          },
-        ],
-      });
-      jest.spyOn(cognitoService, 'cognitoAdminGetUserByEmail').mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: 'custom:mandai_id',
-            Value: '123',
           },
         ],
       });
@@ -79,18 +64,14 @@ describe('MembershipService', () => {
     });
     it('should return group based on user with mid is true when cognito can found user', async () => {
       jest.spyOn(userModel, 'findPassesByUserEmailOrMandaiId').mockResolvedValue([]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
       jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockResolvedValue({
         Groups: [
           {
             GroupName: 'wildpass',
-          },
-        ],
-      });
-      jest.spyOn(cognitoService, 'cognitoAdminGetUserByEmail').mockResolvedValue({
-        UserAttributes: [
-          {
-            Name: 'custom:mandai_id',
-            Value: '123',
           },
         ],
       });
@@ -129,6 +110,10 @@ describe('MembershipService', () => {
           isBelong: 1,
         },
       ]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
       const rs = await membershipService.checkUserMembership({
         email: 'test-email@gmail.com',
         group: 'wildpass',
@@ -164,6 +149,13 @@ describe('MembershipService', () => {
           isBelong: 0,
         },
       ]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
+      jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockResolvedValue({
+        Groups: [{ GroupName: 'membership-passes' }],
+      });
       const rs = await membershipService.checkUserMembership({
         email: 'test-email@gmail.com',
         group: 'membership-passes',
@@ -193,6 +185,13 @@ describe('MembershipService', () => {
           isBelong: 0,
         },
       ]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
+      jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockResolvedValue({
+        Groups: [],
+      });
       const rs = await membershipService.checkUserMembership({
         email: 'test-email@gmail.com',
         group: 'membership-passes',
@@ -230,6 +229,10 @@ describe('MembershipService', () => {
           isBelong: 1,
         },
       ]);
+      jest.spyOn(userModel, 'findByEmailOrMandaiId').mockResolvedValue({
+        email: 'test-email@gmail.com',
+        mandai_id: '123',
+      });
       const rs = await membershipService.checkUserMembership({
         email: 'test-email@gmail.com',
         group: 'wildpass',
