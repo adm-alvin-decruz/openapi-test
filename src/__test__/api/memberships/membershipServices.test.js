@@ -42,6 +42,22 @@ describe('MembershipService', () => {
         }),
       );
     });
+    it('should return 400 error when neither email nor mandaiId is provided', async () => {
+      const result = await membershipService.checkUserMembership({
+        group: 'wildpass',
+        mid: true,
+      });
+      expect(result).toEqual({
+        membership: {
+          code: 400,
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
+          message: 'No record found.',
+          email: '',
+        },
+        status: 'failed',
+        statusCode: 400,
+      });
+    });
     it('should return group based on user without mid when cognito can found user', async () => {
       jest.spyOn(userModel, 'findPassesByUserEmailOrMandaiId').mockResolvedValue([]);
       jest.spyOn(cognitoService, 'cognitoAdminListGroupsForUser').mockResolvedValue({
