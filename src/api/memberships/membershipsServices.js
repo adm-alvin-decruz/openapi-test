@@ -79,7 +79,7 @@ async function checkUserMembership(reqBody) {
   try {
     // Validate that at least email or mandaiId is provided
     if (!reqBody.email && !reqBody.mandaiId) {
-      return Promise.resolve({
+      return {
         membership: {
           code: 400,
           mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
@@ -88,7 +88,7 @@ async function checkUserMembership(reqBody) {
         },
         status: 'failed',
         statusCode: 400,
-      });
+      };
     }
 
     //1st priority check membership group: DB
@@ -127,7 +127,7 @@ async function checkUserMembership(reqBody) {
     }
     // Handle case user not found in user_memberships
     if (!userInfo || !userInfo.email) {
-      return Promise.resolve({
+      return {
         membership: {
           code: 200,
           mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_NULL',
@@ -136,7 +136,7 @@ async function checkUserMembership(reqBody) {
         },
         status: 'failed',
         statusCode: 200,
-      });
+      };
     }
 
     //cover for case user signup with membership-passes only - 2nd priority check group on Cognito
