@@ -77,6 +77,20 @@ function checkMatchedGroup(data) {
 //Check user membership group in Cognito [membership-passes, wildpass]
 async function checkUserMembership(reqBody) {
   try {
+    // Validate that at least email or mandaiId is provided
+    if (!reqBody.email && !reqBody.mandaiId) {
+      return Promise.resolve({
+        membership: {
+          code: 400,
+          mwgCode: 'MWG_CIAM_USERS_MEMBERSHIPS_INVALID_INPUT',
+          message: messageLang('email_no_record', reqBody.language),
+          email: '',
+        },
+        status: 'failed',
+        statusCode: 400,
+      });
+    }
+
     //1st priority check membership group: DB
     const passes = await passesByGroup(reqBody.group);
 
@@ -96,12 +110,14 @@ async function checkUserMembership(reqBody) {
     if (userPasses && userPasses.length > 0) {
       //cover for case user signup with WP then signup with MP
       const groups =
-        reqBody.group === GROUP.MEMBERSHIP_PASSES ? await getCognitoGroups(userInfo, reqBody) : [];
+        reqBody.group === GROUP.MEMBERSHIP_PASSES && userInfo
+          ? await getCognitoGroups(userInfo, reqBody)
+          : [];
       return success({
         mid: reqBody.mid,
         group: reqBody.group,
         email: reqBody.email,
-        mandaiId: reqBody.mandaiId || userInfo.mandai_id,
+        mandaiId: reqBody.mandaiId || (userInfo ? userInfo.mandai_id : null),
         lang: reqBody.language,
         isMatchedGroup:
           reqBody.group === GROUP.MEMBERSHIP_PASSES
