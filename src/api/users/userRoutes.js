@@ -270,34 +270,6 @@ router.post(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedError'
- *   get:
- *     summary: Get user by email
- *     description: Retrieve user information by email address
- *     tags: [Users]
- *     security:
- *       - AppId: []
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema:
- *           type: string
- *           format: email
- *         description: User's email address
- *         example: user@example.com
- *     responses:
- *       200:
- *         description: User found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UserResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.put(
   '/users',
