@@ -14,7 +14,76 @@ const membershipsController = require('./membershipController');
 router.use(express.json());
 
 /**
- * CIAM MyAccount retrieve membership
+ * @openapi
+ * /v2/ciam/auth/membership:
+ *   post:
+ *     summary: Retrieve membership
+ *     description: Retrieve membership details for the authenticated user
+ *     tags: [MyAccount]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MyAccountMembershipRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Membership details retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MyAccountMembershipResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InternalServerError'
+ *   delete:
+ *     summary: Delete user account
+ *     description: Delete the authenticated user's account and all associated data
+ *     tags: [MyAccount]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/DeleteAccountRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DeleteAccountResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InternalServerError'
  */
 router.post('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -39,9 +108,6 @@ router.post('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
   }
 });
 
-/**
- * CIAM MyAccount delete user account
- */
 router.delete('/', validateEmail, AccessTokenAuthGuard, async (req, res) => {
   req['processTimer'] = processTimer;
   req['apiTimer'] = req.processTimer.apiRequestTimer(true); // log time durations

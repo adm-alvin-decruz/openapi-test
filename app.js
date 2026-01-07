@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const qs = require('qs');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swaggerConfig');
 const membershipRoutes = require('./src/api/memberships/membershipRoutes');
 const userRoutes = require('./src/api/users/userRoutes');
 const galaxyRoutes = require('./src/api/components/galaxy/galaxyRoutes');
@@ -21,6 +23,20 @@ app.set('query parser', (str) => {
 });
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// Swagger UI - mounted BEFORE helmet to avoid CSP blocking
+// API Documentation (disabled in production unless explicitly enabled)
+if (process.env.APP_ENV !== 'prod' || process.env.ENABLE_SWAGGER === 'true') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'CIAM API Documentation',
+  }));
+  app.get('/api-docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+}
+
 app.use(helmetMiddleware);
 //permission policy
 app.use(permissionsPolicyMiddleware);

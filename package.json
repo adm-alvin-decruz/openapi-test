@@ -23,7 +23,8 @@
     "sam:build": "npm run sam:env:generate && sam build",
     "sam:local": "npm run sam:env:generate && ./scripts/sam-with-env.sh local start-api --port 3000 --env-vars sam-env.json",
     "sam:local:watch": "npm run sam:env:generate && ./scripts/sam-with-env.sh local start-api --port 3000 --warm-containers EAGER --env-vars sam-env.json",
-    "sam:invoke": "npm run sam:env:generate && ./scripts/sam-with-env.sh local invoke CiamApiFunction --env-vars sam-env.json"
+    "sam:invoke": "npm run sam:env:generate && ./scripts/sam-with-env.sh local invoke CiamApiFunction --env-vars sam-env.json",
+    "swagger:generate": "node scripts/generate-swagger.js"
   },
   "author": "",
   "license": "ISC",
@@ -55,6 +56,8 @@
     "reflect-metadata": "^0.2.2",
     "serverless-http": "^3.2.0",
     "supertest": "^7.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.20",
     "uuid": "^13.0.0",
     "validator": "^13.15.23"

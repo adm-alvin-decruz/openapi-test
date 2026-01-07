@@ -29,12 +29,67 @@ const pong = { pong: 'pang' };
 
 router.use(express.json());
 
+/**
+ * @openapi
+ * /v1/ciam/ping:
+ *   get:
+ *     summary: Health check
+ *     description: Simple health check endpoint to verify the API is running
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PingResponse'
+ */
 router.get('/ping', async (req, res) => {
   return res.json(pong);
 });
 
 /**
- * User signup, create new CIAM user
+ * @openapi
+ * /v1/ciam/users:
+ *   post:
+ *     summary: User signup
+ *     description: Create a new CIAM user account. Supports both WildPass and Membership Passes user groups.
+ *     tags: [Users]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserSignupRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "SecurePass123!"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             group: "membership-passes"
+ *             phoneNumber: "+6591234567"
+ *             newsletter: true
+ *     responses:
+ *       200:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserSignupResponse'
+ *       400:
+ *         description: Bad request - invalid parameters or email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - invalid or missing app-id
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/users',
@@ -175,9 +230,74 @@ router.post(
 );
 
 /**
- * CIAM Update user info
- *
- * Handling most HTTP validation here
+ * @openapi
+ * /v1/ciam/users:
+ *   put:
+ *     summary: Update user info
+ *     description: Update user profile information. Requires authentication for membership-passes group when accessed via AEM.
+ *     tags: [Users]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserUpdateRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             group: "membership-passes"
+ *             firstName: "John"
+ *             lastName: "Smith"
+ *             phoneNumber: "+6591234567"
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *   get:
+ *     summary: Get user by email
+ *     description: Retrieve user information by email address
+ *     tags: [Users]
+ *     security:
+ *       - AppId: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: User's email address
+ *         example: user@example.com
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.put(
   '/users',
@@ -248,7 +368,42 @@ router.put(
 );
 
 /**
- * Resend wildpass
+ * @openapi
+ * /v1/ciam/users/memberships/resend:
+ *   post:
+ *     summary: Resend WildPass
+ *     description: Resend the WildPass digital pass to the user's email
+ *     tags: [Memberships]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResendMembershipRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: WildPass resent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: WildPass resent successfully
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -270,8 +425,49 @@ router.post('/users/memberships/resend', isEmptyRequest, validateEmail, async (r
 });
 
 /**
- * Delete user in cognito & DB
- * only in dev/UAT
+ * @openapi
+ * /v1/ciam/users/delete:
+ *   post:
+ *     summary: Delete user
+ *     description: Delete user from Cognito and database. Only available in dev/UAT environments.
+ *     tags: [Users]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserDeleteRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deleteMember:
+ *                   type: object
+ *                   description: Deletion result
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       501:
+ *         description: Not implemented (in production)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Not Implemented
  */
 router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -298,7 +494,36 @@ router.post('/users/delete', isEmptyRequest, validateEmail, async (req, res) => 
 });
 
 /**
- * Get User API (Method Get)
+ * @openapi
+ * /v1/ciam/users:
+ *   get:
+ *     summary: Get user by email
+ *     description: Retrieve user information by email address
+ *     tags: [Users]
+ *     security:
+ *       - AppId: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: User's email address
+ *         example: user@example.com
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.get('/users', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -320,7 +545,42 @@ router.get('/users', isEmptyRequest, validateEmail, async (req, res) => {
 });
 
 /**
- * User Login API (Method POST)
+ * @openapi
+ * /v1/ciam/users/sessions:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user with email and password. Returns JWT tokens on success.
+ *     tags: [Sessions]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "SecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Unauthorized - invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InternalServerError'
  */
 router.post('/users/sessions', isEmptyRequest, validateEmail, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -354,7 +614,36 @@ router.post('/users/sessions', isEmptyRequest, validateEmail, async (req, res) =
 });
 
 /**
- * User Logout API (Method DELETE)
+ * @openapi
+ * /v1/ciam/users/sessions:
+ *   delete:
+ *     summary: User logout
+ *     description: Logout the currently authenticated user. Invalidates the access token.
+ *     tags: [Sessions]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LogoutRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LogoutResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.delete(
   '/users/sessions',
@@ -399,7 +688,96 @@ router.delete(
 );
 
 /**
- * User Request Reset Password API (Method POST)
+ * @openapi
+ * /v1/ciam/users/reset-password:
+ *   post:
+ *     summary: Request password reset
+ *     description: Send a password reset email to the user
+ *     tags: [Password]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResetPasswordRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Password reset email sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResetPasswordResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *   get:
+ *     summary: Validate reset token
+ *     description: Validate the password reset token from the email link
+ *     tags: [Password]
+ *     security:
+ *       - AppId: []
+ *     parameters:
+ *       - in: query
+ *         name: passwordToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Password reset token
+ *       - in: query
+ *         name: language
+ *         schema:
+ *           type: string
+ *           enum: [en, ja, kr, zh]
+ *         description: Language for error messages
+ *     responses:
+ *       200:
+ *         description: Token validation result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidateResetTokenResponse'
+ *       401:
+ *         description: Unauthorized or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *   put:
+ *     summary: Confirm password reset
+ *     description: Set a new password using the reset token
+ *     tags: [Password]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ConfirmResetPasswordRequest'
+ *           example:
+ *             passwordToken: "abc123def456"
+ *             password: "NewSecurePass123!"
+ *             confirmPassword: "NewSecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ConfirmResetPasswordResponse'
+ *       401:
+ *         description: Unauthorized or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/users/reset-password',
@@ -513,7 +891,36 @@ router.put('/users/reset-password', isEmptyRequest, async (req, res) => {
 });
 
 /**
- * User Get Membership Passes API (Method POST)
+ * @openapi
+ * /v1/ciam/users/membership-passes:
+ *   post:
+ *     summary: Get membership passes
+ *     description: Retrieve all membership passes for the authenticated user
+ *     tags: [Memberships]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MembershipPassesRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Membership passes retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MembershipPassesResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/users/membership-passes',
@@ -557,7 +964,33 @@ router.post(
 );
 
 /**
- * User Verify Access Token API (Method POST)
+ * @openapi
+ * /v1/ciam/token/verify:
+ *   post:
+ *     summary: Verify access token
+ *     description: Verify if the provided access token is valid
+ *     tags: [Tokens]
+ *     security:
+ *       - AppId: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TokenVerifyRequest'
+ *     responses:
+ *       200:
+ *         description: Token verification result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TokenVerifyResponse'
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post('/token/verify', isEmptyRequest, async (req, res) => {
   req['processTimer'] = processTimer;
@@ -596,7 +1029,76 @@ router.post('/token/verify', isEmptyRequest, async (req, res) => {
 });
 
 /**
- * API - Create Membership Pass
+ * @openapi
+ * /v1/ciam/users/my-membership:
+ *   post:
+ *     summary: Create membership pass
+ *     description: Create a new membership pass for the user
+ *     tags: [Memberships]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMembershipPassRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             passType: "annual"
+ *     responses:
+ *       200:
+ *         description: Membership pass created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MembershipPassesResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *   put:
+ *     summary: Update membership pass
+ *     description: Update an existing membership pass
+ *     tags: [Memberships]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateMembershipPassRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             passType: "premium"
+ *     responses:
+ *       200:
+ *         description: Membership pass updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MembershipPassesResponse'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/users/my-membership',
@@ -606,9 +1108,6 @@ router.post(
   userController.userCreateMembershipPass,
 );
 
-/**
- * API - Update Membership Pass
- */
 router.put(
   '/users/my-membership',
   isEmptyRequest,
@@ -618,7 +1117,37 @@ router.put(
 );
 
 /**
- * CIAM user refresh token endpoint
+ * @openapi
+ * /v1/ciam/token/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     description: Get a new access token using the refresh token. Requires valid access token in Authorization header.
+ *     tags: [Tokens]
+ *     security:
+ *       - AppId: []
+ *       - ApiKey: []
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TokenRefreshRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TokenRefreshResponse'
+ *       401:
+ *         description: Unauthorized - invalid token or API key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/token/refresh',

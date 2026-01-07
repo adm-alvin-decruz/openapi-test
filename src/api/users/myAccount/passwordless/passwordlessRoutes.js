@@ -23,12 +23,61 @@ const pong = { pong: 'pang' };
 
 router.use(express.json());
 
+/**
+ * @openapi
+ * /v2/ciam/auth/ping:
+ *   get:
+ *     summary: Health check (passwordless)
+ *     description: Simple health check endpoint for passwordless authentication service
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PingResponse'
+ */
 router.get('/ping', async (req, res) => {
   return res.json(pong);
 });
 
 /**
- * CIAM MyAccount - Send OTP Email
+ * @openapi
+ * /v2/ciam/auth/passwordless/send:
+ *   post:
+ *     summary: Send OTP email
+ *     description: Send a one-time password to the user's email for passwordless authentication
+ *     tags: [Passwordless]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PasswordlessSendRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PasswordlessSendResponse'
+ *       400:
+ *         description: Bad request - rate limit exceeded or email invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/passwordless/send',
@@ -81,7 +130,42 @@ router.post(
 );
 
 /**
- * CIAM MyAccount - Verify OTP
+ * @openapi
+ * /v2/ciam/auth/passwordless/session:
+ *   post:
+ *     summary: Verify OTP
+ *     description: Verify the one-time password and create a session. Returns JWT tokens on success.
+ *     tags: [Passwordless]
+ *     security:
+ *       - AppId: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PasswordlessVerifyRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully, session created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PasswordlessVerifyResponse'
+ *       400:
+ *         description: Bad request - invalid or expired OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  */
 router.post(
   '/passwordless/session',
