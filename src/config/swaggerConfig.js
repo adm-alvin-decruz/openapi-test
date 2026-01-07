@@ -34,6 +34,20 @@ const options = {
 | \`MWG_CIAM_PASSWORD_ERR_04\` | New password same as old |
 | \`MWG_CIAM_PASSWORD_ERR_05\` | Reset token expired or used |
 | \`MWG_CIAM_REQUIRE_CHANGE_PASSWORD\` | Password change required |
+
+## Async Processing
+
+Some operations trigger background processing via SQS queues:
+
+| Operation | Background Tasks |
+|-----------|------------------|
+| User Signup | Galaxy import, Card face generation, PassKit creation, Welcome email |
+| Membership Update | PassKit regeneration, Notification email |
+| Password Reset | Reset email via SendGrid |
+
+These tasks are processed asynchronously. The API returns immediately with a success response, and background jobs complete within a few minutes.
+
+**Note:** Failed background jobs are tracked in the \`failed_jobs\` table and can be retried via the admin portal.
 `,
       contact: {
         name: 'Mandai Wildlife Group',
@@ -51,32 +65,24 @@ const options = {
         description: 'Health check endpoints',
       },
       {
+        name: 'Auth',
+        description: 'Authentication - Login, logout, OTP, and session management',
+      },
+      {
         name: 'Users',
-        description: 'User registration, authentication, and profile management',
+        description: 'User registration and profile management',
       },
       {
-        name: 'Sessions',
-        description: 'User login and logout',
-      },
-      {
-        name: 'Password',
-        description: 'Password reset and change',
+        name: 'Passwords',
+        description: 'Password reset and change flows',
       },
       {
         name: 'Memberships',
-        description: 'Membership management and lookup',
+        description: 'Membership passes and WildPass management',
       },
       {
         name: 'Tokens',
-        description: 'Token verification and refresh',
-      },
-      {
-        name: 'Passwordless',
-        description: 'OTP-based passwordless authentication',
-      },
-      {
-        name: 'MyAccount',
-        description: 'Authenticated user account management',
+        description: 'Access token verification and refresh',
       },
     ],
     components: {

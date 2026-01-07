@@ -48,7 +48,7 @@ router.get('/ping', async (req, res) => {
  *   post:
  *     summary: Send OTP email
  *     description: Send a one-time password to the user's email for passwordless authentication
- *     tags: [Passwordless]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *     requestBody:
@@ -135,7 +135,7 @@ router.post(
  *   post:
  *     summary: Verify OTP
  *     description: Verify the one-time password and create a session. Returns JWT tokens on success.
- *     tags: [Passwordless]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *     requestBody:

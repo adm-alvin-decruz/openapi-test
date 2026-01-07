@@ -13,7 +13,7 @@
  *           type: string
  *           format: email
  *           description: User's email address (must be unique)
- *           example: user@example.com
+ *           example: john.tan@gmail.com
  *         password:
  *           type: string
  *           format: password
@@ -26,7 +26,7 @@
  *         lastName:
  *           type: string
  *           description: User's last name
- *           example: Doe
+ *           example: Tan
  *         group:
  *           $ref: '#/components/schemas/GroupType'
  *         phoneNumber:
@@ -37,14 +37,14 @@
  *           type: string
  *           format: date
  *           description: Date of birth (YYYY-MM-DD)
- *           example: "1990-01-15"
+ *           example: "1990-08-09"
  *         gender:
  *           type: string
  *           enum: [male, female, other]
  *           example: male
  *         country:
  *           type: string
- *           description: Country code
+ *           description: Country code (ISO 3166-1 alpha-2)
  *           example: SG
  *         newsletter:
  *           type: boolean
@@ -63,7 +63,7 @@
  *           type: string
  *           format: email
  *           description: User's email address
- *           example: user@example.com
+ *           example: john.tan@gmail.com
  *         group:
  *           $ref: '#/components/schemas/GroupType'
  *         firstName:
@@ -73,23 +73,23 @@
  *         lastName:
  *           type: string
  *           description: User's last name
- *           example: Doe
+ *           example: Tan
  *         phoneNumber:
  *           type: string
  *           description: Phone number with country code
- *           example: "+6591234567"
+ *           example: "+6598765432"
  *         dob:
  *           type: string
  *           format: date
  *           description: Date of birth (YYYY-MM-DD)
- *           example: "1990-01-15"
+ *           example: "1990-08-09"
  *         gender:
  *           type: string
  *           enum: [male, female, other]
  *           example: male
  *         country:
  *           type: string
- *           description: Country code
+ *           description: Country code (ISO 3166-1 alpha-2)
  *           example: SG
  *         newsletter:
  *           type: boolean
@@ -104,7 +104,7 @@
  *               type: string
  *               format: email
  *               description: New email address for email change
- *               example: newemail@example.com
+ *               example: john.tan.new@gmail.com
  *
  *     UserGetRequest:
  *       type: object
@@ -115,7 +115,7 @@
  *           type: string
  *           format: email
  *           description: User's email address
- *           example: user@example.com
+ *           example: john.tan@gmail.com
  *
  *     UserSignupResponse:
  *       type: object
@@ -141,11 +141,11 @@
  *               example: User created successfully
  *             email:
  *               type: string
- *               example: user@example.com
+ *               example: john.tan@gmail.com
  *             mandaiId:
  *               type: string
  *               description: Unique Mandai ID assigned to user
- *               example: "MWG-12345678"
+ *               example: "MWG-20240815-ABC123"
  *
  *     UserResponse:
  *       type: object
@@ -165,22 +165,22 @@
  *               example: 200
  *             email:
  *               type: string
- *               example: user@example.com
+ *               example: john.tan@gmail.com
  *             mandaiId:
  *               type: string
- *               example: "MWG-12345678"
+ *               example: "MWG-20240815-ABC123"
  *             firstName:
  *               type: string
  *               example: John
  *             lastName:
  *               type: string
- *               example: Doe
+ *               example: Tan
  *             phoneNumber:
  *               type: string
  *               example: "+6591234567"
  *             dob:
  *               type: string
- *               example: "1990-01-15"
+ *               example: "1990-08-09"
  *             gender:
  *               type: string
  *               example: male
@@ -203,7 +203,7 @@
  *           type: string
  *           format: email
  *           description: Email of user to delete
- *           example: user@example.com
+ *           example: john.tan@gmail.com
  *         language:
  *           $ref: '#/components/schemas/LanguageCode'
  *
@@ -216,7 +216,7 @@
  *           type: string
  *           format: email
  *           description: User's email address
- *           example: user@example.com
+ *           example: john.tan@gmail.com
  *         language:
  *           $ref: '#/components/schemas/LanguageCode'
  */

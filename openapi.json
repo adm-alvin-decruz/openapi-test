@@ -3,7 +3,7 @@
   "info": {
     "title": "CIAM Microservice API",
     "version": "1.0.0",
-    "description": "Customer Identity and Access Management API for Mandai Wildlife Group. This API provides endpoints for user authentication, membership management, and WildPass digital passes.\n\n## Authentication\n\n1. **Get tokens**: Call `POST /v1/ciam/users/sessions` with email and password\n2. **Include App ID**: Add `mwg-app-id` header on ALL requests\n3. **Protected routes**: Add `Authorization: Bearer <accessToken>` header\n4. **Refresh tokens**: Call `POST /v1/ciam/token/refresh` when token expires\n5. **Passwordless login**: Use `POST /v2/ciam/auth/passwordless/send` and `POST /v2/ciam/auth/passwordless/session`\n\n## Error Codes\n\n| Code | Description |\n|------|-------------|\n| `MWG_CIAM_UNAUTHORIZED` | Invalid or missing credentials/token |\n| `MWG_CIAM_PARAMS_ERR` | Invalid request parameters |\n| `MWG_CIAM_USER_SIGNUP_ERR` | User signup failed |\n| `MWG_CIAM_USER_SIGNUP_SUCCESS` | User signup successful |\n| `MWG_CIAM_LOGIN_SUCCESS` | Login successful |\n| `MWG_CIAM_OTP_VERIFY_SUCCESS` | OTP verification successful |\n| `MWG_CIAM_INTERNAL_SERVER_ERROR` | Internal server error |\n| `MWG_CIAM_NOT_IMPLEMENTED` | Feature not implemented |\n| `MWG_CIAM_PASSWORD_ERR_01` | Invalid password format |\n| `MWG_CIAM_PASSWORD_ERR_02` | Passwords do not match |\n| `MWG_CIAM_PASSWORD_ERR_03` | Old password incorrect |\n| `MWG_CIAM_PASSWORD_ERR_04` | New password same as old |\n| `MWG_CIAM_PASSWORD_ERR_05` | Reset token expired or used |\n| `MWG_CIAM_REQUIRE_CHANGE_PASSWORD` | Password change required |\n",
+    "description": "Customer Identity and Access Management API for Mandai Wildlife Group. This API provides endpoints for user authentication, membership management, and WildPass digital passes.\n\n## Authentication\n\n1. **Get tokens**: Call `POST /v1/ciam/users/sessions` with email and password\n2. **Include App ID**: Add `mwg-app-id` header on ALL requests\n3. **Protected routes**: Add `Authorization: Bearer <accessToken>` header\n4. **Refresh tokens**: Call `POST /v1/ciam/token/refresh` when token expires\n5. **Passwordless login**: Use `POST /v2/ciam/auth/passwordless/send` and `POST /v2/ciam/auth/passwordless/session`\n\n## Error Codes\n\n| Code | Description |\n|------|-------------|\n| `MWG_CIAM_UNAUTHORIZED` | Invalid or missing credentials/token |\n| `MWG_CIAM_PARAMS_ERR` | Invalid request parameters |\n| `MWG_CIAM_USER_SIGNUP_ERR` | User signup failed |\n| `MWG_CIAM_USER_SIGNUP_SUCCESS` | User signup successful |\n| `MWG_CIAM_LOGIN_SUCCESS` | Login successful |\n| `MWG_CIAM_OTP_VERIFY_SUCCESS` | OTP verification successful |\n| `MWG_CIAM_INTERNAL_SERVER_ERROR` | Internal server error |\n| `MWG_CIAM_NOT_IMPLEMENTED` | Feature not implemented |\n| `MWG_CIAM_PASSWORD_ERR_01` | Invalid password format |\n| `MWG_CIAM_PASSWORD_ERR_02` | Passwords do not match |\n| `MWG_CIAM_PASSWORD_ERR_03` | Old password incorrect |\n| `MWG_CIAM_PASSWORD_ERR_04` | New password same as old |\n| `MWG_CIAM_PASSWORD_ERR_05` | Reset token expired or used |\n| `MWG_CIAM_REQUIRE_CHANGE_PASSWORD` | Password change required |\n\n## Async Processing\n\nSome operations trigger background processing via SQS queues:\n\n| Operation | Background Tasks |\n|-----------|------------------|\n| User Signup | Galaxy import, Card face generation, PassKit creation, Welcome email |\n| Membership Update | PassKit regeneration, Notification email |\n| Password Reset | Reset email via SendGrid |\n\nThese tasks are processed asynchronously. The API returns immediately with a success response, and background jobs complete within a few minutes.\n\n**Note:** Failed background jobs are tracked in the `failed_jobs` table and can be retried via the admin portal.\n",
     "contact": {
       "name": "Mandai Wildlife Group"
     }
@@ -20,32 +20,24 @@
       "description": "Health check endpoints"
     },
     {
+      "name": "Auth",
+      "description": "Authentication - Login, logout, OTP, and session management"
+    },
+    {
       "name": "Users",
-      "description": "User registration, authentication, and profile management"
+      "description": "User registration and profile management"
     },
     {
-      "name": "Sessions",
-      "description": "User login and logout"
-    },
-    {
-      "name": "Password",
-      "description": "Password reset and change"
+      "name": "Passwords",
+      "description": "Password reset and change flows"
     },
     {
       "name": "Memberships",
-      "description": "Membership management and lookup"
+      "description": "Membership passes and WildPass management"
     },
     {
       "name": "Tokens",
-      "description": "Token verification and refresh"
-    },
-    {
-      "name": "Passwordless",
-      "description": "OTP-based passwordless authentication"
-    },
-    {
-      "name": "MyAccount",
-      "description": "Authenticated user account management"
+      "description": "Access token verification and refresh"
     }
   ],
   "components": {
@@ -984,7 +976,7 @@
             "type": "string",
             "format": "email",
             "description": "User's email address (must be unique)",
-            "example": "user@example.com"
+            "example": "john.tan@gmail.com"
           },
           "password": {
             "type": "string",
@@ -1000,7 +992,7 @@
           "lastName": {
             "type": "string",
             "description": "User's last name",
-            "example": "Doe"
+            "example": "Tan"
           },
           "group": {
             "$ref": "#/components/schemas/GroupType"
@@ -1014,7 +1006,7 @@
             "type": "string",
             "format": "date",
             "description": "Date of birth (YYYY-MM-DD)",
-            "example": "1990-01-15"
+            "example": "1990-08-09"
           },
           "gender": {
             "type": "string",
@@ -1023,7 +1015,7 @@
           },
           "country": {
             "type": "string",
-            "description": "Country code",
+            "description": "Country code (ISO 3166-1 alpha-2)",
             "example": "SG"
           },
           "newsletter": {
@@ -1044,7 +1036,7 @@
             "type": "string",
             "format": "email",
             "description": "User's email address",
-            "example": "user@example.com"
+            "example": "john.tan@gmail.com"
           },
           "group": {
             "$ref": "#/components/schemas/GroupType"
@@ -1057,18 +1049,18 @@
           "lastName": {
             "type": "string",
             "description": "User's last name",
-            "example": "Doe"
+            "example": "Tan"
           },
           "phoneNumber": {
             "type": "string",
             "description": "Phone number with country code",
-            "example": "+6591234567"
+            "example": "+6598765432"
           },
           "dob": {
             "type": "string",
             "format": "date",
             "description": "Date of birth (YYYY-MM-DD)",
-            "example": "1990-01-15"
+            "example": "1990-08-09"
           },
           "gender": {
             "type": "string",
@@ -1077,7 +1069,7 @@
           },
           "country": {
             "type": "string",
-            "description": "Country code",
+            "description": "Country code (ISO 3166-1 alpha-2)",
             "example": "SG"
           },
           "newsletter": {
@@ -1095,7 +1087,7 @@
                 "type": "string",
                 "format": "email",
                 "description": "New email address for email change",
-                "example": "newemail@example.com"
+                "example": "john.tan.new@gmail.com"
               }
             }
           }
@@ -1109,7 +1101,7 @@
             "type": "string",
             "format": "email",
             "description": "User's email address",
-            "example": "user@example.com"
+            "example": "john.tan@gmail.com"
           }
         }
       },
@@ -1142,12 +1134,12 @@
               },
               "email": {
                 "type": "string",
-                "example": "user@example.com"
+                "example": "john.tan@gmail.com"
               },
               "mandaiId": {
                 "type": "string",
                 "description": "Unique Mandai ID assigned to user",
-                "example": "MWG-12345678"
+                "example": "MWG-20240815-ABC123"
               }
             }
           }
@@ -1174,11 +1166,11 @@
               },
               "email": {
                 "type": "string",
-                "example": "user@example.com"
+                "example": "john.tan@gmail.com"
               },
               "mandaiId": {
                 "type": "string",
-                "example": "MWG-12345678"
+                "example": "MWG-20240815-ABC123"
               },
               "firstName": {
                 "type": "string",
@@ -1186,7 +1178,7 @@
               },
               "lastName": {
                 "type": "string",
-                "example": "Doe"
+                "example": "Tan"
               },
               "phoneNumber": {
                 "type": "string",
@@ -1194,7 +1186,7 @@
               },
               "dob": {
                 "type": "string",
-                "example": "1990-01-15"
+                "example": "1990-08-09"
               },
               "gender": {
                 "type": "string",
@@ -1224,7 +1216,7 @@
             "type": "string",
             "format": "email",
             "description": "Email of user to delete",
-            "example": "user@example.com"
+            "example": "john.tan@gmail.com"
           },
           "language": {
             "$ref": "#/components/schemas/LanguageCode"
@@ -1239,7 +1231,7 @@
             "type": "string",
             "format": "email",
             "description": "User's email address",
-            "example": "user@example.com"
+            "example": "john.tan@gmail.com"
           },
           "language": {
             "$ref": "#/components/schemas/LanguageCode"
@@ -1573,7 +1565,7 @@
       "post": {
         "summary": "User login",
         "description": "Authenticate user with email and password. Returns JWT tokens on success.",
-        "tags": ["Sessions"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []
@@ -1629,7 +1621,7 @@
       "delete": {
         "summary": "User logout",
         "description": "Logout the currently authenticated user. Invalidates the access token.",
-        "tags": ["Sessions"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []
@@ -1679,7 +1671,7 @@
       "post": {
         "summary": "Request password reset",
         "description": "Send a password reset email to the user",
-        "tags": ["Password"],
+        "tags": ["Passwords"],
         "security": [
           {
             "AppId": []
@@ -1724,7 +1716,7 @@
       "get": {
         "summary": "Validate reset token",
         "description": "Validate the password reset token from the email link",
-        "tags": ["Password"],
+        "tags": ["Passwords"],
         "security": [
           {
             "AppId": []
@@ -1776,7 +1768,7 @@
       "put": {
         "summary": "Confirm password reset",
         "description": "Set a new password using the reset token",
-        "tags": ["Password"],
+        "tags": ["Passwords"],
         "security": [
           {
             "AppId": []
@@ -2164,7 +2156,7 @@
       "post": {
         "summary": "Send OTP email",
         "description": "Send a one-time password to the user's email for passwordless authentication",
-        "tags": ["Passwordless"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []
@@ -2221,7 +2213,7 @@
       "post": {
         "summary": "Verify OTP",
         "description": "Verify the one-time password and create a session. Returns JWT tokens on success.",
-        "tags": ["Passwordless"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []
@@ -2279,7 +2271,7 @@
       "post": {
         "summary": "Retrieve membership",
         "description": "Retrieve membership details for the authenticated user",
-        "tags": ["MyAccount"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []
@@ -2337,7 +2329,7 @@
       "delete": {
         "summary": "Delete user account",
         "description": "Delete the authenticated user's account and all associated data",
-        "tags": ["MyAccount"],
+        "tags": ["Auth"],
         "security": [
           {
             "AppId": []

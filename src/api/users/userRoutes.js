@@ -550,7 +550,7 @@ router.get('/users', isEmptyRequest, validateEmail, async (req, res) => {
  *   post:
  *     summary: User login
  *     description: Authenticate user with email and password. Returns JWT tokens on success.
- *     tags: [Sessions]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *     requestBody:
@@ -619,7 +619,7 @@ router.post('/users/sessions', isEmptyRequest, validateEmail, async (req, res) =
  *   delete:
  *     summary: User logout
  *     description: Logout the currently authenticated user. Invalidates the access token.
- *     tags: [Sessions]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *       - BearerAuth: []
@@ -693,7 +693,7 @@ router.delete(
  *   post:
  *     summary: Request password reset
  *     description: Send a password reset email to the user
- *     tags: [Password]
+ *     tags: [Passwords]
  *     security:
  *       - AppId: []
  *     requestBody:
@@ -720,7 +720,7 @@ router.delete(
  *   get:
  *     summary: Validate reset token
  *     description: Validate the password reset token from the email link
- *     tags: [Password]
+ *     tags: [Passwords]
  *     security:
  *       - AppId: []
  *     parameters:
@@ -752,7 +752,7 @@ router.delete(
  *   put:
  *     summary: Confirm password reset
  *     description: Set a new password using the reset token
- *     tags: [Password]
+ *     tags: [Passwords]
  *     security:
  *       - AppId: []
  *     requestBody:

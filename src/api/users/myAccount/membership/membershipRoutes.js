@@ -19,7 +19,7 @@ router.use(express.json());
  *   post:
  *     summary: Retrieve membership
  *     description: Retrieve membership details for the authenticated user
- *     tags: [MyAccount]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *       - BearerAuth: []
@@ -53,7 +53,7 @@ router.use(express.json());
  *   delete:
  *     summary: Delete user account
  *     description: Delete the authenticated user's account and all associated data
- *     tags: [MyAccount]
+ *     tags: [Auth]
  *     security:
  *       - AppId: []
  *       - BearerAuth: []
