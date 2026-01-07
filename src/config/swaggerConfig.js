@@ -55,15 +55,15 @@ These tasks are processed asynchronously. The API returns immediately with a suc
     },
     servers: [
       {
-        url: 'https://services.mandai.com',
+        url: 'https://services.mandaiapi.com',
         description: 'Production',
       },
       {
-        url: 'https://uat-services.mandai.com',
+        url: 'https://uat-services.mandaiapi.com',
         description: 'UAT',
       },
       {
-        url: 'https://dev-services.mandai.com',
+        url: 'https://dev-services.mandaiapi.com',
         description: 'Development',
       },
       {
