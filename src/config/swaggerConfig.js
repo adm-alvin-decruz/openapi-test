@@ -55,8 +55,20 @@ These tasks are processed asynchronously. The API returns immediately with a suc
     },
     servers: [
       {
-        url: '/',
-        description: 'Current environment',
+        url: 'https://services.mandai.com',
+        description: 'Production',
+      },
+      {
+        url: 'https://uat-services.mandai.com',
+        description: 'UAT',
+      },
+      {
+        url: 'https://dev-services.mandai.com',
+        description: 'Development',
+      },
+      {
+        url: 'http://localhost:3000',
+        description: 'Local',
       },
     ],
     tags: [
