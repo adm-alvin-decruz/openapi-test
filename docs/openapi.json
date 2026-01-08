@@ -663,7 +663,7 @@
         "type": "string",
         "enum": ["wildpass", "membership-passes"],
         "description": "User group type",
-        "example": "membership-passes"
+        "example": "wildpass"
       },
       "MembershipCheckRequest": {
         "type": "object",
@@ -1214,7 +1214,7 @@
               },
               "group": {
                 "type": "string",
-                "example": "membership-passes"
+                "example": "wildpass"
               }
             }
           }
@@ -1254,7 +1254,8 @@
   },
   "security": [
     {
-      "AppId": []
+      "AppId": [],
+      "ApiKey": []
     }
   ],
   "paths": {
@@ -1284,7 +1285,8 @@
         "tags": ["Users"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1299,7 +1301,7 @@
                 "password": "SecurePass123!",
                 "firstName": "John",
                 "lastName": "Doe",
-                "group": "membership-passes",
+                "group": "wildpass",
                 "phoneNumber": "+6591234567",
                 "newsletter": true
               }
@@ -1345,9 +1347,8 @@
         "tags": ["Users"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -1360,7 +1361,7 @@
               },
               "example": {
                 "email": "user@example.com",
-                "group": "membership-passes",
+                "group": "wildpass",
                 "firstName": "John",
                 "lastName": "Smith",
                 "phoneNumber": "+6591234567"
@@ -1407,7 +1408,8 @@
         "tags": ["Users"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "parameters": [
@@ -1454,7 +1456,8 @@
         "tags": ["Memberships"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1511,7 +1514,8 @@
         "tags": ["Users"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1580,7 +1584,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1636,9 +1641,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -1686,7 +1690,8 @@
         "tags": ["Passwords"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1731,7 +1736,8 @@
         "tags": ["Passwords"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "parameters": [
@@ -1783,7 +1789,8 @@
         "tags": ["Passwords"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1832,9 +1839,8 @@
         "tags": ["Memberships"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -1882,9 +1888,8 @@
         "tags": ["Tokens"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -1928,7 +1933,8 @@
         "tags": ["Memberships"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -1984,7 +1990,8 @@
         "tags": ["Memberships"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -2042,12 +2049,8 @@
         "tags": ["Tokens"],
         "security": [
           {
-            "AppId": []
-          },
-          {
-            "ApiKey": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -2095,7 +2098,8 @@
         "tags": ["Memberships"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -2171,7 +2175,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -2228,7 +2233,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
+            "AppId": [],
+            "ApiKey": []
           }
         ],
         "requestBody": {
@@ -2286,9 +2292,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
@@ -2344,9 +2349,8 @@
         "tags": ["Auth"],
         "security": [
           {
-            "AppId": []
-          },
-          {
+            "AppId": [],
+            "ApiKey": [],
             "BearerAuth": []
           }
         ],
