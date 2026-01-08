@@ -192,7 +192,7 @@
  *               example: true
  *             group:
  *               type: string
- *               example: membership-passes
+ *               example: wildpass
  *
  *     UserDeleteRequest:
  *       type: object

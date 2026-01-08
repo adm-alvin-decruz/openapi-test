@@ -92,7 +92,7 @@
  *       type: string
  *       enum: [wildpass, membership-passes]
  *       description: User group type
- *       example: membership-passes
+ *       example: wildpass
  */
 
 // This file contains OpenAPI schema definitions only
