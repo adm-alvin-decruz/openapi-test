@@ -70,7 +70,7 @@ router.get('/ping', async (req, res) => {
  *             lastName: "Doe"
  *             group: "membership-passes"
  *             phoneNumber: "+6591234567"
- *             newsletter: true
+ *             newletter: true
  *     responses:
  *       200:
  *         description: User created successfully

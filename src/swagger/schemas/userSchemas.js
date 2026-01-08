@@ -46,7 +46,7 @@
  *           type: string
  *           description: Country code (ISO 3166-1 alpha-2)
  *           example: SG
- *         newsletter:
+ *         newletter:
  *           type: boolean
  *           description: Subscribe to newsletter
  *           example: true
@@ -91,7 +91,7 @@
  *           type: string
  *           description: Country code (ISO 3166-1 alpha-2)
  *           example: SG
- *         newsletter:
+ *         newletter:
  *           type: boolean
  *           description: Subscribe to newsletter
  *           example: true
@@ -187,7 +187,7 @@
  *             country:
  *               type: string
  *               example: SG
- *             newsletter:
+ *             newletter:
  *               type: boolean
  *               example: true
  *             group:
