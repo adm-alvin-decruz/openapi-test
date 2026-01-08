@@ -57,6 +57,7 @@ router.get('/ping', async (req, res) => {
  *     tags: [Users]
  *     security:
  *       - AppId: []
+ *         ApiKey: []
  *     requestBody:
  *       required: true
  *       content:
@@ -68,7 +69,7 @@ router.get('/ping', async (req, res) => {
  *             password: "SecurePass123!"
  *             firstName: "John"
  *             lastName: "Doe"
- *             group: "membership-passes"
+ *             group: "wildpass"
  *             phoneNumber: "+6591234567"
  *             newletter: true
  *     responses:
